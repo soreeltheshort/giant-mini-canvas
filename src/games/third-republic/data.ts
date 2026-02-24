@@ -4,8 +4,8 @@ import { Game } from "@/games/types";
 const thirdRepublic: Game = {
   id: "third-republic",
   title: "Third Republic",
-  description: "A hex-based tactical wargame where every decision shapes the theater of war.",
-  pitch: "Command combined-arms forces across procedurally generated theaters. Third Republic rewards careful planning, logistics management, and operational-level thinking over reflexes.",
+  description: "A tactical war game where commanders design, build and lead fleets in competition with each other and collaborate against an alien threat.",
+  pitch: "Design and build your fleets, lead them across hex-based star systems, compete with rival commanders for resources and territory, and unite against a relentless alien threat. Third Republic rewards strategic fleet composition, logistics mastery, and diplomatic cunning.",
   image: game1,
   screenshots: [game1],
   features: [
