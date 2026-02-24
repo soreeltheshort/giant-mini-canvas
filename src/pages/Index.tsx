@@ -10,34 +10,9 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Hero */}
-      <section className="border-b border-border">
-        <div className="container py-24 md:py-32">
-          <p className="text-sm font-medium uppercase tracking-widest text-gold">MiniGiantGames</p>
-          <h1 className="mt-4 font-heading text-4xl font-bold leading-tight text-foreground md:text-5xl">
-            Small Studio.<br />Deep Systems.
-          </h1>
-          <p className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground">
-            We build strategy and simulation games with the depth you remember and the design you expect today.
-          </p>
-          <div className="mt-8 flex gap-3">
-            <Link
-              to="/games"
-              className="inline-flex h-10 items-center border border-primary bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              View Games
-            </Link>
-            <a
-              href="#newsletter"
-              className="inline-flex h-10 items-center border border-border px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              Join Newsletter
-            </a>
-          </div>
-        </div>
-      </section>
-
       {/* Featured Games */}
+
+      {/* Featured Games - duplicate removed */}
       <section className="border-b border-border">
         <div className="container py-20">
           <h2 className="font-heading text-2xl font-semibold text-foreground">Featured Games</h2>

@@ -1,12 +1,21 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const links = [
+  const navLinks = [
     { to: "/", label: "Home" },
     { to: "/games", label: "Games" },
   ];
+
+  const handleNewsletter = () => {
+    if (location.pathname === "/") {
+      document.getElementById("newsletter")?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      navigate("/#newsletter");
+    }
+  };
 
   return (
     <header className="border-b border-border">
@@ -15,19 +24,23 @@ const Header = () => {
           MiniGiantGames
         </Link>
         <nav className="flex items-center gap-8">
-          {links.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
               className={`text-sm font-medium transition-colors hover:text-foreground ${
-                location.pathname === link.to
-                  ? "text-foreground"
-                  : "text-muted-foreground"
+                location.pathname === link.to ? "text-foreground" : "text-muted-foreground"
               }`}
             >
               {link.label}
             </Link>
           ))}
+          <button
+            onClick={handleNewsletter}
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Join Newsletter
+          </button>
         </nav>
       </div>
     </header>
