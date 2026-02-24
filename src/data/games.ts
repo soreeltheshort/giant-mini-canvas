@@ -11,14 +11,15 @@ export interface Game {
   screenshots: string[];
   features: string[];
   platforms: string[];
+  inDevelopment: boolean;
 }
 
 export const games: Game[] = [
   {
-    id: "iron-doctrine",
-    title: "Iron Doctrine",
+    id: "third-republic",
+    title: "Third Republic",
     description: "A hex-based tactical wargame where every decision shapes the theater of war.",
-    pitch: "Command combined-arms forces across procedurally generated theaters. Iron Doctrine rewards careful planning, logistics management, and operational-level thinking over reflexes.",
+    pitch: "Command combined-arms forces across procedurally generated theaters. Third Republic rewards careful planning, logistics management, and operational-level thinking over reflexes.",
     image: game1,
     screenshots: [game1],
     features: [
@@ -29,6 +30,7 @@ export const games: Game[] = [
       "Asynchronous multiplayer support",
     ],
     platforms: ["Windows", "macOS", "Linux"],
+    inDevelopment: true,
   },
   {
     id: "void-compact",
@@ -45,6 +47,7 @@ export const games: Game[] = [
       "Narrative events driven by player choices",
     ],
     platforms: ["Windows", "macOS"],
+    inDevelopment: false,
   },
   {
     id: "crown-and-charter",
@@ -61,5 +64,6 @@ export const games: Game[] = [
       "Procedural historical chronicle",
     ],
     platforms: ["Windows", "macOS", "Linux"],
+    inDevelopment: false,
   },
 ];
