@@ -1,56 +1,74 @@
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import GameCard from "@/components/GameCard";
 import Newsletter from "@/components/Newsletter";
 import { games } from "@/data/games";
 
 const Index = () => {
+  const activeGame = games.find((g) => g.inDevelopment);
+  const upcomingGames = games.filter((g) => !g.inDevelopment);
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Featured Games */}
-
-      {/* Featured Games - duplicate removed */}
+      {/* Currently in Development */}
       <section className="border-b border-border">
         <div className="container py-20">
-          <h2 className="font-heading text-2xl font-semibold text-foreground">Featured Games</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Currently in development</p>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {games.map((game) => (
-              <GameCard
-                key={game.id}
-                id={game.id}
-                title={game.title}
-                description={game.description}
-                image={game.image}
-              />
-            ))}
-          </div>
+          <p className="text-xs font-medium uppercase tracking-widest text-gold">Currently in Development</p>
+          {activeGame && (
+            <div className="mt-8 grid gap-8 md:grid-cols-2">
+              <div className="aspect-video overflow-hidden border border-border">
+                <img
+                  src={activeGame.image}
+                  alt={activeGame.title}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="flex flex-col justify-center">
+                <h2 className="font-heading text-3xl font-bold text-foreground">{activeGame.title}</h2>
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{activeGame.description}</p>
+                <div className="mt-6">
+                  <Link
+                    to={`/games/${activeGame.id}`}
+                    className="inline-flex h-10 items-center border border-primary bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                  >
+                    View Details →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Philosophy */}
+      {/* Upcoming Titles */}
       <section className="border-b border-border">
         <div className="container py-20">
-          <div className="max-w-2xl">
-            <h2 className="font-heading text-2xl font-semibold text-foreground">Our Philosophy</h2>
-            <div className="mt-6 space-y-4 text-sm leading-relaxed text-muted-foreground">
-              <p>
-                We believe the best games are systems you learn to read, not stories you're told. 
-                Every mechanic should create meaningful choices. Every number should matter.
-              </p>
-              <p>
-                We draw inspiration from the golden age of strategy gaming—SSI, Microprose, 
-                the early Paradox titles—and bring those ideas forward with modern design 
-                sensibility and clean interfaces.
-              </p>
-              <p>
-                No loot boxes. No filler content. Just deep, replayable systems built by people 
-                who play the games they make.
-              </p>
-            </div>
+          <h2 className="font-heading text-2xl font-semibold text-foreground">Future Titles</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Not yet in development</p>
+          <div className="mt-10 grid gap-6 md:grid-cols-2">
+            {upcomingGames.map((game) => (
+              <div key={game.id} className="border border-border bg-card p-5 opacity-60">
+                <div className="aspect-video overflow-hidden border border-border">
+                  <img
+                    src={game.image}
+                    alt={game.title}
+                    className="h-full w-full object-cover grayscale"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="mt-4 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-heading text-lg font-semibold text-foreground">{game.title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{game.description}</p>
+                  </div>
+                  <span className="shrink-0 border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Planned
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
