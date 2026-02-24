@@ -6,7 +6,6 @@ import { games } from "@/data/games";
 
 const Index = () => {
   const activeGame = games.find((g) => g.inDevelopment);
-  const upcomingGames = games.filter((g) => !g.inDevelopment);
 
   return (
     <div className="min-h-screen bg-background">
@@ -42,36 +41,8 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Upcoming Titles */}
-      <section className="border-b border-border">
-        <div className="container py-20">
-          <h2 className="font-heading text-2xl font-semibold text-foreground">Future Titles</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Not yet in development</p>
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
-            {upcomingGames.map((game) => (
-              <div key={game.id} className="border border-border bg-card p-5 opacity-60">
-                <div className="aspect-video overflow-hidden border border-border">
-                  <img
-                    src={game.image}
-                    alt={game.title}
-                    className="h-full w-full object-cover grayscale"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="mt-4 flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-heading text-lg font-semibold text-foreground">{game.title}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{game.description}</p>
-                  </div>
-                  <span className="shrink-0 border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Planned
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+
+
 
       {/* About */}
       <section className="border-b border-border">
