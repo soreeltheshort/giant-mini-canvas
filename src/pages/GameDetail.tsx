@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Newsletter from "@/components/Newsletter";
-import { games } from "@/data/games";
+import { games } from "@/games";
 
 const GameDetail = () => {
   const { id } = useParams<{ id: string }>();

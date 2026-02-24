@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import GameCard from "@/components/GameCard";
-import { games } from "@/data/games";
+import { games } from "@/games";
 
 const Games = () => {
   return (
