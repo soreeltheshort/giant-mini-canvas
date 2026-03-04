@@ -135,6 +135,7 @@ export type Database = {
           owner_user_id: string
           points_budget: number
           revision: number
+          standing_order: string
           updated_at: string
         }
         Insert: {
@@ -144,6 +145,7 @@ export type Database = {
           owner_user_id: string
           points_budget?: number
           revision?: number
+          standing_order?: string
           updated_at?: string
         }
         Update: {
@@ -153,6 +155,7 @@ export type Database = {
           owner_user_id?: string
           points_budget?: number
           revision?: number
+          standing_order?: string
           updated_at?: string
         }
         Relationships: []
