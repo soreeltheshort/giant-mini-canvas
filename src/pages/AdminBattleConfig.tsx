@@ -39,7 +39,7 @@ interface CombatConst {
   _new?: boolean;
 }
 
-const ALL_GROUPS = ["Core", "Attack", "Special1", "Special2", "Rear", "Retreat"];
+const ALL_GROUPS = ["Core", "Attack", "Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish", "Rear", "Retreat"];
 
 const AdminBattleConfig = () => {
   const { user, loading, isAdmin } = useAuth();

@@ -55,7 +55,8 @@ interface FleetShipEntry {
 
 const SPECIAL_ROLES = ["Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish"];
 
-const GROUPS = ["Core", "Attack", "Special1", "Special2", "Rear", "Retreat"];
+const BASE_GROUPS = ["Core", "Attack"];
+const TAIL_GROUPS = ["Rear", "Retreat"];
 const STANDING_ORDERS = ["move", "attack", "defend"] as const;
 type StandingOrder = typeof STANDING_ORDERS[number];
 const ORDER_LABELS: Record<StandingOrder, string> = { move: "Move", attack: "Attack", defend: "Defend" };
@@ -94,14 +95,24 @@ const FleetBuilder = () => {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
 
+  // Build dynamic GROUPS list: Core, Attack, [role1], [role2], Rear, Retreat
+  const GROUPS = useMemo(() => [
+    ...BASE_GROUPS,
+    special1Role,
+    ...(special2Role !== special1Role ? [special2Role] : []),
+    ...TAIL_GROUPS,
+  ], [special1Role, special2Role]);
+
   const GROUP_LABELS: Record<string, string> = {
     Core: "Core",
     Attack: "Attack",
-    Special1: `Special 1 — ${special1Role}`,
-    Special2: `Special 2 — ${special2Role}`,
     Rear: "Rear",
     Retreat: "Retreat",
   };
+  // Strategy roles use their own name as label
+  for (const role of SPECIAL_ROLES) {
+    GROUP_LABELS[role] = role;
+  }
 
   const handleDrop = useCallback((targetGroup: string) => {
     if (dragIdx !== null) {
@@ -317,14 +328,24 @@ const FleetBuilder = () => {
 
         <div className="mt-4 flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Special 1 Role:</span>
-            <select className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground" value={special1Role} onChange={e => setSpecial1Role(e.target.value)}>
+            <span className="text-sm text-muted-foreground">Strategy 1:</span>
+            <select className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground" value={special1Role} onChange={e => {
+              const oldRole = special1Role;
+              const newRole = e.target.value;
+              setSpecial1Role(newRole);
+              setEntries(prev => prev.map(en => en.tactical_group === oldRole ? { ...en, tactical_group: newRole } : en));
+            }}>
               {SPECIAL_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Special 2 Role:</span>
-            <select className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground" value={special2Role} onChange={e => setSpecial2Role(e.target.value)}>
+            <span className="text-sm text-muted-foreground">Strategy 2:</span>
+            <select className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground" value={special2Role} onChange={e => {
+              const oldRole = special2Role;
+              const newRole = e.target.value;
+              setSpecial2Role(newRole);
+              setEntries(prev => prev.map(en => en.tactical_group === oldRole ? { ...en, tactical_group: newRole } : en));
+            }}>
               {SPECIAL_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
