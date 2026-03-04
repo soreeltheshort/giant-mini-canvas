@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, X, ChevronDown } from "lucide-react";
+import { Plus, X, ChevronDown, GripVertical } from "lucide-react";
 
 interface ShipType {
   id: string;
@@ -55,7 +55,7 @@ interface FleetShipEntry {
 
 const SPECIAL_ROLES = ["Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish"];
 
-const GROUPS = ["Core", "Rear", "Retreat", "Special1", "Special2"];
+const GROUPS = ["Core", "Special1", "Special2", "Rear", "Retreat"];
 const STANDING_ORDERS = ["move", "attack", "defend"] as const;
 type StandingOrder = typeof STANDING_ORDERS[number];
 const ORDER_LABELS: Record<StandingOrder, string> = { move: "Move", attack: "Attack", defend: "Defend" };
@@ -92,6 +92,24 @@ const FleetBuilder = () => {
   const [filterClass, setFilterClass] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedHull, setExpandedHull] = useState<string | null>(null);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
+
+  const GROUP_LABELS: Record<string, string> = {
+    Core: "Core",
+    Special1: `Special 1 — ${special1Role}`,
+    Special2: `Special 2 — ${special2Role}`,
+    Rear: "Rear",
+    Retreat: "Retreat",
+  };
+
+  const handleDrop = useCallback((targetGroup: string) => {
+    if (dragIdx !== null) {
+      setEntries(prev => prev.map((e, i) => i === dragIdx ? { ...e, tactical_group: targetGroup } : e));
+    }
+    setDragIdx(null);
+    setDragOverGroup(null);
+  }, [dragIdx]);
 
   useEffect(() => {
     if (!loading && !user) navigate("/login");
@@ -293,35 +311,69 @@ const FleetBuilder = () => {
 
         {/* Two-panel layout */}
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_380px]">
-          {/* Left: Fleet Composition */}
+          {/* Left: Fleet Composition - Group Lanes */}
           <div>
-            <h2 className="font-heading text-lg font-semibold text-foreground">Fleet Composition</h2>
-            {entries.length === 0 && <p className="mt-4 text-sm text-muted-foreground">Select ships from the catalog on the right to add them.</p>}
-            <div className="mt-4 space-y-2">
-              {entries.map((entry, idx) => {
-                const st = shipTypes.find(s => s.id === entry.ship_type_id);
-                if (!st) return null;
+            <h2 className="font-heading text-lg font-semibold text-foreground mb-4">Fleet Composition</h2>
+            {entries.length === 0 && <p className="mb-4 text-sm text-muted-foreground">Select ships from the catalog on the right to add them.</p>}
+            <div className="space-y-3">
+              {GROUPS.map(group => {
+                const groupEntries = entries.map((e, idx) => ({ ...e, _idx: idx })).filter(e => e.tactical_group === group);
+                const isOver = dragOverGroup === group;
                 return (
-                  <div key={idx} className="flex flex-wrap items-center gap-3 border border-border rounded p-3 bg-card">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-semibold text-foreground">{st.name}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{st.hull_class} · {st.point_cost * entry.quantity}pts</span>
+                  <div
+                    key={group}
+                    className={`border rounded p-3 transition-colors min-h-[60px] ${isOver ? "border-primary bg-primary/5" : "border-border bg-card"}`}
+                    onDragOver={e => { e.preventDefault(); setDragOverGroup(group); }}
+                    onDragLeave={() => setDragOverGroup(null)}
+                    onDrop={e => { e.preventDefault(); handleDrop(group); }}
+                  >
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      {GROUP_LABELS[group]}
+                      {groupEntries.length > 0 && (
+                        <span className="ml-2 text-foreground normal-case">
+                          ({groupEntries.reduce((s, e) => s + e.quantity, 0)} ships)
+                        </span>
+                      )}
+                    </h3>
+                    {groupEntries.length === 0 && (
+                      <p className="text-[10px] text-muted-foreground italic">Drag ships here</p>
+                    )}
+                    <div className="space-y-1">
+                      {groupEntries.map(entry => {
+                        const st = shipTypes.find(s => s.id === entry.ship_type_id);
+                        if (!st) return null;
+                        return (
+                          <div
+                            key={entry._idx}
+                            draggable
+                            onDragStart={() => setDragIdx(entry._idx)}
+                            onDragEnd={() => { setDragIdx(null); setDragOverGroup(null); }}
+                            className={`flex items-center gap-2 rounded px-2 py-1.5 cursor-grab active:cursor-grabbing transition-opacity ${dragIdx === entry._idx ? "opacity-40" : "hover:bg-muted/50"}`}
+                          >
+                            <GripVertical className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            <span className="text-xs font-semibold text-foreground flex-1 min-w-0 truncate">{st.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{st.hull_class}</span>
+                            <span className="text-[10px] text-primary font-semibold">{st.point_cost * entry.quantity}pts</span>
+                            <div className="flex items-center gap-0.5">
+                              <Input
+                                type="number"
+                                className="h-6 w-12 text-[10px] px-1"
+                                min={1}
+                                value={entry.quantity}
+                                onChange={e => updateEntry(entry._idx, { quantity: Math.max(1, Number(e.target.value)) })}
+                                onClick={e => e.stopPropagation()}
+                              />
+                            </div>
+                            <button
+                              onClick={() => removeEntry(entry._idx)}
+                              className="text-destructive hover:text-destructive/80 p-0.5"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">Qty:</span>
-                      <Input type="number" className="h-8 w-16" min={1} value={entry.quantity}
-                        onChange={e => updateEntry(idx, { quantity: Math.max(1, Number(e.target.value)) })} />
-                    </div>
-                    <select
-                      className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground"
-                      value={entry.tactical_group}
-                      onChange={e => updateEntry(idx, { tactical_group: e.target.value })}
-                    >
-                      {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
-                    </select>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeEntry(idx)}>
-                      <X className="h-4 w-4" />
-                    </Button>
                   </div>
                 );
               })}
