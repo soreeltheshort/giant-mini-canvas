@@ -25,11 +25,89 @@ export interface ShipTypeData {
   point_cost: number;
   hull: number;
   armor: number;
-  lasers: number;
-  missiles: number;
   sensor_rating: number;
-  max_jump: number;
-  supply_capacity: number;
+  cbt_speed: number;
+  map_speed: number;
+  target_preference: string;
+  // Lasers
+  laser_2_5cm: number;
+  laser_4_5cm: number;
+  laser_6_5cm: number;
+  laser_10cm: number;
+  laser_14cm: number;
+  laser_20cm: number;
+  laser_28cm: number;
+  laser_50cm: number;
+  // Missiles
+  missile_10kg: number;
+  missile_50kg: number;
+  missile_100kg: number;
+  missile_half_kt: number;
+  // Special
+  fighter_bay: number;
+  fighter_storage: number;
+  gun_ship_link: number;
+  gunship_storage: number;
+  ground_invasion: number;
+  repair_pod: number;
+  supply_pod: number;
+  scout_sensors: number;
+}
+
+interface WeaponMount {
+  name: string;
+  type: "laser" | "missile";
+  count: number;
+  damage: number;       // per mount
+  baseHitChance: number;
+}
+
+// Weapon stats lookup: damage per mount and base hit chance
+const WEAPON_STATS: Record<string, { type: "laser" | "missile"; damage: number; hitChance: number }> = {
+  laser_2_5cm:    { type: "laser",   damage: 1,  hitChance: 0.75 },
+  laser_4_5cm:    { type: "laser",   damage: 2,  hitChance: 0.70 },
+  laser_6_5cm:    { type: "laser",   damage: 3,  hitChance: 0.68 },
+  laser_10cm:     { type: "laser",   damage: 5,  hitChance: 0.65 },
+  laser_14cm:     { type: "laser",   damage: 8,  hitChance: 0.60 },
+  laser_20cm:     { type: "laser",   damage: 12, hitChance: 0.55 },
+  laser_28cm:     { type: "laser",   damage: 18, hitChance: 0.50 },
+  laser_50cm:     { type: "laser",   damage: 30, hitChance: 0.45 },
+  missile_10kg:   { type: "missile", damage: 6,  hitChance: 0.50 },
+  missile_50kg:   { type: "missile", damage: 15, hitChance: 0.45 },
+  missile_100kg:  { type: "missile", damage: 25, hitChance: 0.40 },
+  missile_half_kt:{ type: "missile", damage: 50, hitChance: 0.35 },
+};
+
+const WEAPON_DISPLAY_NAMES: Record<string, string> = {
+  laser_2_5cm: "2.5cm Laser",
+  laser_4_5cm: "4.5cm Laser",
+  laser_6_5cm: "6.5cm Laser",
+  laser_10cm: "10cm Laser",
+  laser_14cm: "14cm Laser",
+  laser_20cm: "20cm Laser",
+  laser_28cm: "28cm Laser",
+  laser_50cm: "50cm Laser",
+  missile_10kg: "10kg Missile",
+  missile_50kg: "50kg Missile",
+  missile_100kg: "100kg Missile",
+  missile_half_kt: "½kt Missile",
+};
+
+function getWeaponMounts(shipType: ShipTypeData): WeaponMount[] {
+  const mounts: WeaponMount[] = [];
+  for (const [key, stats] of Object.entries(WEAPON_STATS)) {
+    const count = (shipType as any)[key] as number;
+    if (count > 0) {
+      mounts.push({
+        name: WEAPON_DISPLAY_NAMES[key],
+        type: stats.type,
+        count,
+        damage: stats.damage,
+        baseHitChance: stats.hitChance,
+      });
+    }
+  }
+  return mounts;
 }
 
 export interface FleetShipData {
@@ -54,10 +132,9 @@ interface ShipInstance {
   maxHull: number;
   currentHull: number;
   armor: number;
-  lasers: number;
-  missiles: number;
+  weapons: WeaponMount[];
   sensor_rating: number;
-  max_jump: number;
+  cbt_speed: number;
   tacticalGroup: string;
   fleet: "A" | "B";
   crippled: boolean;
@@ -134,10 +211,9 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           maxHull: fs.ship_type.hull,
           currentHull: fs.ship_type.hull,
           armor: fs.ship_type.armor,
-          lasers: fs.ship_type.lasers,
-          missiles: fs.ship_type.missiles,
+          weapons: getWeaponMounts(fs.ship_type),
           sensor_rating: fs.ship_type.sensor_rating,
-          max_jump: fs.ship_type.max_jump,
+          cbt_speed: fs.ship_type.cbt_speed,
           tacticalGroup: fs.tactical_group,
           fleet,
           crippled: false,
@@ -154,15 +230,15 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     `Battle begins: ${fleetA.name} vs ${fleetB.name}`,
     `Battle initialized with seed "${seedStr}". Fleet A: ${shipsA.length} ships, Fleet B: ${shipsB.length} ships.`);
 
-  // 2) INITIATIVE
-  const minJumpA = shipsA.length ? Math.min(...shipsA.map(s => s.max_jump)) : 0;
-  const minJumpB = shipsB.length ? Math.min(...shipsB.map(s => s.max_jump)) : 0;
-  const initA = 100 + minJumpA * 5;
-  const initB = 100 + minJumpB * 5;
+  // 2) INITIATIVE (based on combat speed)
+  const avgSpeedA = shipsA.length ? Math.round(shipsA.reduce((s, sh) => s + sh.cbt_speed, 0) / shipsA.length) : 0;
+  const avgSpeedB = shipsB.length ? Math.round(shipsB.reduce((s, sh) => s + sh.cbt_speed, 0) / shipsB.length) : 0;
+  const initA = 100 + avgSpeedA * 5;
+  const initB = 100 + avgSpeedB * 5;
 
-  emit("initiative", { initA, initB, minJumpA, minJumpB },
+  emit("initiative", { initA, initB, avgSpeedA, avgSpeedB },
     `Initiative: Fleet A=${initA}, Fleet B=${initB}. ${initA >= initB ? "Fleet A" : "Fleet B"} has initiative.`,
-    `Initiative calc: Base 100 + movement*5. A: 100+${minJumpA}*5=${initA}. B: 100+${minJumpB}*5=${initB}.`);
+    `Initiative calc: Base 100 + avgCbtSpeed*5. A: 100+${avgSpeedA}*5=${initA}. B: 100+${avgSpeedB}*5=${initB}.`);
 
   tick++;
 
@@ -175,7 +251,6 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
 
   function selectTarget(attacker: ShipInstance, enemies: ShipInstance[]): ShipInstance | null {
     const priority = getTargetPriority(attacker.class);
-    // Prioritize damaged but not crippled
     for (const hullClass of priority) {
       const damaged = enemies.filter(e => e.hull_class === hullClass && !e.crippled && e.currentHull < e.maxHull);
       if (damaged.length > 0) return damaged[Math.floor(rng() * damaged.length)];
@@ -188,43 +263,48 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     return remaining.length > 0 ? remaining[Math.floor(rng() * remaining.length)] : null;
   }
 
-  function fireWeapon(attacker: ShipInstance, target: ShipInstance, weaponType: "laser" | "missile", attackMod: number, defenseMod: number) {
-    const power = weaponType === "laser" ? attacker.lasers : attacker.missiles;
-    if (power <= 0) return;
+  function fireWeaponsOfType(attacker: ShipInstance, target: ShipInstance, weaponType: "laser" | "missile", attackMod: number, defenseMod: number) {
+    const mounts = attacker.weapons.filter(w => w.type === weaponType);
+    if (mounts.length === 0) return;
 
-    const baseHitChance = weaponType === "laser" ? 0.65 : 0.45;
-    const hitChance = Math.min(0.95, Math.max(0.1, baseHitChance + attackMod - defenseMod));
-    const roll = rng();
-    const hit = roll <= hitChance;
+    for (const mount of mounts) {
+      if (target.crippled) break;
 
-    if (hit) {
-      const baseDmg = weaponType === "laser" ? power * 2 : power * 4;
-      const dmgVariance = 0.7 + rng() * 0.6;
-      const rawDmg = Math.round(baseDmg * dmgVariance);
-      const actualDmg = Math.max(1, rawDmg - target.armor);
-      target.currentHull -= actualDmg;
+      const hitChance = Math.min(0.95, Math.max(0.1, mount.baseHitChance + attackMod - defenseMod));
+      const roll = rng();
+      const hit = roll <= hitChance;
 
-      if (target.currentHull <= 0) {
-        target.currentHull = 0;
-        target.crippled = true;
+      if (hit) {
+        const baseDmg = mount.damage * mount.count;
+        const dmgVariance = 0.7 + rng() * 0.6;
+        const rawDmg = Math.round(baseDmg * dmgVariance);
+        const actualDmg = Math.max(1, rawDmg - target.armor);
+        target.currentHull -= actualDmg;
+
+        if (target.currentHull <= 0) {
+          target.currentHull = 0;
+          target.crippled = true;
+        }
+
+        emit("fire_hit", {
+          attacker: attacker.instanceId, target: target.instanceId,
+          weaponName: mount.name, weaponType: mount.type, mountCount: mount.count,
+          roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
+          rawDmg, armor: target.armor, actualDmg, remainingHull: target.currentHull, crippled: target.crippled
+        },
+          `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${mount.name} (×${mount.count}) for ${actualDmg} damage.${target.crippled ? " DESTROYED!" : ""}`,
+          `${mount.name} ×${mount.count} fire: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! Raw dmg=${rawDmg}, armor=${target.armor}, actual=${actualDmg}. Hull: ${target.currentHull}/${target.maxHull}.${target.crippled ? " Ship crippled." : ""}`
+        );
+      } else {
+        emit("fire_miss", {
+          attacker: attacker.instanceId, target: target.instanceId,
+          weaponName: mount.name, weaponType: mount.type, mountCount: mount.count,
+          roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100)
+        },
+          `${attacker.name} (${attacker.fleet}) fires ${mount.name} (×${mount.count}) at ${target.name} (${target.fleet}) — miss.`,
+          `${mount.name} ×${mount.count} fire: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Miss.`
+        );
       }
-
-      emit("fire_hit", {
-        attacker: attacker.instanceId, target: target.instanceId, weapon: weaponType,
-        roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
-        rawDmg, armor: target.armor, actualDmg, remainingHull: target.currentHull, crippled: target.crippled
-      },
-        `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${weaponType}s for ${actualDmg} damage.${target.crippled ? " DESTROYED!" : ""}`,
-        `${weaponType} fire: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! Raw dmg=${rawDmg}, armor=${target.armor}, actual=${actualDmg}. Hull: ${target.currentHull}/${target.maxHull}.${target.crippled ? " Ship crippled." : ""}`
-      );
-    } else {
-      emit("fire_miss", {
-        attacker: attacker.instanceId, target: target.instanceId, weapon: weaponType,
-        roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100)
-      },
-        `${attacker.name} (${attacker.fleet}) fires ${weaponType}s at ${target.name} (${target.fleet}) — miss.`,
-        `${weaponType} fire: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Miss.`
-      );
     }
   }
 
@@ -256,7 +336,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         if (!target) continue;
         const attackMod = phase.modA + getGroupModifier(attacker.tacticalGroup, "attack");
         const defenseMod = getGroupModifier(target.tacticalGroup, "defense");
-        fireWeapon(attacker, target, weaponType, attackMod, defenseMod);
+        fireWeaponsOfType(attacker, target, weaponType, attackMod, defenseMod);
       }
 
       // Fleet B fires at A
@@ -268,7 +348,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         if (!target) continue;
         const attackMod = phase.modB + getGroupModifier(attacker.tacticalGroup, "attack");
         const defenseMod = getGroupModifier(target.tacticalGroup, "defense");
-        fireWeapon(attacker, target, weaponType, attackMod, defenseMod);
+        fireWeaponsOfType(attacker, target, weaponType, attackMod, defenseMod);
       }
     }
   }
