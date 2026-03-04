@@ -268,42 +268,43 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     if (mounts.length === 0) return;
 
     for (const mount of mounts) {
-      if (target.crippled) break;
+      for (let gun = 0; gun < mount.count; gun++) {
+        if (target.crippled) break;
 
-      const hitChance = Math.min(0.95, Math.max(0.1, mount.baseHitChance + attackMod - defenseMod));
-      const roll = rng();
-      const hit = roll <= hitChance;
+        const hitChance = Math.min(0.95, Math.max(0.1, mount.baseHitChance + attackMod - defenseMod));
+        const roll = rng();
+        const hit = roll <= hitChance;
 
-      if (hit) {
-        const baseDmg = mount.damage * mount.count;
-        const dmgVariance = 0.7 + rng() * 0.6;
-        const rawDmg = Math.round(baseDmg * dmgVariance);
-        const actualDmg = Math.max(1, rawDmg - target.armor);
-        target.currentHull -= actualDmg;
+        if (hit) {
+          const dmgVariance = 0.7 + rng() * 0.6;
+          const rawDmg = Math.round(mount.damage * dmgVariance);
+          const actualDmg = Math.max(1, rawDmg - target.armor);
+          target.currentHull -= actualDmg;
 
-        if (target.currentHull <= 0) {
-          target.currentHull = 0;
-          target.crippled = true;
+          if (target.currentHull <= 0) {
+            target.currentHull = 0;
+            target.crippled = true;
+          }
+
+          emit("fire_hit", {
+            attacker: attacker.instanceId, target: target.instanceId,
+            weaponName: mount.name, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
+            roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
+            rawDmg, armor: target.armor, actualDmg, remainingHull: target.currentHull, crippled: target.crippled
+          },
+            `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage.${target.crippled ? " DESTROYED!" : ""}`,
+            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! Raw dmg=${rawDmg}, armor=${target.armor}, actual=${actualDmg}. Hull: ${target.currentHull}/${target.maxHull}.${target.crippled ? " Ship crippled." : ""}`
+          );
+        } else {
+          emit("fire_miss", {
+            attacker: attacker.instanceId, target: target.instanceId,
+            weaponName: mount.name, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
+            roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100)
+          },
+            `${attacker.name} (${attacker.fleet}) fires ${mount.name} #${gun + 1} at ${target.name} (${target.fleet}) — miss.`,
+            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Miss.`
+          );
         }
-
-        emit("fire_hit", {
-          attacker: attacker.instanceId, target: target.instanceId,
-          weaponName: mount.name, weaponType: mount.type, mountCount: mount.count,
-          roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
-          rawDmg, armor: target.armor, actualDmg, remainingHull: target.currentHull, crippled: target.crippled
-        },
-          `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${mount.name} (×${mount.count}) for ${actualDmg} damage.${target.crippled ? " DESTROYED!" : ""}`,
-          `${mount.name} ×${mount.count} fire: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! Raw dmg=${rawDmg}, armor=${target.armor}, actual=${actualDmg}. Hull: ${target.currentHull}/${target.maxHull}.${target.crippled ? " Ship crippled." : ""}`
-        );
-      } else {
-        emit("fire_miss", {
-          attacker: attacker.instanceId, target: target.instanceId,
-          weaponName: mount.name, weaponType: mount.type, mountCount: mount.count,
-          roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100)
-        },
-          `${attacker.name} (${attacker.fleet}) fires ${mount.name} (×${mount.count}) at ${target.name} (${target.fleet}) — miss.`,
-          `${mount.name} ×${mount.count} fire: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Miss.`
-        );
       }
     }
   }
