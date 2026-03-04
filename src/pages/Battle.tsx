@@ -180,6 +180,50 @@ const Battle = () => {
               </div>
             </div>
 
+            {/* Final ship status */}
+            <div className="mt-6 grid gap-6 md:grid-cols-2">
+              {[
+                { label: "Fleet A", ships: result.finalState.fleetA, snap: fleetASnap },
+                { label: "Fleet B", ships: result.finalState.fleetB, snap: fleetBSnap },
+              ].map(({ label, ships, snap }) => (
+                <div key={label} className="border border-border rounded p-4">
+                  <h3 className="font-heading text-sm font-bold text-foreground mb-2">{label}: {snap?.name}</h3>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="py-1 text-left text-muted-foreground">Ship</th>
+                        <th className="py-1 text-left text-muted-foreground">Group</th>
+                        <th className="py-1 text-right text-muted-foreground">Hull</th>
+                        <th className="py-1 text-left pl-2 text-muted-foreground">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ships.map(s => {
+                        const status = s.crippled
+                          ? "Destroyed"
+                          : s.currentHull <= s.maxHull / 2
+                          ? "Crippled"
+                          : "Operational";
+                        const statusColor = status === "Destroyed"
+                          ? "text-destructive"
+                          : status === "Crippled"
+                          ? "text-yellow-500"
+                          : "text-green-500";
+                        return (
+                          <tr key={s.instanceId} className="border-b border-border/50">
+                            <td className="py-1 text-foreground">{s.name}</td>
+                            <td className="py-1 text-muted-foreground">{s.tacticalGroup}</td>
+                            <td className="py-1 text-right text-foreground">{s.currentHull}/{s.maxHull}</td>
+                            <td className={`py-1 pl-2 font-medium ${statusColor}`}>{status}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+
             <div className="mt-4 space-y-1">
               {result.events.map(event => (
                 <div key={event.seq} className="border-l-2 border-border pl-3">
