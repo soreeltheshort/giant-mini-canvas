@@ -193,6 +193,7 @@ export interface GroupModConfig {
 export interface CombatConstants {
   hit_chance_min: number;
   hit_chance_max: number;
+  base_hit_chance: number;
   dmg_variance_min: number;
   dmg_variance_range: number;
   critical_hit_chance: number;
@@ -224,6 +225,7 @@ const DEFAULT_GROUP_MODS: GroupModConfig[] = [
 const DEFAULT_COMBAT_CONSTANTS: CombatConstants = {
   hit_chance_min: 0.10,
   hit_chance_max: 0.95,
+  base_hit_chance: 0.50,
   dmg_variance_min: 0.70,
   dmg_variance_range: 0.60,
   critical_hit_chance: 0.05,
@@ -330,7 +332,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         if (target.crippled) break;
 
         const speedDiff = (attacker.cbt_speed - target.cbt_speed) * cc.speed_hit_modifier;
-        const hitChance = Math.min(cc.hit_chance_max, Math.max(cc.hit_chance_min, mount.baseHitChance + attackMod - defenseMod + speedDiff));
+        const hitChance = Math.min(cc.hit_chance_max, Math.max(cc.hit_chance_min, cc.base_hit_chance + attackMod - defenseMod + speedDiff));
         const roll = rng();
         const hit = roll <= hitChance;
 
