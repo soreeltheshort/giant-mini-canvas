@@ -1,0 +1,1 @@
+ALTER TABLE public.fleets ADD COLUMN standing_order text NOT NULL DEFAULT 'move';
