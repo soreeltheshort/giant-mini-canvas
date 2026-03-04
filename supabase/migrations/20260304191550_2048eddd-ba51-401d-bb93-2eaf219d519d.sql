@@ -1,0 +1,1 @@
+ALTER TABLE public.fleet_ships DROP CONSTRAINT fleet_ships_tactical_group_check;
