@@ -5,13 +5,9 @@ import { Button } from "@/components/ui/button";
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, isTester, signOut } = useAuth();
 
-  const navLinks = [
-    { to: "/", label: "Home" },
-    { to: "/games", label: "Games" },
-    { to: "/manual", label: "Manual" },
-  ];
+  const canAccessGameFeatures = isAdmin || isTester;
 
   const handleNewsletter = () => {
     if (location.pathname === "/") {
@@ -28,21 +24,27 @@ const Header = () => {
           MiniGiantGames
         </Link>
         <nav className="flex items-center gap-6">
-          {navLinks.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              className={`text-sm font-medium transition-colors hover:text-foreground ${
-                location.pathname === link.to ? "text-foreground" : "text-muted-foreground"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-          {user && (
-            <Link to="/dashboard" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/dashboard") ? "text-foreground" : "text-muted-foreground"}`}>
-              Dashboard
-            </Link>
+          <Link
+            to="/"
+            className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/" ? "text-foreground" : "text-muted-foreground"}`}
+          >
+            Home
+          </Link>
+          <Link
+            to="/games"
+            className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/games" ? "text-foreground" : "text-muted-foreground"}`}
+          >
+            Games
+          </Link>
+          {user && canAccessGameFeatures && (
+            <>
+              <Link to="/manual" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/manual" ? "text-foreground" : "text-muted-foreground"}`}>
+                Manual
+              </Link>
+              <Link to="/dashboard" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/dashboard") ? "text-foreground" : "text-muted-foreground"}`}>
+                Dashboard
+              </Link>
+            </>
           )}
           {user && isAdmin && (
             <>
