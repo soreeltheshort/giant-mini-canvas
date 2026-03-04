@@ -10,6 +10,7 @@ const Header = () => {
   const navLinks = [
     { to: "/", label: "Home" },
     { to: "/games", label: "Games" },
+    { to: "/manual", label: "Manual" },
   ];
 
   const handleNewsletter = () => {
