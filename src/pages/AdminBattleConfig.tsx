@@ -17,6 +17,7 @@ interface Phase {
   groups_b: string[];
   mod_a: number;
   mod_b: number;
+  required_group: string | null;
   _dirty?: boolean;
   _new?: boolean;
 }
@@ -83,7 +84,7 @@ const AdminBattleConfig = () => {
     const maxSeq = phases.reduce((m, p) => Math.max(m, p.seq_order), 0);
     setPhases(prev => [...prev, {
       id: crypto.randomUUID(), seq_order: maxSeq + 1, name: "New Phase",
-      groups_a: [], groups_b: [], mod_a: 0, mod_b: 0, _dirty: true, _new: true,
+      groups_a: [], groups_b: [], mod_a: 0, mod_b: 0, required_group: null, _dirty: true, _new: true,
     }]);
   };
 
@@ -143,7 +144,7 @@ const AdminBattleConfig = () => {
     let errors = 0;
 
     for (const p of phases.filter(p => p._dirty)) {
-      const payload = { id: p.id, seq_order: p.seq_order, name: p.name, groups_a: p.groups_a, groups_b: p.groups_b, mod_a: p.mod_a, mod_b: p.mod_b };
+      const payload = { id: p.id, seq_order: p.seq_order, name: p.name, groups_a: p.groups_a, groups_b: p.groups_b, mod_a: p.mod_a, mod_b: p.mod_b, required_group: p.required_group };
       const { error } = p._new
         ? await supabase.from("battle_phases").insert(payload)
         : await supabase.from("battle_phases").update(payload).eq("id", p.id);
@@ -202,9 +203,10 @@ const AdminBattleConfig = () => {
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Name</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Groups A</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Groups B</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-20">Mod A</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-20">Mod B</th>
-                  <th className="px-3 py-2 w-10"></th>
+                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-20">Mod A</th>
+                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-20">Mod B</th>
+                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-32">Required Group</th>
+                   <th className="px-3 py-2 w-10"></th>
                 </tr>
               </thead>
               <tbody>
@@ -239,10 +241,18 @@ const AdminBattleConfig = () => {
                     <td className="px-1 py-1">
                       <Input className="h-8 w-20 text-xs" type="number" step="0.05" value={p.mod_a} onChange={e => updatePhase(p.id, "mod_a", parseFloat(e.target.value) || 0)} />
                     </td>
-                    <td className="px-1 py-1">
-                      <Input className="h-8 w-20 text-xs" type="number" step="0.05" value={p.mod_b} onChange={e => updatePhase(p.id, "mod_b", parseFloat(e.target.value) || 0)} />
-                    </td>
-                    <td className="px-1 py-1">
+                     <td className="px-1 py-1">
+                       <Input className="h-8 w-20 text-xs" type="number" step="0.05" value={p.mod_b} onChange={e => updatePhase(p.id, "mod_b", parseFloat(e.target.value) || 0)} />
+                     </td>
+                     <td className="px-1 py-1">
+                       <select className="h-8 w-32 text-xs rounded border border-border bg-background text-foreground px-1"
+                         value={p.required_group || ""}
+                         onChange={e => updatePhase(p.id, "required_group", e.target.value || null)}>
+                         <option value="">None</option>
+                         {ALL_GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
+                       </select>
+                     </td>
+                     <td className="px-1 py-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deletePhase(p.id, p._new)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>

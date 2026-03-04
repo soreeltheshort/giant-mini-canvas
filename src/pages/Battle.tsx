@@ -69,7 +69,7 @@ const Battle = () => {
       supabase.from("combat_constants").select("*"),
     ]);
     const phases: PhaseConfig[] | undefined = phasesData?.map(p => ({
-      name: p.name, groupsA: p.groups_a, groupsB: p.groups_b, modA: Number(p.mod_a), modB: Number(p.mod_b),
+      name: p.name, groupsA: p.groups_a, groupsB: p.groups_b, modA: Number(p.mod_a), modB: Number(p.mod_b), requiredGroup: p.required_group ?? null,
     }));
     const groupMods: GroupModConfig[] | undefined = modsData?.map(g => ({
       group_name: g.group_name, attack_mod: Number(g.attack_mod), defense_mod: Number(g.defense_mod),

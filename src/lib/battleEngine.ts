@@ -181,6 +181,7 @@ export interface PhaseConfig {
   groupsB: string[];
   modA: number;
   modB: number;
+  requiredGroup?: string | null;
 }
 
 export interface GroupModConfig {
@@ -382,6 +383,17 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     const bInPhase = alive("B").filter(s => phase.groupsB.includes(s.tacticalGroup));
 
     if (aInPhase.length === 0 && bInPhase.length === 0) continue;
+
+    // Skip phase if required group is specified but no ships from either fleet belong to it
+    if (phase.requiredGroup) {
+      const hasRequired = [...aInPhase, ...bInPhase].some(s => s.tacticalGroup === phase.requiredGroup);
+      if (!hasRequired) {
+        emit("phase_skipped", { phase: phase.name, requiredGroup: phase.requiredGroup },
+          `Phase "${phase.name}" skipped — no ships in required group "${phase.requiredGroup}".`,
+          `Phase "${phase.name}" requires group "${phase.requiredGroup}" but none found. Skipping.`);
+        continue;
+      }
+    }
 
     tick++;
     emit("phase_start", { phase: phase.name, aShips: aInPhase.length, bShips: bInPhase.length },

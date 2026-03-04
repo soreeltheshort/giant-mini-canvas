@@ -1,0 +1,1 @@
+ALTER TABLE public.battle_phases ADD COLUMN required_group text DEFAULT NULL;
