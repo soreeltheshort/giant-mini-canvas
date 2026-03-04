@@ -134,6 +134,7 @@ export type Database = {
           name: string
           owner_user_id: string
           points_budget: number
+          readiness: number
           revision: number
           standing_order: string
           updated_at: string
@@ -144,6 +145,7 @@ export type Database = {
           name: string
           owner_user_id: string
           points_budget?: number
+          readiness?: number
           revision?: number
           standing_order?: string
           updated_at?: string
@@ -154,6 +156,7 @@ export type Database = {
           name?: string
           owner_user_id?: string
           points_budget?: number
+          readiness?: number
           revision?: number
           standing_order?: string
           updated_at?: string
