@@ -14,16 +14,251 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      battle_events: {
+        Row: {
+          admin_explain_text: string
+          battle_run_id: string
+          event_type: string
+          id: string
+          payload_json: Json
+          public_summary_text: string
+          seq: number
+          tick: number
+        }
+        Insert: {
+          admin_explain_text?: string
+          battle_run_id: string
+          event_type: string
+          id?: string
+          payload_json?: Json
+          public_summary_text?: string
+          seq: number
+          tick?: number
+        }
+        Update: {
+          admin_explain_text?: string
+          battle_run_id?: string
+          event_type?: string
+          id?: string
+          payload_json?: Json
+          public_summary_text?: string
+          seq?: number
+          tick?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_events_battle_run_id_fkey"
+            columns: ["battle_run_id"]
+            isOneToOne: false
+            referencedRelation: "battle_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_runs: {
+        Row: {
+          created_at: string
+          created_by_user_id: string | null
+          fleet_a_snapshot_json: Json
+          fleet_b_snapshot_json: Json
+          id: string
+          result_json: Json | null
+          seed: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id?: string | null
+          fleet_a_snapshot_json: Json
+          fleet_b_snapshot_json: Json
+          id?: string
+          result_json?: Json | null
+          seed: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string | null
+          fleet_a_snapshot_json?: Json
+          fleet_b_snapshot_json?: Json
+          id?: string
+          result_json?: Json | null
+          seed?: string
+        }
+        Relationships: []
+      }
+      fleet_ships: {
+        Row: {
+          fleet_id: string
+          id: string
+          notes: string | null
+          quantity: number
+          ship_type_id: string
+          tactical_group: string
+        }
+        Insert: {
+          fleet_id: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          ship_type_id: string
+          tactical_group?: string
+        }
+        Update: {
+          fleet_id?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          ship_type_id?: string
+          tactical_group?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_ships_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "fleets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_ships_ship_type_id_fkey"
+            columns: ["ship_type_id"]
+            isOneToOne: false
+            referencedRelation: "ship_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleets: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_user_id: string
+          points_budget: number
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_user_id: string
+          points_budget?: number
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id?: string
+          points_budget?: number
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ship_types: {
+        Row: {
+          armor: number
+          class: string
+          hull: number
+          hull_class: string
+          id: string
+          lasers: number
+          max_jump: number
+          missiles: number
+          name: string
+          point_cost: number
+          sensor_rating: number
+          supply_capacity: number
+        }
+        Insert: {
+          armor?: number
+          class: string
+          hull: number
+          hull_class: string
+          id?: string
+          lasers?: number
+          max_jump?: number
+          missiles?: number
+          name: string
+          point_cost: number
+          sensor_rating?: number
+          supply_capacity?: number
+        }
+        Update: {
+          armor?: number
+          class?: string
+          hull?: number
+          hull_class?: string
+          id?: string
+          lasers?: number
+          max_jump?: number
+          missiles?: number
+          name?: string
+          point_cost?: number
+          sensor_rating?: number
+          supply_capacity?: number
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +385,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

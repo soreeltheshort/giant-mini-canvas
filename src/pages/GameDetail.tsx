@@ -1,12 +1,16 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Newsletter from "@/components/Newsletter";
 import { games } from "@/games";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 const GameDetail = () => {
   const { id } = useParams<{ id: string }>();
   const game = games.find((g) => g.id === id);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   if (!game) {
     return (
@@ -22,6 +26,8 @@ const GameDetail = () => {
       </div>
     );
   }
+
+  const isThirdRepublic = game.id === "third-republic";
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,15 +47,30 @@ const GameDetail = () => {
           <h1 className="font-heading text-3xl font-bold text-foreground">{game.title}</h1>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground">{game.pitch}</p>
 
+          {/* Auth / Combat Testing CTA */}
+          {isThirdRepublic && (
+            <div className="mt-6 flex gap-3">
+              {user ? (
+                <Button onClick={() => navigate("/dashboard")} className="bg-gold text-secondary-foreground hover:bg-gold/90">
+                  ⚔ Combat Testing
+                </Button>
+              ) : (
+                <>
+                  <Link to="/login">
+                    <Button>Sign In</Button>
+                  </Link>
+                  <Link to="/signup">
+                    <Button variant="outline">Create Free Account</Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Platforms */}
           <div className="mt-6 flex gap-2">
             {game.platforms.map((p) => (
-              <span
-                key={p}
-                className="border border-border px-3 py-1 text-xs text-muted-foreground"
-              >
-                {p}
-              </span>
+              <span key={p} className="border border-border px-3 py-1 text-xs text-muted-foreground">{p}</span>
             ))}
           </div>
 

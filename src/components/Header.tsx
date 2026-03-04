@@ -1,8 +1,11 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, isAdmin, signOut } = useAuth();
 
   const navLinks = [
     { to: "/", label: "Home" },
@@ -23,7 +26,7 @@ const Header = () => {
         <Link to="/" className="font-heading text-lg font-semibold tracking-tight text-foreground">
           MiniGiantGames
         </Link>
-        <nav className="flex items-center gap-8">
+        <nav className="flex items-center gap-6">
           {navLinks.map((link) => (
             <Link
               key={link.to}
@@ -35,12 +38,31 @@ const Header = () => {
               {link.label}
             </Link>
           ))}
+          {user && (
+            <Link to="/dashboard" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/dashboard") ? "text-foreground" : "text-muted-foreground"}`}>
+              Dashboard
+            </Link>
+          )}
+          {user && isAdmin && (
+            <Link to="/admin/battle-debug" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+              Debug
+            </Link>
+          )}
           <button
             onClick={handleNewsletter}
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            Join Newsletter
+            Newsletter
           </button>
+          {user ? (
+            <Button variant="ghost" size="sm" onClick={() => { signOut(); navigate("/"); }}>
+              Sign Out
+            </Button>
+          ) : (
+            <Link to="/login">
+              <Button variant="outline" size="sm">Sign In</Button>
+            </Link>
+          )}
         </nav>
       </div>
     </header>
