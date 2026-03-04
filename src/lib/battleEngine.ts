@@ -192,18 +192,21 @@ export interface CombatConstants {
 
 // Fallback defaults (used if DB data not provided)
 const DEFAULT_PHASES: PhaseConfig[] = [
-  { name: "Skirmishers vs Skirmishers", groupsA: ["Special1"], groupsB: ["Special1"], modA: 0.1, modB: 0.1 },
-  { name: "Outflank vs Flank", groupsA: ["Special2"], groupsB: ["Special1", "Special2"], modA: 0.1, modB: -0.1 },
-  { name: "Flank vs Cover Retreat", groupsA: ["Special1", "Special2"], groupsB: ["Retreat"], modA: 0, modB: 0 },
+  { name: "Skirmishers vs Skirmishers", groupsA: ["Skirmish"], groupsB: ["Skirmish"], modA: 0.1, modB: 0.1 },
+  { name: "Outflank vs Flank", groupsA: ["Outflank"], groupsB: ["Flank", "Outflank"], modA: 0.1, modB: -0.1 },
+  { name: "Flank vs Cover Retreat", groupsA: ["Flank", "Outflank", "Skirmish"], groupsB: ["Retreat"], modA: 0, modB: 0 },
   { name: "Attack vs Attack", groupsA: ["Core"], groupsB: ["Core"], modA: 0, modB: 0 },
-  { name: "Main Engagement", groupsA: ["Core", "Special1", "Special2"], groupsB: ["Core", "Rear", "Special1", "Special2"], modA: 0, modB: 0 },
+  { name: "Main Engagement", groupsA: ["Core", "Flank", "Outflank", "Skirmish"], groupsB: ["Core", "Rear", "Flank", "Outflank", "Skirmish"], modA: 0, modB: 0 },
 ];
 
 const DEFAULT_GROUP_MODS: GroupModConfig[] = [
   { group_name: "Core", attack_mod: 0, defense_mod: 0 },
   { group_name: "Attack", attack_mod: 0, defense_mod: 0 },
-  { group_name: "Special1", attack_mod: 0.1, defense_mod: -0.1 },
-  { group_name: "Special2", attack_mod: 0.1, defense_mod: -0.1 },
+  { group_name: "Flank", attack_mod: 0.1, defense_mod: -0.1 },
+  { group_name: "Outflank", attack_mod: 0.1, defense_mod: -0.1 },
+  { group_name: "Skirmish", attack_mod: 0.1, defense_mod: -0.1 },
+  { group_name: "Attack Planet", attack_mod: 0, defense_mod: 0 },
+  { group_name: "Cover Retreat", attack_mod: 0, defense_mod: 0 },
   { group_name: "Rear", attack_mod: -0.1, defense_mod: 0.2 },
   { group_name: "Retreat", attack_mod: 0, defense_mod: 0 },
 ];
