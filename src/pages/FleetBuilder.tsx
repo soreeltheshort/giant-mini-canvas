@@ -189,6 +189,33 @@ const FleetBuilder = () => {
   const fighterOver = fighterUsed > fighterCapacity;
   const gunshipOver = gunshipUsed > gunshipCapacity;
 
+  // Per-group capacity calculations
+  const groupCapacities = useMemo(() => {
+    const caps: Record<string, { fighterCap: number; fighterUsed: number; gunshipCap: number; gunshipUsed: number }> = {};
+    for (const group of GROUPS) {
+      const groupEntries = entries.filter(e => e.tactical_group === group);
+      let fCap = 0, fUsed = 0, gCap = 0, gUsed = 0;
+      for (const e of groupEntries) {
+        const st = shipTypes.find(s => s.id === e.ship_type_id);
+        if (!st) continue;
+        fCap += st.fighter_bay * e.quantity;
+        gCap += st.gun_ship_link * e.quantity;
+        if (st.hull_class === "FL") fUsed += 1 * e.quantity;
+        if (st.hull_class === "FH") fUsed += 2 * e.quantity;
+        if (st.hull_class === "GS") gUsed += 1 * e.quantity;
+      }
+      caps[group] = { fighterCap: fCap, fighterUsed: fUsed, gunshipCap: gCap, gunshipUsed: gUsed };
+    }
+    return caps;
+  }, [entries, shipTypes, GROUPS]);
+
+  const groupsOverCapacity = useMemo(() => {
+    return GROUPS.filter(g => {
+      const c = groupCapacities[g];
+      return c && (c.fighterUsed > c.fighterCap || c.gunshipUsed > c.gunshipCap);
+    });
+  }, [groupCapacities, GROUPS]);
+
   const readinessData = READINESS_LEVELS.find(l => l.value === readiness)!;
   const totalMaintenance = Math.round(baseMaintenance * readinessData.maintenance * 100) / 100;
 
@@ -260,8 +287,17 @@ const FleetBuilder = () => {
 
   const save = async () => {
     if (entries.length === 0) { toast({ title: "Empty fleet", description: "Add at least one ship.", variant: "destructive" }); return; }
-    if (fighterOver) { toast({ title: "Over fighter capacity", description: `${fighterUsed} fighters but only ${fighterCapacity} fighter bay slots.`, variant: "destructive" }); return; }
-    if (gunshipOver) { toast({ title: "Over gunship capacity", description: `${gunshipUsed} gunships but only ${gunshipCapacity} gunship link slots.`, variant: "destructive" }); return; }
+    if (fighterOver) { toast({ title: "Over fleet fighter capacity", description: `${fighterUsed} fighters but only ${fighterCapacity} fighter bay slots fleet-wide.`, variant: "destructive" }); return; }
+    if (gunshipOver) { toast({ title: "Over fleet gunship capacity", description: `${gunshipUsed} gunships but only ${gunshipCapacity} gunship link slots fleet-wide.`, variant: "destructive" }); return; }
+    if (groupsOverCapacity.length > 0) {
+      const g = groupsOverCapacity[0];
+      const gc = groupCapacities[g];
+      const msgs: string[] = [];
+      if (gc.fighterUsed > gc.fighterCap) msgs.push(`fighters ${gc.fighterUsed}/${gc.fighterCap}`);
+      if (gc.gunshipUsed > gc.gunshipCap) msgs.push(`gunships ${gc.gunshipUsed}/${gc.gunshipCap}`);
+      toast({ title: `Group "${g}" over capacity`, description: msgs.join(", "), variant: "destructive" });
+      return;
+    }
     setSaving(true);
 
     if (editId) {
@@ -383,14 +419,38 @@ const FleetBuilder = () => {
                     onDragLeave={() => setDragOverGroup(null)}
                     onDrop={e => { e.preventDefault(); handleDrop(group); }}
                   >
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                      {GROUP_LABELS[group]}
-                      {groupEntries.length > 0 && (
-                        <span className="ml-2 text-foreground normal-case">
-                          ({groupEntries.reduce((s, e) => s + e.quantity, 0)} ships)
-                        </span>
-                      )}
-                    </h3>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {GROUP_LABELS[group]}
+                        {groupEntries.length > 0 && (
+                          <span className="ml-2 text-foreground normal-case">
+                            ({groupEntries.reduce((s, e) => s + e.quantity, 0)} ships)
+                          </span>
+                        )}
+                      </h3>
+                      {(() => {
+                        const gc = groupCapacities[group];
+                        if (!gc) return null;
+                        const hasAny = gc.fighterCap > 0 || gc.gunshipCap > 0 || gc.fighterUsed > 0 || gc.gunshipUsed > 0;
+                        if (!hasAny) return null;
+                        const fOver = gc.fighterUsed > gc.fighterCap;
+                        const gOver = gc.gunshipUsed > gc.gunshipCap;
+                        return (
+                          <div className="flex gap-3">
+                            {(gc.fighterCap > 0 || gc.fighterUsed > 0) && (
+                              <span className={`text-[10px] ${fOver ? "text-destructive font-bold" : "text-muted-foreground"}`}>
+                                ✈ {gc.fighterUsed}/{gc.fighterCap}{fOver && " ⚠"}
+                              </span>
+                            )}
+                            {(gc.gunshipCap > 0 || gc.gunshipUsed > 0) && (
+                              <span className={`text-[10px] ${gOver ? "text-destructive font-bold" : "text-muted-foreground"}`}>
+                                🚀 {gc.gunshipUsed}/{gc.gunshipCap}{gOver && " ⚠"}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
                     {groupEntries.length === 0 && (
                       <p className="text-[10px] text-muted-foreground italic">Drag ships here</p>
                     )}
@@ -436,7 +496,7 @@ const FleetBuilder = () => {
             </div>
 
             <div className="mt-6 flex gap-3">
-              <Button onClick={save} disabled={saving || overCapacity}>
+              <Button onClick={save} disabled={saving || overCapacity || groupsOverCapacity.length > 0}>
                 {saving ? "Saving..." : "Save Fleet"}
               </Button>
               <Button variant="outline" onClick={() => navigate("/dashboard")}>Cancel</Button>
