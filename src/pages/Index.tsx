@@ -3,9 +3,12 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Newsletter from "@/components/Newsletter";
 import { games } from "@/games";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const activeGame = games.find((g) => g.inDevelopment);
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
@@ -18,31 +21,31 @@ const Index = () => {
           {activeGame && (
             <div className="mt-8 grid gap-8 md:grid-cols-2">
               <div className="aspect-video overflow-hidden border border-border">
-                <img
-                  src={activeGame.image}
-                  alt={activeGame.title}
-                  className="h-full w-full object-cover"
-                />
+                <img src={activeGame.image} alt={activeGame.title} className="h-full w-full object-cover" />
               </div>
               <div className="flex flex-col justify-center">
                 <h2 className="font-heading text-3xl font-bold text-foreground">{activeGame.title}</h2>
                 <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{activeGame.description}</p>
-                <div className="mt-6">
-                  <Link
-                    to={`/games/${activeGame.id}`}
-                    className="inline-flex h-10 items-center border border-primary bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                  >
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link to={`/games/${activeGame.id}`} className="inline-flex h-10 items-center border border-primary bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
                     View Details →
                   </Link>
+                  {activeGame.id === "third-republic" && !user && (
+                    <Link to="/signup">
+                      <Button variant="outline">Create Free Account</Button>
+                    </Link>
+                  )}
+                  {activeGame.id === "third-republic" && user && (
+                    <Link to="/dashboard">
+                      <Button className="bg-gold text-secondary-foreground hover:bg-gold/90">⚔ Combat Testing</Button>
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
           )}
         </div>
       </section>
-
-
-
 
       {/* Newsletter */}
       <section id="newsletter">
