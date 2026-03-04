@@ -329,7 +329,6 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
 
     for (const mount of mounts) {
       for (let gun = 0; gun < mount.count; gun++) {
-        if (target.crippled) break;
 
         const speedDiff = (attacker.cbt_speed - target.cbt_speed) * cc.speed_hit_modifier;
         const hitChance = Math.min(cc.hit_chance_max, Math.max(cc.hit_chance_min, cc.base_hit_chance + attackMod - defenseMod + speedDiff));
@@ -346,21 +345,18 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           const armorReduction = isCrit ? 0 : Math.max(target.armor - mount.armorPenetration, 0);
           const actualDmg = Math.max(0, rawDmg - armorReduction);
           target.currentHull -= actualDmg;
-
-          if (target.currentHull <= 0) {
-            target.currentHull = 0;
-            target.crippled = true;
-          }
+          // Crippling is deferred to after the entire weapon pass
+          const wouldCripple = target.currentHull <= 0;
 
           const critTag = isCrit ? " CRITICAL!" : "";
           emit("fire_hit", {
             attacker: attacker.instanceId, target: target.instanceId,
             weaponName: mount.name, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
             roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
-            rawDmg, armor: target.armor, actualDmg, remainingHull: target.currentHull, crippled: target.crippled, critical: isCrit
+            rawDmg, armor: target.armor, actualDmg, remainingHull: Math.max(0, target.currentHull), crippled: wouldCripple, critical: isCrit
           },
-            `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage.${critTag}${target.crippled ? " DESTROYED!" : ""}`,
-            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit!${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${target.currentHull}/${target.maxHull}.${target.crippled ? " Ship crippled." : ""}`
+            `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage.${critTag}${wouldCripple ? " DESTROYED!" : ""}`,
+            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit!${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${Math.max(0, target.currentHull)}/${target.maxHull}.${wouldCripple ? " Ship crippled." : ""}`
           );
         } else {
           emit("fire_miss", {
@@ -400,34 +396,52 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
       `Phase: ${phase.name} — ${aInPhase.length} vs ${bInPhase.length} ships engaged.`,
       `Phase "${phase.name}" begins. Groups A: [${phase.groupsA}], Groups B: [${phase.groupsB}]. Phase mods: A attack+${phase.modA}, B defense+${phase.modB}.`);
 
-    // Fire sequence: Lasers, Missiles, Lasers
+    // Fire sequence: Lasers, Missiles, Lasers — all ships fire simultaneously per weapon pass
     const fireSequence: ("laser" | "missile")[] = ["laser", "missile", "laser"];
 
     for (const weaponType of fireSequence) {
-      if (alive("A").length === 0 || alive("B").length === 0) break;
+      // All non-crippled ships from BOTH fleets fire simultaneously
+      // Targets are selected before any damage is applied in this pass,
+      // and crippling is deferred until after all ships have fired.
+      const pendingCripples: ShipInstance[] = [];
 
-      // Fleet A fires at B (only targets ships in phase groups)
+      // Gather all attackers from both fleets with their targets
+      const firingOrders: { attacker: ShipInstance; target: ShipInstance; attackMod: number; defenseMod: number }[] = [];
+
       for (const attacker of aInPhase) {
         if (attacker.crippled) continue;
         const enemies = bInPhase.filter(s => !s.crippled);
-        if (enemies.length === 0) break;
+        if (enemies.length === 0) continue;
         const target = selectTarget(attacker, enemies);
         if (!target) continue;
         const attackMod = phase.modA + getGroupModifier(attacker.tacticalGroup, "attack", activeMods);
         const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
-        fireWeaponsOfType(attacker, target, weaponType, attackMod, defenseMod);
+        firingOrders.push({ attacker, target, attackMod, defenseMod });
       }
 
-      // Fleet B fires at A (only targets ships in phase groups)
       for (const attacker of bInPhase) {
         if (attacker.crippled) continue;
         const enemies = aInPhase.filter(s => !s.crippled);
-        if (enemies.length === 0) break;
+        if (enemies.length === 0) continue;
         const target = selectTarget(attacker, enemies);
         if (!target) continue;
         const attackMod = phase.modB + getGroupModifier(attacker.tacticalGroup, "attack", activeMods);
         const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
-        fireWeaponsOfType(attacker, target, weaponType, attackMod, defenseMod);
+        firingOrders.push({ attacker, target, attackMod, defenseMod });
+      }
+
+      // Everyone fires — damage is applied immediately but crippling is deferred
+      for (const order of firingOrders) {
+        if (order.attacker.crippled) continue; // skip if crippled by earlier deferred resolution (shouldn't happen, but safe)
+        fireWeaponsOfType(order.attacker, order.target, weaponType, order.attackMod, order.defenseMod);
+      }
+
+      // Now apply deferred crippling: any ship at 0 hull that wasn't already crippled
+      for (const ship of [...aInPhase, ...bInPhase]) {
+        if (!ship.crippled && ship.currentHull <= 0) {
+          ship.currentHull = 0;
+          ship.crippled = true;
+        }
       }
     }
   }
