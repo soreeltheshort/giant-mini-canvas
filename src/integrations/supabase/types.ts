@@ -184,45 +184,108 @@ export type Database = {
       ship_types: {
         Row: {
           armor: number
+          cbt_speed: number
           class: string
+          fighter_bay: number
+          fighter_storage: number
+          ground_invasion: number
+          gun_ship_link: number
+          gunship_storage: number
           hull: number
           hull_class: string
           id: string
-          lasers: number
-          max_jump: number
-          missiles: number
+          laser_10cm: number
+          laser_14cm: number
+          laser_2_5cm: number
+          laser_20cm: number
+          laser_28cm: number
+          laser_4_5cm: number
+          laser_50cm: number
+          laser_6_5cm: number
+          maintenance: number
+          map_speed: number
+          missile_100kg: number
+          missile_10kg: number
+          missile_50kg: number
+          missile_half_kt: number
           name: string
           point_cost: number
+          repair_pod: number
+          scout_sensors: number
           sensor_rating: number
-          supply_capacity: number
+          ship_id: string | null
+          supply_pod: number
+          target_preference: string
         }
         Insert: {
           armor?: number
+          cbt_speed?: number
           class: string
+          fighter_bay?: number
+          fighter_storage?: number
+          ground_invasion?: number
+          gun_ship_link?: number
+          gunship_storage?: number
           hull: number
           hull_class: string
           id?: string
-          lasers?: number
-          max_jump?: number
-          missiles?: number
+          laser_10cm?: number
+          laser_14cm?: number
+          laser_2_5cm?: number
+          laser_20cm?: number
+          laser_28cm?: number
+          laser_4_5cm?: number
+          laser_50cm?: number
+          laser_6_5cm?: number
+          maintenance?: number
+          map_speed?: number
+          missile_100kg?: number
+          missile_10kg?: number
+          missile_50kg?: number
+          missile_half_kt?: number
           name: string
           point_cost: number
+          repair_pod?: number
+          scout_sensors?: number
           sensor_rating?: number
-          supply_capacity?: number
+          ship_id?: string | null
+          supply_pod?: number
+          target_preference?: string
         }
         Update: {
           armor?: number
+          cbt_speed?: number
           class?: string
+          fighter_bay?: number
+          fighter_storage?: number
+          ground_invasion?: number
+          gun_ship_link?: number
+          gunship_storage?: number
           hull?: number
           hull_class?: string
           id?: string
-          lasers?: number
-          max_jump?: number
-          missiles?: number
+          laser_10cm?: number
+          laser_14cm?: number
+          laser_2_5cm?: number
+          laser_20cm?: number
+          laser_28cm?: number
+          laser_4_5cm?: number
+          laser_50cm?: number
+          laser_6_5cm?: number
+          maintenance?: number
+          map_speed?: number
+          missile_100kg?: number
+          missile_10kg?: number
+          missile_50kg?: number
+          missile_half_kt?: number
           name?: string
           point_cost?: number
+          repair_pod?: number
+          scout_sensors?: number
           sensor_rating?: number
-          supply_capacity?: number
+          ship_id?: string | null
+          supply_pod?: number
+          target_preference?: string
         }
         Relationships: []
       }
@@ -246,6 +309,7 @@ export type Database = {
       }
       weapons: {
         Row: {
+          armor_penetration: number
           created_at: string
           damage: number
           hit_chance: number
@@ -259,6 +323,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          armor_penetration?: number
           created_at?: string
           damage?: number
           hit_chance?: number
@@ -272,6 +337,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          armor_penetration?: number
           created_at?: string
           damage?: number
           hit_chance?: number
