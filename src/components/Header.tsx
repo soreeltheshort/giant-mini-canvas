@@ -44,9 +44,14 @@ const Header = () => {
             </Link>
           )}
           {user && isAdmin && (
-            <Link to="/admin/battle-debug" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
-              Debug
-            </Link>
+            <>
+              <Link to="/admin/battle-debug" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                Debug
+              </Link>
+              <Link to="/admin/weapons" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                Weapons
+              </Link>
+            </>
           )}
           <button
             onClick={handleNewsletter}

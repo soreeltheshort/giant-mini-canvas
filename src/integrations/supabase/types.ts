@@ -244,6 +244,48 @@ export type Database = {
         }
         Relationships: []
       }
+      weapons: {
+        Row: {
+          created_at: string
+          damage: number
+          hit_chance: number
+          id: string
+          name: string
+          point_cost: number
+          range: string
+          rate_of_fire: number
+          special_notes: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          damage?: number
+          hit_chance?: number
+          id?: string
+          name: string
+          point_cost?: number
+          range?: string
+          rate_of_fire?: number
+          special_notes?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          damage?: number
+          hit_chance?: number
+          id?: string
+          name?: string
+          point_cost?: number
+          range?: string
+          rate_of_fire?: number
+          special_notes?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
