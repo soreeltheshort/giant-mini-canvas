@@ -331,7 +331,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           const rawDmg = isCrit ? Math.round(baseDmg * cc.critical_hit_multiplier) : baseDmg;
           // Crits bypass armor entirely; otherwise armor reduced by weapon's penetration
           const armorReduction = isCrit ? 0 : Math.max(target.armor - mount.armorPenetration, 0);
-          const actualDmg = Math.max(1, rawDmg - armorReduction);
+          const actualDmg = Math.max(0, rawDmg - armorReduction);
           target.currentHull -= actualDmg;
 
           if (target.currentHull <= 0) {
