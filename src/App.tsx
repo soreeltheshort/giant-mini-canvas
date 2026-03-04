@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import FleetBuilder from "./pages/FleetBuilder";
 import Battle from "./pages/Battle";
 import AdminBattleDebug from "./pages/AdminBattleDebug";
+import AdminWeapons from "./pages/AdminWeapons";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/fleet-builder" element={<FleetBuilder />} />
             <Route path="/battle" element={<Battle />} />
             <Route path="/admin/battle-debug" element={<AdminBattleDebug />} />
+            <Route path="/admin/weapons" element={<AdminWeapons />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
