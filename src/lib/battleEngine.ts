@@ -60,22 +60,23 @@ interface WeaponMount {
   count: number;
   damage: number;       // per mount
   baseHitChance: number;
+  armorPenetration: number;
 }
 
 // Weapon stats lookup: damage per mount and base hit chance
-const WEAPON_STATS: Record<string, { type: "laser" | "missile"; damage: number; hitChance: number }> = {
-  laser_2_5cm:    { type: "laser",   damage: 1,  hitChance: 0.75 },
-  laser_4_5cm:    { type: "laser",   damage: 2,  hitChance: 0.70 },
-  laser_6_5cm:    { type: "laser",   damage: 3,  hitChance: 0.68 },
-  laser_10cm:     { type: "laser",   damage: 5,  hitChance: 0.65 },
-  laser_14cm:     { type: "laser",   damage: 8,  hitChance: 0.60 },
-  laser_20cm:     { type: "laser",   damage: 12, hitChance: 0.55 },
-  laser_28cm:     { type: "laser",   damage: 18, hitChance: 0.50 },
-  laser_50cm:     { type: "laser",   damage: 30, hitChance: 0.45 },
-  missile_10kg:   { type: "missile", damage: 6,  hitChance: 0.50 },
-  missile_50kg:   { type: "missile", damage: 15, hitChance: 0.45 },
-  missile_100kg:  { type: "missile", damage: 25, hitChance: 0.40 },
-  missile_half_kt:{ type: "missile", damage: 50, hitChance: 0.35 },
+const WEAPON_STATS: Record<string, { type: "laser" | "missile"; damage: number; hitChance: number; armorPenetration: number }> = {
+  laser_2_5cm:    { type: "laser",   damage: 1,  hitChance: 0.75, armorPenetration: 0 },
+  laser_4_5cm:    { type: "laser",   damage: 2,  hitChance: 0.70, armorPenetration: 0 },
+  laser_6_5cm:    { type: "laser",   damage: 3,  hitChance: 0.68, armorPenetration: 1 },
+  laser_10cm:     { type: "laser",   damage: 5,  hitChance: 0.65, armorPenetration: 1 },
+  laser_14cm:     { type: "laser",   damage: 8,  hitChance: 0.60, armorPenetration: 2 },
+  laser_20cm:     { type: "laser",   damage: 12, hitChance: 0.55, armorPenetration: 3 },
+  laser_28cm:     { type: "laser",   damage: 18, hitChance: 0.50, armorPenetration: 4 },
+  laser_50cm:     { type: "laser",   damage: 30, hitChance: 0.45, armorPenetration: 6 },
+  missile_10kg:   { type: "missile", damage: 6,  hitChance: 0.50, armorPenetration: 1 },
+  missile_50kg:   { type: "missile", damage: 15, hitChance: 0.45, armorPenetration: 3 },
+  missile_100kg:  { type: "missile", damage: 25, hitChance: 0.40, armorPenetration: 5 },
+  missile_half_kt:{ type: "missile", damage: 50, hitChance: 0.35, armorPenetration: 8 },
 };
 
 const WEAPON_DISPLAY_NAMES: Record<string, string> = {
@@ -104,6 +105,7 @@ function getWeaponMounts(shipType: ShipTypeData): WeaponMount[] {
         count,
         damage: stats.damage,
         baseHitChance: stats.hitChance,
+        armorPenetration: stats.armorPenetration,
       });
     }
   }
@@ -327,7 +329,9 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           const dmgVariance = cc.dmg_variance_min + rng() * cc.dmg_variance_range;
           const baseDmg = Math.round(mount.damage * dmgVariance);
           const rawDmg = isCrit ? Math.round(baseDmg * cc.critical_hit_multiplier) : baseDmg;
-          const actualDmg = Math.max(1, rawDmg - target.armor);
+          // Crits bypass armor entirely; otherwise armor reduced by weapon's penetration
+          const armorReduction = isCrit ? 0 : Math.max(target.armor - mount.armorPenetration, 0);
+          const actualDmg = Math.max(1, rawDmg - armorReduction);
           target.currentHull -= actualDmg;
 
           if (target.currentHull <= 0) {
@@ -343,7 +347,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
             rawDmg, armor: target.armor, actualDmg, remainingHull: target.currentHull, crippled: target.crippled, critical: isCrit
           },
             `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage.${critTag}${target.crippled ? " DESTROYED!" : ""}`,
-            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit!${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, actual=${actualDmg}. Hull: ${target.currentHull}/${target.maxHull}.${target.crippled ? " Ship crippled." : ""}`
+            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit!${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${target.currentHull}/${target.maxHull}.${target.crippled ? " Ship crippled." : ""}`
           );
         } else {
           emit("fire_miss", {
