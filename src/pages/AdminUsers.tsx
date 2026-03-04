@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Shield, ShieldOff, FlaskConical, FlaskConicalOff } from "lucide-react";
+import { Shield, ShieldOff, FlaskConical, FlaskConicalOff, LogIn } from "lucide-react";
 
 interface UserWithRole {
   user_id: string;
@@ -70,6 +70,40 @@ const AdminUsers = () => {
       toast({ title: `${role.charAt(0).toUpperCase() + role.slice(1)} role granted` });
     }
     await loadUsers();
+  };
+
+  const impersonate = async (targetUserId: string, displayName: string | null) => {
+    if (targetUserId === user?.id) {
+      toast({ title: "You're already logged in as yourself", variant: "destructive" });
+      return;
+    }
+
+    const confirmed = window.confirm(`Log in as ${displayName || "this user"}? You will be signed out of your admin account.`);
+    if (!confirmed) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke("impersonate", {
+        body: { target_user_id: targetUserId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      // Sign out current session first
+      await supabase.auth.signOut();
+
+      // Verify the magic link token to create a session
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: data.token_hash,
+        type: "magiclink",
+      });
+
+      if (verifyError) throw verifyError;
+
+      toast({ title: `Now logged in as ${displayName || data.email}` });
+      navigate("/dashboard");
+    } catch (err: any) {
+      toast({ title: "Impersonation failed", description: err.message, variant: "destructive" });
+    }
   };
 
   if (loading) return <div className="min-h-screen bg-background"><Header /><div className="container py-20 text-center text-muted-foreground">Loading...</div><Footer /></div>;
@@ -149,6 +183,16 @@ const AdminUsers = () => {
                               <><FlaskConical className="mr-1 h-3 w-3" /> Make Tester</>
                             )}
                           </Button>
+                          {!isSelf && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs"
+                              onClick={() => impersonate(u.user_id, u.display_name)}
+                            >
+                              <LogIn className="mr-1 h-3 w-3" /> Log in as
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
