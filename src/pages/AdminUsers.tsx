@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Shield, ShieldOff } from "lucide-react";
+import { Shield, ShieldOff, FlaskConical, FlaskConicalOff } from "lucide-react";
 
 interface UserWithRole {
   user_id: string;
@@ -31,13 +31,10 @@ const AdminUsers = () => {
 
   const loadUsers = async () => {
     setLoadingData(true);
-
-    // Load all profiles and all roles
     const [{ data: profiles }, { data: roles }] = await Promise.all([
       supabase.from("profiles").select("user_id, display_name, created_at").order("created_at"),
       supabase.from("user_roles").select("user_id, role"),
     ]);
-
     if (!profiles) { setLoadingData(false); return; }
 
     const roleMap = new Map<string, string[]>();
@@ -53,27 +50,25 @@ const AdminUsers = () => {
       created_at: p.created_at,
       roles: roleMap.get(p.user_id) || [],
     })));
-
     setLoadingData(false);
   };
 
-  const toggleAdmin = async (targetUserId: string, currentlyAdmin: boolean) => {
-    if (targetUserId === user?.id && currentlyAdmin) {
+  const toggleRole = async (targetUserId: string, role: "admin" | "tester", hasRole: boolean) => {
+    if (targetUserId === user?.id && role === "admin" && hasRole) {
       toast({ title: "Cannot remove your own admin role", variant: "destructive" });
       return;
     }
 
-    if (currentlyAdmin) {
+    if (hasRole) {
       const { error } = await supabase.from("user_roles").delete()
-        .eq("user_id", targetUserId).eq("role", "admin");
+        .eq("user_id", targetUserId).eq("role", role);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-      toast({ title: "Admin role removed" });
+      toast({ title: `${role.charAt(0).toUpperCase() + role.slice(1)} role removed` });
     } else {
-      const { error } = await supabase.from("user_roles").insert({ user_id: targetUserId, role: "admin" });
+      const { error } = await supabase.from("user_roles").insert({ user_id: targetUserId, role });
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-      toast({ title: "Admin role granted" });
+      toast({ title: `${role.charAt(0).toUpperCase() + role.slice(1)} role granted` });
     }
-
     await loadUsers();
   };
 
@@ -101,7 +96,8 @@ const AdminUsers = () => {
               </thead>
               <tbody>
                 {users.map(u => {
-                  const isAdminUser = u.roles.includes("admin");
+                  const hasAdmin = u.roles.includes("admin");
+                  const hasTester = u.roles.includes("tester");
                   const isSelf = u.user_id === user?.id;
                   return (
                     <tr key={u.user_id} className="border-b border-border">
@@ -116,26 +112,44 @@ const AdminUsers = () => {
                       <td className="px-4 py-2">
                         <div className="flex gap-1">
                           {u.roles.map(r => (
-                            <span key={r} className={`px-2 py-0.5 text-xs rounded ${r === "admin" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                            <span key={r} className={`px-2 py-0.5 text-xs rounded ${
+                              r === "admin" ? "bg-primary text-primary-foreground" :
+                              r === "tester" ? "bg-accent text-accent-foreground" :
+                              "bg-muted text-muted-foreground"
+                            }`}>
                               {r}
                             </span>
                           ))}
                         </div>
                       </td>
                       <td className="px-4 py-2">
-                        <Button
-                          size="sm"
-                          variant={isAdminUser ? "outline" : "default"}
-                          className="text-xs"
-                          disabled={isSelf && isAdminUser}
-                          onClick={() => toggleAdmin(u.user_id, isAdminUser)}
-                        >
-                          {isAdminUser ? (
-                            <><ShieldOff className="mr-1 h-3 w-3" /> Remove Admin</>
-                          ) : (
-                            <><Shield className="mr-1 h-3 w-3" /> Make Admin</>
-                          )}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant={hasAdmin ? "outline" : "default"}
+                            className="text-xs"
+                            disabled={isSelf && hasAdmin}
+                            onClick={() => toggleRole(u.user_id, "admin", hasAdmin)}
+                          >
+                            {hasAdmin ? (
+                              <><ShieldOff className="mr-1 h-3 w-3" /> Remove Admin</>
+                            ) : (
+                              <><Shield className="mr-1 h-3 w-3" /> Make Admin</>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={hasTester ? "outline" : "secondary"}
+                            className="text-xs"
+                            onClick={() => toggleRole(u.user_id, "tester", hasTester)}
+                          >
+                            {hasTester ? (
+                              <><FlaskConicalOff className="mr-1 h-3 w-3" /> Remove Tester</>
+                            ) : (
+                              <><FlaskConical className="mr-1 h-3 w-3" /> Make Tester</>
+                            )}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
