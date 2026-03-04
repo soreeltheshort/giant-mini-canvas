@@ -81,7 +81,6 @@ const FleetBuilder = () => {
 
   const [shipTypes, setShipTypes] = useState<ShipType[]>([]);
   const [fleetName, setFleetName] = useState("New Fleet");
-  const [pointsBudget, setPointsBudget] = useState(100);
   const [entries, setEntries] = useState<FleetShipEntry[]>([]);
   const [saving, setSaving] = useState(false);
   const [revision, setRevision] = useState(1);
@@ -126,7 +125,6 @@ const FleetBuilder = () => {
       supabase.from("fleets").select("*").eq("id", editId).single().then(({ data }) => {
         if (data) {
           setFleetName(data.name);
-          setPointsBudget(data.points_budget);
           setRevision(data.revision);
           setStandingOrder((data.standing_order as StandingOrder) || "move");
           setReadiness(data.readiness ?? 2);
@@ -153,9 +151,8 @@ const FleetBuilder = () => {
   const readinessData = READINESS_LEVELS.find(l => l.value === readiness)!;
   const totalMaintenance = Math.round(baseMaintenance * readinessData.maintenance * 100) / 100;
 
-  const overBudget = totalCost > pointsBudget;
+  const overBudget = false;
   const noCore = entries.length > 0 && !entries.some(e => e.tactical_group === "Core" && e.quantity > 0);
-  const allRetreat = entries.length > 0 && entries.every(e => e.tactical_group === "Retreat");
 
   const filteredShips = useMemo(() => {
     let ships = shipTypes;
@@ -221,17 +218,16 @@ const FleetBuilder = () => {
   };
 
   const save = async () => {
-    if (overBudget) { toast({ title: "Over budget", description: "Remove ships to fit the points budget.", variant: "destructive" }); return; }
     if (entries.length === 0) { toast({ title: "Empty fleet", description: "Add at least one ship.", variant: "destructive" }); return; }
     setSaving(true);
 
     if (editId) {
-      await supabase.from("fleets").update({ name: fleetName, points_budget: pointsBudget, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, revision: revision + 1 }).eq("id", editId);
+      await supabase.from("fleets").update({ name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, revision: revision + 1 }).eq("id", editId);
       await supabase.from("fleet_ships").delete().eq("fleet_id", editId);
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: editId, ...e })));
     } else {
       const { data: newFleet, error } = await supabase.from("fleets")
-        .insert({ owner_user_id: user!.id, name: fleetName, points_budget: pointsBudget, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role })
+        .insert({ owner_user_id: user!.id, name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role })
         .select().single();
       if (error || !newFleet) { toast({ title: "Error", description: error?.message, variant: "destructive" }); setSaving(false); return; }
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: newFleet.id, ...e })));
@@ -278,12 +274,8 @@ const FleetBuilder = () => {
             </p>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Budget:</span>
-              <Input type="number" className="w-24" value={pointsBudget} onChange={e => setPointsBudget(Number(e.target.value))} />
-              <span className={`text-sm font-semibold ${overBudget ? "text-destructive" : "text-foreground"}`}>
-                {totalCost} / {pointsBudget} pts
-              </span>
+            <div className="flex items-center gap-2 h-10">
+              <span className="text-sm font-semibold text-foreground">{totalCost} pts</span>
             </div>
             <p className="mt-1 text-[10px] text-muted-foreground">
               Maintenance: {totalMaintenance} ({baseMaintenance} base × {readinessData.maintenance})
@@ -307,7 +299,7 @@ const FleetBuilder = () => {
         </div>
 
         {noCore && <p className="mt-2 text-sm text-secondary">⚠ Fleet has no ships in the Core group.</p>}
-        {allRetreat && <p className="mt-2 text-sm text-secondary">⚠ All ships are in Retreat.</p>}
+        
 
         {/* Two-panel layout */}
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_380px]">
