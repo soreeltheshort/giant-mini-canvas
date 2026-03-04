@@ -122,7 +122,6 @@ export interface FleetSnapshot {
   id: string;
   name: string;
   ships: FleetShipData[];
-  points_budget: number;
 }
 
 interface ShipInstance {

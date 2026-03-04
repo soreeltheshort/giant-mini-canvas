@@ -13,7 +13,6 @@ interface FleetOption {
   id: string;
   name: string;
   owner_user_id: string;
-  points_budget: number;
 }
 
 const Battle = () => {
@@ -35,7 +34,7 @@ const Battle = () => {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    supabase.from("fleets").select("id, name, owner_user_id, points_budget").then(({ data }) => {
+    supabase.from("fleets").select("id, name, owner_user_id").then(({ data }) => {
       if (data) setFleets(data);
     });
   }, []);
@@ -48,7 +47,6 @@ const Battle = () => {
     return {
       id: fleet.id,
       name: fleet.name,
-      points_budget: fleet.points_budget,
       ships: ships.map((s: any) => ({
         ship_type: s.ship_types,
         quantity: s.quantity,
@@ -146,14 +144,14 @@ const Battle = () => {
             <label className="text-xs text-muted-foreground">Fleet A</label>
             <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={fleetAId} onChange={e => setFleetAId(e.target.value)}>
               <option value="">Select fleet...</option>
-              {fleets.map(f => <option key={f.id} value={f.id}>{f.name} ({f.points_budget}pts)</option>)}
+              {fleets.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Fleet B</label>
             <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={fleetBId} onChange={e => setFleetBId(e.target.value)}>
               <option value="">Select fleet...</option>
-              {fleets.map(f => <option key={f.id} value={f.id}>{f.name} ({f.points_budget}pts)</option>)}
+              {fleets.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
           <div>
