@@ -17,7 +17,7 @@ interface BattleRun {
 }
 
 const AdminBattleDebug = () => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isTester } = useAuth();
   const navigate = useNavigate();
   const [battles, setBattles] = useState<BattleRun[]>([]);
   const [selectedBattle, setSelectedBattle] = useState<BattleRun | null>(null);
@@ -28,7 +28,7 @@ const AdminBattleDebug = () => {
   const [filterType, setFilterType] = useState("");
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) navigate("/dashboard");
+    if (!loading && (!user || (!isAdmin && !isTester))) navigate("/dashboard");
   }, [loading, user, isAdmin, navigate]);
 
   useEffect(() => {
