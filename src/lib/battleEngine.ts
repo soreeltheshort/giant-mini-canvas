@@ -394,10 +394,10 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     for (const weaponType of fireSequence) {
       if (alive("A").length === 0 || alive("B").length === 0) break;
 
-      // Fleet A fires at B
+      // Fleet A fires at B (only targets ships in phase groups)
       for (const attacker of aInPhase) {
         if (attacker.crippled) continue;
-        const enemies = alive("B");
+        const enemies = bInPhase.filter(s => !s.crippled);
         if (enemies.length === 0) break;
         const target = selectTarget(attacker, enemies);
         if (!target) continue;
@@ -406,10 +406,10 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         fireWeaponsOfType(attacker, target, weaponType, attackMod, defenseMod);
       }
 
-      // Fleet B fires at A
+      // Fleet B fires at A (only targets ships in phase groups)
       for (const attacker of bInPhase) {
         if (attacker.crippled) continue;
-        const enemies = alive("A");
+        const enemies = aInPhase.filter(s => !s.crippled);
         if (enemies.length === 0) break;
         const target = selectTarget(attacker, enemies);
         if (!target) continue;
