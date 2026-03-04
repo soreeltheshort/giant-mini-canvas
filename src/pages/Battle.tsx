@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { runBattle, eventsToJSON, eventsToCSV, eventsToTXT, FleetSnapshot, BattleResult, BattleEvent, PhaseConfig, GroupModConfig } from "@/lib/battleEngine";
+import { runBattle, eventsToJSON, eventsToCSV, eventsToTXT, FleetSnapshot, BattleResult, BattleEvent, PhaseConfig, GroupModConfig, CombatConstants } from "@/lib/battleEngine";
 
 interface FleetOption {
   id: string;
@@ -65,9 +65,10 @@ const Battle = () => {
     if (!snapA || !snapB) { toast({ title: "Failed to load fleets", variant: "destructive" }); setRunning(false); return; }
 
     // Load battle config from DB
-    const [{ data: phasesData }, { data: modsData }] = await Promise.all([
+    const [{ data: phasesData }, { data: modsData }, { data: constsData }] = await Promise.all([
       supabase.from("battle_phases").select("*").order("seq_order"),
       supabase.from("group_modifiers").select("*"),
+      supabase.from("combat_constants").select("*"),
     ]);
     const phases: PhaseConfig[] | undefined = phasesData?.map(p => ({
       name: p.name, groupsA: p.groups_a, groupsB: p.groups_b, modA: Number(p.mod_a), modB: Number(p.mod_b),
@@ -75,11 +76,15 @@ const Battle = () => {
     const groupMods: GroupModConfig[] | undefined = modsData?.map(g => ({
       group_name: g.group_name, attack_mod: Number(g.attack_mod), defense_mod: Number(g.defense_mod),
     }));
+    const combatConsts: CombatConstants | undefined = constsData ? constsData.reduce((acc, row) => {
+      (acc as any)[row.key] = Number(row.value);
+      return acc;
+    }, {} as CombatConstants) : undefined;
 
     const usedSeed = seed || Math.random().toString(36).substring(2, 10);
     if (!seed) setSeed(usedSeed);
 
-    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods);
+    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods, combatConsts);
     setFleetASnap(snapA);
     setFleetBSnap(snapB);
     setResult(battleResult);

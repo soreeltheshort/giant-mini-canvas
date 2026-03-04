@@ -30,6 +30,15 @@ interface GroupMod {
   _new?: boolean;
 }
 
+interface CombatConst {
+  id: string;
+  key: string;
+  value: number;
+  description: string;
+  _dirty?: boolean;
+  _new?: boolean;
+}
+
 const ALL_GROUPS = ["Core", "Attack", "Special1", "Special2", "Rear", "Retreat"];
 
 const AdminBattleConfig = () => {
@@ -37,6 +46,7 @@ const AdminBattleConfig = () => {
   const navigate = useNavigate();
   const [phases, setPhases] = useState<Phase[]>([]);
   const [groupMods, setGroupMods] = useState<GroupMod[]>([]);
+  const [constants, setConstants] = useState<CombatConst[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -46,12 +56,14 @@ const AdminBattleConfig = () => {
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
-    const [{ data: p }, { data: g }] = await Promise.all([
+    const [{ data: p }, { data: g }, { data: c }] = await Promise.all([
       supabase.from("battle_phases").select("*").order("seq_order"),
       supabase.from("group_modifiers").select("*").order("group_name"),
+      supabase.from("combat_constants").select("*").order("key"),
     ]);
     if (p) setPhases(p.map(r => ({ ...r, mod_a: Number(r.mod_a), mod_b: Number(r.mod_b) })));
     if (g) setGroupMods(g.map(r => ({ ...r, attack_mod: Number(r.attack_mod), defense_mod: Number(r.defense_mod) })));
+    if (c) setConstants(c.map(r => ({ ...r, value: Number(r.value) })));
   };
 
   // --- Phase helpers ---
@@ -105,6 +117,27 @@ const AdminBattleConfig = () => {
     toast({ title: "Deleted" });
   };
 
+  // --- Combat constants helpers ---
+  const updateConst = (id: string, field: keyof CombatConst, value: any) => {
+    setConstants(prev => prev.map(c => c.id === id ? { ...c, [field]: value, _dirty: true } : c));
+  };
+
+  const addConst = () => {
+    setConstants(prev => [...prev, {
+      id: crypto.randomUUID(), key: "new_constant", value: 0, description: "",
+      _dirty: true, _new: true,
+    }]);
+  };
+
+  const deleteConst = async (id: string, isNew?: boolean) => {
+    if (!isNew) {
+      const { error } = await supabase.from("combat_constants").delete().eq("id", id);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    }
+    setConstants(prev => prev.filter(c => c.id !== id));
+    toast({ title: "Deleted" });
+  };
+
   const saveAll = async () => {
     setSaving(true);
     let errors = 0;
@@ -125,6 +158,14 @@ const AdminBattleConfig = () => {
       if (error) { errors++; console.error(error); }
     }
 
+    for (const c of constants.filter(c => c._dirty)) {
+      const payload = { id: c.id, key: c.key, value: c.value, description: c.description };
+      const { error } = c._new
+        ? await supabase.from("combat_constants").insert(payload)
+        : await supabase.from("combat_constants").update(payload).eq("id", c.id);
+      if (error) { errors++; console.error(error); }
+    }
+
     if (errors) toast({ title: "Some saves failed", description: `${errors} error(s)`, variant: "destructive" });
     else toast({ title: "Saved" });
 
@@ -132,7 +173,7 @@ const AdminBattleConfig = () => {
     setSaving(false);
   };
 
-  const hasDirty = phases.some(p => p._dirty) || groupMods.some(g => g._dirty);
+  const hasDirty = phases.some(p => p._dirty) || groupMods.some(g => g._dirty) || constants.some(c => c._dirty);
 
   if (loading) return <div className="min-h-screen bg-background"><Header /><div className="container py-20 text-center text-muted-foreground">Loading...</div><Footer /></div>;
 
@@ -243,6 +284,46 @@ const AdminBattleConfig = () => {
                     </td>
                     <td className="px-1 py-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteGroupMod(g.id, g._new)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* COMBAT CONSTANTS */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-heading text-lg font-semibold text-foreground">Combat Constants (hit chance & critical formula)</h2>
+            <Button size="sm" variant="outline" onClick={addConst}><Plus className="mr-1 h-4 w-4" /> Add Constant</Button>
+          </div>
+          <div className="overflow-x-auto border border-border rounded">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Key</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Value</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Description</th>
+                  <th className="px-3 py-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {constants.map(c => (
+                  <tr key={c.id} className={`border-b border-border ${c._dirty ? "bg-primary/5" : ""}`}>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 text-xs" value={c.key} onChange={e => updateConst(c.id, "key", e.target.value)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 w-28 text-xs" type="number" step="0.01" value={c.value} onChange={e => updateConst(c.id, "value", parseFloat(e.target.value) || 0)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 text-xs" value={c.description} onChange={e => updateConst(c.id, "description", e.target.value)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteConst(c.id, c._new)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </td>
