@@ -55,7 +55,7 @@ interface FleetShipEntry {
 
 const SPECIAL_ROLES = ["Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish"];
 
-const GROUPS = ["Core", "Special1", "Special2", "Rear", "Retreat"];
+const GROUPS = ["Core", "Attack", "Special1", "Special2", "Rear", "Retreat"];
 const STANDING_ORDERS = ["move", "attack", "defend"] as const;
 type StandingOrder = typeof STANDING_ORDERS[number];
 const ORDER_LABELS: Record<StandingOrder, string> = { move: "Move", attack: "Attack", defend: "Defend" };
@@ -96,6 +96,7 @@ const FleetBuilder = () => {
 
   const GROUP_LABELS: Record<string, string> = {
     Core: "Core",
+    Attack: "Attack",
     Special1: `Special 1 — ${special1Role}`,
     Special2: `Special 2 — ${special2Role}`,
     Rear: "Rear",
