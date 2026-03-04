@@ -11,10 +11,10 @@ interface Fleet {
   id: string;
   name: string;
   revision: number;
-  points_budget: number;
   created_at: string;
   owner_user_id: string;
   owner_display_name?: string;
+  total_points: number;
 }
 
 const Dashboard = () => {
@@ -37,7 +37,7 @@ const Dashboard = () => {
   const fetchFleets = async () => {
     let query = supabase
       .from("fleets")
-      .select("id, name, revision, points_budget, created_at, owner_user_id")
+      .select("id, name, revision, created_at, owner_user_id")
       .order("updated_at", { ascending: false });
 
     if (!canSeeAll) {
@@ -55,7 +55,24 @@ const Dashboard = () => {
       .in("user_id", ownerIds);
     const nameMap = new Map((profiles || []).map(p => [p.user_id, p.display_name]));
 
-    setFleets(data.map(f => ({ ...f, owner_display_name: nameMap.get(f.owner_user_id) || undefined })));
+    // Fetch fleet ships with point costs to calculate actual points
+    const fleetIds = data.map(f => f.id);
+    const { data: fleetShips } = await supabase
+      .from("fleet_ships")
+      .select("fleet_id, quantity, ship_types(point_cost)")
+      .in("fleet_id", fleetIds);
+
+    const pointsMap = new Map<string, number>();
+    for (const fs of (fleetShips || [])) {
+      const cost = (fs.ship_types as any)?.point_cost || 0;
+      pointsMap.set(fs.fleet_id, (pointsMap.get(fs.fleet_id) || 0) + cost * fs.quantity);
+    }
+
+    setFleets(data.map(f => ({
+      ...f,
+      owner_display_name: nameMap.get(f.owner_user_id) || undefined,
+      total_points: pointsMap.get(f.id) || 0,
+    })));
     setFetching(false);
   };
 
@@ -71,7 +88,7 @@ const Dashboard = () => {
   const duplicateFleet = async (fleet: Fleet) => {
     const { data: newFleet, error } = await supabase
       .from("fleets")
-      .insert({ owner_user_id: user!.id, name: `${fleet.name} (copy)`, points_budget: fleet.points_budget })
+      .insert({ owner_user_id: user!.id, name: `${fleet.name} (copy)` })
       .select()
       .single();
     if (error || !newFleet) { toast({ title: "Error", description: error?.message, variant: "destructive" }); return; }
@@ -120,7 +137,7 @@ const Dashboard = () => {
                         </span>
                       )}
                     </p>
-                    <p className="text-xs text-muted-foreground">Rev {fleet.revision} · {fleet.points_budget} pts</p>
+                    <p className="text-xs text-muted-foreground">Rev {fleet.revision} · {fleet.total_points} pts</p>
                   </div>
                   <div className="flex gap-2">
                     {canEdit && <Button variant="ghost" size="sm" onClick={() => navigate(`/fleet-builder?edit=${fleet.id}`)}>Edit</Button>}
