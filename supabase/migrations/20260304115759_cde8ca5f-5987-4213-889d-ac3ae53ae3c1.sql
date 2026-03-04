@@ -1,0 +1,1 @@
+ALTER TABLE public.fleet_ships ADD COLUMN special_role text NOT NULL DEFAULT '';
