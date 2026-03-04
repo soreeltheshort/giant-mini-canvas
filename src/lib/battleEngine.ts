@@ -197,6 +197,7 @@ export interface CombatConstants {
   dmg_variance_range: number;
   critical_hit_chance: number;
   critical_hit_multiplier: number;
+  speed_hit_modifier: number;
 }
 
 // Fallback defaults (used if DB data not provided)
@@ -227,6 +228,7 @@ const DEFAULT_COMBAT_CONSTANTS: CombatConstants = {
   dmg_variance_range: 0.60,
   critical_hit_chance: 0.05,
   critical_hit_multiplier: 2.0,
+  speed_hit_modifier: 0.02,
 };
 
 function getGroupModifier(group: string, type: "attack" | "defense", modifiers: GroupModConfig[]): number {
@@ -327,7 +329,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
       for (let gun = 0; gun < mount.count; gun++) {
         if (target.crippled) break;
 
-        const hitChance = Math.min(cc.hit_chance_max, Math.max(cc.hit_chance_min, mount.baseHitChance + attackMod - defenseMod));
+        const speedDiff = (attacker.cbt_speed - target.cbt_speed) * cc.speed_hit_modifier;
+        const hitChance = Math.min(cc.hit_chance_max, Math.max(cc.hit_chance_min, mount.baseHitChance + attackMod - defenseMod + speedDiff));
         const roll = rng();
         const hit = roll <= hitChance;
 
