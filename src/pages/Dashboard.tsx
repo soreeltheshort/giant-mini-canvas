@@ -108,6 +108,7 @@ const Dashboard = () => {
           <div className="mt-8 space-y-3">
             {fleets.map(fleet => {
               const isOwn = fleet.owner_user_id === user?.id;
+              const canEdit = isOwn || canSeeAll;
               return (
                 <div key={fleet.id} className="flex items-center justify-between border border-border p-4">
                   <div>
@@ -122,9 +123,9 @@ const Dashboard = () => {
                     <p className="text-xs text-muted-foreground">Rev {fleet.revision} · {fleet.points_budget} pts</p>
                   </div>
                   <div className="flex gap-2">
-                    {isOwn && <Button variant="ghost" size="sm" onClick={() => navigate(`/fleet-builder?edit=${fleet.id}`)}>Edit</Button>}
+                    {canEdit && <Button variant="ghost" size="sm" onClick={() => navigate(`/fleet-builder?edit=${fleet.id}`)}>Edit</Button>}
                     <Button variant="ghost" size="sm" onClick={() => duplicateFleet(fleet)}>Duplicate</Button>
-                    {isOwn && <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteFleet(fleet.id)}>Delete</Button>}
+                    {canEdit && <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteFleet(fleet.id)}>Delete</Button>}
                   </div>
                 </div>
               );
