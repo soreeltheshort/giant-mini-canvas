@@ -31,8 +31,8 @@ const Dashboard = () => {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    if (user) fetchFleets();
-  }, [user, canSeeAll]);
+    if (user && !loading) fetchFleets();
+  }, [user, loading, canSeeAll]);
 
   const fetchFleets = async () => {
     let query = supabase
