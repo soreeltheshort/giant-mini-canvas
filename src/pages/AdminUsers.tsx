@@ -88,6 +88,9 @@ const AdminUsers = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
+      // Store admin user ID for switch-back
+      localStorage.setItem("impersonating_from_admin", user!.id);
+
       // Sign out current session first
       await supabase.auth.signOut();
 
