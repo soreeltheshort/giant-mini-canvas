@@ -52,6 +52,9 @@ const Header = () => {
               <Link to="/admin/weapons" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
                 Weapons
               </Link>
+              <Link to="/admin/battle-config" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                Config
+              </Link>
             </>
           )}
           <button
