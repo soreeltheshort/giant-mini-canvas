@@ -15,6 +15,7 @@ interface Weapon {
   type: string;
   damage: number;
   hit_chance: number;
+  armor_penetration: number;
   range: string;
   rate_of_fire: number;
   special_notes: string;
@@ -42,7 +43,7 @@ const AdminWeapons = () => {
 
   const loadWeapons = async () => {
     const { data } = await supabase.from("weapons").select("*").order("type").order("point_cost");
-    if (data) setWeapons(data.map(w => ({ ...w, hit_chance: Number(w.hit_chance), special_notes: w.special_notes ?? "" })));
+    if (data) setWeapons(data.map(w => ({ ...w, hit_chance: Number(w.hit_chance), armor_penetration: Number(w.armor_penetration), special_notes: w.special_notes ?? "" })));
   };
 
   const updateField = (id: string, field: keyof Weapon, value: string | number) => {
@@ -56,6 +57,7 @@ const AdminWeapons = () => {
       type: "Laser",
       damage: 1,
       hit_chance: 0.5,
+      armor_penetration: 0,
       range: "Medium",
       rate_of_fire: 1,
       special_notes: "",
@@ -87,6 +89,7 @@ const AdminWeapons = () => {
         type: w.type,
         damage: w.damage,
         hit_chance: w.hit_chance,
+        armor_penetration: w.armor_penetration,
         range: w.range,
         rate_of_fire: w.rate_of_fire,
         special_notes: w.special_notes,
@@ -136,6 +139,7 @@ const AdminWeapons = () => {
                 <th className="px-3 py-2 text-left font-medium text-muted-foreground">Type</th>
                 <th className="px-3 py-2 text-left font-medium text-muted-foreground">Damage</th>
                 <th className="px-3 py-2 text-left font-medium text-muted-foreground">Hit %</th>
+                <th className="px-3 py-2 text-left font-medium text-muted-foreground">AP</th>
                 <th className="px-3 py-2 text-left font-medium text-muted-foreground">Range</th>
                 <th className="px-3 py-2 text-left font-medium text-muted-foreground">RoF</th>
                 <th className="px-3 py-2 text-left font-medium text-muted-foreground">Cost</th>
@@ -159,6 +163,9 @@ const AdminWeapons = () => {
                   </td>
                   <td className="px-1 py-1">
                     <Input className="h-8 w-16 text-xs" type="number" step="0.05" min="0" max="1" value={w.hit_chance} onChange={e => updateField(w.id, "hit_chance", parseFloat(e.target.value) || 0)} />
+                  </td>
+                  <td className="px-1 py-1">
+                    <Input className="h-8 w-14 text-xs" type="number" value={w.armor_penetration} onChange={e => updateField(w.id, "armor_penetration", parseInt(e.target.value) || 0)} />
                   </td>
                   <td className="px-1 py-1">
                     <select className="h-8 w-full rounded border border-input bg-background px-2 text-xs text-foreground" value={w.range} onChange={e => updateField(w.id, "range", e.target.value)}>
