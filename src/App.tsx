@@ -12,6 +12,7 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import FleetBuilder from "./pages/FleetBuilder";
 import Battle from "./pages/Battle";
+import Manual from "./pages/Manual";
 import AdminBattleDebug from "./pages/AdminBattleDebug";
 import AdminWeapons from "./pages/AdminWeapons";
 import AdminBattleConfig from "./pages/AdminBattleConfig";
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/fleet-builder" element={<FleetBuilder />} />
             <Route path="/battle" element={<Battle />} />
+            <Route path="/manual" element={<Manual />} />
             <Route path="/admin/battle-debug" element={<AdminBattleDebug />} />
             <Route path="/admin/weapons" element={<AdminWeapons />} />
             <Route path="/admin/battle-config" element={<AdminBattleConfig />} />
