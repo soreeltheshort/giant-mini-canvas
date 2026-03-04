@@ -17,7 +17,7 @@ interface FleetOption {
 }
 
 const Battle = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin, isTester } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [fleets, setFleets] = useState<FleetOption[]>([]);
@@ -225,16 +225,21 @@ const Battle = () => {
             </div>
 
             <div className="mt-4 space-y-1">
-              {result.events.map(event => (
-                <div key={event.seq} className="border-l-2 border-border pl-3">
-                  <button onClick={() => toggleEvent(event.seq)} className="w-full text-left text-sm text-foreground hover:text-primary">
-                    <span className="text-xs text-muted-foreground">[{event.seq}]</span> {event.public_summary_text}
-                  </button>
-                  {expandedEvents.has(event.seq) && (
-                    <p className="mt-1 text-xs text-muted-foreground">{event.admin_explain_text}</p>
-                  )}
-                </div>
-              ))}
+              {result.events.map(event => {
+                const showDebug = isAdmin || isTester;
+                return (
+                  <div key={event.seq} className="border-l-2 border-border pl-3">
+                    <button onClick={() => toggleEvent(event.seq)} className="w-full text-left text-sm text-foreground hover:text-primary">
+                      <span className="text-xs text-muted-foreground">[{event.seq}]</span> {event.public_summary_text}
+                    </button>
+                    {showDebug ? (
+                      <p className="mt-1 text-xs text-muted-foreground">{event.admin_explain_text}</p>
+                    ) : expandedEvents.has(event.seq) ? (
+                      <p className="mt-1 text-xs text-muted-foreground">{event.admin_explain_text}</p>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
