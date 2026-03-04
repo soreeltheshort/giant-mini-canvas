@@ -121,6 +121,33 @@ export type Database = {
         }
         Relationships: []
       }
+      combat_constants: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          key: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          key: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
+      }
       fleet_ships: {
         Row: {
           fleet_id: string

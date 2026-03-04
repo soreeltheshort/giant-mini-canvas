@@ -181,6 +181,15 @@ export interface GroupModConfig {
   defense_mod: number;
 }
 
+export interface CombatConstants {
+  hit_chance_min: number;
+  hit_chance_max: number;
+  dmg_variance_min: number;
+  dmg_variance_range: number;
+  critical_hit_chance: number;
+  critical_hit_multiplier: number;
+}
+
 // Fallback defaults (used if DB data not provided)
 const DEFAULT_PHASES: PhaseConfig[] = [
   { name: "Skirmishers vs Skirmishers", groupsA: ["Special1"], groupsB: ["Special1"], modA: 0.1, modB: 0.1 },
@@ -199,15 +208,25 @@ const DEFAULT_GROUP_MODS: GroupModConfig[] = [
   { group_name: "Retreat", attack_mod: 0, defense_mod: 0 },
 ];
 
+const DEFAULT_COMBAT_CONSTANTS: CombatConstants = {
+  hit_chance_min: 0.10,
+  hit_chance_max: 0.95,
+  dmg_variance_min: 0.70,
+  dmg_variance_range: 0.60,
+  critical_hit_chance: 0.05,
+  critical_hit_multiplier: 2.0,
+};
+
 function getGroupModifier(group: string, type: "attack" | "defense", modifiers: GroupModConfig[]): number {
   const mod = modifiers.find(m => m.group_name === group);
   if (!mod) return 0;
   return type === "attack" ? mod.attack_mod : mod.defense_mod;
 }
 
-export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[]): BattleResult {
+export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants): BattleResult {
   const activePhases = phases && phases.length > 0 ? phases : DEFAULT_PHASES;
   const activeMods = groupModifiers && groupModifiers.length > 0 ? groupModifiers : DEFAULT_GROUP_MODS;
+  const cc = combatConsts ?? DEFAULT_COMBAT_CONSTANTS;
   const rng = createRNG(hashSeed(seedStr));
   const events: BattleEvent[] = [];
   let seq = 0;
@@ -295,13 +314,16 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
       for (let gun = 0; gun < mount.count; gun++) {
         if (target.crippled) break;
 
-        const hitChance = Math.min(0.95, Math.max(0.1, mount.baseHitChance + attackMod - defenseMod));
+        const hitChance = Math.min(cc.hit_chance_max, Math.max(cc.hit_chance_min, mount.baseHitChance + attackMod - defenseMod));
         const roll = rng();
         const hit = roll <= hitChance;
 
         if (hit) {
-          const dmgVariance = 0.7 + rng() * 0.6;
-          const rawDmg = Math.round(mount.damage * dmgVariance);
+          const critRoll = rng();
+          const isCrit = critRoll <= cc.critical_hit_chance;
+          const dmgVariance = cc.dmg_variance_min + rng() * cc.dmg_variance_range;
+          const baseDmg = Math.round(mount.damage * dmgVariance);
+          const rawDmg = isCrit ? Math.round(baseDmg * cc.critical_hit_multiplier) : baseDmg;
           const actualDmg = Math.max(1, rawDmg - target.armor);
           target.currentHull -= actualDmg;
 
@@ -310,14 +332,15 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
             target.crippled = true;
           }
 
+          const critTag = isCrit ? " CRITICAL!" : "";
           emit("fire_hit", {
             attacker: attacker.instanceId, target: target.instanceId,
             weaponName: mount.name, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
             roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
-            rawDmg, armor: target.armor, actualDmg, remainingHull: target.currentHull, crippled: target.crippled
+            rawDmg, armor: target.armor, actualDmg, remainingHull: target.currentHull, crippled: target.crippled, critical: isCrit
           },
-            `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage.${target.crippled ? " DESTROYED!" : ""}`,
-            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! Raw dmg=${rawDmg}, armor=${target.armor}, actual=${actualDmg}. Hull: ${target.currentHull}/${target.maxHull}.${target.crippled ? " Ship crippled." : ""}`
+            `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage.${critTag}${target.crippled ? " DESTROYED!" : ""}`,
+            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit!${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, actual=${actualDmg}. Hull: ${target.currentHull}/${target.maxHull}.${target.crippled ? " Ship crippled." : ""}`
           );
         } else {
           emit("fire_miss", {
