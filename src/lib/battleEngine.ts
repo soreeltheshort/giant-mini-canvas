@@ -156,8 +156,6 @@ export interface BattleResult {
   seed: string;
 }
 
-const TACTICAL_GROUPS = ["Core", "Rear", "Retreat", "Special1", "Special2"];
-
 // Target selection: General→smaller, Assault→larger, Escort→smaller
 function getTargetPriority(attackerClass: string): string[] {
   switch (attackerClass) {
@@ -168,8 +166,23 @@ function getTargetPriority(attackerClass: string): string[] {
   }
 }
 
-// Phase definitions (simplified)
-const PHASES = [
+// Externalized phase/modifier types
+export interface PhaseConfig {
+  name: string;
+  groupsA: string[];
+  groupsB: string[];
+  modA: number;
+  modB: number;
+}
+
+export interface GroupModConfig {
+  group_name: string;
+  attack_mod: number;
+  defense_mod: number;
+}
+
+// Fallback defaults (used if DB data not provided)
+const DEFAULT_PHASES: PhaseConfig[] = [
   { name: "Skirmishers vs Skirmishers", groupsA: ["Special1"], groupsB: ["Special1"], modA: 0.1, modB: 0.1 },
   { name: "Outflank vs Flank", groupsA: ["Special2"], groupsB: ["Special1", "Special2"], modA: 0.1, modB: -0.1 },
   { name: "Flank vs Cover Retreat", groupsA: ["Special1", "Special2"], groupsB: ["Retreat"], modA: 0, modB: 0 },
@@ -177,13 +190,24 @@ const PHASES = [
   { name: "Main Engagement", groupsA: ["Core", "Special1", "Special2"], groupsB: ["Core", "Rear", "Special1", "Special2"], modA: 0, modB: 0 },
 ];
 
-function getGroupModifier(group: string, type: "attack" | "defense"): number {
-  if (group === "Special1" || group === "Special2") return type === "attack" ? 0.1 : -0.1;
-  if (group === "Rear") return type === "defense" ? 0.2 : -0.1;
-  return 0;
+const DEFAULT_GROUP_MODS: GroupModConfig[] = [
+  { group_name: "Core", attack_mod: 0, defense_mod: 0 },
+  { group_name: "Attack", attack_mod: 0, defense_mod: 0 },
+  { group_name: "Special1", attack_mod: 0.1, defense_mod: -0.1 },
+  { group_name: "Special2", attack_mod: 0.1, defense_mod: -0.1 },
+  { group_name: "Rear", attack_mod: -0.1, defense_mod: 0.2 },
+  { group_name: "Retreat", attack_mod: 0, defense_mod: 0 },
+];
+
+function getGroupModifier(group: string, type: "attack" | "defense", modifiers: GroupModConfig[]): number {
+  const mod = modifiers.find(m => m.group_name === group);
+  if (!mod) return 0;
+  return type === "attack" ? mod.attack_mod : mod.defense_mod;
 }
 
-export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string): BattleResult {
+export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[]): BattleResult {
+  const activePhases = phases && phases.length > 0 ? phases : DEFAULT_PHASES;
+  const activeMods = groupModifiers && groupModifiers.length > 0 ? groupModifiers : DEFAULT_GROUP_MODS;
   const rng = createRNG(hashSeed(seedStr));
   const events: BattleEvent[] = [];
   let seq = 0;
@@ -309,7 +333,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     }
   }
 
-  for (const phase of PHASES) {
+  for (const phase of activePhases) {
     if (alive("A").length === 0 || alive("B").length === 0) break;
 
     const aInPhase = alive("A").filter(s => phase.groupsA.includes(s.tacticalGroup));
@@ -335,8 +359,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         if (enemies.length === 0) break;
         const target = selectTarget(attacker, enemies);
         if (!target) continue;
-        const attackMod = phase.modA + getGroupModifier(attacker.tacticalGroup, "attack");
-        const defenseMod = getGroupModifier(target.tacticalGroup, "defense");
+        const attackMod = phase.modA + getGroupModifier(attacker.tacticalGroup, "attack", activeMods);
+        const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
         fireWeaponsOfType(attacker, target, weaponType, attackMod, defenseMod);
       }
 
@@ -347,8 +371,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         if (enemies.length === 0) break;
         const target = selectTarget(attacker, enemies);
         if (!target) continue;
-        const attackMod = phase.modB + getGroupModifier(attacker.tacticalGroup, "attack");
-        const defenseMod = getGroupModifier(target.tacticalGroup, "defense");
+        const attackMod = phase.modB + getGroupModifier(attacker.tacticalGroup, "attack", activeMods);
+        const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
         fireWeaponsOfType(attacker, target, weaponType, attackMod, defenseMod);
       }
     }

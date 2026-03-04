@@ -55,6 +55,42 @@ export type Database = {
           },
         ]
       }
+      battle_phases: {
+        Row: {
+          created_at: string
+          groups_a: string[]
+          groups_b: string[]
+          id: string
+          mod_a: number
+          mod_b: number
+          name: string
+          seq_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          groups_a?: string[]
+          groups_b?: string[]
+          id?: string
+          mod_a?: number
+          mod_b?: number
+          name: string
+          seq_order: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          groups_a?: string[]
+          groups_b?: string[]
+          id?: string
+          mod_a?: number
+          mod_b?: number
+          name?: string
+          seq_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       battle_runs: {
         Row: {
           created_at: string
@@ -165,6 +201,33 @@ export type Database = {
           special1_role?: string
           special2_role?: string
           standing_order?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      group_modifiers: {
+        Row: {
+          attack_mod: number
+          created_at: string
+          defense_mod: number
+          group_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          attack_mod?: number
+          created_at?: string
+          defense_mod?: number
+          group_name: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          attack_mod?: number
+          created_at?: string
+          defense_mod?: number
+          group_name?: string
+          id?: string
           updated_at?: string
         }
         Relationships: []
