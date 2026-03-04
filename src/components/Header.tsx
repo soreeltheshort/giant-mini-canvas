@@ -1,11 +1,19 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, isTester, signOut } = useAuth();
+  const { toast } = useToast();
+  const [switchingBack, setSwitchingBack] = useState(false);
+
+  const impersonatingFromAdmin = localStorage.getItem("impersonating_from_admin");
+  const isImpersonating = !!impersonatingFromAdmin && user && impersonatingFromAdmin !== user.id;
 
   const canAccessGameFeatures = isAdmin || isTester;
 
@@ -17,69 +25,118 @@ const Header = () => {
     }
   };
 
+  const switchBackToAdmin = async () => {
+    if (!impersonatingFromAdmin) return;
+    setSwitchingBack(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("impersonate", {
+        body: { return_to_admin_id: impersonatingFromAdmin },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      localStorage.removeItem("impersonating_from_admin");
+      await supabase.auth.signOut();
+
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: data.token_hash,
+        type: "magiclink",
+      });
+      if (verifyError) throw verifyError;
+
+      toast({ title: "Switched back to admin account" });
+      navigate("/admin/users");
+    } catch (err: any) {
+      toast({ title: "Switch back failed", description: err.message, variant: "destructive" });
+      setSwitchingBack(false);
+    }
+  };
+
   return (
-    <header className="border-b border-border">
-      <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="font-heading text-lg font-semibold tracking-tight text-foreground">
-          MiniGiantGames
-        </Link>
-        <nav className="flex items-center gap-6">
-          <Link
-            to="/"
-            className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/" ? "text-foreground" : "text-muted-foreground"}`}
+    <>
+      {isImpersonating && (
+        <div className="bg-yellow-600 text-black text-center text-sm py-2 px-4 flex items-center justify-center gap-3">
+          <span className="font-medium">
+            ⚠ Impersonating: {user?.user_metadata?.display_name || user?.email}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 text-xs bg-black/10 border-black/30 text-black hover:bg-black/20"
+            disabled={switchingBack}
+            onClick={switchBackToAdmin}
           >
-            Home
+            {switchingBack ? "Switching..." : "Switch back to Admin"}
+          </Button>
+        </div>
+      )}
+      <header className="border-b border-border">
+        <div className="container flex h-16 items-center justify-between">
+          <Link to="/" className="font-heading text-lg font-semibold tracking-tight text-foreground">
+            MiniGiantGames
           </Link>
-          <Link
-            to="/games"
-            className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/games" ? "text-foreground" : "text-muted-foreground"}`}
-          >
-            Games
-          </Link>
-          {user && canAccessGameFeatures && (
-            <>
-              <Link to="/manual" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/manual" ? "text-foreground" : "text-muted-foreground"}`}>
-                Manual
-              </Link>
-              <Link to="/dashboard" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/dashboard") ? "text-foreground" : "text-muted-foreground"}`}>
-                Dashboard
-              </Link>
-            </>
-          )}
-          {user && isAdmin && (
-            <>
-              <Link to="/admin/battle-debug" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
-                Debug
-              </Link>
-              <Link to="/admin/weapons" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
-                Weapons
-              </Link>
-              <Link to="/admin/battle-config" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
-                Config
-              </Link>
-              <Link to="/admin/users" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
-                Users
-              </Link>
-            </>
-          )}
-          <button
-            onClick={handleNewsletter}
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Newsletter
-          </button>
-          {user ? (
-            <Button variant="ghost" size="sm" onClick={() => { signOut(); navigate("/"); }}>
-              Sign Out
-            </Button>
-          ) : (
-            <Link to="/login">
-              <Button variant="outline" size="sm">Sign In</Button>
+          <nav className="flex items-center gap-6">
+            <Link
+              to="/"
+              className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/" ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              Home
             </Link>
-          )}
-        </nav>
-      </div>
-    </header>
+            <Link
+              to="/games"
+              className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/games" ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              Games
+            </Link>
+            {user && canAccessGameFeatures && (
+              <>
+                <Link to="/manual" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/manual" ? "text-foreground" : "text-muted-foreground"}`}>
+                  Manual
+                </Link>
+                <Link to="/dashboard" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/dashboard") ? "text-foreground" : "text-muted-foreground"}`}>
+                  Dashboard
+                </Link>
+              </>
+            )}
+            {user && isAdmin && (
+              <>
+                <Link to="/admin/battle-debug" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                  Debug
+                </Link>
+                <Link to="/admin/weapons" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                  Weapons
+                </Link>
+                <Link to="/admin/battle-config" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                  Config
+                </Link>
+                <Link to="/admin/users" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                  Users
+                </Link>
+              </>
+            )}
+            <button
+              onClick={handleNewsletter}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Newsletter
+            </button>
+            {user ? (
+              <Button variant="ghost" size="sm" onClick={() => {
+                localStorage.removeItem("impersonating_from_admin");
+                signOut();
+                navigate("/");
+              }}>
+                Sign Out
+              </Button>
+            ) : (
+              <Link to="/login">
+                <Button variant="outline" size="sm">Sign In</Button>
+              </Link>
+            )}
+          </nav>
+        </div>
+      </header>
+    </>
   );
 };
 
