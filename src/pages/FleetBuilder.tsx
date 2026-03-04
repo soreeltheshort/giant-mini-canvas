@@ -121,6 +121,14 @@ const FleetBuilder = () => {
     return sum + (st ? st.point_cost * e.quantity : 0);
   }, 0);
 
+  const baseMaintenance = entries.reduce((sum, e) => {
+    const st = shipTypes.find(s => s.id === e.ship_type_id);
+    return sum + (st ? st.maintenance * e.quantity : 0);
+  }, 0);
+
+  const readinessData = READINESS_LEVELS.find(l => l.value === readiness)!;
+  const totalMaintenance = Math.round(baseMaintenance * readinessData.maintenance * 100) / 100;
+
   const overBudget = totalCost > pointsBudget;
   const noCore = entries.length > 0 && !entries.some(e => e.tactical_group === "Core" && e.quantity > 0);
   const allRetreat = entries.length > 0 && entries.every(e => e.tactical_group === "Retreat");
@@ -245,12 +253,17 @@ const FleetBuilder = () => {
               {(() => { const r = READINESS_LEVELS.find(l => l.value === readiness)!; return `Maint ×${r.maintenance} · Effect ×${r.effectiveness}`; })()}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Budget:</span>
-            <Input type="number" className="w-24" value={pointsBudget} onChange={e => setPointsBudget(Number(e.target.value))} />
-            <span className={`text-sm font-semibold ${overBudget ? "text-destructive" : "text-foreground"}`}>
-              {totalCost} / {pointsBudget} pts
-            </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Budget:</span>
+              <Input type="number" className="w-24" value={pointsBudget} onChange={e => setPointsBudget(Number(e.target.value))} />
+              <span className={`text-sm font-semibold ${overBudget ? "text-destructive" : "text-foreground"}`}>
+                {totalCost} / {pointsBudget} pts
+              </span>
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Maintenance: {totalMaintenance} ({baseMaintenance} base × {readinessData.maintenance})
+            </p>
           </div>
         </div>
 
