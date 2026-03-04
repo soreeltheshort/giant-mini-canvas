@@ -140,6 +140,7 @@ interface ShipInstance {
   tacticalGroup: string;
   fleet: "A" | "B";
   crippled: boolean;
+  target_preference: string;
 }
 
 export interface BattleEvent {
@@ -158,14 +159,20 @@ export interface BattleResult {
   seed: string;
 }
 
-// Target selection: General→smaller, Assault→larger, Escort→smaller
-function getTargetPriority(attackerClass: string): string[] {
-  switch (attackerClass) {
-    case "General": return ["Light", "Medium", "Heavy", "Capital"];
-    case "Assault": return ["Capital", "Heavy", "Medium", "Light"];
-    case "Escort": return ["Light", "Medium", "Heavy", "Capital"];
-    default: return ["Light", "Medium", "Heavy", "Capital"];
-  }
+// Hull class size order (smallest to largest)
+const HULL_SIZE_ORDER: string[] = ["FL", "FH", "GS", "DD", "CL", "CM", "CH", "BB", "T", "TT", "Titan"];
+
+// Build target priority: prefer the target_preference hull class, then fan outward by size proximity
+function getTargetPriority(targetPref: string): string[] {
+  const idx = HULL_SIZE_ORDER.indexOf(targetPref);
+  if (idx === -1) return [...HULL_SIZE_ORDER];
+
+  const sorted = [...HULL_SIZE_ORDER].sort((a, b) => {
+    const distA = Math.abs(HULL_SIZE_ORDER.indexOf(a) - idx);
+    const distB = Math.abs(HULL_SIZE_ORDER.indexOf(b) - idx);
+    return distA - distB;
+  });
+  return sorted;
 }
 
 // Externalized phase/modifier types
@@ -265,6 +272,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           tacticalGroup: fs.tactical_group,
           fleet,
           crippled: false,
+          target_preference: fs.ship_type.target_preference || fs.ship_type.hull_class,
         });
       }
     }
@@ -298,7 +306,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
   }
 
   function selectTarget(attacker: ShipInstance, enemies: ShipInstance[]): ShipInstance | null {
-    const priority = getTargetPriority(attacker.class);
+    const priority = getTargetPriority(attacker.target_preference);
     for (const hullClass of priority) {
       const damaged = enemies.filter(e => e.hull_class === hullClass && !e.crippled && e.currentHull < e.maxHull);
       if (damaged.length > 0) return damaged[Math.floor(rng() * damaged.length)];
