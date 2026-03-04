@@ -149,10 +149,39 @@ const FleetBuilder = () => {
     return sum + (st ? st.maintenance * e.quantity : 0);
   }, 0);
 
+  // Fighter & Gunship capacity calculations
+  const fighterCapacity = entries.reduce((sum, e) => {
+    const st = shipTypes.find(s => s.id === e.ship_type_id);
+    return sum + (st ? st.fighter_bay * e.quantity : 0);
+  }, 0);
+
+  const fighterUsed = entries.reduce((sum, e) => {
+    const st = shipTypes.find(s => s.id === e.ship_type_id);
+    if (!st) return sum;
+    if (st.hull_class === "FL") return sum + 1 * e.quantity;
+    if (st.hull_class === "FH") return sum + 2 * e.quantity;
+    return sum;
+  }, 0);
+
+  const gunshipCapacity = entries.reduce((sum, e) => {
+    const st = shipTypes.find(s => s.id === e.ship_type_id);
+    return sum + (st ? st.gun_ship_link * e.quantity : 0);
+  }, 0);
+
+  const gunshipUsed = entries.reduce((sum, e) => {
+    const st = shipTypes.find(s => s.id === e.ship_type_id);
+    if (!st) return sum;
+    if (st.hull_class === "GS") return sum + 1 * e.quantity;
+    return sum;
+  }, 0);
+
+  const fighterOver = fighterUsed > fighterCapacity;
+  const gunshipOver = gunshipUsed > gunshipCapacity;
+
   const readinessData = READINESS_LEVELS.find(l => l.value === readiness)!;
   const totalMaintenance = Math.round(baseMaintenance * readinessData.maintenance * 100) / 100;
 
-  const overBudget = false;
+  const overCapacity = fighterOver || gunshipOver;
   const noCore = entries.length > 0 && !entries.some(e => e.tactical_group === "Core" && e.quantity > 0);
 
   const filteredShips = useMemo(() => {
@@ -220,6 +249,8 @@ const FleetBuilder = () => {
 
   const save = async () => {
     if (entries.length === 0) { toast({ title: "Empty fleet", description: "Add at least one ship.", variant: "destructive" }); return; }
+    if (fighterOver) { toast({ title: "Over fighter capacity", description: `${fighterUsed} fighters but only ${fighterCapacity} fighter bay slots.`, variant: "destructive" }); return; }
+    if (gunshipOver) { toast({ title: "Over gunship capacity", description: `${gunshipUsed} gunships but only ${gunshipCapacity} gunship link slots.`, variant: "destructive" }); return; }
     setSaving(true);
 
     if (editId) {
@@ -306,7 +337,18 @@ const FleetBuilder = () => {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_380px]">
           {/* Left: Fleet Composition - Group Lanes */}
           <div>
-            <h2 className="font-heading text-lg font-semibold text-foreground mb-4">Fleet Composition</h2>
+            <h2 className="font-heading text-lg font-semibold text-foreground mb-2">Fleet Composition</h2>
+            {/* Capacity bars */}
+            <div className="flex flex-wrap gap-4 mb-4 p-3 rounded border border-border bg-card">
+              <div className={`text-xs ${fighterOver ? "text-destructive font-bold" : "text-foreground"}`}>
+                ✈ Fighters: <span className="font-semibold">{fighterUsed}</span> / {fighterCapacity} slots
+                {fighterOver && <span className="ml-1">⚠ OVER</span>}
+              </div>
+              <div className={`text-xs ${gunshipOver ? "text-destructive font-bold" : "text-foreground"}`}>
+                🚀 Gunships: <span className="font-semibold">{gunshipUsed}</span> / {gunshipCapacity} slots
+                {gunshipOver && <span className="ml-1">⚠ OVER</span>}
+              </div>
+            </div>
             {entries.length === 0 && <p className="mb-4 text-sm text-muted-foreground">Select ships from the catalog on the right to add them.</p>}
             <div className="space-y-3">
               {GROUPS.map(group => {
@@ -373,7 +415,7 @@ const FleetBuilder = () => {
             </div>
 
             <div className="mt-6 flex gap-3">
-              <Button onClick={save} disabled={saving || overBudget}>
+              <Button onClick={save} disabled={saving || overCapacity}>
                 {saving ? "Saving..." : "Save Fleet"}
               </Button>
               <Button variant="outline" onClick={() => navigate("/dashboard")}>Cancel</Button>
