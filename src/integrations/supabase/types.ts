@@ -92,7 +92,6 @@ export type Database = {
           notes: string | null
           quantity: number
           ship_type_id: string
-          special_role: string
           tactical_group: string
         }
         Insert: {
@@ -101,7 +100,6 @@ export type Database = {
           notes?: string | null
           quantity?: number
           ship_type_id: string
-          special_role?: string
           tactical_group?: string
         }
         Update: {
@@ -110,7 +108,6 @@ export type Database = {
           notes?: string | null
           quantity?: number
           ship_type_id?: string
-          special_role?: string
           tactical_group?: string
         }
         Relationships: [
@@ -139,6 +136,8 @@ export type Database = {
           points_budget: number
           readiness: number
           revision: number
+          special1_role: string
+          special2_role: string
           standing_order: string
           updated_at: string
         }
@@ -150,6 +149,8 @@ export type Database = {
           points_budget?: number
           readiness?: number
           revision?: number
+          special1_role?: string
+          special2_role?: string
           standing_order?: string
           updated_at?: string
         }
@@ -161,6 +162,8 @@ export type Database = {
           points_budget?: number
           readiness?: number
           revision?: number
+          special1_role?: string
+          special2_role?: string
           standing_order?: string
           updated_at?: string
         }
