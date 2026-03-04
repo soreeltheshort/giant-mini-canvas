@@ -50,7 +50,6 @@ interface FleetShipEntry {
   ship_type_id: string;
   quantity: number;
   tactical_group: string;
-  special_role: string;
   notes: string;
 }
 
@@ -88,6 +87,8 @@ const FleetBuilder = () => {
   const [revision, setRevision] = useState(1);
   const [standingOrder, setStandingOrder] = useState<StandingOrder>("move");
   const [readiness, setReadiness] = useState(2);
+  const [special1Role, setSpecial1Role] = useState("Flank");
+  const [special2Role, setSpecial2Role] = useState("Flank");
   const [filterClass, setFilterClass] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedHull, setExpandedHull] = useState<string | null>(null);
@@ -111,10 +112,12 @@ const FleetBuilder = () => {
           setRevision(data.revision);
           setStandingOrder((data.standing_order as StandingOrder) || "move");
           setReadiness(data.readiness ?? 2);
+          setSpecial1Role(data.special1_role || "Flank");
+          setSpecial2Role(data.special2_role || "Flank");
         }
       });
-      supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group, special_role, notes").eq("fleet_id", editId).then(({ data }) => {
-        if (data) setEntries(data.map(d => ({ ...d, notes: d.notes || "", special_role: d.special_role || "" })));
+      supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group, notes").eq("fleet_id", editId).then(({ data }) => {
+        if (data) setEntries(data.map(d => ({ ...d, notes: d.notes || "" })));
       });
     }
   }, [editId, user]);
@@ -157,7 +160,7 @@ const FleetBuilder = () => {
     if (existing) {
       setEntries(entries.map(e => e === existing ? { ...e, quantity: e.quantity + 1 } : e));
     } else {
-      setEntries([...entries, { ship_type_id: shipTypeId, quantity: 1, tactical_group: "Core", special_role: "", notes: "" }]);
+      setEntries([...entries, { ship_type_id: shipTypeId, quantity: 1, tactical_group: "Core", notes: "" }]);
     }
   };
 
@@ -205,12 +208,12 @@ const FleetBuilder = () => {
     setSaving(true);
 
     if (editId) {
-      await supabase.from("fleets").update({ name: fleetName, points_budget: pointsBudget, standing_order: standingOrder, readiness, revision: revision + 1 }).eq("id", editId);
+      await supabase.from("fleets").update({ name: fleetName, points_budget: pointsBudget, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, revision: revision + 1 }).eq("id", editId);
       await supabase.from("fleet_ships").delete().eq("fleet_id", editId);
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: editId, ...e })));
     } else {
       const { data: newFleet, error } = await supabase.from("fleets")
-        .insert({ owner_user_id: user!.id, name: fleetName, points_budget: pointsBudget, standing_order: standingOrder, readiness })
+        .insert({ owner_user_id: user!.id, name: fleetName, points_budget: pointsBudget, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role })
         .select().single();
       if (error || !newFleet) { toast({ title: "Error", description: error?.message, variant: "destructive" }); setSaving(false); return; }
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: newFleet.id, ...e })));
@@ -270,6 +273,21 @@ const FleetBuilder = () => {
           </div>
         </div>
 
+        <div className="mt-4 flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Special 1 Role:</span>
+            <select className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground" value={special1Role} onChange={e => setSpecial1Role(e.target.value)}>
+              {SPECIAL_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Special 2 Role:</span>
+            <select className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground" value={special2Role} onChange={e => setSpecial2Role(e.target.value)}>
+              {SPECIAL_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+        </div>
+
         {noCore && <p className="mt-2 text-sm text-secondary">⚠ Fleet has no ships in the Core group.</p>}
         {allRetreat && <p className="mt-2 text-sm text-secondary">⚠ All ships are in Retreat.</p>}
 
@@ -297,19 +315,10 @@ const FleetBuilder = () => {
                     <select
                       className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground"
                       value={entry.tactical_group}
-                      onChange={e => updateEntry(idx, { tactical_group: e.target.value, special_role: (e.target.value === "Special1" || e.target.value === "Special2") ? (entry.special_role || "Flank") : "" })}
+                      onChange={e => updateEntry(idx, { tactical_group: e.target.value })}
                     >
                       {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
-                    {(entry.tactical_group === "Special1" || entry.tactical_group === "Special2") && (
-                      <select
-                        className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground"
-                        value={entry.special_role || "Flank"}
-                        onChange={e => updateEntry(idx, { special_role: e.target.value })}
-                      >
-                        {SPECIAL_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
-                    )}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeEntry(idx)}>
                       <X className="h-4 w-4" />
                     </Button>
