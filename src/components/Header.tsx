@@ -55,6 +55,9 @@ const Header = () => {
               <Link to="/admin/battle-config" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
                 Config
               </Link>
+              <Link to="/admin/users" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                Users
+              </Link>
             </>
           )}
           <button
