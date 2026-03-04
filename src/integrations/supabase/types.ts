@@ -64,6 +64,7 @@ export type Database = {
           mod_a: number
           mod_b: number
           name: string
+          required_group: string | null
           seq_order: number
           updated_at: string
         }
@@ -75,6 +76,7 @@ export type Database = {
           mod_a?: number
           mod_b?: number
           name: string
+          required_group?: string | null
           seq_order: number
           updated_at?: string
         }
@@ -86,6 +88,7 @@ export type Database = {
           mod_a?: number
           mod_b?: number
           name?: string
+          required_group?: string | null
           seq_order?: number
           updated_at?: string
         }
