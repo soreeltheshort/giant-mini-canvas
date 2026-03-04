@@ -50,8 +50,11 @@ interface FleetShipEntry {
   ship_type_id: string;
   quantity: number;
   tactical_group: string;
+  special_role: string;
   notes: string;
 }
+
+const SPECIAL_ROLES = ["Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish"];
 
 const GROUPS = ["Core", "Rear", "Retreat", "Special1", "Special2"];
 const STANDING_ORDERS = ["move", "attack", "defend"] as const;
@@ -110,8 +113,8 @@ const FleetBuilder = () => {
           setReadiness(data.readiness ?? 2);
         }
       });
-      supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group, notes").eq("fleet_id", editId).then(({ data }) => {
-        if (data) setEntries(data.map(d => ({ ...d, notes: d.notes || "" })));
+      supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group, special_role, notes").eq("fleet_id", editId).then(({ data }) => {
+        if (data) setEntries(data.map(d => ({ ...d, notes: d.notes || "", special_role: d.special_role || "" })));
       });
     }
   }, [editId, user]);
@@ -154,7 +157,7 @@ const FleetBuilder = () => {
     if (existing) {
       setEntries(entries.map(e => e === existing ? { ...e, quantity: e.quantity + 1 } : e));
     } else {
-      setEntries([...entries, { ship_type_id: shipTypeId, quantity: 1, tactical_group: "Core", notes: "" }]);
+      setEntries([...entries, { ship_type_id: shipTypeId, quantity: 1, tactical_group: "Core", special_role: "", notes: "" }]);
     }
   };
 
@@ -294,10 +297,19 @@ const FleetBuilder = () => {
                     <select
                       className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground"
                       value={entry.tactical_group}
-                      onChange={e => updateEntry(idx, { tactical_group: e.target.value })}
+                      onChange={e => updateEntry(idx, { tactical_group: e.target.value, special_role: (e.target.value === "Special1" || e.target.value === "Special2") ? (entry.special_role || "Flank") : "" })}
                     >
                       {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
+                    {(entry.tactical_group === "Special1" || entry.tactical_group === "Special2") && (
+                      <select
+                        className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground"
+                        value={entry.special_role || "Flank"}
+                        onChange={e => updateEntry(idx, { special_role: e.target.value })}
+                      >
+                        {SPECIAL_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    )}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeEntry(idx)}>
                       <X className="h-4 w-4" />
                     </Button>
