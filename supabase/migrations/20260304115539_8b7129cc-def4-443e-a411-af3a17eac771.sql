@@ -1,0 +1,1 @@
+ALTER TABLE public.fleets ADD COLUMN readiness integer NOT NULL DEFAULT 2;

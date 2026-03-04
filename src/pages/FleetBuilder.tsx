@@ -57,6 +57,13 @@ const GROUPS = ["Core", "Rear", "Retreat", "Special1", "Special2"];
 const STANDING_ORDERS = ["move", "attack", "defend"] as const;
 type StandingOrder = typeof STANDING_ORDERS[number];
 const ORDER_LABELS: Record<StandingOrder, string> = { move: "Move", attack: "Attack", defend: "Defend" };
+
+const READINESS_LEVELS = [
+  { value: 1, label: "Condition 1 – Combat Ready", maintenance: 1.4, effectiveness: 1.2 },
+  { value: 2, label: "Condition 2 – Standard", maintenance: 1.0, effectiveness: 1.0 },
+  { value: 3, label: "Condition 3 – Routine", maintenance: 0.75, effectiveness: 0.6 },
+  { value: 4, label: "Condition 4 – Drydocked", maintenance: 0.25, effectiveness: 0.1 },
+];
 const HULL_CLASSES = ["T", "BB", "CH", "CM", "CL", "DD", "FH", "FL", "GS"];
 const HULL_LABELS: Record<string, string> = {
   T: "Titan", BB: "Battleship", CH: "Cruiser Heavy", CM: "Cruiser Medium",
@@ -77,6 +84,7 @@ const FleetBuilder = () => {
   const [saving, setSaving] = useState(false);
   const [revision, setRevision] = useState(1);
   const [standingOrder, setStandingOrder] = useState<StandingOrder>("move");
+  const [readiness, setReadiness] = useState(2);
   const [filterClass, setFilterClass] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedHull, setExpandedHull] = useState<string | null>(null);
@@ -99,6 +107,7 @@ const FleetBuilder = () => {
           setPointsBudget(data.points_budget);
           setRevision(data.revision);
           setStandingOrder((data.standing_order as StandingOrder) || "move");
+          setReadiness(data.readiness ?? 2);
         }
       });
       supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group, notes").eq("fleet_id", editId).then(({ data }) => {
@@ -185,12 +194,12 @@ const FleetBuilder = () => {
     setSaving(true);
 
     if (editId) {
-      await supabase.from("fleets").update({ name: fleetName, points_budget: pointsBudget, standing_order: standingOrder, revision: revision + 1 }).eq("id", editId);
+      await supabase.from("fleets").update({ name: fleetName, points_budget: pointsBudget, standing_order: standingOrder, readiness, revision: revision + 1 }).eq("id", editId);
       await supabase.from("fleet_ships").delete().eq("fleet_id", editId);
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: editId, ...e })));
     } else {
       const { data: newFleet, error } = await supabase.from("fleets")
-        .insert({ owner_user_id: user!.id, name: fleetName, points_budget: pointsBudget, standing_order: standingOrder })
+        .insert({ owner_user_id: user!.id, name: fleetName, points_budget: pointsBudget, standing_order: standingOrder, readiness })
         .select().single();
       if (error || !newFleet) { toast({ title: "Error", description: error?.message, variant: "destructive" }); setSaving(false); return; }
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: newFleet.id, ...e })));
@@ -210,7 +219,7 @@ const FleetBuilder = () => {
         <Button variant="ghost" onClick={() => navigate("/dashboard")} className="mb-4">← Back</Button>
         <h1 className="font-heading text-2xl font-bold text-foreground">{editId ? "Edit Fleet" : "New Fleet"}</h1>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Input placeholder="Fleet name" value={fleetName} onChange={e => setFleetName(e.target.value)} />
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Order:</span>
@@ -221,6 +230,20 @@ const FleetBuilder = () => {
             >
               {STANDING_ORDERS.map(o => <option key={o} value={o}>{ORDER_LABELS[o]}</option>)}
             </select>
+          </div>
+          <div>
+            <select
+              className="h-10 w-full rounded border border-input bg-background px-3 text-sm text-foreground"
+              value={readiness}
+              onChange={e => setReadiness(Number(e.target.value))}
+            >
+              {READINESS_LEVELS.map(r => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {(() => { const r = READINESS_LEVELS.find(l => l.value === readiness)!; return `Maint ×${r.maintenance} · Effect ×${r.effectiveness}`; })()}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Budget:</span>
