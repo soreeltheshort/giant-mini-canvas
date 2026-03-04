@@ -13,14 +13,18 @@ interface Fleet {
   revision: number;
   points_budget: number;
   created_at: string;
+  owner_user_id: string;
+  owner_display_name?: string;
 }
 
 const Dashboard = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin, isTester } = useAuth();
   const [fleets, setFleets] = useState<Fleet[]>([]);
   const [fetching, setFetching] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const canSeeAll = isAdmin || isTester;
 
   useEffect(() => {
     if (!loading && !user) navigate("/login");
@@ -28,15 +32,30 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) fetchFleets();
-  }, [user]);
+  }, [user, canSeeAll]);
 
   const fetchFleets = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("fleets")
-      .select("id, name, revision, points_budget, created_at")
-      .eq("owner_user_id", user!.id)
+      .select("id, name, revision, points_budget, created_at, owner_user_id")
       .order("updated_at", { ascending: false });
-    if (!error && data) setFleets(data);
+
+    if (!canSeeAll) {
+      query = query.eq("owner_user_id", user!.id);
+    }
+
+    const { data, error } = await query;
+    if (error || !data) { setFetching(false); return; }
+
+    // Fetch owner display names
+    const ownerIds = [...new Set(data.map(f => f.owner_user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, display_name")
+      .in("user_id", ownerIds);
+    const nameMap = new Map((profiles || []).map(p => [p.user_id, p.display_name]));
+
+    setFleets(data.map(f => ({ ...f, owner_display_name: nameMap.get(f.owner_user_id) || undefined })));
     setFetching(false);
   };
 
@@ -73,7 +92,7 @@ const Dashboard = () => {
       <Header />
       <div className="container py-16">
         <div className="flex items-center justify-between">
-          <h1 className="font-heading text-2xl font-bold text-foreground">Your Fleets</h1>
+          <h1 className="font-heading text-2xl font-bold text-foreground">{canSeeAll ? "All Fleets" : "Your Fleets"}</h1>
           <div className="flex gap-3">
             <Button onClick={() => navigate("/fleet-builder")}>New Fleet</Button>
             <Button variant="outline" onClick={() => navigate("/battle")}>Simulate Battle</Button>
@@ -87,19 +106,29 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="mt-8 space-y-3">
-            {fleets.map(fleet => (
-              <div key={fleet.id} className="flex items-center justify-between border border-border p-4">
-                <div>
-                  <p className="font-heading font-semibold text-foreground">{fleet.name}</p>
-                  <p className="text-xs text-muted-foreground">Rev {fleet.revision} · {fleet.points_budget} pts</p>
+            {fleets.map(fleet => {
+              const isOwn = fleet.owner_user_id === user?.id;
+              return (
+                <div key={fleet.id} className="flex items-center justify-between border border-border p-4">
+                  <div>
+                    <p className="font-heading font-semibold text-foreground">
+                      {fleet.name}
+                      {canSeeAll && (
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">
+                          by {isOwn ? "you" : (fleet.owner_display_name || "Unknown")}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Rev {fleet.revision} · {fleet.points_budget} pts</p>
+                  </div>
+                  <div className="flex gap-2">
+                    {isOwn && <Button variant="ghost" size="sm" onClick={() => navigate(`/fleet-builder?edit=${fleet.id}`)}>Edit</Button>}
+                    <Button variant="ghost" size="sm" onClick={() => duplicateFleet(fleet)}>Duplicate</Button>
+                    {isOwn && <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteFleet(fleet.id)}>Delete</Button>}
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => navigate(`/fleet-builder?edit=${fleet.id}`)}>Edit</Button>
-                  <Button variant="ghost" size="sm" onClick={() => duplicateFleet(fleet)}>Duplicate</Button>
-                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteFleet(fleet.id)}>Delete</Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
