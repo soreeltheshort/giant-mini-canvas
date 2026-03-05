@@ -112,6 +112,9 @@ const Header = () => {
                 <Link to="/admin/users" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
                   Users
                 </Link>
+                <Link to="/admin/ships" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                  Ships
+                </Link>
               </>
             )}
             <button
