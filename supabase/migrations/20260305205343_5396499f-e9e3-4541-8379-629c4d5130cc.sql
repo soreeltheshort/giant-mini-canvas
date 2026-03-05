@@ -1,0 +1,1 @@
+ALTER TABLE ship_types ADD COLUMN flavor_description text NOT NULL DEFAULT '';

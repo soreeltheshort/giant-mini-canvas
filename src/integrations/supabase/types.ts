@@ -293,6 +293,7 @@ export type Database = {
           class: string
           fighter_bay: number
           fighter_storage: number
+          flavor_description: string
           ground_invasion: number
           gun_ship_link: number
           gunship_storage: number
@@ -328,6 +329,7 @@ export type Database = {
           class: string
           fighter_bay?: number
           fighter_storage?: number
+          flavor_description?: string
           ground_invasion?: number
           gun_ship_link?: number
           gunship_storage?: number
@@ -363,6 +365,7 @@ export type Database = {
           class?: string
           fighter_bay?: number
           fighter_storage?: number
+          flavor_description?: string
           ground_invasion?: number
           gun_ship_link?: number
           gunship_storage?: number
