@@ -221,7 +221,7 @@ const FleetBuilder = () => {
   const totalMaintenance = Math.round(baseMaintenance * readinessData.maintenance * 100) / 100;
 
   const overCapacity = fighterOver || gunshipOver;
-  const noCore = entries.length > 0 && !entries.some(e => e.tactical_group === "Core" && e.quantity > 0);
+  
 
   const filteredShips = useMemo(() => {
     let ships = shipTypes;
@@ -392,8 +392,8 @@ const FleetBuilder = () => {
           </div>
         </div>
 
-        {noCore && <p className="mt-2 text-sm text-secondary">⚠ Fleet has no ships in the Core group.</p>}
-        
+        {(overCapacity || groupsOverCapacity.length > 0) && <p className="mt-2 text-sm text-destructive font-semibold">⚠ Insufficient Fighter/Gunship Capacity</p>}
+
 
         {/* Two-panel layout */}
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_380px]">
@@ -501,7 +501,7 @@ const FleetBuilder = () => {
             </div>
 
             <div className="mt-6 flex gap-3">
-              <Button onClick={save} disabled={saving || overCapacity || groupsOverCapacity.length > 0}>
+              <Button onClick={save} disabled={saving}>
                 {saving ? "Saving..." : "Save Fleet"}
               </Button>
               <Button variant="outline" onClick={() => navigate("/dashboard")}>Cancel</Button>
