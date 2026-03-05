@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,7 +7,11 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, Save, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Save, ChevronDown, ChevronRight, Upload } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ShipType {
   id: string;
@@ -101,6 +105,116 @@ const AdminShips = () => {
   const [showWeapons, setShowWeapons] = useState(false);
   const [showUtility, setShowUtility] = useState(false);
   const [filterClass, setFilterClass] = useState<string>("all");
+  const [csvPending, setCsvPending] = useState<Record<string, string | number | null>[] | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const CSV_FIELD_MAP: Record<string, keyof ShipType> = {
+    name: "name", class: "class", hull_class: "hull_class", hull: "hull", armor: "armor",
+    point_cost: "point_cost", maintenance: "maintenance", cbt_speed: "cbt_speed", map_speed: "map_speed",
+    sensor_rating: "sensor_rating", target_preference: "target_preference", flavor_description: "flavor_description",
+    ship_id: "ship_id",
+    laser_2_5cm: "laser_2_5cm", "laser_2.5cm": "laser_2_5cm",
+    laser_4_5cm: "laser_4_5cm", "laser_4.5cm": "laser_4_5cm",
+    laser_6_5cm: "laser_6_5cm", "laser_6.5cm": "laser_6_5cm",
+    laser_10cm: "laser_10cm", laser_14cm: "laser_14cm", laser_20cm: "laser_20cm",
+    laser_28cm: "laser_28cm", laser_50cm: "laser_50cm",
+    missile_10kg: "missile_10kg", missile_50kg: "missile_50kg",
+    missile_100kg: "missile_100kg", missile_half_kt: "missile_half_kt",
+    fighter_bay: "fighter_bay", fighter_storage: "fighter_storage",
+    gun_ship_link: "gun_ship_link", gunship_storage: "gunship_storage",
+    scout_sensors: "scout_sensors", supply_pod: "supply_pod",
+    repair_pod: "repair_pod", ground_invasion: "ground_invasion",
+  };
+
+  const NUM_FIELDS = new Set<string>([
+    "hull", "armor", "point_cost", "cbt_speed", "map_speed", "sensor_rating",
+    "laser_2_5cm", "laser_4_5cm", "laser_6_5cm", "laser_10cm", "laser_14cm",
+    "laser_20cm", "laser_28cm", "laser_50cm", "missile_10kg", "missile_50kg",
+    "missile_100kg", "missile_half_kt", "fighter_bay", "fighter_storage",
+    "gun_ship_link", "gunship_storage", "scout_sensors", "supply_pod",
+    "repair_pod", "ground_invasion",
+  ]);
+
+  const parseCSV = (text: string) => {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
+    return lines.slice(1).map(line => {
+      // Handle quoted fields with commas
+      const values: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      for (const ch of line) {
+        if (ch === '"') { inQuotes = !inQuotes; continue; }
+        if (ch === ',' && !inQuotes) { values.push(current.trim()); current = ""; continue; }
+        current += ch;
+      }
+      values.push(current.trim());
+
+      const row: Record<string, string | number | null> = {};
+      headers.forEach((h, i) => {
+        const mapped = CSV_FIELD_MAP[h];
+        if (!mapped) return;
+        const val = values[i] ?? "";
+        if (mapped === "maintenance") {
+          row[mapped] = parseFloat(val) || 0;
+        } else if (NUM_FIELDS.has(mapped)) {
+          row[mapped] = parseInt(val) || 0;
+        } else if (mapped === "ship_id") {
+          row[mapped] = val || null;
+        } else {
+          row[mapped] = val;
+        }
+      });
+      return row;
+    }).filter(r => r.name);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const parsed = parseCSV(text);
+      if (parsed.length === 0) {
+        toast({ title: "Error", description: "No valid ship rows found in CSV", variant: "destructive" });
+        return;
+      }
+      setCsvPending(parsed);
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const confirmUpload = async () => {
+    if (!csvPending) return;
+    setUploading(true);
+    // Delete all existing ships
+    const { error: delErr } = await supabase.from("ship_types").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    if (delErr) {
+      toast({ title: "Error deleting old ships", description: delErr.message, variant: "destructive" });
+      setUploading(false);
+      setCsvPending(null);
+      return;
+    }
+    // Insert in batches of 50
+    let errors = 0;
+    for (let i = 0; i < csvPending.length; i += 50) {
+      const batch = csvPending.slice(i, i + 50);
+      const { error } = await supabase.from("ship_types").insert(batch as any);
+      if (error) { errors++; console.error(error); }
+    }
+    if (errors) {
+      toast({ title: "Upload partially failed", description: `${errors} batch error(s)`, variant: "destructive" });
+    } else {
+      toast({ title: "Upload complete", description: `${csvPending.length} ships imported` });
+    }
+    setCsvPending(null);
+    setUploading(false);
+    await loadShips();
+  };
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) navigate("/dashboard");
@@ -181,6 +295,10 @@ const AdminShips = () => {
         <div className="flex items-center justify-between mb-4">
           <h1 className="font-heading text-2xl font-bold text-foreground">Ship Catalog (Admin)</h1>
           <div className="flex gap-2">
+            <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileSelect} />
+            <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="mr-1 h-4 w-4" /> Upload CSV
+            </Button>
             <Button size="sm" variant="outline" onClick={addShip}><Plus className="mr-1 h-4 w-4" /> Add Ship</Button>
             <Button size="sm" onClick={saveAll} disabled={saving || !ships.some(s => s._dirty)}>
               <Save className="mr-1 h-4 w-4" /> {saving ? "Saving..." : "Save All"}
@@ -263,6 +381,23 @@ const AdminShips = () => {
         <p className="mt-2 text-xs text-muted-foreground">Showing {filtered.length} of {ships.length} ships</p>
       </div>
       <Footer />
+
+      <AlertDialog open={!!csvPending} onOpenChange={(open) => { if (!open) setCsvPending(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace All Ships?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will <strong>delete all {ships.length} existing ships</strong> and replace them with <strong>{csvPending?.length ?? 0} ships</strong> from the CSV. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={uploading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmUpload} disabled={uploading}>
+              {uploading ? "Uploading..." : "Replace All Ships"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
