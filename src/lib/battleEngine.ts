@@ -266,7 +266,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           typeId: fs.ship_type.id,
           name: `${fs.ship_type.name} #${i + 1}`,
           class: fs.ship_type.class,
-          hull_class: fs.ship_type.hull_class,
+          hull_class: fs.ship_type.class,
           maxHull: fs.ship_type.hull,
           currentHull: fs.ship_type.hull,
           armor: fs.ship_type.armor,
@@ -276,7 +276,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           tacticalGroup: fs.tactical_group,
           fleet,
           crippled: false,
-          target_preference: fs.ship_type.target_preference || fs.ship_type.hull_class,
+          target_preference: fs.ship_type.target_preference || fs.ship_type.class,
         });
       }
     }
