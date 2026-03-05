@@ -44,6 +44,7 @@ interface ShipType {
   fighter_storage: number;
   gun_ship_link: number;
   gunship_storage: number;
+  flavor_description: string;
 }
 
 interface FleetShipEntry {
@@ -558,6 +559,9 @@ const FleetBuilder = () => {
                             )}
                             {getSpecialSummary(st) && (
                               <div className="text-[10px] text-secondary">{getSpecialSummary(st)}</div>
+                            )}
+                            {st.flavor_description && (
+                              <div className="text-[10px] text-muted-foreground italic mt-1 leading-snug">{st.flavor_description}</div>
                             )}
                             <Plus className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 absolute right-2 top-2" />
                           </button>
