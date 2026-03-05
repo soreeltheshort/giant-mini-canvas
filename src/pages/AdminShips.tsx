@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, Save, ChevronDown, ChevronRight, Upload } from "lucide-react";
+import { Plus, Trash2, Save, Upload } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -102,8 +102,6 @@ const AdminShips = () => {
   const navigate = useNavigate();
   const [ships, setShips] = useState<ShipType[]>([]);
   const [saving, setSaving] = useState(false);
-  const [showWeapons, setShowWeapons] = useState(false);
-  const [showUtility, setShowUtility] = useState(false);
   const [filterClass, setFilterClass] = useState<string>("all");
   const [csvPending, setCsvPending] = useState<Record<string, string | number | null>[] | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -312,37 +310,35 @@ const AdminShips = () => {
             <option value="all">All Classes ({ships.length})</option>
             {CLASS_CODES.map(c => <option key={c} value={c}>{c} ({ships.filter(s => s.class === c).length})</option>)}
           </select>
-          <Button size="sm" variant="ghost" onClick={() => setShowWeapons(!showWeapons)}>
-            {showWeapons ? <ChevronDown className="mr-1 h-3 w-3" /> : <ChevronRight className="mr-1 h-3 w-3" />} Weapons
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setShowUtility(!showUtility)}>
-            {showUtility ? <ChevronDown className="mr-1 h-3 w-3" /> : <ChevronRight className="mr-1 h-3 w-3" />} Utility
-          </Button>
         </div>
 
-        <div className="overflow-x-auto border border-border rounded">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                {CORE_FIELDS.map(f => (
-                  <th key={f.key} className="px-2 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap">{f.label}</th>
+        <div className="overflow-auto border border-border rounded max-h-[70vh]">
+          <table className="text-sm border-collapse">
+            <thead className="sticky top-0 z-20 bg-muted">
+              <tr className="border-b border-border">
+                {CORE_FIELDS.map((f, i) => (
+                  <th key={f.key} className={`px-2 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap bg-muted ${i < 2 ? `sticky left-0 z-30 ${i === 1 ? 'left-[160px] border-r border-border' : ''}` : ''}`}
+                    style={i === 0 ? { left: 0, minWidth: 160 } : i === 1 ? { left: 160, minWidth: 80 } : undefined}>
+                    {f.label}
+                  </th>
                 ))}
-                {showWeapons && WEAPON_FIELDS.map(f => (
-                  <th key={f.key} className="px-1 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap">{f.label}</th>
+                {WEAPON_FIELDS.map(f => (
+                  <th key={f.key} className="px-1 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap bg-muted">{f.label}</th>
                 ))}
-                {showUtility && UTILITY_FIELDS.map(f => (
-                  <th key={f.key} className="px-1 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap">{f.label}</th>
+                {UTILITY_FIELDS.map(f => (
+                  <th key={f.key} className="px-1 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap bg-muted">{f.label}</th>
                 ))}
-                <th className="px-2 py-2 w-10"></th>
+                <th className="px-2 py-2 w-10 bg-muted"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(s => (
                 <tr key={s.id} className={`border-b border-border ${s._dirty ? "bg-primary/5" : ""}`}>
-                  {CORE_FIELDS.map(f => (
-                    <td key={f.key} className="px-1 py-1">
+                  {CORE_FIELDS.map((f, i) => (
+                    <td key={f.key} className={`px-1 py-1 ${i < 2 ? `sticky z-10 bg-background ${i === 1 ? 'left-[160px] border-r border-border' : 'left-0'}` : ''} ${s._dirty && i < 2 ? '!bg-primary/5' : ''}`}
+                      style={i === 0 ? { left: 0, minWidth: 160 } : i === 1 ? { left: 160, minWidth: 80 } : undefined}>
                       {f.type === "select" ? (
-                        <select className="h-7 w-full rounded border border-input bg-background px-1 text-xs text-foreground"
+                        <select className={`h-7 rounded border border-input bg-background px-1 text-xs text-foreground ${i === 1 ? 'w-20' : 'w-full'}`}
                           value={s[f.key] as string} onChange={e => updateField(s.id, f.key, e.target.value)}>
                           {f.options!.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
@@ -356,13 +352,13 @@ const AdminShips = () => {
                       )}
                     </td>
                   ))}
-                  {showWeapons && WEAPON_FIELDS.map(f => (
+                  {WEAPON_FIELDS.map(f => (
                     <td key={f.key} className="px-1 py-1">
                       <Input className="h-7 w-12 text-xs" type="number" value={s[f.key] as number}
                         onChange={e => updateField(s.id, f.key, parseInt(e.target.value) || 0)} />
                     </td>
                   ))}
-                  {showUtility && UTILITY_FIELDS.map(f => (
+                  {UTILITY_FIELDS.map(f => (
                     <td key={f.key} className="px-1 py-1">
                       <Input className="h-7 w-12 text-xs" type="number" value={s[f.key] as number}
                         onChange={e => updateField(s.id, f.key, parseInt(e.target.value) || 0)} />
