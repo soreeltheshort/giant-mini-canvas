@@ -170,8 +170,8 @@ const FleetBuilder = () => {
   const fighterUsed = entries.reduce((sum, e) => {
     const st = shipTypes.find(s => s.id === e.ship_type_id);
     if (!st) return sum;
-    if (st.hull_class === "FL") return sum + 1 * e.quantity;
-    if (st.hull_class === "FH") return sum + 2 * e.quantity;
+    if (st.class === "FL") return sum + 1 * e.quantity;
+    if (st.class === "FH") return sum + 2 * e.quantity;
     return sum;
   }, 0);
 
@@ -183,7 +183,7 @@ const FleetBuilder = () => {
   const gunshipUsed = entries.reduce((sum, e) => {
     const st = shipTypes.find(s => s.id === e.ship_type_id);
     if (!st) return sum;
-    if (st.hull_class === "GS") return sum + 1 * e.quantity;
+    if (st.class === "GS") return sum + 1 * e.quantity;
     return sum;
   }, 0);
 
@@ -201,9 +201,9 @@ const FleetBuilder = () => {
         if (!st) continue;
         fCap += st.fighter_bay * e.quantity;
         gCap += st.gun_ship_link * e.quantity;
-        if (st.hull_class === "FL") fUsed += 1 * e.quantity;
-        if (st.hull_class === "FH") fUsed += 2 * e.quantity;
-        if (st.hull_class === "GS") gUsed += 1 * e.quantity;
+        if (st.class === "FL") fUsed += 1 * e.quantity;
+        if (st.class === "FH") fUsed += 2 * e.quantity;
+        if (st.class === "GS") gUsed += 1 * e.quantity;
       }
       caps[group] = { fighterCap: fCap, fighterUsed: fUsed, gunshipCap: gCap, gunshipUsed: gUsed };
     }
@@ -225,7 +225,7 @@ const FleetBuilder = () => {
 
   const filteredShips = useMemo(() => {
     let ships = shipTypes;
-    if (filterClass !== "all") ships = ships.filter(s => s.hull_class === filterClass);
+    if (filterClass !== "all") ships = ships.filter(s => s.class === filterClass);
     if (searchTerm) ships = ships.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
     return ships;
   }, [shipTypes, filterClass, searchTerm]);
@@ -233,8 +233,8 @@ const FleetBuilder = () => {
   const groupedShips = useMemo(() => {
     const groups: Record<string, ShipType[]> = {};
     for (const s of filteredShips) {
-      if (!groups[s.hull_class]) groups[s.hull_class] = [];
-      groups[s.hull_class].push(s);
+      if (!groups[s.class]) groups[s.class] = [];
+      groups[s.class].push(s);
     }
     return groups;
   }, [filteredShips]);
@@ -469,7 +469,7 @@ const FleetBuilder = () => {
                           >
                             <GripVertical className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                             <span className="text-xs font-semibold text-foreground flex-1 min-w-0 truncate">{st.name}</span>
-                            <span className="text-[10px] text-muted-foreground">{st.hull_class}</span>
+                            <span className="text-[10px] text-muted-foreground">{st.class}</span>
                             <span className="text-[10px] text-primary font-semibold">{st.point_cost * entry.quantity}pts</span>
                             <div className="flex items-center gap-0.5">
                               <Input
