@@ -1,0 +1,2 @@
+ALTER TABLE ship_types DROP CONSTRAINT ship_types_hull_class_check;
+ALTER TABLE ship_types ADD CONSTRAINT ship_types_hull_class_check CHECK (hull_class IN ('BB','CH','CL','CM','DD','FH','FL','GS','T','Light','Medium','Heavy','Capital','Cruiser','Escort','Strikecraft'));
