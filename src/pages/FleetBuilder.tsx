@@ -288,16 +288,20 @@ const FleetBuilder = () => {
 
   const save = async () => {
     if (entries.length === 0) { toast({ title: "Empty fleet", description: "Add at least one ship.", variant: "destructive" }); return; }
-    if (fighterOver) { toast({ title: "Over fleet fighter capacity", description: `${fighterUsed} fighters but only ${fighterCapacity} fighter bay slots fleet-wide.`, variant: "destructive" }); return; }
-    if (gunshipOver) { toast({ title: "Over fleet gunship capacity", description: `${gunshipUsed} gunships but only ${gunshipCapacity} gunship link slots fleet-wide.`, variant: "destructive" }); return; }
-    if (groupsOverCapacity.length > 0) {
-      const g = groupsOverCapacity[0];
+    
+    // Warn but don't block for capacity issues
+    const warnings: string[] = [];
+    if (fighterOver) warnings.push(`Fighter capacity exceeded: ${fighterUsed} used / ${fighterCapacity} available`);
+    if (gunshipOver) warnings.push(`Gunship capacity exceeded: ${gunshipUsed} used / ${gunshipCapacity} available`);
+    for (const g of groupsOverCapacity) {
       const gc = groupCapacities[g];
       const msgs: string[] = [];
       if (gc.fighterUsed > gc.fighterCap) msgs.push(`fighters ${gc.fighterUsed}/${gc.fighterCap}`);
       if (gc.gunshipUsed > gc.gunshipCap) msgs.push(`gunships ${gc.gunshipUsed}/${gc.gunshipCap}`);
-      toast({ title: `Group "${g}" over capacity`, description: msgs.join(", "), variant: "destructive" });
-      return;
+      warnings.push(`Group "${g}" over capacity: ${msgs.join(", ")}`);
+    }
+    if (warnings.length > 0) {
+      toast({ title: "⚠️ Fleet saved with warnings", description: warnings.join(". "), variant: "destructive" });
     }
     setSaving(true);
 
