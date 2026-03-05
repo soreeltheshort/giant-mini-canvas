@@ -69,6 +69,7 @@ const CORE_FIELDS: { key: keyof ShipType; label: string; type: "text" | "number"
   { key: "cbt_speed", label: "Cbt Spd", type: "number", width: "w-16" },
   { key: "map_speed", label: "Map Spd", type: "number", width: "w-16" },
   { key: "sensor_rating", label: "Sensor", type: "number", width: "w-16" },
+  { key: "flavor_description", label: "Flavor", type: "text", width: "w-48" },
 ];
 
 const WEAPON_FIELDS: { key: keyof ShipType; label: string }[] = [
