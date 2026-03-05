@@ -13,6 +13,7 @@ interface FleetOption {
   id: string;
   name: string;
   owner_user_id: string;
+  capacityWarnings?: string[];
 }
 
 const Battle = () => {
@@ -34,9 +35,40 @@ const Battle = () => {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    supabase.from("fleets").select("id, name, owner_user_id").then(({ data }) => {
-      if (data) setFleets(data);
-    });
+    const loadFleets = async () => {
+      const { data: fleetsData } = await supabase.from("fleets").select("id, name, owner_user_id");
+      if (!fleetsData) return;
+
+      // Load all fleet ships with ship types to check capacity
+      const { data: allFleetShips } = await supabase
+        .from("fleet_ships")
+        .select("fleet_id, quantity, ship_type_id, ship_types(class, fighter_bay, gun_ship_link)")
+        .in("fleet_id", fleetsData.map(f => f.id));
+
+      const enriched: FleetOption[] = fleetsData.map(f => {
+        const ships = allFleetShips?.filter(s => s.fleet_id === f.id) || [];
+        const warnings: string[] = [];
+
+        let fighterCap = 0, fighterUsed = 0, gunshipCap = 0, gunshipUsed = 0;
+        for (const s of ships) {
+          const st = s.ship_types as any;
+          if (!st) continue;
+          fighterCap += (st.fighter_bay || 0) * s.quantity;
+          gunshipCap += (st.gun_ship_link || 0) * s.quantity;
+          if (st.class === "FL") fighterUsed += 1 * s.quantity;
+          if (st.class === "FH") fighterUsed += 2 * s.quantity;
+          if (st.class === "GS") gunshipUsed += 1 * s.quantity;
+        }
+
+        if (fighterUsed > fighterCap) warnings.push(`Fighters: ${fighterUsed}/${fighterCap}`);
+        if (gunshipUsed > gunshipCap) warnings.push(`Gunships: ${gunshipUsed}/${gunshipCap}`);
+
+        return { ...f, capacityWarnings: warnings };
+      });
+
+      setFleets(enriched);
+    };
+    loadFleets();
   }, []);
 
   const loadFleetSnapshot = async (fleetId: string): Promise<FleetSnapshot | null> => {
@@ -144,15 +176,27 @@ const Battle = () => {
             <label className="text-xs text-muted-foreground">Fleet A</label>
             <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={fleetAId} onChange={e => setFleetAId(e.target.value)}>
               <option value="">Select fleet...</option>
-              {fleets.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+              {fleets.map(f => <option key={f.id} value={f.id}>{f.name}{f.capacityWarnings?.length ? " ⚠️" : ""}</option>)}
             </select>
+            {fleetAId && (() => {
+              const f = fleets.find(fl => fl.id === fleetAId);
+              return f?.capacityWarnings?.length ? (
+                <div className="mt-1 text-xs text-yellow-500 font-medium">⚠️ {f.capacityWarnings.join(", ")}</div>
+              ) : null;
+            })()}
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Fleet B</label>
             <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={fleetBId} onChange={e => setFleetBId(e.target.value)}>
               <option value="">Select fleet...</option>
-              {fleets.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+              {fleets.map(f => <option key={f.id} value={f.id}>{f.name}{f.capacityWarnings?.length ? " ⚠️" : ""}</option>)}
             </select>
+            {fleetBId && (() => {
+              const f = fleets.find(fl => fl.id === fleetBId);
+              return f?.capacityWarnings?.length ? (
+                <div className="mt-1 text-xs text-yellow-500 font-medium">⚠️ {f.capacityWarnings.join(", ")}</div>
+              ) : null;
+            })()}
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Seed (optional)</label>
