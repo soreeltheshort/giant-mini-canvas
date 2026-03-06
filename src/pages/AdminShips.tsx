@@ -154,6 +154,7 @@ const AdminShips = () => {
     laser_28cm: "laser_28cm", laser_50cm: "laser_50cm",
     missile_10kg: "missile_10kg", missile_50kg: "missile_50kg",
     missile_100kg: "missile_100kg", missile_half_kt: "missile_half_kt",
+    "missile_1/2kt": "missile_half_kt",
     fighter_bay: "fighter_bay", fighter_storage: "fighter_storage",
     gun_ship_link: "gun_ship_link", gunship_storage: "gunship_storage",
     scout_sensors: "scout_sensors", supply_pod: "supply_pod",
