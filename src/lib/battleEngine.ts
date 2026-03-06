@@ -284,10 +284,11 @@ function getGroupModifier(group: string, type: "attack" | "defense", modifiers: 
   return type === "attack" ? mod.attack_mod : mod.defense_mod;
 }
 
-export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants): BattleResult {
+export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants, weaponTargetPrefs?: WeaponTargetPref[]): BattleResult {
   const activePhases = phases && phases.length > 0 ? phases : DEFAULT_PHASES;
   const activeMods = groupModifiers && groupModifiers.length > 0 ? groupModifiers : DEFAULT_GROUP_MODS;
   const cc = combatConsts ?? DEFAULT_COMBAT_CONSTANTS;
+  const weaponPrefs = weaponTargetPrefs ?? [];
   const rng = createRNG(hashSeed(seedStr));
   const events: BattleEvent[] = [];
   let seq = 0;
