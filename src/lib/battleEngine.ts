@@ -229,7 +229,11 @@ export interface GroupModConfig {
   defense_mod: number;
 }
 
-export interface CombatConstants {
+export interface WeaponTargetPref {
+  weapon_key: string;
+  hull_class: string;
+  priority: number;
+}
   hit_chance_min: number;
   hit_chance_max: number;
   base_hit_chance: number;
