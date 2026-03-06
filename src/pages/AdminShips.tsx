@@ -241,6 +241,14 @@ const AdminShips = () => {
           row[mapped] = val;
         }
       });
+      // Derive hull_class from class if not present
+      if (!row.hull_class && row.class) {
+        const cls = row.class as string;
+        if (["BB", "CH", "T"].includes(cls)) row.hull_class = "Capital";
+        else if (["CM", "CL"].includes(cls)) row.hull_class = "Cruiser";
+        else if (["DD"].includes(cls)) row.hull_class = "Escort";
+        else row.hull_class = "Strikecraft";
+      }
       return row;
     }).filter(r => r.name);
   };
