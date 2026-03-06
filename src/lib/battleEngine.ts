@@ -356,8 +356,24 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     return allShips.filter(s => s.fleet === fleet && !s.crippled);
   }
 
-  function selectTarget(attacker: ShipInstance, enemies: ShipInstance[]): ShipInstance | null {
-    const priority = getTargetPriority(attacker.target_preference);
+  function getWeaponTargetPriority(weaponKey: string, shipTargetPref: string): { priority: string[]; source: string } {
+    const prefs = weaponPrefs.filter(p => p.weapon_key === weaponKey).sort((a, b) => a.priority - b.priority);
+    if (prefs.length > 0) {
+      // Weapon has explicit preferences — use those first, then fall back to remaining hull classes
+      const explicit = prefs.map(p => p.hull_class);
+      const remaining = HULL_SIZE_ORDER.filter(h => !explicit.includes(h));
+      // Sort remaining by proximity to ship's target preference
+      const shipPriority = getTargetPriority(shipTargetPref);
+      remaining.sort((a, b) => shipPriority.indexOf(a) - shipPriority.indexOf(b));
+      return { priority: [...explicit, ...remaining], source: `weapon(${explicit.join(">")})+ship` };
+    }
+    return { priority: getTargetPriority(shipTargetPref), source: "ship" };
+  }
+
+  function selectTarget(attacker: ShipInstance, enemies: ShipInstance[], weaponKey?: string): ShipInstance | null {
+    const { priority } = weaponKey
+      ? getWeaponTargetPriority(weaponKey, attacker.target_preference)
+      : { priority: getTargetPriority(attacker.target_preference) };
     for (const hullClass of priority) {
       const damaged = enemies.filter(e => e.hull_class === hullClass && !e.crippled && e.currentHull < e.maxHull);
       if (damaged.length > 0) return damaged[Math.floor(rng() * damaged.length)];
