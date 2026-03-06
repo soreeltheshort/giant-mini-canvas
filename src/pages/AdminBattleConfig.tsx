@@ -167,6 +167,27 @@ const AdminBattleConfig = () => {
     toast({ title: "Deleted" });
   };
 
+  // --- Weapon target preference helpers ---
+  const updateWeaponPref = (id: string, field: keyof WeaponTargetPref, value: any) => {
+    setWeaponPrefs(prev => prev.map(w => w.id === id ? { ...w, [field]: value, _dirty: true } : w));
+  };
+
+  const addWeaponPref = () => {
+    setWeaponPrefs(prev => [...prev, {
+      id: crypto.randomUUID(), weapon_key: "laser_2_5cm", hull_class: "FL", priority: 0,
+      _dirty: true, _new: true,
+    }]);
+  };
+
+  const deleteWeaponPref = async (id: string, isNew?: boolean) => {
+    if (!isNew) {
+      const { error } = await supabase.from("weapon_target_preferences").delete().eq("id", id);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    }
+    setWeaponPrefs(prev => prev.filter(w => w.id !== id));
+    toast({ title: "Deleted" });
+  };
+
   const saveAll = async () => {
     setSaving(true);
     let errors = 0;
@@ -195,6 +216,14 @@ const AdminBattleConfig = () => {
       if (error) { errors++; console.error(error); }
     }
 
+    for (const w of weaponPrefs.filter(w => w._dirty)) {
+      const payload = { id: w.id, weapon_key: w.weapon_key, hull_class: w.hull_class, priority: w.priority };
+      const { error } = w._new
+        ? await supabase.from("weapon_target_preferences").insert(payload as any)
+        : await supabase.from("weapon_target_preferences").update(payload as any).eq("id", w.id);
+      if (error) { errors++; console.error(error); }
+    }
+
     if (errors) toast({ title: "Some saves failed", description: `${errors} error(s)`, variant: "destructive" });
     else toast({ title: "Saved" });
 
@@ -202,7 +231,7 @@ const AdminBattleConfig = () => {
     setSaving(false);
   };
 
-  const hasDirty = phases.some(p => p._dirty) || groupMods.some(g => g._dirty) || constants.some(c => c._dirty);
+  const hasDirty = phases.some(p => p._dirty) || groupMods.some(g => g._dirty) || constants.some(c => c._dirty) || weaponPrefs.some(w => w._dirty);
 
   if (loading) return <div className="min-h-screen bg-background"><Header /><div className="container py-20 text-center text-muted-foreground">Loading...</div><Footer /></div>;
 
