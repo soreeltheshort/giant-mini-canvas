@@ -234,6 +234,8 @@ export interface WeaponTargetPref {
   hull_class: string;
   priority: number;
 }
+
+export interface CombatConstants {
   hit_chance_min: number;
   hit_chance_max: number;
   base_hit_chance: number;
