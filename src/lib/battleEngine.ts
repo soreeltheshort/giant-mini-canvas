@@ -429,9 +429,9 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
             weaponName: mount.name, weaponKey: mount.key, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
             roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
             rawDmg, armor: target.armor, actualDmg, remainingHull: Math.max(0, target.currentHull), crippled: wouldCripple, critical: isCrit,
-            attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed, targetSource,
+             attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed, targetSource, attackerTargetPref: attacker.target_preference,
           },
-            `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage. (rolled ${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% to hit)${critTag}${wouldCripple ? " DESTROYED!" : ""}`,
+            `${attacker.name} (${attacker.fleet}, pref: ${attacker.target_preference}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage. (rolled ${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% to hit)${critTag}${wouldCripple ? " DESTROYED!" : ""}`,
             `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! ${targetExplain} ${speedExplain}${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${Math.max(0, target.currentHull)}/${target.maxHull}.${wouldCripple ? " Ship crippled." : ""}`
           );
         } else {
@@ -439,9 +439,9 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
             attacker: attacker.instanceId, target: target.instanceId,
             weaponName: mount.name, weaponKey: mount.key, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
             roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
-            attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed, targetSource,
+             attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed, targetSource, attackerTargetPref: attacker.target_preference,
           },
-            `${attacker.name} (${attacker.fleet}) fires ${mount.name} #${gun + 1} at ${target.name} (${target.fleet}) — miss. (rolled ${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% to hit)`,
+            `${attacker.name} (${attacker.fleet}, pref: ${attacker.target_preference}) fires ${mount.name} #${gun + 1} at ${target.name} (${target.fleet}) — miss. (rolled ${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% to hit)`,
             `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Miss. ${targetExplain} ${speedExplain}`
           );
         }
