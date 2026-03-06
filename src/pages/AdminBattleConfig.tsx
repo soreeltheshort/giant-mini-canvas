@@ -40,7 +40,32 @@ interface CombatConst {
   _new?: boolean;
 }
 
+interface WeaponTargetPref {
+  id: string;
+  weapon_key: string;
+  hull_class: string;
+  priority: number;
+  _dirty?: boolean;
+  _new?: boolean;
+}
+
 const ALL_GROUPS = ["Core", "Attack", "Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish", "Rear", "Retreat"];
+
+const ALL_HULL_CLASSES = ["FL", "FH", "GS", "DD", "CL", "CM", "CH", "BB", "T", "TT", "Titan"];
+
+const ALL_WEAPON_KEYS = [
+  "laser_2_5cm", "laser_4_5cm", "laser_6_5cm", "laser_10cm", "laser_14cm",
+  "laser_20cm", "laser_28cm", "laser_50cm",
+  "missile_10kg", "missile_50kg", "missile_100kg", "missile_half_kt",
+];
+
+const WEAPON_DISPLAY: Record<string, string> = {
+  laser_2_5cm: "2.5cm Laser", laser_4_5cm: "4.5cm Laser", laser_6_5cm: "6.5cm Laser",
+  laser_10cm: "10cm Laser", laser_14cm: "14cm Laser", laser_20cm: "20cm Laser",
+  laser_28cm: "28cm Laser", laser_50cm: "50cm Laser",
+  missile_10kg: "10kg Missile", missile_50kg: "50kg Missile", missile_100kg: "100kg Missile",
+  missile_half_kt: "½kt Missile",
+};
 
 const AdminBattleConfig = () => {
   const { user, loading, isAdmin } = useAuth();
