@@ -190,6 +190,10 @@ const Battle = () => {
                 <div className="mt-1 text-xs text-yellow-500 font-medium">⚠️ {f.capacityWarnings.join(", ")}</div>
               ) : null;
             })()}
+            <label className="mt-2 block text-xs text-muted-foreground">Admiral A Rating</label>
+            <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={admiralA} onChange={e => setAdmiralA(Number(e.target.value))}>
+              {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+            </select>
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Fleet B</label>
@@ -203,6 +207,10 @@ const Battle = () => {
                 <div className="mt-1 text-xs text-yellow-500 font-medium">⚠️ {f.capacityWarnings.join(", ")}</div>
               ) : null;
             })()}
+            <label className="mt-2 block text-xs text-muted-foreground">Admiral B Rating</label>
+            <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={admiralB} onChange={e => setAdmiralB(Number(e.target.value))}>
+              {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+            </select>
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Seed (optional)</label>
