@@ -159,6 +159,24 @@ interface ShipInstance {
   fleet: "A" | "B";
   crippled: boolean;
   target_preference: string;
+  shipTypeData: ShipTypeData; // full type data for virtual speed lookups
+}
+
+// Map tactical group name to virtual speed column suffix
+function groupToKey(group: string): string {
+  return group.toLowerCase().replace(/ /g, "_");
+}
+
+function getVirtualAttackSpeed(ship: ShipInstance): number {
+  const key = `virtual_atk_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
+  const val = Number(ship.shipTypeData[key] ?? 0);
+  return val > 0 ? val : ship.cbt_speed;
+}
+
+function getVirtualDefenseSpeed(ship: ShipInstance): number {
+  const key = `virtual_def_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
+  const val = Number(ship.shipTypeData[key] ?? 0);
+  return val > 0 ? val : ship.cbt_speed;
 }
 
 export interface BattleEvent {
