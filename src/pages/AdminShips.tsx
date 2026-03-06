@@ -51,6 +51,25 @@ interface ShipType {
   supply_pod: number;
   repair_pod: number;
   ground_invasion: number;
+  // Virtual speeds
+  virtual_atk_speed_attack: number;
+  virtual_atk_speed_core: number;
+  virtual_atk_speed_rear: number;
+  virtual_atk_speed_retreat: number;
+  virtual_atk_speed_attack_planet: number;
+  virtual_atk_speed_outflank: number;
+  virtual_atk_speed_skirmish: number;
+  virtual_atk_speed_cover_retreat: number;
+  virtual_atk_speed_flank: number;
+  virtual_def_speed_attack: number;
+  virtual_def_speed_core: number;
+  virtual_def_speed_rear: number;
+  virtual_def_speed_retreat: number;
+  virtual_def_speed_attack_planet: number;
+  virtual_def_speed_outflank: number;
+  virtual_def_speed_skirmish: number;
+  virtual_def_speed_cover_retreat: number;
+  virtual_def_speed_flank: number;
   _dirty?: boolean;
   _new?: boolean;
 }
@@ -98,6 +117,18 @@ const UTILITY_FIELDS: { key: keyof ShipType; label: string }[] = [
   { key: "ground_invasion", label: "Ground" },
 ];
 
+const VIRTUAL_SPEED_GROUPS = ["Attack", "Core", "Rear", "Retreat", "Attack Planet", "Outflank", "Skirmish", "Cover Retreat", "Flank"] as const;
+
+const VIRTUAL_ATK_FIELDS: { key: keyof ShipType; label: string }[] = VIRTUAL_SPEED_GROUPS.map(g => ({
+  key: `virtual_atk_speed_${g.toLowerCase().replace(/ /g, "_")}` as keyof ShipType,
+  label: g,
+}));
+
+const VIRTUAL_DEF_FIELDS: { key: keyof ShipType; label: string }[] = VIRTUAL_SPEED_GROUPS.map(g => ({
+  key: `virtual_def_speed_${g.toLowerCase().replace(/ /g, "_")}` as keyof ShipType,
+  label: g,
+}));
+
 const AdminShips = () => {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -124,6 +155,27 @@ const AdminShips = () => {
     gun_ship_link: "gun_ship_link", gunship_storage: "gunship_storage",
     scout_sensors: "scout_sensors", supply_pod: "supply_pod",
     repair_pod: "repair_pod", ground_invasion: "ground_invasion",
+    // Virtual speed CSV header mappings
+    virtual_attack_speed_attack: "virtual_atk_speed_attack",
+    virtual_attack_speed_core: "virtual_atk_speed_core",
+    "virtual_attack_speed_core_": "virtual_atk_speed_core",
+    virtual_attack_speed_rear: "virtual_atk_speed_rear",
+    virtual_attack_speed_retreat: "virtual_atk_speed_retreat",
+    virtual_attack_speed_attack_planet: "virtual_atk_speed_attack_planet",
+    virtual_attack_speed_outflank: "virtual_atk_speed_outflank",
+    virtual_attack_speed_skirmish: "virtual_atk_speed_skirmish",
+    virtual_attack_speed_cover_retreat: "virtual_atk_speed_cover_retreat",
+    virtual_attack_speed_flank: "virtual_atk_speed_flank",
+    virtual_defense_speed_attack: "virtual_def_speed_attack",
+    virtual_defense_speed_core: "virtual_def_speed_core",
+    "virtual_defense_speed_core_": "virtual_def_speed_core",
+    virtual_defense_speed_rear: "virtual_def_speed_rear",
+    virtual_defense_speed_retreat: "virtual_def_speed_retreat",
+    virtual_defense_speed_attack_planet: "virtual_def_speed_attack_planet",
+    virtual_defense_speed_outflank: "virtual_def_speed_outflank",
+    virtual_defense_speed_skirmish: "virtual_def_speed_skirmish",
+    virtual_defense_speed_cover_retreat: "virtual_def_speed_cover_retreat",
+    virtual_defense_speed_flank: "virtual_def_speed_flank",
   };
 
   const NUM_FIELDS = new Set<string>([
