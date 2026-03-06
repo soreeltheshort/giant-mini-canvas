@@ -400,6 +400,53 @@ const AdminBattleConfig = () => {
             </table>
           </div>
         </div>
+
+        {/* WEAPON TARGET PREFERENCES */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-heading text-lg font-semibold text-foreground">Weapon Target Preferences</h2>
+            <Button size="sm" variant="outline" onClick={addWeaponPref}><Plus className="mr-1 h-4 w-4" /> Add Preference</Button>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">Configure per-weapon targeting priority. Lower priority number = higher preference. Weapons without entries default to the ship's target preference.</p>
+          <div className="overflow-x-auto border border-border rounded">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Weapon</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Target Hull Class</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-20">Priority</th>
+                  <th className="px-3 py-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {weaponPrefs.map(w => (
+                  <tr key={w.id} className={`border-b border-border ${w._dirty ? "bg-primary/5" : ""}`}>
+                    <td className="px-1 py-1">
+                      <select className="h-8 w-40 text-xs rounded border border-input bg-background text-foreground px-1"
+                        value={w.weapon_key} onChange={e => updateWeaponPref(w.id, "weapon_key", e.target.value)}>
+                        {ALL_WEAPON_KEYS.map(k => <option key={k} value={k}>{WEAPON_DISPLAY[k]}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-1 py-1">
+                      <select className="h-8 w-24 text-xs rounded border border-input bg-background text-foreground px-1"
+                        value={w.hull_class} onChange={e => updateWeaponPref(w.id, "hull_class", e.target.value)}>
+                        {ALL_HULL_CLASSES.map(h => <option key={h} value={h}>{h}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 w-20 text-xs" type="number" value={w.priority} onChange={e => updateWeaponPref(w.id, "priority", parseInt(e.target.value) || 0)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteWeaponPref(w.id, w._new)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
       <Footer />
     </div>
