@@ -52,6 +52,25 @@ export interface ShipTypeData {
   repair_pod: number;
   supply_pod: number;
   scout_sensors: number;
+  // Virtual speeds per tactical group
+  virtual_atk_speed_attack?: number;
+  virtual_atk_speed_core?: number;
+  virtual_atk_speed_rear?: number;
+  virtual_atk_speed_retreat?: number;
+  virtual_atk_speed_attack_planet?: number;
+  virtual_atk_speed_outflank?: number;
+  virtual_atk_speed_skirmish?: number;
+  virtual_atk_speed_cover_retreat?: number;
+  virtual_atk_speed_flank?: number;
+  virtual_def_speed_attack?: number;
+  virtual_def_speed_core?: number;
+  virtual_def_speed_rear?: number;
+  virtual_def_speed_retreat?: number;
+  virtual_def_speed_attack_planet?: number;
+  virtual_def_speed_outflank?: number;
+  virtual_def_speed_skirmish?: number;
+  virtual_def_speed_cover_retreat?: number;
+  virtual_def_speed_flank?: number;
 }
 
 interface WeaponMount {
