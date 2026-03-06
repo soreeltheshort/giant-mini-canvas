@@ -73,6 +73,7 @@ const AdminBattleConfig = () => {
   const [phases, setPhases] = useState<Phase[]>([]);
   const [groupMods, setGroupMods] = useState<GroupMod[]>([]);
   const [constants, setConstants] = useState<CombatConst[]>([]);
+  const [weaponPrefs, setWeaponPrefs] = useState<WeaponTargetPref[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -82,14 +83,16 @@ const AdminBattleConfig = () => {
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
-    const [{ data: p }, { data: g }, { data: c }] = await Promise.all([
+    const [{ data: p }, { data: g }, { data: c }, { data: w }] = await Promise.all([
       supabase.from("battle_phases").select("*").order("seq_order"),
       supabase.from("group_modifiers").select("*").order("group_name"),
       supabase.from("combat_constants").select("*").order("key"),
+      supabase.from("weapon_target_preferences").select("*").order("weapon_key").order("priority"),
     ]);
     if (p) setPhases(p.map(r => ({ ...r, mod_a: Number(r.mod_a), mod_b: Number(r.mod_b) })));
     if (g) setGroupMods(g.map(r => ({ ...r, attack_mod: Number(r.attack_mod), defense_mod: Number(r.defense_mod) })));
     if (c) setConstants(c.map(r => ({ ...r, value: Number(r.value) })));
+    if (w) setWeaponPrefs(w);
   };
 
   // --- Phase helpers ---
