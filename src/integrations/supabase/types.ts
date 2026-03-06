@@ -322,6 +322,24 @@ export type Database = {
           ship_id: string | null
           supply_pod: number
           target_preference: string
+          virtual_atk_speed_attack: number
+          virtual_atk_speed_attack_planet: number
+          virtual_atk_speed_core: number
+          virtual_atk_speed_cover_retreat: number
+          virtual_atk_speed_flank: number
+          virtual_atk_speed_outflank: number
+          virtual_atk_speed_rear: number
+          virtual_atk_speed_retreat: number
+          virtual_atk_speed_skirmish: number
+          virtual_def_speed_attack: number
+          virtual_def_speed_attack_planet: number
+          virtual_def_speed_core: number
+          virtual_def_speed_cover_retreat: number
+          virtual_def_speed_flank: number
+          virtual_def_speed_outflank: number
+          virtual_def_speed_rear: number
+          virtual_def_speed_retreat: number
+          virtual_def_speed_skirmish: number
         }
         Insert: {
           armor?: number
@@ -358,6 +376,24 @@ export type Database = {
           ship_id?: string | null
           supply_pod?: number
           target_preference?: string
+          virtual_atk_speed_attack?: number
+          virtual_atk_speed_attack_planet?: number
+          virtual_atk_speed_core?: number
+          virtual_atk_speed_cover_retreat?: number
+          virtual_atk_speed_flank?: number
+          virtual_atk_speed_outflank?: number
+          virtual_atk_speed_rear?: number
+          virtual_atk_speed_retreat?: number
+          virtual_atk_speed_skirmish?: number
+          virtual_def_speed_attack?: number
+          virtual_def_speed_attack_planet?: number
+          virtual_def_speed_core?: number
+          virtual_def_speed_cover_retreat?: number
+          virtual_def_speed_flank?: number
+          virtual_def_speed_outflank?: number
+          virtual_def_speed_rear?: number
+          virtual_def_speed_retreat?: number
+          virtual_def_speed_skirmish?: number
         }
         Update: {
           armor?: number
@@ -394,6 +430,24 @@ export type Database = {
           ship_id?: string | null
           supply_pod?: number
           target_preference?: string
+          virtual_atk_speed_attack?: number
+          virtual_atk_speed_attack_planet?: number
+          virtual_atk_speed_core?: number
+          virtual_atk_speed_cover_retreat?: number
+          virtual_atk_speed_flank?: number
+          virtual_atk_speed_outflank?: number
+          virtual_atk_speed_rear?: number
+          virtual_atk_speed_retreat?: number
+          virtual_atk_speed_skirmish?: number
+          virtual_def_speed_attack?: number
+          virtual_def_speed_attack_planet?: number
+          virtual_def_speed_core?: number
+          virtual_def_speed_cover_retreat?: number
+          virtual_def_speed_flank?: number
+          virtual_def_speed_outflank?: number
+          virtual_def_speed_rear?: number
+          virtual_def_speed_retreat?: number
+          virtual_def_speed_skirmish?: number
         }
         Relationships: []
       }
