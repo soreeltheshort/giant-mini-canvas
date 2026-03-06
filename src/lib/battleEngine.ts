@@ -75,6 +75,7 @@ export interface ShipTypeData {
 
 interface WeaponMount {
   name: string;
+  key: string; // e.g. "laser_2_5cm"
   type: "laser" | "missile";
   count: number;
   damage: number;       // per mount
@@ -120,6 +121,7 @@ function getWeaponMounts(shipType: ShipTypeData): WeaponMount[] {
     if (count > 0) {
       mounts.push({
         name: WEAPON_DISPLAY_NAMES[key],
+        key,
         type: stats.type,
         count,
         damage: stats.damage,
