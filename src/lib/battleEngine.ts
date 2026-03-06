@@ -169,16 +169,18 @@ function groupToKey(group: string): string {
   return group.toLowerCase().replace(/ /g, "_");
 }
 
-function getVirtualAttackSpeed(ship: ShipInstance): number {
+function getVirtualAttackSpeed(ship: ShipInstance, admiralBonus: number = 0): number {
   const key = `virtual_atk_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
   const val = Number(ship.shipTypeData[key] ?? 0);
-  return val > 0 ? val : ship.cbt_speed;
+  const base = val > 0 ? val : ship.cbt_speed;
+  return base + admiralBonus;
 }
 
-function getVirtualDefenseSpeed(ship: ShipInstance): number {
+function getVirtualDefenseSpeed(ship: ShipInstance, admiralBonus: number = 0): number {
   const key = `virtual_def_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
   const val = Number(ship.shipTypeData[key] ?? 0);
-  return val > 0 ? val : ship.cbt_speed;
+  const base = val > 0 ? val : ship.cbt_speed;
+  return base + admiralBonus;
 }
 
 export interface BattleEvent {
@@ -284,7 +286,7 @@ function getGroupModifier(group: string, type: "attack" | "defense", modifiers: 
   return type === "attack" ? mod.attack_mod : mod.defense_mod;
 }
 
-export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants, weaponTargetPrefs?: WeaponTargetPref[]): BattleResult {
+export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants, weaponTargetPrefs?: WeaponTargetPref[], admiralRatingA: number = 4, admiralRatingB: number = 4): BattleResult {
   const activePhases = phases && phases.length > 0 ? phases : DEFAULT_PHASES;
   const activeMods = groupModifiers && groupModifiers.length > 0 ? groupModifiers : DEFAULT_GROUP_MODS;
   const cc = combatConsts ?? DEFAULT_COMBAT_CONSTANTS;
