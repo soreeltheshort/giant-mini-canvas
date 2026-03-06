@@ -1,0 +1,20 @@
+
+ALTER TABLE public.ship_types
+  ADD COLUMN virtual_atk_speed_attack numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_atk_speed_core numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_atk_speed_rear numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_atk_speed_retreat numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_atk_speed_attack_planet numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_atk_speed_outflank numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_atk_speed_skirmish numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_atk_speed_cover_retreat numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_atk_speed_flank numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_def_speed_attack numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_def_speed_core numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_def_speed_rear numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_def_speed_retreat numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_def_speed_attack_planet numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_def_speed_outflank numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_def_speed_skirmish numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_def_speed_cover_retreat numeric NOT NULL DEFAULT 0,
+  ADD COLUMN virtual_def_speed_flank numeric NOT NULL DEFAULT 0;

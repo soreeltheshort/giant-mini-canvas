@@ -52,6 +52,25 @@ export interface ShipTypeData {
   repair_pod: number;
   supply_pod: number;
   scout_sensors: number;
+  // Virtual speeds per tactical group
+  virtual_atk_speed_attack?: number;
+  virtual_atk_speed_core?: number;
+  virtual_atk_speed_rear?: number;
+  virtual_atk_speed_retreat?: number;
+  virtual_atk_speed_attack_planet?: number;
+  virtual_atk_speed_outflank?: number;
+  virtual_atk_speed_skirmish?: number;
+  virtual_atk_speed_cover_retreat?: number;
+  virtual_atk_speed_flank?: number;
+  virtual_def_speed_attack?: number;
+  virtual_def_speed_core?: number;
+  virtual_def_speed_rear?: number;
+  virtual_def_speed_retreat?: number;
+  virtual_def_speed_attack_planet?: number;
+  virtual_def_speed_outflank?: number;
+  virtual_def_speed_skirmish?: number;
+  virtual_def_speed_cover_retreat?: number;
+  virtual_def_speed_flank?: number;
 }
 
 interface WeaponMount {
@@ -140,6 +159,24 @@ interface ShipInstance {
   fleet: "A" | "B";
   crippled: boolean;
   target_preference: string;
+  shipTypeData: ShipTypeData; // full type data for virtual speed lookups
+}
+
+// Map tactical group name to virtual speed column suffix
+function groupToKey(group: string): string {
+  return group.toLowerCase().replace(/ /g, "_");
+}
+
+function getVirtualAttackSpeed(ship: ShipInstance): number {
+  const key = `virtual_atk_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
+  const val = Number(ship.shipTypeData[key] ?? 0);
+  return val > 0 ? val : ship.cbt_speed;
+}
+
+function getVirtualDefenseSpeed(ship: ShipInstance): number {
+  const key = `virtual_def_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
+  const val = Number(ship.shipTypeData[key] ?? 0);
+  return val > 0 ? val : ship.cbt_speed;
 }
 
 export interface BattleEvent {
@@ -277,6 +314,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           fleet,
           crippled: false,
           target_preference: fs.ship_type.target_preference || fs.ship_type.class,
+          shipTypeData: fs.ship_type,
         });
       }
     }
@@ -327,13 +365,19 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     const mounts = attacker.weapons.filter(w => w.type === weaponType);
     if (mounts.length === 0) return;
 
+    // Use virtual speeds based on tactical group
+    const atkSpeed = getVirtualAttackSpeed(attacker);
+    const defSpeed = getVirtualDefenseSpeed(target);
+
     for (const mount of mounts) {
       for (let gun = 0; gun < mount.count; gun++) {
 
-        const speedDiff = (attacker.cbt_speed - target.cbt_speed) * cc.speed_hit_modifier;
+        const speedDiff = (atkSpeed - defSpeed) * cc.speed_hit_modifier;
         const hitChance = Math.min(cc.hit_chance_max, Math.max(cc.hit_chance_min, cc.base_hit_chance + attackMod - defenseMod + speedDiff));
         const roll = rng();
         const hit = roll <= hitChance;
+
+        const speedExplain = `Speed: atk=${atkSpeed}(base ${attacker.cbt_speed}, group ${attacker.tacticalGroup}) vs def=${defSpeed}(base ${target.cbt_speed}, group ${target.tacticalGroup}), diff=${(atkSpeed - defSpeed).toFixed(1)}, mod=${speedDiff.toFixed(3)}.`;
 
         if (hit) {
           const critRoll = rng();
@@ -341,11 +385,9 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           const dmgVariance = cc.dmg_variance_min + rng() * cc.dmg_variance_range;
           const baseDmg = Math.round(mount.damage * dmgVariance);
           const rawDmg = isCrit ? Math.round(baseDmg * cc.critical_hit_multiplier) : baseDmg;
-          // Crits bypass armor entirely; otherwise armor reduced by weapon's penetration
           const armorReduction = isCrit ? 0 : Math.max(target.armor - mount.armorPenetration, 0);
           const actualDmg = Math.max(0, rawDmg - armorReduction);
           target.currentHull -= actualDmg;
-          // Crippling is deferred to after the entire weapon pass
           const wouldCripple = target.currentHull <= 0;
 
           const critTag = isCrit ? " CRITICAL!" : "";
@@ -353,19 +395,21 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
             attacker: attacker.instanceId, target: target.instanceId,
             weaponName: mount.name, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
             roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
-            rawDmg, armor: target.armor, actualDmg, remainingHull: Math.max(0, target.currentHull), crippled: wouldCripple, critical: isCrit
+            rawDmg, armor: target.armor, actualDmg, remainingHull: Math.max(0, target.currentHull), crippled: wouldCripple, critical: isCrit,
+            attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed,
           },
             `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage.${critTag}${wouldCripple ? " DESTROYED!" : ""}`,
-            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit!${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${Math.max(0, target.currentHull)}/${target.maxHull}.${wouldCripple ? " Ship crippled." : ""}`
+            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! ${speedExplain}${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${Math.max(0, target.currentHull)}/${target.maxHull}.${wouldCripple ? " Ship crippled." : ""}`
           );
         } else {
           emit("fire_miss", {
             attacker: attacker.instanceId, target: target.instanceId,
             weaponName: mount.name, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
-            roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100)
+            roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
+            attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed,
           },
             `${attacker.name} (${attacker.fleet}) fires ${mount.name} #${gun + 1} at ${target.name} (${target.fleet}) — miss.`,
-            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Miss.`
+            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Miss. ${speedExplain}`
           );
         }
       }

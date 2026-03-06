@@ -51,6 +51,25 @@ interface ShipType {
   supply_pod: number;
   repair_pod: number;
   ground_invasion: number;
+  // Virtual speeds
+  virtual_atk_speed_attack: number;
+  virtual_atk_speed_core: number;
+  virtual_atk_speed_rear: number;
+  virtual_atk_speed_retreat: number;
+  virtual_atk_speed_attack_planet: number;
+  virtual_atk_speed_outflank: number;
+  virtual_atk_speed_skirmish: number;
+  virtual_atk_speed_cover_retreat: number;
+  virtual_atk_speed_flank: number;
+  virtual_def_speed_attack: number;
+  virtual_def_speed_core: number;
+  virtual_def_speed_rear: number;
+  virtual_def_speed_retreat: number;
+  virtual_def_speed_attack_planet: number;
+  virtual_def_speed_outflank: number;
+  virtual_def_speed_skirmish: number;
+  virtual_def_speed_cover_retreat: number;
+  virtual_def_speed_flank: number;
   _dirty?: boolean;
   _new?: boolean;
 }
@@ -98,6 +117,18 @@ const UTILITY_FIELDS: { key: keyof ShipType; label: string }[] = [
   { key: "ground_invasion", label: "Ground" },
 ];
 
+const VIRTUAL_SPEED_GROUPS = ["Attack", "Core", "Rear", "Retreat", "Attack Planet", "Outflank", "Skirmish", "Cover Retreat", "Flank"] as const;
+
+const VIRTUAL_ATK_FIELDS: { key: keyof ShipType; label: string }[] = VIRTUAL_SPEED_GROUPS.map(g => ({
+  key: `virtual_atk_speed_${g.toLowerCase().replace(/ /g, "_")}` as keyof ShipType,
+  label: g,
+}));
+
+const VIRTUAL_DEF_FIELDS: { key: keyof ShipType; label: string }[] = VIRTUAL_SPEED_GROUPS.map(g => ({
+  key: `virtual_def_speed_${g.toLowerCase().replace(/ /g, "_")}` as keyof ShipType,
+  label: g,
+}));
+
 const AdminShips = () => {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -109,10 +140,13 @@ const AdminShips = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const CSV_FIELD_MAP: Record<string, keyof ShipType> = {
-    name: "name", class: "class", hull_class: "hull_class", hull: "hull", armor: "armor",
-    point_cost: "point_cost", maintenance: "maintenance", cbt_speed: "cbt_speed", map_speed: "map_speed",
-    sensor_rating: "sensor_rating", target_preference: "target_preference", flavor_description: "flavor_description",
-    ship_id: "ship_id",
+    name: "name", class: "class", ship_size: "class", hull_class: "hull_class",
+    hits: "hull", hull: "hull", armor: "armor",
+    cost: "point_cost", point_cost: "point_cost", maintenance: "maintenance",
+    cbt_speed: "cbt_speed", map_speed: "map_speed",
+    sensor_rating: "sensor_rating", target_preference: "target_preference",
+    flavor_description: "flavor_description",
+    ship_id: "ship_id", id: "ship_id",
     laser_2_5cm: "laser_2_5cm", "laser_2.5cm": "laser_2_5cm",
     laser_4_5cm: "laser_4_5cm", "laser_4.5cm": "laser_4_5cm",
     laser_6_5cm: "laser_6_5cm", "laser_6.5cm": "laser_6_5cm",
@@ -120,11 +154,43 @@ const AdminShips = () => {
     laser_28cm: "laser_28cm", laser_50cm: "laser_50cm",
     missile_10kg: "missile_10kg", missile_50kg: "missile_50kg",
     missile_100kg: "missile_100kg", missile_half_kt: "missile_half_kt",
+    "missile_1/2kt": "missile_half_kt",
     fighter_bay: "fighter_bay", fighter_storage: "fighter_storage",
     gun_ship_link: "gun_ship_link", gunship_storage: "gunship_storage",
     scout_sensors: "scout_sensors", supply_pod: "supply_pod",
     repair_pod: "repair_pod", ground_invasion: "ground_invasion",
+    // Virtual speed CSV header mappings
+    virtual_attack_speed_attack: "virtual_atk_speed_attack",
+    virtual_attack_speed_core: "virtual_atk_speed_core",
+    "virtual_attack_speed_core_": "virtual_atk_speed_core",
+    virtual_attack_speed_rear: "virtual_atk_speed_rear",
+    virtual_attack_speed_retreat: "virtual_atk_speed_retreat",
+    virtual_attack_speed_attack_planet: "virtual_atk_speed_attack_planet",
+    virtual_attack_speed_outflank: "virtual_atk_speed_outflank",
+    virtual_attack_speed_skirmish: "virtual_atk_speed_skirmish",
+    virtual_attack_speed_cover_retreat: "virtual_atk_speed_cover_retreat",
+    virtual_attack_speed_flank: "virtual_atk_speed_flank",
+    virtual_defense_speed_attack: "virtual_def_speed_attack",
+    virtual_defense_speed_core: "virtual_def_speed_core",
+    "virtual_defense_speed_core_": "virtual_def_speed_core",
+    virtual_defense_speed_rear: "virtual_def_speed_rear",
+    virtual_defense_speed_retreat: "virtual_def_speed_retreat",
+    virtual_defense_speed_attack_planet: "virtual_def_speed_attack_planet",
+    virtual_defense_speed_outflank: "virtual_def_speed_outflank",
+    virtual_defense_speed_skirmish: "virtual_def_speed_skirmish",
+    virtual_defense_speed_cover_retreat: "virtual_def_speed_cover_retreat",
+    virtual_defense_speed_flank: "virtual_def_speed_flank",
   };
+
+  const FLOAT_FIELDS = new Set<string>([
+    "maintenance",
+    "virtual_atk_speed_attack", "virtual_atk_speed_core", "virtual_atk_speed_rear",
+    "virtual_atk_speed_retreat", "virtual_atk_speed_attack_planet", "virtual_atk_speed_outflank",
+    "virtual_atk_speed_skirmish", "virtual_atk_speed_cover_retreat", "virtual_atk_speed_flank",
+    "virtual_def_speed_attack", "virtual_def_speed_core", "virtual_def_speed_rear",
+    "virtual_def_speed_retreat", "virtual_def_speed_attack_planet", "virtual_def_speed_outflank",
+    "virtual_def_speed_skirmish", "virtual_def_speed_cover_retreat", "virtual_def_speed_flank",
+  ]);
 
   const NUM_FIELDS = new Set<string>([
     "hull", "armor", "point_cost", "cbt_speed", "map_speed", "sensor_rating",
@@ -136,10 +202,19 @@ const AdminShips = () => {
   ]);
 
   const parseCSV = (text: string) => {
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
-    return lines.slice(1).map(line => {
+    const allLines = text.split(/\r?\n/).filter(l => l.trim());
+    if (allLines.length < 3) return [];
+    // Row 1 is category row (Virtual Attack Speed / Virtual Defense Speed), row 2 is column names, row 3+ is data
+    const catRow = allLines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
+    const nameRow = allLines[1].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
+    // Build merged headers: for virtual speed cols, prefix with category
+    const headers = nameRow.map((h, i) => {
+      const cat = catRow[i] || "";
+      if (cat.includes("virtual_attack_speed")) return `virtual_attack_speed_${h}`;
+      if (cat.includes("virtual_defense_speed")) return `virtual_defense_speed_${h}`;
+      return h;
+    });
+    return allLines.slice(2).map(line => {
       // Handle quoted fields with commas
       const values: string[] = [];
       let current = "";
@@ -156,7 +231,7 @@ const AdminShips = () => {
         const mapped = CSV_FIELD_MAP[h];
         if (!mapped) return;
         const val = values[i] ?? "";
-        if (mapped === "maintenance") {
+        if (FLOAT_FIELDS.has(mapped)) {
           row[mapped] = parseFloat(val) || 0;
         } else if (NUM_FIELDS.has(mapped)) {
           row[mapped] = parseInt(val) || 0;
@@ -166,6 +241,14 @@ const AdminShips = () => {
           row[mapped] = val;
         }
       });
+      // Derive hull_class from class if not present
+      if (!row.hull_class && row.class) {
+        const cls = row.class as string;
+        if (["BB", "CH", "T"].includes(cls)) row.hull_class = "Capital";
+        else if (["CM", "CL"].includes(cls)) row.hull_class = "Cruiser";
+        else if (["DD"].includes(cls)) row.hull_class = "Escort";
+        else row.hull_class = "Strikecraft";
+      }
       return row;
     }).filter(r => r.name);
   };
@@ -223,7 +306,11 @@ const AdminShips = () => {
 
   const loadShips = async () => {
     const { data } = await supabase.from("ship_types").select("*").order("class").order("point_cost");
-    if (data) setShips(data.map(s => ({ ...s, maintenance: Number(s.maintenance) })));
+    if (data) setShips(data.map(s => {
+      const converted: any = { ...s };
+      for (const f of [...FLOAT_FIELDS]) converted[f] = Number(converted[f] ?? 0);
+      return converted;
+    }));
   };
 
   const updateField = (id: string, field: keyof ShipType, value: string | number) => {
@@ -241,6 +328,12 @@ const AdminShips = () => {
       missile_10kg: 0, missile_50kg: 0, missile_100kg: 0, missile_half_kt: 0,
       fighter_bay: 0, fighter_storage: 0, gun_ship_link: 0, gunship_storage: 0,
       scout_sensors: 0, supply_pod: 0, repair_pod: 0, ground_invasion: 0,
+      virtual_atk_speed_attack: 0, virtual_atk_speed_core: 0, virtual_atk_speed_rear: 0,
+      virtual_atk_speed_retreat: 0, virtual_atk_speed_attack_planet: 0, virtual_atk_speed_outflank: 0,
+      virtual_atk_speed_skirmish: 0, virtual_atk_speed_cover_retreat: 0, virtual_atk_speed_flank: 0,
+      virtual_def_speed_attack: 0, virtual_def_speed_core: 0, virtual_def_speed_rear: 0,
+      virtual_def_speed_retreat: 0, virtual_def_speed_attack_planet: 0, virtual_def_speed_outflank: 0,
+      virtual_def_speed_skirmish: 0, virtual_def_speed_cover_retreat: 0, virtual_def_speed_flank: 0,
       _dirty: true, _new: true,
     };
     setShips(prev => [...prev, ns]);
@@ -329,6 +422,12 @@ const AdminShips = () => {
                 {UTILITY_FIELDS.map(f => (
                   <th key={f.key} className="px-1 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap bg-muted">{f.label}</th>
                 ))}
+                {VIRTUAL_ATK_FIELDS.map(f => (
+                  <th key={f.key} className="px-1 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap bg-muted border-l border-border">A.{f.label}</th>
+                ))}
+                {VIRTUAL_DEF_FIELDS.map(f => (
+                  <th key={f.key} className="px-1 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap bg-muted border-l border-border">D.{f.label}</th>
+                ))}
                 <th className="px-2 py-2 w-10 bg-muted"></th>
               </tr>
             </thead>
@@ -363,6 +462,18 @@ const AdminShips = () => {
                     <td key={f.key} className="px-1 py-1">
                       <Input className="h-7 w-12 text-xs" type="number" value={s[f.key] as number}
                         onChange={e => updateField(s.id, f.key, parseInt(e.target.value) || 0)} />
+                    </td>
+                  ))}
+                  {VIRTUAL_ATK_FIELDS.map(f => (
+                    <td key={f.key} className="px-1 py-1 border-l border-border">
+                      <Input className="h-7 w-14 text-xs" type="number" step="0.1" value={s[f.key] as number}
+                        onChange={e => updateField(s.id, f.key, parseFloat(e.target.value) || 0)} />
+                    </td>
+                  ))}
+                  {VIRTUAL_DEF_FIELDS.map(f => (
+                    <td key={f.key} className="px-1 py-1 border-l border-border">
+                      <Input className="h-7 w-14 text-xs" type="number" step="0.1" value={s[f.key] as number}
+                        onChange={e => updateField(s.id, f.key, parseFloat(e.target.value) || 0)} />
                     </td>
                   ))}
                   <td className="px-1 py-1">
