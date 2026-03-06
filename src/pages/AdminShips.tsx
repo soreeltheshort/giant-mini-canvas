@@ -285,7 +285,11 @@ const AdminShips = () => {
 
   const loadShips = async () => {
     const { data } = await supabase.from("ship_types").select("*").order("class").order("point_cost");
-    if (data) setShips(data.map(s => ({ ...s, maintenance: Number(s.maintenance) })));
+    if (data) setShips(data.map(s => {
+      const converted: any = { ...s };
+      for (const f of [...FLOAT_FIELDS]) converted[f] = Number(converted[f] ?? 0);
+      return converted;
+    }));
   };
 
   const updateField = (id: string, field: keyof ShipType, value: string | number) => {
