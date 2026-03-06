@@ -24,6 +24,8 @@ const Battle = () => {
   const [fleetAId, setFleetAId] = useState("");
   const [fleetBId, setFleetBId] = useState("");
   const [seed, setSeed] = useState("");
+  const [admiralA, setAdmiralA] = useState(4);
+  const [admiralB, setAdmiralB] = useState(4);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<BattleResult | null>(null);
   const [fleetASnap, setFleetASnap] = useState<FleetSnapshot | null>(null);
@@ -118,7 +120,7 @@ const Battle = () => {
     const usedSeed = seed || Math.random().toString(36).substring(2, 10);
     if (!seed) setSeed(usedSeed);
 
-    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods, combatConsts, weaponPrefs);
+    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods, combatConsts, weaponPrefs, admiralA, admiralB);
     setFleetASnap(snapA);
     setFleetBSnap(snapB);
     setResult(battleResult);
@@ -188,6 +190,10 @@ const Battle = () => {
                 <div className="mt-1 text-xs text-yellow-500 font-medium">⚠️ {f.capacityWarnings.join(", ")}</div>
               ) : null;
             })()}
+            <label className="mt-2 block text-xs text-muted-foreground">Admiral A Rating</label>
+            <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={admiralA} onChange={e => setAdmiralA(Number(e.target.value))}>
+              {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+            </select>
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Fleet B</label>
@@ -201,6 +207,10 @@ const Battle = () => {
                 <div className="mt-1 text-xs text-yellow-500 font-medium">⚠️ {f.capacityWarnings.join(", ")}</div>
               ) : null;
             })()}
+            <label className="mt-2 block text-xs text-muted-foreground">Admiral B Rating</label>
+            <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={admiralB} onChange={e => setAdmiralB(Number(e.target.value))}>
+              {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+            </select>
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Seed (optional)</label>
