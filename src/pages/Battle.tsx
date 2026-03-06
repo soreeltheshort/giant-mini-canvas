@@ -24,6 +24,8 @@ const Battle = () => {
   const [fleetAId, setFleetAId] = useState("");
   const [fleetBId, setFleetBId] = useState("");
   const [seed, setSeed] = useState("");
+  const [admiralA, setAdmiralA] = useState(4);
+  const [admiralB, setAdmiralB] = useState(4);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<BattleResult | null>(null);
   const [fleetASnap, setFleetASnap] = useState<FleetSnapshot | null>(null);
@@ -118,7 +120,7 @@ const Battle = () => {
     const usedSeed = seed || Math.random().toString(36).substring(2, 10);
     if (!seed) setSeed(usedSeed);
 
-    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods, combatConsts, weaponPrefs);
+    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods, combatConsts, weaponPrefs, admiralA, admiralB);
     setFleetASnap(snapA);
     setFleetBSnap(snapB);
     setResult(battleResult);
