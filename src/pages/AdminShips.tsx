@@ -140,10 +140,13 @@ const AdminShips = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const CSV_FIELD_MAP: Record<string, keyof ShipType> = {
-    name: "name", class: "class", hull_class: "hull_class", hull: "hull", armor: "armor",
-    point_cost: "point_cost", maintenance: "maintenance", cbt_speed: "cbt_speed", map_speed: "map_speed",
-    sensor_rating: "sensor_rating", target_preference: "target_preference", flavor_description: "flavor_description",
-    ship_id: "ship_id",
+    name: "name", class: "class", ship_size: "class", hull_class: "hull_class",
+    hits: "hull", hull: "hull", armor: "armor",
+    cost: "point_cost", point_cost: "point_cost", maintenance: "maintenance",
+    cbt_speed: "cbt_speed", map_speed: "map_speed",
+    sensor_rating: "sensor_rating", target_preference: "target_preference",
+    flavor_description: "flavor_description",
+    ship_id: "ship_id", id: "ship_id",
     laser_2_5cm: "laser_2_5cm", "laser_2.5cm": "laser_2_5cm",
     laser_4_5cm: "laser_4_5cm", "laser_4.5cm": "laser_4_5cm",
     laser_6_5cm: "laser_6_5cm", "laser_6.5cm": "laser_6_5cm",
