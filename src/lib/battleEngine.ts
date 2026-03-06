@@ -291,6 +291,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
   const activeMods = groupModifiers && groupModifiers.length > 0 ? groupModifiers : DEFAULT_GROUP_MODS;
   const cc = combatConsts ?? DEFAULT_COMBAT_CONSTANTS;
   const weaponPrefs = weaponTargetPrefs ?? [];
+  const admiralBonusA = (admiralRatingA - 4) * 0.05;
+  const admiralBonusB = (admiralRatingB - 4) * 0.05;
   const rng = createRNG(hashSeed(seedStr));
   const events: BattleEvent[] = [];
   let seq = 0;
@@ -392,8 +394,9 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     const mounts = attacker.weapons.filter(w => w.type === weaponType);
     if (mounts.length === 0) return;
 
-    // Use virtual speeds based on tactical group
-    const atkSpeed = getVirtualAttackSpeed(attacker);
+    // Use virtual speeds based on tactical group, with admiral bonus
+    const admiralAtkBonus = attacker.fleet === "A" ? admiralBonusA : admiralBonusB;
+    const atkSpeed = getVirtualAttackSpeed(attacker, admiralAtkBonus);
 
     for (const mount of mounts) {
       // Each weapon mount selects its own target based on weapon preferences
@@ -401,7 +404,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
       const target = selectTarget(attacker, enemies, mount.key);
       if (!target) continue;
 
-      const defSpeed = getVirtualDefenseSpeed(target);
+      const admiralDefBonus = target.fleet === "A" ? admiralBonusA : admiralBonusB;
+      const defSpeed = getVirtualDefenseSpeed(target, admiralDefBonus);
       const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
 
       for (let gun = 0; gun < mount.count; gun++) {
