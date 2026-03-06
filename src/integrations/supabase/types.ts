@@ -469,6 +469,33 @@ export type Database = {
         }
         Relationships: []
       }
+      weapon_target_preferences: {
+        Row: {
+          created_at: string
+          hull_class: string
+          id: string
+          priority: number
+          updated_at: string
+          weapon_key: string
+        }
+        Insert: {
+          created_at?: string
+          hull_class: string
+          id?: string
+          priority?: number
+          updated_at?: string
+          weapon_key: string
+        }
+        Update: {
+          created_at?: string
+          hull_class?: string
+          id?: string
+          priority?: number
+          updated_at?: string
+          weapon_key?: string
+        }
+        Relationships: []
+      }
       weapons: {
         Row: {
           armor_penetration: number

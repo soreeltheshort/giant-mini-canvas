@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { runBattle, eventsToJSON, eventsToCSV, eventsToTXT, FleetSnapshot, BattleResult, BattleEvent, PhaseConfig, GroupModConfig, CombatConstants } from "@/lib/battleEngine";
+import { runBattle, eventsToJSON, eventsToCSV, eventsToTXT, FleetSnapshot, BattleResult, BattleEvent, PhaseConfig, GroupModConfig, CombatConstants, WeaponTargetPref } from "@/lib/battleEngine";
 
 interface FleetOption {
   id: string;
@@ -95,10 +95,11 @@ const Battle = () => {
     if (!snapA || !snapB) { toast({ title: "Failed to load fleets", variant: "destructive" }); setRunning(false); return; }
 
     // Load battle config from DB
-    const [{ data: phasesData }, { data: modsData }, { data: constsData }] = await Promise.all([
+    const [{ data: phasesData }, { data: modsData }, { data: constsData }, { data: weaponPrefsData }] = await Promise.all([
       supabase.from("battle_phases").select("*").order("seq_order"),
       supabase.from("group_modifiers").select("*"),
       supabase.from("combat_constants").select("*"),
+      supabase.from("weapon_target_preferences").select("*").order("priority"),
     ]);
     const phases: PhaseConfig[] | undefined = phasesData?.map(p => ({
       name: p.name, groupsA: p.groups_a, groupsB: p.groups_b, modA: Number(p.mod_a), modB: Number(p.mod_b), requiredGroup: p.required_group ?? null,
@@ -110,11 +111,14 @@ const Battle = () => {
       (acc as any)[row.key] = Number(row.value);
       return acc;
     }, {} as CombatConstants) : undefined;
+    const weaponPrefs: WeaponTargetPref[] | undefined = weaponPrefsData?.map(w => ({
+      weapon_key: w.weapon_key, hull_class: w.hull_class, priority: w.priority,
+    }));
 
     const usedSeed = seed || Math.random().toString(36).substring(2, 10);
     if (!seed) setSeed(usedSeed);
 
-    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods, combatConsts);
+    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods, combatConsts, weaponPrefs);
     setFleetASnap(snapA);
     setFleetBSnap(snapB);
     setResult(battleResult);

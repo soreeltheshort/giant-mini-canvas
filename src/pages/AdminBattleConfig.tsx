@@ -40,7 +40,32 @@ interface CombatConst {
   _new?: boolean;
 }
 
+interface WeaponTargetPref {
+  id: string;
+  weapon_key: string;
+  hull_class: string;
+  priority: number;
+  _dirty?: boolean;
+  _new?: boolean;
+}
+
 const ALL_GROUPS = ["Core", "Attack", "Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish", "Rear", "Retreat"];
+
+const ALL_HULL_CLASSES = ["FL", "FH", "GS", "DD", "CL", "CM", "CH", "BB", "T", "TT", "Titan"];
+
+const ALL_WEAPON_KEYS = [
+  "laser_2_5cm", "laser_4_5cm", "laser_6_5cm", "laser_10cm", "laser_14cm",
+  "laser_20cm", "laser_28cm", "laser_50cm",
+  "missile_10kg", "missile_50kg", "missile_100kg", "missile_half_kt",
+];
+
+const WEAPON_DISPLAY: Record<string, string> = {
+  laser_2_5cm: "2.5cm Laser", laser_4_5cm: "4.5cm Laser", laser_6_5cm: "6.5cm Laser",
+  laser_10cm: "10cm Laser", laser_14cm: "14cm Laser", laser_20cm: "20cm Laser",
+  laser_28cm: "28cm Laser", laser_50cm: "50cm Laser",
+  missile_10kg: "10kg Missile", missile_50kg: "50kg Missile", missile_100kg: "100kg Missile",
+  missile_half_kt: "½kt Missile",
+};
 
 const AdminBattleConfig = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -48,6 +73,7 @@ const AdminBattleConfig = () => {
   const [phases, setPhases] = useState<Phase[]>([]);
   const [groupMods, setGroupMods] = useState<GroupMod[]>([]);
   const [constants, setConstants] = useState<CombatConst[]>([]);
+  const [weaponPrefs, setWeaponPrefs] = useState<WeaponTargetPref[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -57,14 +83,16 @@ const AdminBattleConfig = () => {
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
-    const [{ data: p }, { data: g }, { data: c }] = await Promise.all([
+    const [{ data: p }, { data: g }, { data: c }, { data: w }] = await Promise.all([
       supabase.from("battle_phases").select("*").order("seq_order"),
       supabase.from("group_modifiers").select("*").order("group_name"),
       supabase.from("combat_constants").select("*").order("key"),
+      supabase.from("weapon_target_preferences").select("*").order("weapon_key").order("priority"),
     ]);
     if (p) setPhases(p.map(r => ({ ...r, mod_a: Number(r.mod_a), mod_b: Number(r.mod_b) })));
     if (g) setGroupMods(g.map(r => ({ ...r, attack_mod: Number(r.attack_mod), defense_mod: Number(r.defense_mod) })));
     if (c) setConstants(c.map(r => ({ ...r, value: Number(r.value) })));
+    if (w) setWeaponPrefs(w);
   };
 
   // --- Phase helpers ---
@@ -139,6 +167,27 @@ const AdminBattleConfig = () => {
     toast({ title: "Deleted" });
   };
 
+  // --- Weapon target preference helpers ---
+  const updateWeaponPref = (id: string, field: keyof WeaponTargetPref, value: any) => {
+    setWeaponPrefs(prev => prev.map(w => w.id === id ? { ...w, [field]: value, _dirty: true } : w));
+  };
+
+  const addWeaponPref = () => {
+    setWeaponPrefs(prev => [...prev, {
+      id: crypto.randomUUID(), weapon_key: "laser_2_5cm", hull_class: "FL", priority: 0,
+      _dirty: true, _new: true,
+    }]);
+  };
+
+  const deleteWeaponPref = async (id: string, isNew?: boolean) => {
+    if (!isNew) {
+      const { error } = await supabase.from("weapon_target_preferences").delete().eq("id", id);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    }
+    setWeaponPrefs(prev => prev.filter(w => w.id !== id));
+    toast({ title: "Deleted" });
+  };
+
   const saveAll = async () => {
     setSaving(true);
     let errors = 0;
@@ -167,6 +216,14 @@ const AdminBattleConfig = () => {
       if (error) { errors++; console.error(error); }
     }
 
+    for (const w of weaponPrefs.filter(w => w._dirty)) {
+      const payload = { id: w.id, weapon_key: w.weapon_key, hull_class: w.hull_class, priority: w.priority };
+      const { error } = w._new
+        ? await supabase.from("weapon_target_preferences").insert(payload as any)
+        : await supabase.from("weapon_target_preferences").update(payload as any).eq("id", w.id);
+      if (error) { errors++; console.error(error); }
+    }
+
     if (errors) toast({ title: "Some saves failed", description: `${errors} error(s)`, variant: "destructive" });
     else toast({ title: "Saved" });
 
@@ -174,7 +231,7 @@ const AdminBattleConfig = () => {
     setSaving(false);
   };
 
-  const hasDirty = phases.some(p => p._dirty) || groupMods.some(g => g._dirty) || constants.some(c => c._dirty);
+  const hasDirty = phases.some(p => p._dirty) || groupMods.some(g => g._dirty) || constants.some(c => c._dirty) || weaponPrefs.some(w => w._dirty);
 
   if (loading) return <div className="min-h-screen bg-background"><Header /><div className="container py-20 text-center text-muted-foreground">Loading...</div><Footer /></div>;
 
@@ -334,6 +391,53 @@ const AdminBattleConfig = () => {
                     </td>
                     <td className="px-1 py-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteConst(c.id, c._new)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* WEAPON TARGET PREFERENCES */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-heading text-lg font-semibold text-foreground">Weapon Target Preferences</h2>
+            <Button size="sm" variant="outline" onClick={addWeaponPref}><Plus className="mr-1 h-4 w-4" /> Add Preference</Button>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">Configure per-weapon targeting priority. Lower priority number = higher preference. Weapons without entries default to the ship's target preference.</p>
+          <div className="overflow-x-auto border border-border rounded">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Weapon</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Target Hull Class</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-20">Priority</th>
+                  <th className="px-3 py-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {weaponPrefs.map(w => (
+                  <tr key={w.id} className={`border-b border-border ${w._dirty ? "bg-primary/5" : ""}`}>
+                    <td className="px-1 py-1">
+                      <select className="h-8 w-40 text-xs rounded border border-input bg-background text-foreground px-1"
+                        value={w.weapon_key} onChange={e => updateWeaponPref(w.id, "weapon_key", e.target.value)}>
+                        {ALL_WEAPON_KEYS.map(k => <option key={k} value={k}>{WEAPON_DISPLAY[k]}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-1 py-1">
+                      <select className="h-8 w-24 text-xs rounded border border-input bg-background text-foreground px-1"
+                        value={w.hull_class} onChange={e => updateWeaponPref(w.id, "hull_class", e.target.value)}>
+                        {ALL_HULL_CLASSES.map(h => <option key={h} value={h}>{h}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 w-20 text-xs" type="number" value={w.priority} onChange={e => updateWeaponPref(w.id, "priority", parseInt(e.target.value) || 0)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteWeaponPref(w.id, w._new)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </td>

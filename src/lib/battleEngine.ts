@@ -75,6 +75,7 @@ export interface ShipTypeData {
 
 interface WeaponMount {
   name: string;
+  key: string; // e.g. "laser_2_5cm"
   type: "laser" | "missile";
   count: number;
   damage: number;       // per mount
@@ -120,6 +121,7 @@ function getWeaponMounts(shipType: ShipTypeData): WeaponMount[] {
     if (count > 0) {
       mounts.push({
         name: WEAPON_DISPLAY_NAMES[key],
+        key,
         type: stats.type,
         count,
         damage: stats.damage,
@@ -227,6 +229,12 @@ export interface GroupModConfig {
   defense_mod: number;
 }
 
+export interface WeaponTargetPref {
+  weapon_key: string;
+  hull_class: string;
+  priority: number;
+}
+
 export interface CombatConstants {
   hit_chance_min: number;
   hit_chance_max: number;
@@ -276,10 +284,11 @@ function getGroupModifier(group: string, type: "attack" | "defense", modifiers: 
   return type === "attack" ? mod.attack_mod : mod.defense_mod;
 }
 
-export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants): BattleResult {
+export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants, weaponTargetPrefs?: WeaponTargetPref[]): BattleResult {
   const activePhases = phases && phases.length > 0 ? phases : DEFAULT_PHASES;
   const activeMods = groupModifiers && groupModifiers.length > 0 ? groupModifiers : DEFAULT_GROUP_MODS;
   const cc = combatConsts ?? DEFAULT_COMBAT_CONSTANTS;
+  const weaponPrefs = weaponTargetPrefs ?? [];
   const rng = createRNG(hashSeed(seedStr));
   const events: BattleEvent[] = [];
   let seq = 0;
@@ -347,8 +356,24 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     return allShips.filter(s => s.fleet === fleet && !s.crippled);
   }
 
-  function selectTarget(attacker: ShipInstance, enemies: ShipInstance[]): ShipInstance | null {
-    const priority = getTargetPriority(attacker.target_preference);
+  function getWeaponTargetPriority(weaponKey: string, shipTargetPref: string): { priority: string[]; source: string } {
+    const prefs = weaponPrefs.filter(p => p.weapon_key === weaponKey).sort((a, b) => a.priority - b.priority);
+    if (prefs.length > 0) {
+      // Weapon has explicit preferences — use those first, then fall back to remaining hull classes
+      const explicit = prefs.map(p => p.hull_class);
+      const remaining = HULL_SIZE_ORDER.filter(h => !explicit.includes(h));
+      // Sort remaining by proximity to ship's target preference
+      const shipPriority = getTargetPriority(shipTargetPref);
+      remaining.sort((a, b) => shipPriority.indexOf(a) - shipPriority.indexOf(b));
+      return { priority: [...explicit, ...remaining], source: `weapon(${explicit.join(">")})+ship` };
+    }
+    return { priority: getTargetPriority(shipTargetPref), source: "ship" };
+  }
+
+  function selectTarget(attacker: ShipInstance, enemies: ShipInstance[], weaponKey?: string): ShipInstance | null {
+    const { priority } = weaponKey
+      ? getWeaponTargetPriority(weaponKey, attacker.target_preference)
+      : { priority: getTargetPriority(attacker.target_preference) };
     for (const hullClass of priority) {
       const damaged = enemies.filter(e => e.hull_class === hullClass && !e.crippled && e.currentHull < e.maxHull);
       if (damaged.length > 0) return damaged[Math.floor(rng() * damaged.length)];
@@ -361,15 +386,22 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     return remaining.length > 0 ? remaining[Math.floor(rng() * remaining.length)] : null;
   }
 
-  function fireWeaponsOfType(attacker: ShipInstance, target: ShipInstance, weaponType: "laser" | "missile", attackMod: number, defenseMod: number) {
+  function fireWeaponsOfType(attacker: ShipInstance, enemies: ShipInstance[], weaponType: "laser" | "missile", attackMod: number, phaseMod: number) {
     const mounts = attacker.weapons.filter(w => w.type === weaponType);
     if (mounts.length === 0) return;
 
     // Use virtual speeds based on tactical group
     const atkSpeed = getVirtualAttackSpeed(attacker);
-    const defSpeed = getVirtualDefenseSpeed(target);
 
     for (const mount of mounts) {
+      // Each weapon mount selects its own target based on weapon preferences
+      const { priority: targetPriority, source: targetSource } = getWeaponTargetPriority(mount.key, attacker.target_preference);
+      const target = selectTarget(attacker, enemies, mount.key);
+      if (!target) continue;
+
+      const defSpeed = getVirtualDefenseSpeed(target);
+      const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
+
       for (let gun = 0; gun < mount.count; gun++) {
 
         const speedDiff = (atkSpeed - defSpeed) * cc.speed_hit_modifier;
@@ -378,6 +410,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         const hit = roll <= hitChance;
 
         const speedExplain = `Speed: atk=${atkSpeed}(base ${attacker.cbt_speed}, group ${attacker.tacticalGroup}) vs def=${defSpeed}(base ${target.cbt_speed}, group ${target.tacticalGroup}), diff=${(atkSpeed - defSpeed).toFixed(1)}, mod=${speedDiff.toFixed(3)}.`;
+        const targetExplain = `Target: ${target.name}(${target.hull_class}) via ${targetSource}.`;
 
         if (hit) {
           const critRoll = rng();
@@ -393,23 +426,23 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           const critTag = isCrit ? " CRITICAL!" : "";
           emit("fire_hit", {
             attacker: attacker.instanceId, target: target.instanceId,
-            weaponName: mount.name, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
+            weaponName: mount.name, weaponKey: mount.key, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
             roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
             rawDmg, armor: target.armor, actualDmg, remainingHull: Math.max(0, target.currentHull), crippled: wouldCripple, critical: isCrit,
-            attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed,
+            attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed, targetSource,
           },
             `${attacker.name} (${attacker.fleet}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage.${critTag}${wouldCripple ? " DESTROYED!" : ""}`,
-            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! ${speedExplain}${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${Math.max(0, target.currentHull)}/${target.maxHull}.${wouldCripple ? " Ship crippled." : ""}`
+            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! ${targetExplain} ${speedExplain}${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${Math.max(0, target.currentHull)}/${target.maxHull}.${wouldCripple ? " Ship crippled." : ""}`
           );
         } else {
           emit("fire_miss", {
             attacker: attacker.instanceId, target: target.instanceId,
-            weaponName: mount.name, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
+            weaponName: mount.name, weaponKey: mount.key, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
             roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
-            attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed,
+            attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed, targetSource,
           },
             `${attacker.name} (${attacker.fleet}) fires ${mount.name} #${gun + 1} at ${target.name} (${target.fleet}) — miss.`,
-            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Miss. ${speedExplain}`
+            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Miss. ${targetExplain} ${speedExplain}`
           );
         }
       }
@@ -449,35 +482,29 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
       // and crippling is deferred until after all ships have fired.
       const pendingCripples: ShipInstance[] = [];
 
-      // Gather all attackers from both fleets with their targets
-      const firingOrders: { attacker: ShipInstance; target: ShipInstance; attackMod: number; defenseMod: number }[] = [];
+      // Gather all attackers from both fleets with their enemies
+      const firingOrders: { attacker: ShipInstance; enemies: ShipInstance[]; attackMod: number }[] = [];
 
       for (const attacker of aInPhase) {
         if (attacker.crippled) continue;
         const enemies = bInPhase.filter(s => !s.crippled);
         if (enemies.length === 0) continue;
-        const target = selectTarget(attacker, enemies);
-        if (!target) continue;
         const attackMod = phase.modA + getGroupModifier(attacker.tacticalGroup, "attack", activeMods);
-        const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
-        firingOrders.push({ attacker, target, attackMod, defenseMod });
+        firingOrders.push({ attacker, enemies, attackMod });
       }
 
       for (const attacker of bInPhase) {
         if (attacker.crippled) continue;
         const enemies = aInPhase.filter(s => !s.crippled);
         if (enemies.length === 0) continue;
-        const target = selectTarget(attacker, enemies);
-        if (!target) continue;
         const attackMod = phase.modB + getGroupModifier(attacker.tacticalGroup, "attack", activeMods);
-        const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
-        firingOrders.push({ attacker, target, attackMod, defenseMod });
+        firingOrders.push({ attacker, enemies, attackMod });
       }
 
       // Everyone fires — damage is applied immediately but crippling is deferred
       for (const order of firingOrders) {
-        if (order.attacker.crippled) continue; // skip if crippled by earlier deferred resolution (shouldn't happen, but safe)
-        fireWeaponsOfType(order.attacker, order.target, weaponType, order.attackMod, order.defenseMod);
+        if (order.attacker.crippled) continue;
+        fireWeaponsOfType(order.attacker, order.enemies, weaponType, order.attackMod, 0);
       }
 
       // Now apply deferred crippling: any ship at 0 hull that wasn't already crippled
