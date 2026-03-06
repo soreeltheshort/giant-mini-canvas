@@ -482,35 +482,29 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
       // and crippling is deferred until after all ships have fired.
       const pendingCripples: ShipInstance[] = [];
 
-      // Gather all attackers from both fleets with their targets
-      const firingOrders: { attacker: ShipInstance; target: ShipInstance; attackMod: number; defenseMod: number }[] = [];
+      // Gather all attackers from both fleets with their enemies
+      const firingOrders: { attacker: ShipInstance; enemies: ShipInstance[]; attackMod: number }[] = [];
 
       for (const attacker of aInPhase) {
         if (attacker.crippled) continue;
         const enemies = bInPhase.filter(s => !s.crippled);
         if (enemies.length === 0) continue;
-        const target = selectTarget(attacker, enemies);
-        if (!target) continue;
         const attackMod = phase.modA + getGroupModifier(attacker.tacticalGroup, "attack", activeMods);
-        const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
-        firingOrders.push({ attacker, target, attackMod, defenseMod });
+        firingOrders.push({ attacker, enemies, attackMod });
       }
 
       for (const attacker of bInPhase) {
         if (attacker.crippled) continue;
         const enemies = aInPhase.filter(s => !s.crippled);
         if (enemies.length === 0) continue;
-        const target = selectTarget(attacker, enemies);
-        if (!target) continue;
         const attackMod = phase.modB + getGroupModifier(attacker.tacticalGroup, "attack", activeMods);
-        const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
-        firingOrders.push({ attacker, target, attackMod, defenseMod });
+        firingOrders.push({ attacker, enemies, attackMod });
       }
 
       // Everyone fires — damage is applied immediately but crippling is deferred
       for (const order of firingOrders) {
-        if (order.attacker.crippled) continue; // skip if crippled by earlier deferred resolution (shouldn't happen, but safe)
-        fireWeaponsOfType(order.attacker, order.target, weaponType, order.attackMod, order.defenseMod);
+        if (order.attacker.crippled) continue;
+        fireWeaponsOfType(order.attacker, order.enemies, weaponType, order.attackMod, 0);
       }
 
       // Now apply deferred crippling: any ship at 0 hull that wasn't already crippled
