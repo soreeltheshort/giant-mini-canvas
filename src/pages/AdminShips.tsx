@@ -178,6 +178,16 @@ const AdminShips = () => {
     virtual_defense_speed_flank: "virtual_def_speed_flank",
   };
 
+  const FLOAT_FIELDS = new Set<string>([
+    "maintenance",
+    "virtual_atk_speed_attack", "virtual_atk_speed_core", "virtual_atk_speed_rear",
+    "virtual_atk_speed_retreat", "virtual_atk_speed_attack_planet", "virtual_atk_speed_outflank",
+    "virtual_atk_speed_skirmish", "virtual_atk_speed_cover_retreat", "virtual_atk_speed_flank",
+    "virtual_def_speed_attack", "virtual_def_speed_core", "virtual_def_speed_rear",
+    "virtual_def_speed_retreat", "virtual_def_speed_attack_planet", "virtual_def_speed_outflank",
+    "virtual_def_speed_skirmish", "virtual_def_speed_cover_retreat", "virtual_def_speed_flank",
+  ]);
+
   const NUM_FIELDS = new Set<string>([
     "hull", "armor", "point_cost", "cbt_speed", "map_speed", "sensor_rating",
     "laser_2_5cm", "laser_4_5cm", "laser_6_5cm", "laser_10cm", "laser_14cm",
@@ -208,7 +218,7 @@ const AdminShips = () => {
         const mapped = CSV_FIELD_MAP[h];
         if (!mapped) return;
         const val = values[i] ?? "";
-        if (mapped === "maintenance") {
+        if (FLOAT_FIELDS.has(mapped)) {
           row[mapped] = parseFloat(val) || 0;
         } else if (NUM_FIELDS.has(mapped)) {
           row[mapped] = parseInt(val) || 0;
@@ -293,6 +303,12 @@ const AdminShips = () => {
       missile_10kg: 0, missile_50kg: 0, missile_100kg: 0, missile_half_kt: 0,
       fighter_bay: 0, fighter_storage: 0, gun_ship_link: 0, gunship_storage: 0,
       scout_sensors: 0, supply_pod: 0, repair_pod: 0, ground_invasion: 0,
+      virtual_atk_speed_attack: 0, virtual_atk_speed_core: 0, virtual_atk_speed_rear: 0,
+      virtual_atk_speed_retreat: 0, virtual_atk_speed_attack_planet: 0, virtual_atk_speed_outflank: 0,
+      virtual_atk_speed_skirmish: 0, virtual_atk_speed_cover_retreat: 0, virtual_atk_speed_flank: 0,
+      virtual_def_speed_attack: 0, virtual_def_speed_core: 0, virtual_def_speed_rear: 0,
+      virtual_def_speed_retreat: 0, virtual_def_speed_attack_planet: 0, virtual_def_speed_outflank: 0,
+      virtual_def_speed_skirmish: 0, virtual_def_speed_cover_retreat: 0, virtual_def_speed_flank: 0,
       _dirty: true, _new: true,
     };
     setShips(prev => [...prev, ns]);
