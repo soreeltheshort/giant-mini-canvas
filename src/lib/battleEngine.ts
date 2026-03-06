@@ -314,6 +314,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           fleet,
           crippled: false,
           target_preference: fs.ship_type.target_preference || fs.ship_type.class,
+          shipTypeData: fs.ship_type,
         });
       }
     }
