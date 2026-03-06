@@ -463,13 +463,17 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
 
     if (aInPhase.length === 0 && bInPhase.length === 0) continue;
 
-    // Skip phase if required group is specified but no ships from either fleet belong to it
+    // Skip phase if required group is specified but:
+    // - neither player has any alive ship in the required group, OR
+    // - either player has zero ships in their participating groups
     if (phase.requiredGroup) {
-      const hasRequired = [...aInPhase, ...bInPhase].some(s => s.tacticalGroup === phase.requiredGroup);
-      if (!hasRequired) {
+      const eitherHasRequired = alive("A").some(s => s.tacticalGroup === phase.requiredGroup)
+        || alive("B").some(s => s.tacticalGroup === phase.requiredGroup);
+      const bothHaveParticipants = aInPhase.length > 0 && bInPhase.length > 0;
+      if (!eitherHasRequired || !bothHaveParticipants) {
         emit("phase_skipped", { phase: phase.name, requiredGroup: phase.requiredGroup },
-          `Phase "${phase.name}" skipped — no ships in required group "${phase.requiredGroup}".`,
-          `Phase "${phase.name}" requires group "${phase.requiredGroup}" but none found. Skipping.`);
+          `Phase "${phase.name}" skipped — ${!eitherHasRequired ? `no ships in required group "${phase.requiredGroup}"` : "one side has no participating ships"}.`,
+          `Phase "${phase.name}" requires group "${phase.requiredGroup}" (found: ${eitherHasRequired}), both sides need participants (A: ${aInPhase.length}, B: ${bInPhase.length}). Skipping.`);
         continue;
       }
     }
