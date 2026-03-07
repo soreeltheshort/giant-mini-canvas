@@ -139,10 +139,19 @@ export interface FleetShipData {
   tactical_group: string;
 }
 
+// Readiness effectiveness multipliers (matches FleetBuilder READINESS_LEVELS)
+const READINESS_EFFECTIVENESS: Record<number, number> = {
+  1: 1.2,
+  2: 1.0,
+  3: 0.6,
+  4: 0.1,
+};
+
 export interface FleetSnapshot {
   id: string;
   name: string;
   ships: FleetShipData[];
+  readiness?: number; // Condition 1-4
 }
 
 interface ShipInstance {
@@ -169,18 +178,30 @@ function groupToKey(group: string): string {
   return group.toLowerCase().replace(/ /g, "_");
 }
 
-function getVirtualAttackSpeed(ship: ShipInstance, admiralBonus: number = 0): number {
-  const key = `virtual_atk_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
-  const val = Number(ship.shipTypeData[key] ?? 0);
-  const base = val > 0 ? val : ship.cbt_speed;
-  return base + admiralBonus;
+interface SpeedBreakdown {
+  baseCbtSpeed: number;
+  virtualSpeed: number;
+  readinessMult: number;
+  admiralBonus: number;
+  finalSpeed: number;
 }
 
-function getVirtualDefenseSpeed(ship: ShipInstance, admiralBonus: number = 0): number {
+function getVirtualAttackSpeed(ship: ShipInstance, admiralBonus: number = 0, readiness: number = 2): SpeedBreakdown {
+  const key = `virtual_atk_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
+  const val = Number(ship.shipTypeData[key] ?? 0);
+  const virtualSpeed = val > 0 ? val : ship.cbt_speed;
+  const readinessMult = READINESS_EFFECTIVENESS[readiness] ?? 1.0;
+  const finalSpeed = virtualSpeed * readinessMult + admiralBonus;
+  return { baseCbtSpeed: ship.cbt_speed, virtualSpeed, readinessMult, admiralBonus, finalSpeed };
+}
+
+function getVirtualDefenseSpeed(ship: ShipInstance, admiralBonus: number = 0, readiness: number = 2): SpeedBreakdown {
   const key = `virtual_def_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
   const val = Number(ship.shipTypeData[key] ?? 0);
-  const base = val > 0 ? val : ship.cbt_speed;
-  return base + admiralBonus;
+  const virtualSpeed = val > 0 ? val : ship.cbt_speed;
+  const readinessMult = READINESS_EFFECTIVENESS[readiness] ?? 1.0;
+  const finalSpeed = virtualSpeed * readinessMult + admiralBonus;
+  return { baseCbtSpeed: ship.cbt_speed, virtualSpeed, readinessMult, admiralBonus, finalSpeed };
 }
 
 export interface BattleEvent {
