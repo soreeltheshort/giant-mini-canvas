@@ -139,10 +139,19 @@ export interface FleetShipData {
   tactical_group: string;
 }
 
+// Readiness effectiveness multipliers (matches FleetBuilder READINESS_LEVELS)
+const READINESS_EFFECTIVENESS: Record<number, number> = {
+  1: 1.2,
+  2: 1.0,
+  3: 0.6,
+  4: 0.1,
+};
+
 export interface FleetSnapshot {
   id: string;
   name: string;
   ships: FleetShipData[];
+  readiness?: number; // Condition 1-4
 }
 
 interface ShipInstance {
@@ -169,18 +178,30 @@ function groupToKey(group: string): string {
   return group.toLowerCase().replace(/ /g, "_");
 }
 
-function getVirtualAttackSpeed(ship: ShipInstance, admiralBonus: number = 0): number {
-  const key = `virtual_atk_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
-  const val = Number(ship.shipTypeData[key] ?? 0);
-  const base = val > 0 ? val : ship.cbt_speed;
-  return base + admiralBonus;
+interface SpeedBreakdown {
+  baseCbtSpeed: number;
+  virtualSpeed: number;
+  readinessMult: number;
+  admiralBonus: number;
+  finalSpeed: number;
 }
 
-function getVirtualDefenseSpeed(ship: ShipInstance, admiralBonus: number = 0): number {
+function getVirtualAttackSpeed(ship: ShipInstance, admiralBonus: number = 0, readiness: number = 2): SpeedBreakdown {
+  const key = `virtual_atk_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
+  const val = Number(ship.shipTypeData[key] ?? 0);
+  const virtualSpeed = val > 0 ? val : ship.cbt_speed;
+  const readinessMult = READINESS_EFFECTIVENESS[readiness] ?? 1.0;
+  const finalSpeed = virtualSpeed * readinessMult + admiralBonus;
+  return { baseCbtSpeed: ship.cbt_speed, virtualSpeed, readinessMult, admiralBonus, finalSpeed };
+}
+
+function getVirtualDefenseSpeed(ship: ShipInstance, admiralBonus: number = 0, readiness: number = 2): SpeedBreakdown {
   const key = `virtual_def_speed_${groupToKey(ship.tacticalGroup)}` as keyof ShipTypeData;
   const val = Number(ship.shipTypeData[key] ?? 0);
-  const base = val > 0 ? val : ship.cbt_speed;
-  return base + admiralBonus;
+  const virtualSpeed = val > 0 ? val : ship.cbt_speed;
+  const readinessMult = READINESS_EFFECTIVENESS[readiness] ?? 1.0;
+  const finalSpeed = virtualSpeed * readinessMult + admiralBonus;
+  return { baseCbtSpeed: ship.cbt_speed, virtualSpeed, readinessMult, admiralBonus, finalSpeed };
 }
 
 export interface BattleEvent {
@@ -293,6 +314,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
   const weaponPrefs = weaponTargetPrefs ?? [];
   const admiralBonusA = (admiralRatingA - 4) * 0.05;
   const admiralBonusB = (admiralRatingB - 4) * 0.05;
+  const readinessA = fleetA.readiness ?? 2;
+  const readinessB = fleetB.readiness ?? 2;
   const rng = createRNG(hashSeed(seedStr));
   const events: BattleEvent[] = [];
   let seq = 0;
@@ -394,9 +417,10 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     const mounts = attacker.weapons.filter(w => w.type === weaponType);
     if (mounts.length === 0) return;
 
-    // Use virtual speeds based on tactical group, with admiral bonus
+    // Use virtual speeds based on tactical group, with readiness and admiral bonus
     const admiralAtkBonus = attacker.fleet === "A" ? admiralBonusA : admiralBonusB;
-    const atkSpeed = getVirtualAttackSpeed(attacker, admiralAtkBonus);
+    const attackerReadiness = attacker.fleet === "A" ? readinessA : readinessB;
+    const atkBreakdown = getVirtualAttackSpeed(attacker, admiralAtkBonus, attackerReadiness);
 
     for (const mount of mounts) {
       // Each weapon mount selects its own target based on weapon preferences
@@ -405,17 +429,18 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
       if (!target) continue;
 
       const admiralDefBonus = target.fleet === "A" ? admiralBonusA : admiralBonusB;
-      const defSpeed = getVirtualDefenseSpeed(target, admiralDefBonus);
+      const defenderReadiness = target.fleet === "A" ? readinessA : readinessB;
+      const defBreakdown = getVirtualDefenseSpeed(target, admiralDefBonus, defenderReadiness);
       const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
 
       for (let gun = 0; gun < mount.count; gun++) {
 
-        const speedDiff = (atkSpeed - defSpeed) * cc.speed_hit_modifier;
+        const speedDiff = (atkBreakdown.finalSpeed - defBreakdown.finalSpeed) * cc.speed_hit_modifier;
         const hitChance = Math.min(cc.hit_chance_max, Math.max(cc.hit_chance_min, cc.base_hit_chance + attackMod - defenseMod + speedDiff));
         const roll = rng();
         const hit = roll <= hitChance;
 
-        const speedExplain = `Speed: atk=${atkSpeed}(base ${attacker.cbt_speed}, group ${attacker.tacticalGroup}) vs def=${defSpeed}(base ${target.cbt_speed}, group ${target.tacticalGroup}), diff=${(atkSpeed - defSpeed).toFixed(1)}, mod=${speedDiff.toFixed(3)}.`;
+        const speedExplain = `Speed: atk=${atkBreakdown.finalSpeed.toFixed(2)}(virtual ${atkBreakdown.virtualSpeed} × readiness ${atkBreakdown.readinessMult} + admiral ${atkBreakdown.admiralBonus.toFixed(2)}, base cbt ${atkBreakdown.baseCbtSpeed}, group ${attacker.tacticalGroup}) vs def=${defBreakdown.finalSpeed.toFixed(2)}(virtual ${defBreakdown.virtualSpeed} × readiness ${defBreakdown.readinessMult} + admiral ${defBreakdown.admiralBonus.toFixed(2)}, base cbt ${defBreakdown.baseCbtSpeed}, group ${target.tacticalGroup}), diff=${(atkBreakdown.finalSpeed - defBreakdown.finalSpeed).toFixed(2)}, hitMod=${speedDiff.toFixed(3)}.`;
         const targetExplain = `Target: ${target.name}(${target.hull_class}) via ${targetSource}.`;
 
         if (hit) {
@@ -435,7 +460,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
             weaponName: mount.name, weaponKey: mount.key, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
             roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
             rawDmg, armor: target.armor, actualDmg, remainingHull: Math.max(0, target.currentHull), crippled: wouldCripple, critical: isCrit,
-             attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed, targetSource, attackerTargetPref: attacker.target_preference,
+             attackerVirtualSpeed: atkBreakdown.finalSpeed, defenderVirtualSpeed: defBreakdown.finalSpeed, targetSource, attackerTargetPref: attacker.target_preference,
+             attackerReadiness: attackerReadiness, defenderReadiness: defenderReadiness,
           },
             `${attacker.name} (${attacker.fleet}, pref: ${attacker.target_preference}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage. (rolled ${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% to hit)${critTag}${wouldCripple ? " DESTROYED!" : ""}`,
             `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! ${targetExplain} ${speedExplain}${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${Math.max(0, target.currentHull)}/${target.maxHull}.${wouldCripple ? " Ship crippled." : ""}`
@@ -445,7 +471,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
             attacker: attacker.instanceId, target: target.instanceId,
             weaponName: mount.name, weaponKey: mount.key, weaponType: mount.type, gunIndex: gun + 1, totalGuns: mount.count,
             roll: Math.round(roll * 1000) / 1000, hitChance: Math.round(hitChance * 100),
-             attackerVirtualSpeed: atkSpeed, defenderVirtualSpeed: defSpeed, targetSource, attackerTargetPref: attacker.target_preference,
+             attackerVirtualSpeed: atkBreakdown.finalSpeed, defenderVirtualSpeed: defBreakdown.finalSpeed, targetSource, attackerTargetPref: attacker.target_preference,
+             attackerReadiness: attackerReadiness, defenderReadiness: defenderReadiness,
           },
             `${attacker.name} (${attacker.fleet}, pref: ${attacker.target_preference}) fires ${mount.name} #${gun + 1} at ${target.name} (${target.fleet}) — miss. (rolled ${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% to hit)`,
             `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Miss. ${targetExplain} ${speedExplain}`
