@@ -81,6 +81,7 @@ const Battle = () => {
     return {
       id: fleet.id,
       name: fleet.name,
+      readiness: fleet.readiness ?? 2,
       ships: ships.map((s: any) => ({
         ship_type: s.ship_types,
         quantity: s.quantity,
