@@ -4,16 +4,17 @@ import { Game } from "@/games/types";
 const thirdRepublic: Game = {
   id: "third-republic",
   title: "Third Republic",
-  description: "A tactical war game where commanders design, build and lead fleets in competition with each other and collaborate against an alien threat.",
-  pitch: "Design and build your fleets, lead them across hex-based star systems, compete with rival commanders for resources and territory, and unite against a relentless alien threat. Third Republic rewards strategic fleet composition, logistics mastery, and diplomatic cunning.",
+  description:
+    "A tactical politics and war game where players compete for control of the republic and collaborate against an alien threat.",
+  pitch:
+    "Lead the Republic through war and diplomacy in this hex-based, simultaneous-resolution game based on a popular Play By Mail.",
   image: game1,
   screenshots: [game1],
   features: [
     "Hex-based tactical combat with line-of-sight mechanics",
-    "Procedurally generated campaign maps",
-    "Deep logistics and supply chain simulation",
-    "Moddable unit editor and scenario builder",
-    "Asynchronous multiplayer support",
+    "Propose and vote on resolutions",
+    "Deep strategy and combat simulation",
+    "Asynchronous multiplayer",
   ],
   platforms: ["Windows", "macOS", "Linux"],
   inDevelopment: true,
