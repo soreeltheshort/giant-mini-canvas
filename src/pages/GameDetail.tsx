@@ -51,7 +51,10 @@ const GameDetail = () => {
           {isThirdRepublic && (
             <div className="mt-6 flex gap-3">
               {user ? (
-                <Button onClick={() => navigate("/dashboard")} className="bg-gold text-secondary-foreground hover:bg-gold/90">
+                <Button
+                  onClick={() => navigate("/dashboard")}
+                  className="bg-gold text-secondary-foreground hover:bg-gold/90"
+                >
                   ⚔ Combat Testing
                 </Button>
               ) : (
@@ -70,7 +73,9 @@ const GameDetail = () => {
           {/* Platforms */}
           <div className="mt-6 flex gap-2">
             {game.platforms.map((p) => (
-              <span key={p} className="border border-border px-3 py-1 text-xs text-muted-foreground">{p}</span>
+              <span key={p} className="border border-border px-3 py-1 text-xs text-muted-foreground">
+                {p}
+              </span>
             ))}
           </div>
 
@@ -100,11 +105,13 @@ const GameDetail = () => {
             <div className="mt-6 space-y-6">
               <div className="border-l-2 border-primary pl-4">
                 <p className="text-xs text-muted-foreground">February 2026</p>
-                <p className="mt-1 text-sm text-foreground">Core gameplay loop finalized. Internal playtesting underway.</p>
+                <p className="mt-1 text-sm text-foreground">Core combat at Alpha. Combat playtesting underway.</p>
               </div>
               <div className="border-l-2 border-border pl-4">
                 <p className="text-xs text-muted-foreground">January 2026</p>
-                <p className="mt-1 text-sm text-foreground">UI overhaul complete. New map rendering engine integrated.</p>
+                <p className="mt-1 text-sm text-foreground">
+                  Core rules modified for online play. Rework of concept of who is the player
+                </p>
               </div>
               <div className="border-l-2 border-border pl-4">
                 <p className="text-xs text-muted-foreground">December 2025</p>
