@@ -26,6 +26,11 @@ interface Props {
   onToggleCoordinates: () => void;
   onHighlightChange: (c: HexClassification | "ALL" | null) => void;
   provinceStats: Record<string, { hexCount: number; systemCount: number }>;
+  onRandomize: () => void;
+  onUndoRandomize: () => void;
+  onReRandomize: () => void;
+  canUndoRandomize: boolean;
+  randomizedCount: number;
 }
 
 const LeftPanel: React.FC<Props> = ({
@@ -44,6 +49,11 @@ const LeftPanel: React.FC<Props> = ({
   onToggleCoordinates,
   onHighlightChange,
   provinceStats,
+  onRandomize,
+  onUndoRandomize,
+  onReRandomize,
+  canUndoRandomize,
+  randomizedCount,
 }) => {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -77,6 +87,43 @@ const LeftPanel: React.FC<Props> = ({
         >
           {saving ? "Saving..." : "Save Map"}
         </Button>
+      </div>
+
+      {/* Randomize Systems */}
+      <div>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Randomize Systems
+        </h3>
+        <div className="flex flex-col gap-1">
+          <Button size="sm" onClick={onRandomize}>
+            Randomize Planets
+          </Button>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 text-xs"
+              disabled={!canUndoRandomize}
+              onClick={onUndoRandomize}
+            >
+              Undo
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 text-xs"
+              disabled={!canUndoRandomize}
+              onClick={onReRandomize}
+            >
+              Re-roll
+            </Button>
+          </div>
+          {randomizedCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {randomizedCount} system{randomizedCount !== 1 ? "s" : ""} added (unsaved)
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Tools */}

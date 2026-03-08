@@ -14,6 +14,7 @@ import {
   CLASSIFICATION_COLORS,
   HexClassification,
 } from "@/lib/mapTypes";
+import { loadRandomizeParams, saveRandomizeParams } from "@/lib/randomizeSystems";
 
 const MapTestingConfig = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -24,13 +25,25 @@ const MapTestingConfig = () => {
   const [newDesc, setNewDesc] = useState("");
   const [newIcon, setNewIcon] = useState("🏭");
 
-  // Random system generation params
-  const [selectedProvinces, setSelectedProvinces] = useState<HexClassification[]>([
-    "UNEXPLORED_MARCHES",
-  ]);
-  const [hexesPerSystem, setHexesPerSystem] = useState(50);
-  const [minDistance, setMinDistance] = useState(3);
-  const [forceEvenDistribution, setForceEvenDistribution] = useState(false);
+  // Random system generation params — persisted to localStorage
+  const [params, setParams] = useState(() => loadRandomizeParams());
+  const selectedProvinces = params.provinces;
+  const hexesPerSystem = params.hexesPerSystem;
+  const minDistance = params.minDistance;
+  const forceEvenDistribution = params.forceEvenDistribution;
+
+  const updateParams = (patch: Partial<typeof params>) => {
+    setParams((prev) => {
+      const next = { ...prev, ...patch };
+      saveRandomizeParams(next);
+      return next;
+    });
+  };
+  const setSelectedProvinces = (fn: (prev: HexClassification[]) => HexClassification[]) =>
+    updateParams({ provinces: fn(params.provinces) });
+  const setHexesPerSystem = (v: number) => updateParams({ hexesPerSystem: v });
+  const setMinDistance = (v: number) => updateParams({ minDistance: v });
+  const setForceEvenDistribution = (v: boolean) => updateParams({ forceEvenDistribution: v });
 
   useEffect(() => {
     if (!loading && !user) navigate("/login");

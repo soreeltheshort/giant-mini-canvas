@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import HexMapCanvas from "./HexMapCanvas";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
+import { randomizeSystems, loadRandomizeParams } from "@/lib/randomizeSystems";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
@@ -280,6 +281,38 @@ const HexMapEditor: React.FC = () => {
     [mapState.hexes, toast]
   );
 
+  // Randomize state
+  const [preRandomizeState, setPreRandomizeState] = useState<MapState | null>(null);
+  const [randomizedCount, setRandomizedCount] = useState(0);
+
+  const handleRandomize = useCallback(() => {
+    const params = loadRandomizeParams();
+    setPreRandomizeState(mapState);
+    const newState = randomizeSystems(mapState, params);
+    const addedCount = newState.systems.size - mapState.systems.size;
+    setMapState(newState);
+    setRandomizedCount(addedCount);
+    toast({ title: "Randomized", description: `Added ${addedCount} systems` });
+  }, [mapState, toast]);
+
+  const handleUndoRandomize = useCallback(() => {
+    if (!preRandomizeState) return;
+    setMapState(preRandomizeState);
+    setPreRandomizeState(null);
+    setRandomizedCount(0);
+    toast({ title: "Undone", description: "Randomized systems removed" });
+  }, [preRandomizeState, toast]);
+
+  const handleReRandomize = useCallback(() => {
+    if (!preRandomizeState) return;
+    const params = loadRandomizeParams();
+    const newState = randomizeSystems(preRandomizeState, params);
+    const addedCount = newState.systems.size - preRandomizeState.systems.size;
+    setMapState(newState);
+    setRandomizedCount(addedCount);
+    toast({ title: "Re-randomized", description: `Added ${addedCount} systems` });
+  }, [preRandomizeState, toast]);
+
   const stats = useMemo(() => getProvinceStats(mapState), [mapState]);
 
   return (
@@ -327,6 +360,11 @@ const HexMapEditor: React.FC = () => {
             onToggleCoordinates={() => setEditorState((s) => ({ ...s, showCoordinates: !s.showCoordinates }))}
             onHighlightChange={(c) => setEditorState((s) => ({ ...s, highlightClassification: c }))}
             provinceStats={stats}
+            onRandomize={handleRandomize}
+            onUndoRandomize={handleUndoRandomize}
+            onReRandomize={handleReRandomize}
+            canUndoRandomize={!!preRandomizeState}
+            randomizedCount={randomizedCount}
           />
         )}
       </div>
