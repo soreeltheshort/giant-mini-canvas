@@ -103,6 +103,10 @@ const Header = () => {
                 </Link>
               </>
             )}
+            {user && isAdmin && isMapTestingMode && (
+              <Link to="/map-testing/config" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/map-testing/config" ? "text-foreground" : ""}`}>
+                Config
+              </Link>
             {user && isAdmin && isCombatTestingMode && (
               <>
                 <Link to="/admin/battle-debug" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/battle-debug" ? "text-foreground" : ""}`}>
