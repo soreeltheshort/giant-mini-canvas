@@ -6,7 +6,8 @@ export type HexClassification =
   | "PROVINCE_4"
   | "PROVINCE_5"
   | "PROVINCE_6"
-  | "MARCHES";
+  | "MARCHES"
+  | "EXPLORED_MARCHES";
 
 export const CLASSIFICATION_LABELS: Record<HexClassification, string> = {
   CORE: "Core",
@@ -17,6 +18,7 @@ export const CLASSIFICATION_LABELS: Record<HexClassification, string> = {
   PROVINCE_5: "Marcellan",
   PROVINCE_6: "Octavian",
   MARCHES: "Tiberon",
+  EXPLORED_MARCHES: "Explored Marches",
 };
 
 export const CLASSIFICATION_COLORS: Record<HexClassification, string> = {
@@ -28,6 +30,7 @@ export const CLASSIFICATION_COLORS: Record<HexClassification, string> = {
   PROVINCE_5: "#f472b6",
   PROVINCE_6: "#14b8a6",
   MARCHES: "#374151",
+  EXPLORED_MARCHES: "#6b7280",
 };
 
 export const ALL_CLASSIFICATIONS: HexClassification[] = [
@@ -39,6 +42,7 @@ export const ALL_CLASSIFICATIONS: HexClassification[] = [
   "PROVINCE_5",
   "PROVINCE_6",
   "MARCHES",
+  "EXPLORED_MARCHES",
 ];
 
 export interface MapData {
