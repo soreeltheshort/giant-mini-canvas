@@ -26,7 +26,7 @@ const MapTestingConfig = () => {
 
   // Random system generation params
   const [selectedProvinces, setSelectedProvinces] = useState<HexClassification[]>([
-    "CORE", "PROVINCE_1", "PROVINCE_2", "PROVINCE_3", "PROVINCE_4", "PROVINCE_5", "PROVINCE_6",
+    "MARCHES",
   ]);
   const [hexesPerSystem, setHexesPerSystem] = useState(50);
   const [minDistance, setMinDistance] = useState(3);
