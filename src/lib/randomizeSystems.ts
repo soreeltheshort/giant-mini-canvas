@@ -46,29 +46,84 @@ export function randomizeSystems(state: MapState, params: RandomizeParams): MapS
   const newSystems = new Map(state.systems);
   const placedCubes = [...existingCubes];
 
-  // Process each selected province
+  const QUADRANT_SIZE = 10;
+
   for (const province of provinces) {
-    // Get eligible hexes (in province, no system)
-    const eligible = Array.from(state.hexes.values()).filter(
-      (h) => h.classification === province && !h.has_system
-    );
-
-    if (eligible.length === 0) continue;
-
-    // How many systems to place
-    const totalHexes = Array.from(state.hexes.values()).filter(
+    const allInProvince = Array.from(state.hexes.values()).filter(
       (h) => h.classification === province
-    ).length;
-    const targetCount = Math.max(1, Math.floor(totalHexes / hexesPerSystem));
+    );
+    const eligibleInProvince = allInProvince.filter((h) => !h.has_system);
+    if (eligibleInProvince.length === 0) continue;
 
-    if (forceEvenDistribution) {
-      placeEven(eligible, targetCount, minDistance, placedCubes, newHexes, newSystems, province);
-    } else {
-      placeRandom(eligible, targetCount, minDistance, placedCubes, newHexes, newSystems, province);
+    const totalTarget = Math.max(1, Math.floor(allInProvince.length / hexesPerSystem));
+
+    // Bucket eligible hexes into 10x10 quadrants
+    const quadrants = new Map<string, HexData[]>();
+    const allQuadrants = new Map<string, number>(); // track total hexes per quadrant
+
+    for (const h of allInProvince) {
+      const qx = Math.floor((h.x + 70) / QUADRANT_SIZE);
+      const qy = Math.floor((h.y + 70) / QUADRANT_SIZE);
+      const qk = `${qx},${qy}`;
+      allQuadrants.set(qk, (allQuadrants.get(qk) || 0) + 1);
+    }
+
+    for (const h of eligibleInProvince) {
+      const qx = Math.floor((h.x + 70) / QUADRANT_SIZE);
+      const qy = Math.floor((h.y + 70) / QUADRANT_SIZE);
+      const qk = `${qx},${qy}`;
+      if (!quadrants.has(qk)) quadrants.set(qk, []);
+      quadrants.get(qk)!.push(h);
+    }
+
+    // Distribute target count proportionally across quadrants
+    const quadrantKeys = Array.from(quadrants.keys());
+    const totalQuadrantHexes = Array.from(allQuadrants.values()).reduce((a, b) => a + b, 0);
+
+    // Calculate per-quadrant targets
+    const quadrantTargets = new Map<string, number>();
+    let assigned = 0;
+    for (const qk of quadrantKeys) {
+      const proportion = (allQuadrants.get(qk) || 0) / totalQuadrantHexes;
+      const target = Math.round(totalTarget * proportion);
+      quadrantTargets.set(qk, target);
+      assigned += target;
+    }
+
+    // Distribute remainder randomly
+    let remainder = totalTarget - assigned;
+    const shuffledKeys = fisherYatesShuffle([...quadrantKeys]);
+    let ki = 0;
+    while (remainder > 0 && shuffledKeys.length > 0) {
+      quadrantTargets.set(shuffledKeys[ki % shuffledKeys.length], (quadrantTargets.get(shuffledKeys[ki % shuffledKeys.length]) || 0) + 1);
+      remainder--;
+      ki++;
+    }
+
+    // Place systems within each quadrant
+    for (const qk of quadrantKeys) {
+      const qTarget = quadrantTargets.get(qk) || 0;
+      if (qTarget === 0) continue;
+      const qEligible = quadrants.get(qk)!;
+
+      if (forceEvenDistribution) {
+        placeEvenInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province);
+      } else {
+        placeRandomInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province);
+      }
     }
   }
 
   return { ...state, hexes: newHexes, systems: newSystems };
+}
+
+/** Fisher-Yates shuffle */
+function fisherYatesShuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 function isFarEnough(
@@ -107,7 +162,7 @@ function placeSystem(
   });
 }
 
-function placeRandom(
+function placeRandomInQuadrant(
   eligible: HexData[],
   targetCount: number,
   minDistance: number,
@@ -116,10 +171,8 @@ function placeRandom(
   newSystems: Map<number, SystemData>,
   province: HexClassification
 ) {
-  // Shuffle eligible
-  const shuffled = [...eligible].sort(() => Math.random() - 0.5);
+  const shuffled = fisherYatesShuffle([...eligible]);
   let placed = 0;
-
   for (const hex of shuffled) {
     if (placed >= targetCount) break;
     if (!isFarEnough(hex, placedCubes, minDistance)) continue;
@@ -128,7 +181,7 @@ function placeRandom(
   }
 }
 
-function placeEven(
+function placeEvenInQuadrant(
   eligible: HexData[],
   targetCount: number,
   minDistance: number,
@@ -137,7 +190,6 @@ function placeEven(
   newSystems: Map<number, SystemData>,
   province: HexClassification
 ) {
-  // Use a greedy approach: pick the hex farthest from all placed systems
   const remaining = [...eligible];
   let placed = 0;
 
@@ -149,14 +201,12 @@ function placeEven(
       const hex = remaining[i];
       const [cx, cy, cz] = offsetToCube(hex.x, hex.y);
 
-      // Find minimum distance to any placed system
       let minD = Infinity;
       for (const [px, py, pz] of placedCubes) {
         const d = cubeDistance(cx, cy, cz, px, py, pz);
         if (d < minD) minD = d;
       }
 
-      // If no placed systems yet, use distance from center
       if (placedCubes.length === 0) {
         minD = cubeDistance(cx, cy, cz, 0, 0, 0);
       }
@@ -167,7 +217,7 @@ function placeEven(
       }
     }
 
-    if (bestIdx === -1) break; // Can't place any more with min distance constraint
+    if (bestIdx === -1) break;
     placeSystem(remaining[bestIdx], province, placedCubes, newHexes, newSystems);
     remaining.splice(bestIdx, 1);
     placed++;
