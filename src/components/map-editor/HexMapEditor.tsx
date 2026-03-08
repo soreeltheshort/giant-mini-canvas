@@ -287,9 +287,15 @@ const HexMapEditor: React.FC = () => {
 
   const handleRandomize = useCallback(() => {
     const params = loadRandomizeParams();
-    setPreRandomizeState(mapState);
-    const newState = randomizeSystems(mapState, params);
-    const addedCount = newState.systems.size - mapState.systems.size;
+    // Deep-copy current state so undo has a clean snapshot
+    const snapshot: MapState = {
+      ...mapState,
+      hexes: new Map(Array.from(mapState.hexes.entries()).map(([k, v]) => [k, { ...v }])),
+      systems: new Map(Array.from(mapState.systems.entries()).map(([k, v]) => [k, { ...v, facilities: [...(v.facilities || [])] }])),
+    };
+    setPreRandomizeState(snapshot);
+    const newState = randomizeSystems(snapshot, params);
+    const addedCount = newState.systems.size - snapshot.systems.size;
     setMapState(newState);
     setRandomizedCount(addedCount);
     toast({ title: "Randomized", description: `Added ${addedCount} systems` });
