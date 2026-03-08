@@ -360,6 +360,11 @@ const HexMapEditor: React.FC = () => {
             onToggleCoordinates={() => setEditorState((s) => ({ ...s, showCoordinates: !s.showCoordinates }))}
             onHighlightChange={(c) => setEditorState((s) => ({ ...s, highlightClassification: c }))}
             provinceStats={stats}
+            onRandomize={handleRandomize}
+            onUndoRandomize={handleUndoRandomize}
+            onReRandomize={handleReRandomize}
+            canUndoRandomize={!!preRandomizeState}
+            randomizedCount={randomizedCount}
           />
         )}
       </div>
