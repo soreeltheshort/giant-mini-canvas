@@ -82,7 +82,7 @@ const HexMapEditor: React.FC = () => {
 
   const refreshState = useCallback(() => {
     if (!db) return;
-    setMapState(readMapState(db));
+    setMapState(readMapStateFromDb(db));
   }, [db]);
 
   const applyClassificationToHex = useCallback(
