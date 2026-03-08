@@ -2,6 +2,7 @@ import {
   MapData,
   HexData,
   SystemData,
+  ProvinceRegion,
   MapState,
   HexClassification,
   hexKey,
