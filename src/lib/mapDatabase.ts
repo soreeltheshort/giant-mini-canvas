@@ -207,10 +207,13 @@ export async function importFromSqlite(file: File): Promise<MapState> {
   const maps = readRows("SELECT * FROM maps LIMIT 1");
   const mapData: MapData | null = maps.length > 0 ? maps[0] as MapData : null;
 
-  // Read hexes
+  // Read hexes — migrate legacy MARCHES to UNEXPLORED_MARCHES
   const hexes = new Map<string, HexData>();
   for (const row of readRows("SELECT * FROM hexes")) {
     row.has_system = !!row.has_system;
+    if (row.classification === "MARCHES") {
+      row.classification = "UNEXPLORED_MARCHES";
+    }
     hexes.set(hexKey(row.x, row.y), row as HexData);
   }
 
