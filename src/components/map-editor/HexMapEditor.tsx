@@ -55,12 +55,15 @@ const HexMapEditor: React.FC = () => {
     : undefined;
 
   const handleImport = useCallback(async (file: File) => {
+    console.log("[MapEditor] Import started, file:", file.name, file.size, "bytes");
     try {
       const result = await loadMapFromFile(file);
+      console.log("[MapEditor] Load complete. mapData:", result.state.mapData, "hexes:", result.state.hexes.size, "systems:", result.state.systems.size);
       setDb(result.db);
       setMapState(result.state);
       toast({ title: "Map loaded", description: `${result.state.hexes.size} hexes loaded` });
     } catch (err: any) {
+      console.error("[MapEditor] Import error:", err);
       toast({ title: "Import failed", description: err.message, variant: "destructive" });
     }
   }, [toast]);
