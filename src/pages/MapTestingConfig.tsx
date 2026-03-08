@@ -1,11 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import {
+  ALL_CLASSIFICATIONS,
+  CLASSIFICATION_LABELS,
+  CLASSIFICATION_COLORS,
+  HexClassification,
+} from "@/lib/mapTypes";
 
 const MapTestingConfig = () => {
   const { user, loading, isAdmin } = useAuth();
