@@ -36,9 +36,14 @@ const Index = () => {
                     </Link>
                   )}
                   {activeGame.id === "third-republic" && user && (
-                    <Link to="/dashboard">
-                      <Button className="bg-gold text-secondary-foreground hover:bg-gold/90">⚔ Combat Testing</Button>
-                    </Link>
+                    <>
+                      <Link to="/dashboard">
+                        <Button className="bg-gold text-secondary-foreground hover:bg-gold/90">⚔ Combat Testing</Button>
+                      </Link>
+                      <Link to="/map-testing">
+                        <Button variant="outline">🗺 Map Testing</Button>
+                      </Link>
+                    </>
                   )}
                 </div>
               </div>

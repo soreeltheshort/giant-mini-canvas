@@ -93,8 +93,11 @@ const Header = () => {
                 <Link to="/manual" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/manual" ? "text-foreground" : "text-muted-foreground"}`}>
                   Manual
                 </Link>
-                <Link to="/dashboard" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/dashboard") ? "text-foreground" : "text-muted-foreground"}`}>
-                  Dashboard
+                <Link to="/dashboard" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/fleet-builder") || location.pathname.startsWith("/battle") ? "text-foreground" : "text-muted-foreground"}`}>
+                  Combat Testing
+                </Link>
+                <Link to="/map-testing" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/map-testing") ? "text-foreground" : "text-muted-foreground"}`}>
+                  Map Testing
                 </Link>
               </>
             )}
