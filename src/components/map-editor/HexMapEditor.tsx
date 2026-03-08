@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
-  const [db, setDb] = useState<Database | null>(null);
+  const [db, setDb] = useState<any>(null);
   const [mapState, setMapState] = useState<MapState>({
     mapData: null,
     hexes: new Map(),
