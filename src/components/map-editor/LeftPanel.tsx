@@ -42,7 +42,7 @@ const LeftPanel: React.FC<Props> = ({
   const fileRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex h-full w-64 flex-col gap-4 overflow-y-auto border-r border-border bg-background p-4">
+    <div className="flex h-full w-full flex-col gap-4 overflow-y-auto p-4">
       {/* Import / Export */}
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Database</h3>

@@ -65,6 +65,18 @@ export interface HexData {
   has_system: boolean;
 }
 
+export interface FacilityType {
+  facility_type_id: number;
+  name: string;
+  description: string;
+  icon: string; // emoji or short code
+}
+
+export interface SystemFacility {
+  facility_type_id: number;
+  quantity: number;
+}
+
 export interface SystemData {
   system_id: number;
   map_id: number;
@@ -72,6 +84,8 @@ export interface SystemData {
   system_name: string;
   classification: string;
   importance_rank: number;
+  owner: string;
+  facilities: SystemFacility[];
 }
 
 export interface ProvinceRegion {
@@ -91,6 +105,7 @@ export interface MapState {
   hexes: Map<string, HexData>;
   systems: Map<number, SystemData>;
   regions: ProvinceRegion[];
+  facilityTypes: FacilityType[];
 }
 
 export type EditorTool = "select" | "paint" | "fill" | "brush";

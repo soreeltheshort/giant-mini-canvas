@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import {
   HexData,
   SystemData,
+  FacilityType,
+  SystemFacility,
   HexClassification,
   ALL_CLASSIFICATIONS,
   CLASSIFICATION_LABELS,
@@ -13,9 +15,10 @@ import {
 interface Props {
   hex: HexData | null;
   system: SystemData | undefined;
+  facilityTypes: FacilityType[];
   onClassificationChange: (hexId: number, c: HexClassification) => void;
   onAddSystem: (hexId: number, name: string, rank: number) => void;
-  onUpdateSystem: (hexId: number, name: string, rank: number) => void;
+  onUpdateSystem: (hexId: number, updates: Partial<Pick<SystemData, "system_name" | "importance_rank" | "owner" | "facilities">>) => void;
   onRemoveSystem: (hexId: number) => void;
   onSearchCoords: (x: number, y: number) => void;
 }
@@ -23,6 +26,7 @@ interface Props {
 const RightPanel: React.FC<Props> = ({
   hex,
   system,
+  facilityTypes,
   onClassificationChange,
   onAddSystem,
   onUpdateSystem,
@@ -31,6 +35,7 @@ const RightPanel: React.FC<Props> = ({
 }) => {
   const [sysName, setSysName] = useState("");
   const [sysRank, setSysRank] = useState(1);
+  const [sysOwner, setSysOwner] = useState("");
   const [searchX, setSearchX] = useState("");
   const [searchY, setSearchY] = useState("");
 
@@ -38,11 +43,40 @@ const RightPanel: React.FC<Props> = ({
     if (system) {
       setSysName(system.system_name);
       setSysRank(system.importance_rank);
+      setSysOwner(system.owner || "");
     } else {
       setSysName("");
       setSysRank(1);
+      setSysOwner("");
     }
   }, [system, hex?.hex_id]);
+
+  const handleSave = () => {
+    if (!hex || !system) return;
+    onUpdateSystem(hex.hex_id, {
+      system_name: sysName,
+      importance_rank: sysRank,
+      owner: sysOwner,
+    });
+  };
+
+  const toggleFacility = (ftId: number) => {
+    if (!hex || !system) return;
+    const existing = system.facilities || [];
+    const has = existing.find((f) => f.facility_type_id === ftId);
+    const updated = has
+      ? existing.filter((f) => f.facility_type_id !== ftId)
+      : [...existing, { facility_type_id: ftId, quantity: 1 }];
+    onUpdateSystem(hex.hex_id, { facilities: updated });
+  };
+
+  const updateFacilityQty = (ftId: number, qty: number) => {
+    if (!hex || !system) return;
+    const updated = (system.facilities || []).map((f) =>
+      f.facility_type_id === ftId ? { ...f, quantity: Math.max(1, qty) } : f
+    );
+    onUpdateSystem(hex.hex_id, { facilities: updated });
+  };
 
   return (
     <div className="flex h-full w-64 flex-col gap-4 overflow-y-auto border-l border-border bg-background p-4">
@@ -52,18 +86,8 @@ const RightPanel: React.FC<Props> = ({
           Search Coordinates
         </h3>
         <div className="flex gap-1">
-          <Input
-            placeholder="X"
-            value={searchX}
-            onChange={(e) => setSearchX(e.target.value)}
-            className="h-8 text-xs"
-          />
-          <Input
-            placeholder="Y"
-            value={searchY}
-            onChange={(e) => setSearchY(e.target.value)}
-            className="h-8 text-xs"
-          />
+          <Input placeholder="X" value={searchX} onChange={(e) => setSearchX(e.target.value)} className="h-8 text-xs" />
+          <Input placeholder="Y" value={searchY} onChange={(e) => setSearchY(e.target.value)} className="h-8 text-xs" />
           <Button
             size="sm"
             variant="outline"
@@ -85,9 +109,7 @@ const RightPanel: React.FC<Props> = ({
         <>
           {/* Hex Inspector */}
           <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Hex Inspector
-            </h3>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Hex Inspector</h3>
             <div className="space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Coordinates</span>
@@ -108,10 +130,7 @@ const RightPanel: React.FC<Props> = ({
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Classification</span>
                 <span className="flex items-center gap-1">
-                  <span
-                    className="inline-block h-2 w-2 rounded-sm"
-                    style={{ backgroundColor: CLASSIFICATION_COLORS[hex.classification] }}
-                  />
+                  <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: CLASSIFICATION_COLORS[hex.classification] }} />
                   {CLASSIFICATION_LABELS[hex.classification]}
                 </span>
               </div>
@@ -120,24 +139,17 @@ const RightPanel: React.FC<Props> = ({
 
           {/* Change Classification */}
           <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Set Classification
-            </h3>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Set Classification</h3>
             <div className="flex flex-col gap-1">
               {ALL_CLASSIFICATIONS.map((c) => (
                 <button
                   key={c}
                   onClick={() => onClassificationChange(hex.hex_id, c)}
                   className={`flex items-center gap-2 rounded px-2 py-1 text-xs transition-colors ${
-                    hex.classification === c
-                      ? "bg-accent text-accent-foreground font-medium"
-                      : "text-muted-foreground hover:text-foreground"
+                    hex.classification === c ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <span
-                    className="inline-block h-3 w-3 rounded-sm"
-                    style={{ backgroundColor: CLASSIFICATION_COLORS[c] }}
-                  />
+                  <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: CLASSIFICATION_COLORS[c] }} />
                   {CLASSIFICATION_LABELS[c]}
                 </button>
               ))}
@@ -146,66 +158,61 @@ const RightPanel: React.FC<Props> = ({
 
           {/* Solar System */}
           <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Solar System
-            </h3>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Solar System</h3>
             {hex.classification === "MARCHES" ? (
               <p className="text-xs text-destructive">Systems not allowed in Marches</p>
             ) : hex.has_system && system ? (
               <div className="space-y-2">
-                <Input
-                  value={sysName}
-                  onChange={(e) => setSysName(e.target.value)}
-                  placeholder="System name"
-                  className="h-8 text-xs"
-                />
-                <Input
-                  type="number"
-                  value={sysRank}
-                  onChange={(e) => setSysRank(parseInt(e.target.value) || 1)}
-                  placeholder="Importance rank"
-                  className="h-8 text-xs"
-                />
+                <Input value={sysName} onChange={(e) => setSysName(e.target.value)} placeholder="System name" className="h-8 text-xs" />
+                <Input type="number" value={sysRank} onChange={(e) => setSysRank(parseInt(e.target.value) || 1)} placeholder="Importance rank" className="h-8 text-xs" />
+                <Input value={sysOwner} onChange={(e) => setSysOwner(e.target.value)} placeholder="Owner (faction/player)" className="h-8 text-xs" />
                 <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-xs"
-                    onClick={() => onUpdateSystem(hex.hex_id, sysName, sysRank)}
-                  >
+                  <Button size="sm" variant="outline" className="text-xs" onClick={handleSave}>
                     Save
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-xs text-destructive"
-                    onClick={() => onRemoveSystem(hex.hex_id)}
-                  >
+                  <Button size="sm" variant="outline" className="text-xs text-destructive" onClick={() => onRemoveSystem(hex.hex_id)}>
                     Remove
                   </Button>
                 </div>
+
+                {/* Facilities */}
+                {facilityTypes.length > 0 && (
+                  <div className="border-t border-border pt-2">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Facilities</p>
+                    <div className="space-y-1">
+                      {facilityTypes.map((ft) => {
+                        const existing = (system.facilities || []).find((f) => f.facility_type_id === ft.facility_type_id);
+                        return (
+                          <div key={ft.facility_type_id} className="flex items-center gap-1.5">
+                            <input
+                              type="checkbox"
+                              checked={!!existing}
+                              onChange={() => toggleFacility(ft.facility_type_id)}
+                              className="h-3 w-3"
+                            />
+                            <span className="text-sm">{ft.icon}</span>
+                            <span className="text-xs flex-1 truncate">{ft.name}</span>
+                            {existing && (
+                              <Input
+                                type="number"
+                                value={existing.quantity}
+                                onChange={(e) => updateFacilityQty(ft.facility_type_id, parseInt(e.target.value) || 1)}
+                                className="h-6 w-12 text-xs text-center p-0"
+                                min={1}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
-                <Input
-                  value={sysName}
-                  onChange={(e) => setSysName(e.target.value)}
-                  placeholder="System name"
-                  className="h-8 text-xs"
-                />
-                <Input
-                  type="number"
-                  value={sysRank}
-                  onChange={(e) => setSysRank(parseInt(e.target.value) || 1)}
-                  placeholder="Importance rank"
-                  className="h-8 text-xs"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs"
-                  onClick={() => onAddSystem(hex.hex_id, sysName || "New System", sysRank)}
-                >
+                <Input value={sysName} onChange={(e) => setSysName(e.target.value)} placeholder="System name" className="h-8 text-xs" />
+                <Input type="number" value={sysRank} onChange={(e) => setSysRank(parseInt(e.target.value) || 1)} placeholder="Importance rank" className="h-8 text-xs" />
+                <Button size="sm" variant="outline" className="text-xs" onClick={() => onAddSystem(hex.hex_id, sysName || "New System", sysRank)}>
                   Add System
                 </Button>
               </div>
