@@ -49,11 +49,11 @@ const LeftPanel: React.FC<Props> = ({
         <input
           ref={fileRef}
           type="file"
-          accept=".db,.sqlite,.sqlite3"
           className="block w-full text-xs text-muted-foreground file:mr-2 file:rounded file:border file:border-border file:bg-muted file:px-2 file:py-1 file:text-xs file:text-foreground file:cursor-pointer"
           onChange={(e) => {
-            console.log("[LeftPanel] file input changed", e.target.files);
-            if (e.target.files?.[0]) onImport(e.target.files[0]);
+            const file = e.target.files?.[0];
+            console.log("[LeftPanel] file input changed, files count:", e.target.files?.length, "file:", file?.name, file?.size);
+            if (file) onImport(file);
           }}
         />
         {hasMap && (
