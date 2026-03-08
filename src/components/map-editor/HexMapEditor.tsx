@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import HexMapCanvas from "./HexMapCanvas";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
+import { randomizeSystems, loadRandomizeParams } from "@/lib/randomizeSystems";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
