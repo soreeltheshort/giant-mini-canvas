@@ -60,7 +60,18 @@ const HexMapEditor: React.FC = () => {
     }
   }, [mapState, toast]);
 
-  const applyClassificationToHex = useCallback(
+  const handleImport = useCallback(async (file: File) => {
+    try {
+      toast({ title: "Importing...", description: "Reading SQLite database" });
+      const state = await importFromSqlite(file);
+      setMapState(state);
+      toast({ title: "Map imported", description: `${state.hexes.size} hexes loaded` });
+    } catch (err: any) {
+      console.error("[Import]", err);
+      toast({ title: "Import failed", description: err.message, variant: "destructive" });
+    }
+  }, [toast]);
+
     (hex: HexData, classification: HexClassification) => {
       setMapState((prev) => {
         const newHexes = new Map(prev.hexes);
