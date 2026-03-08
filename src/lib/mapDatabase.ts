@@ -142,8 +142,26 @@ export async function exportToSqlite(state: MapState): Promise<Blob> {
   db.run("BEGIN TRANSACTION");
   for (const sys of state.systems.values()) {
     db.run(
-      "INSERT INTO systems (map_id, hex_id, system_name, classification, importance_rank) VALUES (?,?,?,?,?)",
-      [sys.map_id, sys.hex_id, sys.system_name, sys.classification, sys.importance_rank]
+      "INSERT INTO systems (map_id, hex_id, system_name, classification, importance_rank, owner) VALUES (?,?,?,?,?,?)",
+      [sys.map_id, sys.hex_id, sys.system_name, sys.classification, sys.importance_rank, sys.owner || ""]
+    );
+    // Get the inserted system_id
+    const lastId = db.exec("SELECT last_insert_rowid()")[0].values[0][0] as number;
+    for (const fac of sys.facilities || []) {
+      db.run(
+        "INSERT INTO system_facilities (system_id, facility_type_id, quantity) VALUES (?,?,?)",
+        [lastId, fac.facility_type_id, fac.quantity]
+      );
+    }
+  }
+  db.run("COMMIT");
+
+  // Insert facility types
+  db.run("BEGIN TRANSACTION");
+  for (const ft of state.facilityTypes || []) {
+    db.run(
+      "INSERT INTO facility_types (facility_type_id, name, description, icon) VALUES (?,?,?,?)",
+      [ft.facility_type_id, ft.name, ft.description, ft.icon]
     );
   }
   db.run("COMMIT");
