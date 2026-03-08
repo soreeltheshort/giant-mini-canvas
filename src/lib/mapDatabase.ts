@@ -13,9 +13,11 @@ let SQL: Awaited<ReturnType<typeof initSqlJs>> | null = null;
 
 async function getSql() {
   if (!SQL) {
+    console.log("[sql.js] Initializing...");
     SQL = await initSqlJs({
       locateFile: () => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.wasm`,
     });
+    console.log("[sql.js] Initialized successfully");
   }
   return SQL;
 }
