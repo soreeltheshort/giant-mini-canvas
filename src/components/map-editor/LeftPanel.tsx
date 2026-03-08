@@ -15,6 +15,9 @@ interface Props {
   editorState: EditorState;
   onImport: (file: File) => void;
   onExport: () => void;
+  onSave: () => void;
+  saving: boolean;
+  loadingMap: boolean;
   onToolChange: (tool: EditorTool) => void;
   onBrushSizeChange: (size: BrushSize) => void;
   onPaintClassChange: (c: HexClassification) => void;
