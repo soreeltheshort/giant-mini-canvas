@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from "react";
-import { Database } from "sql.js";
 import HexMapCanvas from "./HexMapCanvas";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
