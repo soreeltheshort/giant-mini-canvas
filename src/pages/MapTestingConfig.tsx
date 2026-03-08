@@ -106,6 +106,92 @@ const MapTestingConfig = () => {
             </div>
           )}
         </div>
+
+        {/* Random System Generation Parameters */}
+        <div className="space-y-4 mt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Random System Generation
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Configure parameters for randomly placing solar systems on the map.
+          </p>
+
+          {/* Province selection */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">Provinces to Randomize</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {ALL_CLASSIFICATIONS.filter(c => c !== "UNEXPLORED_MARCHES").map((cls) => (
+                <label
+                  key={cls}
+                  className="flex items-center gap-2 rounded border border-border px-3 py-2 cursor-pointer hover:bg-accent/50 transition-colors"
+                >
+                  <Checkbox
+                    checked={selectedProvinces.includes(cls)}
+                    onCheckedChange={(checked) => {
+                      setSelectedProvinces(prev =>
+                        checked
+                          ? [...prev, cls]
+                          : prev.filter(c => c !== cls)
+                      );
+                    }}
+                  />
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: CLASSIFICATION_COLORS[cls] }}
+                  />
+                  <span className="text-sm text-foreground">{CLASSIFICATION_LABELS[cls]}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Hexes per solar system */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-muted-foreground">Hexes per Solar System</Label>
+              <span className="text-sm font-mono text-foreground">{hexesPerSystem}</span>
+            </div>
+            <Slider
+              value={[hexesPerSystem]}
+              onValueChange={([v]) => setHexesPerSystem(v)}
+              min={5}
+              max={200}
+              step={1}
+            />
+            <p className="text-xs text-muted-foreground">
+              One system will be placed for every {hexesPerSystem} hexes in each selected province.
+            </p>
+          </div>
+
+          {/* Minimum distance */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-muted-foreground">Minimum Distance Between Systems</Label>
+              <span className="text-sm font-mono text-foreground">{minDistance} hex{minDistance !== 1 ? "es" : ""}</span>
+            </div>
+            <Slider
+              value={[minDistance]}
+              onValueChange={([v]) => setMinDistance(v)}
+              min={1}
+              max={10}
+              step={1}
+            />
+          </div>
+
+          {/* Even distribution */}
+          <label className="flex items-center gap-3 rounded border border-border px-3 py-3 cursor-pointer hover:bg-accent/50 transition-colors">
+            <Checkbox
+              checked={forceEvenDistribution}
+              onCheckedChange={(checked) => setForceEvenDistribution(!!checked)}
+            />
+            <div>
+              <p className="text-sm font-medium text-foreground">Force Even System Distribution</p>
+              <p className="text-xs text-muted-foreground">
+                Spread systems as evenly as possible across each province rather than placing randomly.
+              </p>
+            </div>
+          </label>
+        </div>
       </div>
     </div>
   );
