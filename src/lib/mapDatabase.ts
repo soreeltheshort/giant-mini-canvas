@@ -214,9 +214,18 @@ export async function importFromSqlite(file: File): Promise<MapState> {
     hexes.set(hexKey(row.x, row.y), row as HexData);
   }
 
-  // Read systems
+  // Read systems and their facilities
+  const systemFacilities = readRows("SELECT * FROM system_facilities");
+  const facBySystemId = new Map<number, { facility_type_id: number; quantity: number }[]>();
+  for (const sf of systemFacilities) {
+    if (!facBySystemId.has(sf.system_id)) facBySystemId.set(sf.system_id, []);
+    facBySystemId.get(sf.system_id)!.push({ facility_type_id: sf.facility_type_id, quantity: sf.quantity });
+  }
+
   const systems = new Map<number, SystemData>();
   for (const row of readRows("SELECT * FROM systems")) {
+    row.owner = row.owner || "";
+    row.facilities = facBySystemId.get(row.system_id) || [];
     systems.set(row.hex_id, row as SystemData);
   }
 
@@ -227,8 +236,14 @@ export async function importFromSqlite(file: File): Promise<MapState> {
     regions.push(row as ProvinceRegion);
   }
 
+  // Read facility types
+  const facilityTypes: FacilityType[] = [];
+  for (const row of readRows("SELECT * FROM facility_types")) {
+    facilityTypes.push(row as FacilityType);
+  }
+
   db.close();
-  return { mapData, hexes, systems, regions };
+  return { mapData, hexes, systems, regions, facilityTypes };
 }
 
 // Load sql.js from CDN (for export only)

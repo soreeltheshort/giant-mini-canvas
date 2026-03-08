@@ -164,6 +164,8 @@ const HexMapEditor: React.FC = () => {
           system_name: name,
           classification: hex.classification,
           importance_rank: rank,
+          owner: "",
+          facilities: [],
         });
 
         return { ...prev, hexes: newHexes, systems: newSystems };
