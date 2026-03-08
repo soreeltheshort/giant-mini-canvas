@@ -69,6 +69,14 @@ const LeftPanel: React.FC<Props> = ({
             Export
           </Button>
         </div>
+        <Button
+          size="sm"
+          className="mt-2 w-full"
+          onClick={onSave}
+          disabled={saving || loadingMap}
+        >
+          {saving ? "Saving..." : "Save Map"}
+        </Button>
       </div>
 
       {/* Tools */}
