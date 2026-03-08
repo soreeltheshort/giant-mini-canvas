@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import HexMapCanvas from "./HexMapCanvas";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
@@ -24,10 +24,15 @@ import {
 import { floodFill } from "@/lib/hexUtils";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [mapState, setMapState] = useState<MapState>(() => generateBlankMap());
+  const [saving, setSaving] = useState(false);
+  const [loadingMap, setLoadingMap] = useState(true);
   const [leftTab, setLeftTab] = useState<"editor" | "config" | "planets">("editor");
   const [editorState, setEditorState] = useState<EditorState>({
     tool: "select",
