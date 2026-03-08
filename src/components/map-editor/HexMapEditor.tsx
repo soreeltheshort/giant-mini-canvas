@@ -219,7 +219,7 @@ const HexMapEditor: React.FC = () => {
     (hexId: number, name: string, rank: number) => {
       setMapState((prev) => {
         const hex = Array.from(prev.hexes.values()).find((h) => h.hex_id === hexId);
-        if (!hex || hex.classification === "MARCHES") return prev;
+        if (!hex) return prev;
         const newHexes = new Map(prev.hexes);
         newHexes.set(hexKey(hex.x, hex.y), { ...hex, has_system: true });
         const newSystems = new Map(prev.systems);
