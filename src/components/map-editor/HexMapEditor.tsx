@@ -15,6 +15,7 @@ import {
 import {
   generateBlankMap,
   exportToSqlite,
+  importFromSqlite,
   getProvinceStats,
 } from "@/lib/mapDatabase";
 import { floodFill } from "@/lib/hexUtils";
@@ -58,6 +59,18 @@ const HexMapEditor: React.FC = () => {
       toast({ title: "Export failed", description: err.message, variant: "destructive" });
     }
   }, [mapState, toast]);
+
+  const handleImport = useCallback(async (file: File) => {
+    try {
+      toast({ title: "Importing...", description: "Reading SQLite database" });
+      const state = await importFromSqlite(file);
+      setMapState(state);
+      toast({ title: "Map imported", description: `${state.hexes.size} hexes loaded` });
+    } catch (err: any) {
+      console.error("[Import]", err);
+      toast({ title: "Import failed", description: err.message, variant: "destructive" });
+    }
+  }, [toast]);
 
   const applyClassificationToHex = useCallback(
     (hex: HexData, classification: HexClassification) => {
@@ -210,7 +223,7 @@ const HexMapEditor: React.FC = () => {
       <LeftPanel
         hasMap={true}
         editorState={editorState}
-        onImport={() => {}}
+        onImport={handleImport}
         onExport={handleExport}
         onToolChange={(t) => setEditorState((s) => ({ ...s, tool: t }))}
         onBrushSizeChange={(sz) => setEditorState((s) => ({ ...s, brushSize: sz }))}

@@ -2,6 +2,7 @@ import {
   MapData,
   HexData,
   SystemData,
+  ProvinceRegion,
   MapState,
   HexClassification,
   hexKey,
@@ -144,6 +145,55 @@ export function getProvinceStats(state: MapState) {
     if (hex.has_system) stats[hex.classification].systemCount++;
   }
   return stats;
+}
+
+// Import a SQLite file and read map state from it
+export async function importFromSqlite(file: File): Promise<MapState> {
+  const SQL = await loadSqlJsCDN();
+  const buf = await file.arrayBuffer();
+  const db = new SQL.Database(new Uint8Array(buf));
+
+  const readRows = (sql: string) => {
+    try {
+      const result = db.exec(sql);
+      if (result.length === 0) return [];
+      const cols = result[0].columns;
+      return result[0].values.map((row: any[]) => {
+        const obj: any = {};
+        cols.forEach((c: string, i: number) => (obj[c] = row[i]));
+        return obj;
+      });
+    } catch {
+      return [];
+    }
+  };
+
+  // Read map
+  const maps = readRows("SELECT * FROM maps LIMIT 1");
+  const mapData: MapData | null = maps.length > 0 ? maps[0] as MapData : null;
+
+  // Read hexes
+  const hexes = new Map<string, HexData>();
+  for (const row of readRows("SELECT * FROM hexes")) {
+    row.has_system = !!row.has_system;
+    hexes.set(hexKey(row.x, row.y), row as HexData);
+  }
+
+  // Read systems
+  const systems = new Map<number, SystemData>();
+  for (const row of readRows("SELECT * FROM systems")) {
+    systems.set(row.hex_id, row as SystemData);
+  }
+
+  // Read regions
+  const regions: ProvinceRegion[] = [];
+  for (const row of readRows("SELECT * FROM province_regions")) {
+    row.is_system_allowed = !!row.is_system_allowed;
+    regions.push(row as ProvinceRegion);
+  }
+
+  db.close();
+  return { mapData, hexes, systems, regions };
 }
 
 // Load sql.js from CDN (for export only)
