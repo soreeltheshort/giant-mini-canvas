@@ -162,14 +162,8 @@ const HexMapEditor: React.FC = () => {
       setMapState((prev) => {
         const newHexes = new Map(prev.hexes);
         const updated = { ...hex, classification };
-        if (classification === "MARCHES" && hex.has_system) {
-          updated.has_system = false;
-        }
         newHexes.set(hexKey(hex.x, hex.y), updated);
         const newSystems = new Map(prev.systems);
-        if (classification === "MARCHES" && hex.has_system) {
-          newSystems.delete(hex.hex_id);
-        }
         return { ...prev, hexes: newHexes, systems: newSystems };
       });
     },
