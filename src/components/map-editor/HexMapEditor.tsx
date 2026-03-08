@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import HexMapCanvas from "./HexMapCanvas";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
+import FacilityConfigPanel from "./FacilityConfigPanel";
 import {
   MapState,
   EditorState,
@@ -10,6 +11,7 @@ import {
   HexClassification,
   HexData,
   SystemData,
+  FacilityType,
   hexKey,
 } from "@/lib/mapTypes";
 import {
@@ -20,10 +22,12 @@ import {
 } from "@/lib/mapDatabase";
 import { floodFill } from "@/lib/hexUtils";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
   const [mapState, setMapState] = useState<MapState>(() => generateBlankMap());
+  const [showConfig, setShowConfig] = useState(false);
   const [editorState, setEditorState] = useState<EditorState>({
     tool: "select",
     brushSize: 1,
@@ -138,11 +142,6 @@ const HexMapEditor: React.FC = () => {
     (_hexId: number, c: HexClassification) => {
       if (!selectedHex) return;
       applyClassificationToHex(selectedHex, c);
-      // Update selected hex key to reflect change
-      setMapState((prev) => {
-        // selectedHex is stale, re-read
-        return prev;
-      });
     },
     [selectedHex, applyClassificationToHex]
   );
@@ -175,12 +174,12 @@ const HexMapEditor: React.FC = () => {
   );
 
   const handleUpdateSystem = useCallback(
-    (hexId: number, name: string, rank: number) => {
+    (hexId: number, updates: Partial<Pick<SystemData, "system_name" | "importance_rank" | "owner" | "facilities">>) => {
       setMapState((prev) => {
         const newSystems = new Map(prev.systems);
         const existing = newSystems.get(hexId);
         if (existing) {
-          newSystems.set(hexId, { ...existing, system_name: name, importance_rank: rank });
+          newSystems.set(hexId, { ...existing, ...updates });
         }
         return { ...prev, systems: newSystems };
       });
@@ -218,24 +217,95 @@ const HexMapEditor: React.FC = () => {
     [mapState.hexes, toast]
   );
 
+  // Facility type management
+  const handleAddFacilityType = useCallback((name: string, description: string, icon: string) => {
+    setMapState((prev) => ({
+      ...prev,
+      facilityTypes: [
+        ...prev.facilityTypes,
+        { facility_type_id: Date.now(), name, description, icon },
+      ],
+    }));
+  }, []);
+
+  const handleUpdateFacilityType = useCallback((ft: FacilityType) => {
+    setMapState((prev) => ({
+      ...prev,
+      facilityTypes: prev.facilityTypes.map((f) =>
+        f.facility_type_id === ft.facility_type_id ? ft : f
+      ),
+    }));
+  }, []);
+
+  const handleRemoveFacilityType = useCallback((id: number) => {
+    setMapState((prev) => {
+      // Also remove from all systems
+      const newSystems = new Map(prev.systems);
+      for (const [key, sys] of newSystems) {
+        const filtered = (sys.facilities || []).filter((f) => f.facility_type_id !== id);
+        if (filtered.length !== (sys.facilities || []).length) {
+          newSystems.set(key, { ...sys, facilities: filtered });
+        }
+      }
+      return {
+        ...prev,
+        facilityTypes: prev.facilityTypes.filter((f) => f.facility_type_id !== id),
+        systems: newSystems,
+      };
+    });
+  }, []);
+
   const stats = useMemo(() => getProvinceStats(mapState), [mapState]);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] w-full">
-      <LeftPanel
-        hasMap={true}
-        editorState={editorState}
-        onImport={handleImport}
-        onExport={handleExport}
-        onToolChange={(t) => setEditorState((s) => ({ ...s, tool: t }))}
-        onBrushSizeChange={(sz) => setEditorState((s) => ({ ...s, brushSize: sz }))}
-        onPaintClassChange={(c) => setEditorState((s) => ({ ...s, paintClassification: c }))}
-        onToggleBorders={() => setEditorState((s) => ({ ...s, showBorders: !s.showBorders }))}
-        onToggleSystems={() => setEditorState((s) => ({ ...s, showSystems: !s.showSystems }))}
-        onToggleCoordinates={() => setEditorState((s) => ({ ...s, showCoordinates: !s.showCoordinates }))}
-        onHighlightChange={(c) => setEditorState((s) => ({ ...s, highlightClassification: c }))}
-        provinceStats={stats}
-      />
+      <div className="flex h-full w-64 flex-col border-r border-border bg-background">
+        {/* Tab buttons */}
+        <div className="flex border-b border-border">
+          <button
+            onClick={() => setShowConfig(false)}
+            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+              !showConfig ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Editor
+          </button>
+          <button
+            onClick={() => setShowConfig(true)}
+            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
+              showConfig ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Config
+          </button>
+        </div>
+
+        {showConfig ? (
+          <div className="flex-1 overflow-y-auto p-4">
+            <FacilityConfigPanel
+              facilityTypes={mapState.facilityTypes}
+              onAdd={handleAddFacilityType}
+              onUpdate={handleUpdateFacilityType}
+              onRemove={handleRemoveFacilityType}
+            />
+          </div>
+        ) : (
+          <LeftPanel
+            hasMap={true}
+            editorState={editorState}
+            onImport={handleImport}
+            onExport={handleExport}
+            onToolChange={(t) => setEditorState((s) => ({ ...s, tool: t }))}
+            onBrushSizeChange={(sz) => setEditorState((s) => ({ ...s, brushSize: sz }))}
+            onPaintClassChange={(c) => setEditorState((s) => ({ ...s, paintClassification: c }))}
+            onToggleBorders={() => setEditorState((s) => ({ ...s, showBorders: !s.showBorders }))}
+            onToggleSystems={() => setEditorState((s) => ({ ...s, showSystems: !s.showSystems }))}
+            onToggleCoordinates={() => setEditorState((s) => ({ ...s, showCoordinates: !s.showCoordinates }))}
+            onHighlightChange={(c) => setEditorState((s) => ({ ...s, highlightClassification: c }))}
+            provinceStats={stats}
+          />
+        )}
+      </div>
       <div className="flex-1">
         <HexMapCanvas
           hexes={mapState.hexes}
@@ -251,6 +321,7 @@ const HexMapEditor: React.FC = () => {
       <RightPanel
         hex={selectedHex}
         system={selectedSystem}
+        facilityTypes={mapState.facilityTypes}
         onClassificationChange={handleClassificationChange}
         onAddSystem={handleAddSystem}
         onUpdateSystem={handleUpdateSystem}
