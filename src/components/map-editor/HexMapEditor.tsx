@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
   const [mapState, setMapState] = useState<MapState>(() => generateBlankMap());
-  const [showConfig, setShowConfig] = useState(false);
+  const [leftTab, setLeftTab] = useState<"editor" | "config" | "planets">("editor");
   const [editorState, setEditorState] = useState<EditorState>({
     tool: "select",
     brushSize: 1,
