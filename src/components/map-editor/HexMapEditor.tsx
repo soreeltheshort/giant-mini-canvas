@@ -263,25 +263,20 @@ const HexMapEditor: React.FC = () => {
       <div className="flex h-full w-64 flex-col border-r border-border bg-background">
         {/* Tab buttons */}
         <div className="flex border-b border-border">
-          <button
-            onClick={() => setShowConfig(false)}
-            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-              !showConfig ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Editor
-          </button>
-          <button
-            onClick={() => setShowConfig(true)}
-            className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-              showConfig ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Config
-          </button>
+          {(["editor", "config", "planets"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setLeftTab(tab)}
+              className={`flex-1 px-2 py-2 text-xs font-medium capitalize transition-colors ${
+                leftTab === tab ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
 
-        {showConfig ? (
+        {leftTab === "config" ? (
           <div className="flex-1 overflow-y-auto p-4">
             <FacilityConfigPanel
               facilityTypes={mapState.facilityTypes}
@@ -290,6 +285,16 @@ const HexMapEditor: React.FC = () => {
               onRemove={handleRemoveFacilityType}
             />
           </div>
+        ) : leftTab === "planets" ? (
+          <PlanetsPanel
+            systems={mapState.systems}
+            hexes={mapState.hexes}
+            facilityTypes={mapState.facilityTypes}
+            onSelectSystem={(hexId) => {
+              const hex = Array.from(mapState.hexes.values()).find((h) => h.hex_id === hexId);
+              if (hex) setEditorState((s) => ({ ...s, selectedHexKey: hexKey(hex.x, hex.y) }));
+            }}
+          />
         ) : (
           <LeftPanel
             hasMap={true}
