@@ -369,6 +369,9 @@ const HexMapEditor: React.FC = () => {
             editorState={editorState}
             onImport={handleImport}
             onExport={handleExport}
+            onSave={handleSave}
+            saving={saving}
+            loadingMap={loadingMap}
             onToolChange={(t) => setEditorState((s) => ({ ...s, tool: t }))}
             onBrushSizeChange={(sz) => setEditorState((s) => ({ ...s, brushSize: sz }))}
             onPaintClassChange={(c) => setEditorState((s) => ({ ...s, paintClassification: c }))}
