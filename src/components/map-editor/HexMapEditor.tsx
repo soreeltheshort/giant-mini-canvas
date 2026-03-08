@@ -46,6 +46,69 @@ const HexMapEditor: React.FC = () => {
     highlightClassification: null,
   });
 
+  // Auto-load most recent saved map on mount
+  useEffect(() => {
+    if (!user) { setLoadingMap(false); return; }
+    (async () => {
+      try {
+        const { data: savedMaps, error } = await supabase
+          .from("saved_maps")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (error) throw error;
+        if (!savedMaps || savedMaps.length === 0) { setLoadingMap(false); return; }
+
+        const latest = savedMaps[0];
+        const { data: fileData, error: dlError } = await supabase.storage
+          .from("map-files")
+          .download(latest.file_path);
+        if (dlError) throw dlError;
+        if (fileData) {
+          const file = new File([fileData], "map.sqlite");
+          const state = await importFromSqlite(file);
+          setMapState(state);
+          toast({ title: "Map loaded", description: `Loaded "${latest.name}"` });
+        }
+      } catch (err: any) {
+        console.error("[Auto-load map]", err);
+      } finally {
+        setLoadingMap(false);
+      }
+    })();
+  }, [user]);
+
+  const handleSave = useCallback(async () => {
+    if (!user) {
+      toast({ title: "Sign in required", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      toast({ title: "Saving..." });
+      const blob = await exportToSqlite(mapState);
+      const fileName = `${user.id}/${Date.now()}.sqlite`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("map-files")
+        .upload(fileName, blob, { contentType: "application/x-sqlite3", upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { error: insertError } = await supabase
+        .from("saved_maps")
+        .insert({ user_id: user.id, name: "Third Republic Map", file_path: fileName });
+      if (insertError) throw insertError;
+
+      toast({ title: "Map saved successfully" });
+    } catch (err: any) {
+      console.error("[Save]", err);
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }, [mapState, user, toast]);
+
   const selectedHex = editorState.selectedHexKey
     ? mapState.hexes.get(editorState.selectedHexKey) || null
     : null;
