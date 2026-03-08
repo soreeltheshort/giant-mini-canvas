@@ -2,7 +2,6 @@ import React, { useState, useCallback, useMemo, useEffect } from "react";
 import HexMapCanvas from "./HexMapCanvas";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
-import FacilityConfigPanel from "./FacilityConfigPanel";
 import PlanetsPanel from "./PlanetsPanel";
 import {
   MapState,
@@ -23,17 +22,18 @@ import {
 } from "@/lib/mapDatabase";
 import { floodFill } from "@/lib/hexUtils";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { facilityTypes: dbFacilityTypes } = useFacilityTypes();
   const [mapState, setMapState] = useState<MapState>(() => generateBlankMap());
   const [saving, setSaving] = useState(false);
   const [loadingMap, setLoadingMap] = useState(true);
-  const [leftTab, setLeftTab] = useState<"editor" | "config" | "planets">("editor");
+  const [leftTab, setLeftTab] = useState<"editor" | "planets">("editor");
   const [editorState, setEditorState] = useState<EditorState>({
     tool: "select",
     brushSize: 1,
@@ -45,6 +45,18 @@ const HexMapEditor: React.FC = () => {
     showCoordinates: false,
     highlightClassification: null,
   });
+
+  // Convert DB facility types to the format used by components
+  const facilityTypesForUI: FacilityType[] = useMemo(() =>
+    dbFacilityTypes.map((ft) => ({
+      facility_type_id: parseInt(ft.id.replace(/-/g, "").slice(0, 8), 16) || Date.now(),
+      name: ft.name,
+      description: ft.description,
+      icon: ft.icon,
+      db_id: ft.id,
+    })),
+    [dbFacilityTypes]
+  );
 
   // Auto-load most recent saved map on mount
   useEffect(() => {
@@ -154,12 +166,10 @@ const HexMapEditor: React.FC = () => {
           updated.has_system = false;
         }
         newHexes.set(hexKey(hex.x, hex.y), updated);
-
         const newSystems = new Map(prev.systems);
         if (classification === "MARCHES" && hex.has_system) {
           newSystems.delete(hex.hex_id);
         }
-
         return { ...prev, hexes: newHexes, systems: newSystems };
       });
     },
@@ -220,10 +230,8 @@ const HexMapEditor: React.FC = () => {
       setMapState((prev) => {
         const hex = Array.from(prev.hexes.values()).find((h) => h.hex_id === hexId);
         if (!hex || hex.classification === "MARCHES") return prev;
-
         const newHexes = new Map(prev.hexes);
         newHexes.set(hexKey(hex.x, hex.y), { ...hex, has_system: true });
-
         const newSystems = new Map(prev.systems);
         newSystems.set(hexId, {
           system_id: Date.now(),
@@ -235,7 +243,6 @@ const HexMapEditor: React.FC = () => {
           owner: "",
           facilities: [],
         });
-
         return { ...prev, hexes: newHexes, systems: newSystems };
       });
     },
@@ -261,13 +268,10 @@ const HexMapEditor: React.FC = () => {
       setMapState((prev) => {
         const hex = Array.from(prev.hexes.values()).find((h) => h.hex_id === hexId);
         if (!hex) return prev;
-
         const newHexes = new Map(prev.hexes);
         newHexes.set(hexKey(hex.x, hex.y), { ...hex, has_system: false });
-
         const newSystems = new Map(prev.systems);
         newSystems.delete(hexId);
-
         return { ...prev, hexes: newHexes, systems: newSystems };
       });
     },
@@ -286,44 +290,6 @@ const HexMapEditor: React.FC = () => {
     [mapState.hexes, toast]
   );
 
-  // Facility type management
-  const handleAddFacilityType = useCallback((name: string, description: string, icon: string) => {
-    setMapState((prev) => ({
-      ...prev,
-      facilityTypes: [
-        ...prev.facilityTypes,
-        { facility_type_id: Date.now(), name, description, icon },
-      ],
-    }));
-  }, []);
-
-  const handleUpdateFacilityType = useCallback((ft: FacilityType) => {
-    setMapState((prev) => ({
-      ...prev,
-      facilityTypes: prev.facilityTypes.map((f) =>
-        f.facility_type_id === ft.facility_type_id ? ft : f
-      ),
-    }));
-  }, []);
-
-  const handleRemoveFacilityType = useCallback((id: number) => {
-    setMapState((prev) => {
-      // Also remove from all systems
-      const newSystems = new Map(prev.systems);
-      for (const [key, sys] of newSystems) {
-        const filtered = (sys.facilities || []).filter((f) => f.facility_type_id !== id);
-        if (filtered.length !== (sys.facilities || []).length) {
-          newSystems.set(key, { ...sys, facilities: filtered });
-        }
-      }
-      return {
-        ...prev,
-        facilityTypes: prev.facilityTypes.filter((f) => f.facility_type_id !== id),
-        systems: newSystems,
-      };
-    });
-  }, []);
-
   const stats = useMemo(() => getProvinceStats(mapState), [mapState]);
 
   return (
@@ -331,7 +297,7 @@ const HexMapEditor: React.FC = () => {
       <div className="flex h-full w-64 flex-col border-r border-border bg-background">
         {/* Tab buttons */}
         <div className="flex border-b border-border">
-          {(["editor", "config", "planets"] as const).map((tab) => (
+          {(["editor", "planets"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setLeftTab(tab)}
@@ -344,20 +310,11 @@ const HexMapEditor: React.FC = () => {
           ))}
         </div>
 
-        {leftTab === "config" ? (
-          <div className="flex-1 overflow-y-auto p-4">
-            <FacilityConfigPanel
-              facilityTypes={mapState.facilityTypes}
-              onAdd={handleAddFacilityType}
-              onUpdate={handleUpdateFacilityType}
-              onRemove={handleRemoveFacilityType}
-            />
-          </div>
-        ) : leftTab === "planets" ? (
+        {leftTab === "planets" ? (
           <PlanetsPanel
             systems={mapState.systems}
             hexes={mapState.hexes}
-            facilityTypes={mapState.facilityTypes}
+            facilityTypes={facilityTypesForUI}
             onSelectSystem={(hexId) => {
               const hex = Array.from(mapState.hexes.values()).find((h) => h.hex_id === hexId);
               if (hex) setEditorState((s) => ({ ...s, selectedHexKey: hexKey(hex.x, hex.y) }));
@@ -398,7 +355,7 @@ const HexMapEditor: React.FC = () => {
       <RightPanel
         hex={selectedHex}
         system={selectedSystem}
-        facilityTypes={mapState.facilityTypes}
+        facilityTypes={facilityTypesForUI}
         onClassificationChange={handleClassificationChange}
         onAddSystem={handleAddSystem}
         onUpdateSystem={handleUpdateSystem}
