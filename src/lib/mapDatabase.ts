@@ -50,6 +50,7 @@ export function generateBlankMap(): MapState {
     hexes,
     systems: new Map(),
     regions: [],
+    facilityTypes: [],
   };
 }
 
