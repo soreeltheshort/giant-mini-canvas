@@ -105,6 +105,7 @@ export interface MapState {
   hexes: Map<string, HexData>;
   systems: Map<number, SystemData>;
   regions: ProvinceRegion[];
+  facilityTypes: FacilityType[];
 }
 
 export type EditorTool = "select" | "paint" | "fill" | "brush";
