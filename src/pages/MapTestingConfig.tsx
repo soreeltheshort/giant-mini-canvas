@@ -26,7 +26,7 @@ const MapTestingConfig = () => {
 
   // Random system generation params
   const [selectedProvinces, setSelectedProvinces] = useState<HexClassification[]>([
-    "MARCHES",
+    "UNEXPLORED_MARCHES",
   ]);
   const [hexesPerSystem, setHexesPerSystem] = useState(50);
   const [minDistance, setMinDistance] = useState(3);
@@ -128,7 +128,7 @@ const MapTestingConfig = () => {
           <div className="space-y-2">
             <Label className="text-xs font-medium text-muted-foreground">Provinces to Randomize</Label>
             <div className="grid grid-cols-2 gap-2">
-              {ALL_CLASSIFICATIONS.filter(c => c !== "UNEXPLORED_MARCHES").map((cls) => (
+              {ALL_CLASSIFICATIONS.map((cls) => (
                 <label
                   key={cls}
                   className="flex items-center gap-2 rounded border border-border px-3 py-2 cursor-pointer hover:bg-accent/50 transition-colors"
