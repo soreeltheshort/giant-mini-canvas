@@ -50,19 +50,19 @@ const LeftPanel: React.FC<Props> = ({
           ref={fileRef}
           type="file"
           accept=".db,.sqlite,.sqlite3"
-          className="hidden"
-          onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])}
+          className="block w-full text-xs text-muted-foreground file:mr-2 file:rounded file:border file:border-border file:bg-muted file:px-2 file:py-1 file:text-xs file:text-foreground file:cursor-pointer"
+          onChange={(e) => {
+            console.log("[LeftPanel] file input changed", e.target.files);
+            if (e.target.files?.[0]) onImport(e.target.files[0]);
+          }}
         />
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
-            Import SQLite
-          </Button>
-          {hasMap && (
+        {hasMap && (
+          <div className="mt-2">
             <Button size="sm" variant="outline" onClick={onExport}>
               Export
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {hasMap && (
