@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from "react";
-import { Database } from "sql.js";
 import HexMapCanvas from "./HexMapCanvas";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
@@ -21,14 +20,14 @@ import {
   removeSystem,
   exportDatabase,
   getProvinceStats,
-  readMapState,
+  readMapStateFromDb,
 } from "@/lib/mapDatabase";
 import { floodFill } from "@/lib/hexUtils";
 import { useToast } from "@/hooks/use-toast";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
-  const [db, setDb] = useState<Database | null>(null);
+  const [db, setDb] = useState<any>(null);
   const [mapState, setMapState] = useState<MapState>({
     mapData: null,
     hexes: new Map(),
@@ -83,7 +82,7 @@ const HexMapEditor: React.FC = () => {
 
   const refreshState = useCallback(() => {
     if (!db) return;
-    setMapState(readMapState(db));
+    setMapState(readMapStateFromDb(db));
   }, [db]);
 
   const applyClassificationToHex = useCallback(
