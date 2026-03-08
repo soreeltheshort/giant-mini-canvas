@@ -24,6 +24,14 @@ const MapTestingConfig = () => {
   const [newDesc, setNewDesc] = useState("");
   const [newIcon, setNewIcon] = useState("🏭");
 
+  // Random system generation params
+  const [selectedProvinces, setSelectedProvinces] = useState<HexClassification[]>([
+    "CORE", "PROVINCE_1", "PROVINCE_2", "PROVINCE_3", "PROVINCE_4", "PROVINCE_5", "PROVINCE_6",
+  ]);
+  const [hexesPerSystem, setHexesPerSystem] = useState(50);
+  const [minDistance, setMinDistance] = useState(3);
+  const [forceEvenDistribution, setForceEvenDistribution] = useState(false);
+
   useEffect(() => {
     if (!loading && !user) navigate("/login");
   }, [loading, user, navigate]);
