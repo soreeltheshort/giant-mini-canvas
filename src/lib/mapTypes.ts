@@ -17,7 +17,7 @@ export const CLASSIFICATION_LABELS: Record<HexClassification, string> = {
   PROVINCE_4: "Dravian",
   PROVINCE_5: "Marcellan",
   PROVINCE_6: "Octavian",
-  MARCHES: "Tiberon",
+  MARCHES: "Explored Marches",
   UNEXPLORED_MARCHES: "Marches",
 };
 
