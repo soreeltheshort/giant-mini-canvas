@@ -19,6 +19,7 @@ import AdminBattleConfig from "./pages/AdminBattleConfig";
 import AdminUsers from "./pages/AdminUsers";
 import AdminShips from "./pages/AdminShips";
 import MapTesting from "./pages/MapTesting";
+import MapTestingConfig from "./pages/MapTestingConfig";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
