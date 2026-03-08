@@ -28,6 +28,7 @@ interface Props {
 const LeftPanel: React.FC<Props> = ({
   hasMap,
   editorState,
+  onImport,
   onExport,
   onToolChange,
   onBrushSizeChange,
@@ -38,14 +39,30 @@ const LeftPanel: React.FC<Props> = ({
   onHighlightChange,
   provinceStats,
 }) => {
+  const fileRef = useRef<HTMLInputElement>(null);
+
   return (
     <div className="flex h-full w-64 flex-col gap-4 overflow-y-auto border-r border-border bg-background p-4">
-      {/* Export */}
+      {/* Import / Export */}
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Database</h3>
-        <Button size="sm" variant="outline" onClick={onExport}>
-          Export SQLite
-        </Button>
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onImport(file);
+          }}
+        />
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
+            Import
+          </Button>
+          <Button size="sm" variant="outline" onClick={onExport}>
+            Export
+          </Button>
+        </div>
       </div>
 
       {/* Tools */}
