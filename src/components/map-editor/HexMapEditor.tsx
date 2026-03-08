@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import HexMapCanvas from "./HexMapCanvas";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
@@ -9,31 +9,20 @@ import {
   BrushSize,
   HexClassification,
   HexData,
+  SystemData,
   hexKey,
 } from "@/lib/mapTypes";
 import {
-  loadMapFromFile,
-  updateHexClassification,
-  updateHexSystem,
-  addSystem,
-  updateSystem,
-  removeSystem,
-  exportDatabase,
+  generateBlankMap,
+  exportToSqlite,
   getProvinceStats,
-  readMapStateFromDb,
 } from "@/lib/mapDatabase";
 import { floodFill } from "@/lib/hexUtils";
 import { useToast } from "@/hooks/use-toast";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
-  const [db, setDb] = useState<any>(null);
-  const [mapState, setMapState] = useState<MapState>({
-    mapData: null,
-    hexes: new Map(),
-    systems: new Map(),
-    regions: [],
-  });
+  const [mapState, setMapState] = useState<MapState>(() => generateBlankMap());
   const [editorState, setEditorState] = useState<EditorState>({
     tool: "select",
     brushSize: 1,
@@ -53,63 +42,42 @@ const HexMapEditor: React.FC = () => {
     ? mapState.systems.get(selectedHex.hex_id)
     : undefined;
 
-  const handleImport = useCallback(async (file: File) => {
-    console.log("[MapEditor] Import started, file:", file.name, file.size, "bytes");
+  const handleExport = useCallback(async () => {
     try {
-      const result = await loadMapFromFile(file);
-      console.log("[MapEditor] Load complete. mapData:", result.state.mapData, "hexes:", result.state.hexes.size, "systems:", result.state.systems.size);
-      setDb(result.db);
-      setMapState(result.state);
-      toast({ title: "Map loaded", description: `${result.state.hexes.size} hexes loaded` });
+      toast({ title: "Exporting...", description: "Building SQLite database" });
+      const blob = await exportToSqlite(mapState);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "third_republic_hex_map.sqlite";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Exported successfully" });
     } catch (err: any) {
-      console.error("[MapEditor] Import error:", err);
-      toast({ title: "Import failed", description: err.message, variant: "destructive" });
+      console.error("[Export]", err);
+      toast({ title: "Export failed", description: err.message, variant: "destructive" });
     }
-  }, [toast]);
-
-  const handleExport = useCallback(() => {
-    if (!db) return;
-    const data = exportDatabase(db);
-    const blob = new Blob([data.buffer as ArrayBuffer], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "map_export.sqlite";
-    a.click();
-    URL.revokeObjectURL(url);
-    toast({ title: "Exported" });
-  }, [db, toast]);
-
-  const refreshState = useCallback(() => {
-    if (!db) return;
-    setMapState(readMapStateFromDb(db));
-  }, [db]);
+  }, [mapState, toast]);
 
   const applyClassificationToHex = useCallback(
     (hex: HexData, classification: HexClassification) => {
-      if (!db) return;
-      updateHexClassification(db, hex.hex_id, classification, hex.region_id);
-      if (classification === "MARCHES" && hex.has_system) {
-        removeSystem(db, hex.hex_id);
-      }
-      // Update local state efficiently
       setMapState((prev) => {
         const newHexes = new Map(prev.hexes);
         const updated = { ...hex, classification };
-        if (classification === "MARCHES") {
+        if (classification === "MARCHES" && hex.has_system) {
           updated.has_system = false;
         }
         newHexes.set(hexKey(hex.x, hex.y), updated);
 
         const newSystems = new Map(prev.systems);
-        if (classification === "MARCHES") {
+        if (classification === "MARCHES" && hex.has_system) {
           newSystems.delete(hex.hex_id);
         }
 
         return { ...prev, hexes: newHexes, systems: newSystems };
       });
     },
-    [db]
+    []
   );
 
   const handleHexClick = useCallback(
@@ -136,44 +104,91 @@ const HexMapEditor: React.FC = () => {
   const handleFloodFill = useCallback(
     (hex: HexData) => {
       const affected = floodFill(hex.x, hex.y, hex.classification, mapState.hexes);
-      affected.forEach((h) => applyClassificationToHex(h, editorState.paintClassification));
+      setMapState((prev) => {
+        const newHexes = new Map(prev.hexes);
+        const newSystems = new Map(prev.systems);
+        for (const h of affected) {
+          const updated = { ...h, classification: editorState.paintClassification };
+          if (editorState.paintClassification === "MARCHES" && h.has_system) {
+            updated.has_system = false;
+            newSystems.delete(h.hex_id);
+          }
+          newHexes.set(hexKey(h.x, h.y), updated);
+        }
+        return { ...prev, hexes: newHexes, systems: newSystems };
+      });
     },
-    [applyClassificationToHex, editorState.paintClassification, mapState.hexes]
+    [editorState.paintClassification, mapState.hexes]
   );
 
   const handleClassificationChange = useCallback(
-    (hexId: number, c: HexClassification) => {
-      if (!db || !selectedHex) return;
+    (_hexId: number, c: HexClassification) => {
+      if (!selectedHex) return;
       applyClassificationToHex(selectedHex, c);
+      // Update selected hex key to reflect change
+      setMapState((prev) => {
+        // selectedHex is stale, re-read
+        return prev;
+      });
     },
-    [db, selectedHex, applyClassificationToHex]
+    [selectedHex, applyClassificationToHex]
   );
 
   const handleAddSystem = useCallback(
     (hexId: number, name: string, rank: number) => {
-      if (!db || !mapState.mapData) return;
-      addSystem(db, mapState.mapData.map_id, hexId, name, "", rank);
-      refreshState();
+      setMapState((prev) => {
+        const hex = Array.from(prev.hexes.values()).find((h) => h.hex_id === hexId);
+        if (!hex || hex.classification === "MARCHES") return prev;
+
+        const newHexes = new Map(prev.hexes);
+        newHexes.set(hexKey(hex.x, hex.y), { ...hex, has_system: true });
+
+        const newSystems = new Map(prev.systems);
+        newSystems.set(hexId, {
+          system_id: Date.now(),
+          map_id: 1,
+          hex_id: hexId,
+          system_name: name,
+          classification: hex.classification,
+          importance_rank: rank,
+        });
+
+        return { ...prev, hexes: newHexes, systems: newSystems };
+      });
     },
-    [db, mapState.mapData, refreshState]
+    []
   );
 
   const handleUpdateSystem = useCallback(
     (hexId: number, name: string, rank: number) => {
-      if (!db) return;
-      updateSystem(db, hexId, name, rank);
-      refreshState();
+      setMapState((prev) => {
+        const newSystems = new Map(prev.systems);
+        const existing = newSystems.get(hexId);
+        if (existing) {
+          newSystems.set(hexId, { ...existing, system_name: name, importance_rank: rank });
+        }
+        return { ...prev, systems: newSystems };
+      });
     },
-    [db, refreshState]
+    []
   );
 
   const handleRemoveSystem = useCallback(
     (hexId: number) => {
-      if (!db) return;
-      removeSystem(db, hexId);
-      refreshState();
+      setMapState((prev) => {
+        const hex = Array.from(prev.hexes.values()).find((h) => h.hex_id === hexId);
+        if (!hex) return prev;
+
+        const newHexes = new Map(prev.hexes);
+        newHexes.set(hexKey(hex.x, hex.y), { ...hex, has_system: false });
+
+        const newSystems = new Map(prev.systems);
+        newSystems.delete(hexId);
+
+        return { ...prev, hexes: newHexes, systems: newSystems };
+      });
     },
-    [db, refreshState]
+    []
   );
 
   const handleSearchCoords = useCallback(
@@ -188,14 +203,14 @@ const HexMapEditor: React.FC = () => {
     [mapState.hexes, toast]
   );
 
-  const stats = getProvinceStats(mapState);
+  const stats = useMemo(() => getProvinceStats(mapState), [mapState]);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] w-full">
       <LeftPanel
-        hasMap={!!mapState.mapData}
+        hasMap={true}
         editorState={editorState}
-        onImport={handleImport}
+        onImport={() => {}}
         onExport={handleExport}
         onToolChange={(t) => setEditorState((s) => ({ ...s, tool: t }))}
         onBrushSizeChange={(sz) => setEditorState((s) => ({ ...s, brushSize: sz }))}
@@ -207,27 +222,16 @@ const HexMapEditor: React.FC = () => {
         provinceStats={stats}
       />
       <div className="flex-1">
-        {mapState.mapData ? (
-          <HexMapCanvas
-            hexes={mapState.hexes}
-            systems={mapState.systems}
-            editorState={editorState}
-            onHexClick={handleHexClick}
-            onHexHover={(key) => setEditorState((s) => ({ ...s, hoveredHexKey: key }))}
-            onPaintHex={handlePaintHex}
-            onBrushPaint={handleBrushPaint}
-            onFloodFill={handleFloodFill}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <p className="text-lg font-semibold text-foreground">No Map Loaded</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Import a SQLite database to begin editing
-              </p>
-            </div>
-          </div>
-        )}
+        <HexMapCanvas
+          hexes={mapState.hexes}
+          systems={mapState.systems}
+          editorState={editorState}
+          onHexClick={handleHexClick}
+          onHexHover={(key) => setEditorState((s) => ({ ...s, hoveredHexKey: key }))}
+          onPaintHex={handlePaintHex}
+          onBrushPaint={handleBrushPaint}
+          onFloodFill={handleFloodFill}
+        />
       </div>
       <RightPanel
         hex={selectedHex}
