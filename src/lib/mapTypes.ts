@@ -22,11 +22,11 @@ export const CLASSIFICATION_LABELS: Record<HexClassification, string> = {
 export const CLASSIFICATION_COLORS: Record<HexClassification, string> = {
   CORE: "#3b82f6",
   PROVINCE_1: "#f97316",
-  PROVINCE_2: "#22c55e",
-  PROVINCE_3: "#ef4444",
+  PROVINCE_2: "#06b6d4",
+  PROVINCE_3: "#eab308",
   PROVINCE_4: "#a855f7",
-  PROVINCE_5: "#92400e",
-  PROVINCE_6: "#ec4899",
+  PROVINCE_5: "#f472b6",
+  PROVINCE_6: "#14b8a6",
   MARCHES: "#374151",
 };
 
