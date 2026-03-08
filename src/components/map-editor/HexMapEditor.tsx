@@ -15,6 +15,7 @@ import {
 import {
   generateBlankMap,
   exportToSqlite,
+  importFromSqlite,
   getProvinceStats,
 } from "@/lib/mapDatabase";
 import { floodFill } from "@/lib/hexUtils";
