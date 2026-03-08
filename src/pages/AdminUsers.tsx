@@ -11,6 +11,7 @@ import { Shield, ShieldOff, FlaskConical, FlaskConicalOff, LogIn } from "lucide-
 interface UserWithRole {
   user_id: string;
   display_name: string | null;
+  email: string | null;
   created_at: string;
   roles: string[];
 }
@@ -32,7 +33,7 @@ const AdminUsers = () => {
   const loadUsers = async () => {
     setLoadingData(true);
     const [{ data: profiles }, { data: roles }] = await Promise.all([
-      supabase.from("profiles").select("user_id, display_name, created_at").order("created_at"),
+      supabase.from("profiles").select("user_id, display_name, email, created_at").order("created_at"),
       supabase.from("user_roles").select("user_id, role"),
     ]);
     if (!profiles) { setLoadingData(false); return; }
@@ -47,6 +48,7 @@ const AdminUsers = () => {
     setUsers(profiles.map(p => ({
       user_id: p.user_id,
       display_name: p.display_name,
+      email: (p as any).email ?? null,
       created_at: p.created_at,
       roles: roleMap.get(p.user_id) || [],
     })));
@@ -125,6 +127,7 @@ const AdminUsers = () => {
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground">Display Name</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Email</th>
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground">User ID</th>
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground">Joined</th>
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground">Roles</th>
@@ -142,6 +145,7 @@ const AdminUsers = () => {
                         {u.display_name || <span className="text-muted-foreground italic">No name</span>}
                         {isSelf && <span className="ml-2 text-xs text-primary">(you)</span>}
                       </td>
+                      <td className="px-4 py-2 text-muted-foreground text-xs">{u.email || '—'}</td>
                       <td className="px-4 py-2 text-muted-foreground text-xs font-mono">{u.user_id.slice(0, 8)}…</td>
                       <td className="px-4 py-2 text-muted-foreground text-xs">
                         {new Date(u.created_at).toLocaleDateString()}
