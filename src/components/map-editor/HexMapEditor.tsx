@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import HexMapCanvas from "./HexMapCanvas";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
@@ -24,10 +24,15 @@ import {
 import { floodFill } from "@/lib/hexUtils";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [mapState, setMapState] = useState<MapState>(() => generateBlankMap());
+  const [saving, setSaving] = useState(false);
+  const [loadingMap, setLoadingMap] = useState(true);
   const [leftTab, setLeftTab] = useState<"editor" | "config" | "planets">("editor");
   const [editorState, setEditorState] = useState<EditorState>({
     tool: "select",
@@ -40,6 +45,69 @@ const HexMapEditor: React.FC = () => {
     showCoordinates: false,
     highlightClassification: null,
   });
+
+  // Auto-load most recent saved map on mount
+  useEffect(() => {
+    if (!user) { setLoadingMap(false); return; }
+    (async () => {
+      try {
+        const { data: savedMaps, error } = await supabase
+          .from("saved_maps")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (error) throw error;
+        if (!savedMaps || savedMaps.length === 0) { setLoadingMap(false); return; }
+
+        const latest = savedMaps[0];
+        const { data: fileData, error: dlError } = await supabase.storage
+          .from("map-files")
+          .download(latest.file_path);
+        if (dlError) throw dlError;
+        if (fileData) {
+          const file = new File([fileData], "map.sqlite");
+          const state = await importFromSqlite(file);
+          setMapState(state);
+          toast({ title: "Map loaded", description: `Loaded "${latest.name}"` });
+        }
+      } catch (err: any) {
+        console.error("[Auto-load map]", err);
+      } finally {
+        setLoadingMap(false);
+      }
+    })();
+  }, [user]);
+
+  const handleSave = useCallback(async () => {
+    if (!user) {
+      toast({ title: "Sign in required", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      toast({ title: "Saving..." });
+      const blob = await exportToSqlite(mapState);
+      const fileName = `${user.id}/${Date.now()}.sqlite`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("map-files")
+        .upload(fileName, blob, { contentType: "application/x-sqlite3", upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { error: insertError } = await supabase
+        .from("saved_maps")
+        .insert({ user_id: user.id, name: "Third Republic Map", file_path: fileName });
+      if (insertError) throw insertError;
+
+      toast({ title: "Map saved successfully" });
+    } catch (err: any) {
+      console.error("[Save]", err);
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }, [mapState, user, toast]);
 
   const selectedHex = editorState.selectedHexKey
     ? mapState.hexes.get(editorState.selectedHexKey) || null
@@ -301,6 +369,9 @@ const HexMapEditor: React.FC = () => {
             editorState={editorState}
             onImport={handleImport}
             onExport={handleExport}
+            onSave={handleSave}
+            saving={saving}
+            loadingMap={loadingMap}
             onToolChange={(t) => setEditorState((s) => ({ ...s, tool: t }))}
             onBrushSizeChange={(sz) => setEditorState((s) => ({ ...s, brushSize: sz }))}
             onPaintClassChange={(c) => setEditorState((s) => ({ ...s, paintClassification: c }))}

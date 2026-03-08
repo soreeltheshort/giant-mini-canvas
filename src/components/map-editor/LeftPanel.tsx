@@ -15,6 +15,9 @@ interface Props {
   editorState: EditorState;
   onImport: (file: File) => void;
   onExport: () => void;
+  onSave: () => void;
+  saving: boolean;
+  loadingMap: boolean;
   onToolChange: (tool: EditorTool) => void;
   onBrushSizeChange: (size: BrushSize) => void;
   onPaintClassChange: (c: HexClassification) => void;
@@ -30,6 +33,9 @@ const LeftPanel: React.FC<Props> = ({
   editorState,
   onImport,
   onExport,
+  onSave,
+  saving,
+  loadingMap,
   onToolChange,
   onBrushSizeChange,
   onPaintClassChange,
@@ -63,6 +69,14 @@ const LeftPanel: React.FC<Props> = ({
             Export
           </Button>
         </div>
+        <Button
+          size="sm"
+          className="mt-2 w-full"
+          onClick={onSave}
+          disabled={saving || loadingMap}
+        >
+          {saving ? "Saving..." : "Save Map"}
+        </Button>
       </div>
 
       {/* Tools */}
