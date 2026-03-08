@@ -108,23 +108,29 @@ const LeftPanel: React.FC<Props> = ({
             Paint Classification
           </h3>
           <div className="flex flex-col gap-1">
-            {ALL_CLASSIFICATIONS.map((c) => (
-              <button
-                key={c}
-                onClick={() => onPaintClassChange(c)}
-                className={`flex items-center gap-2 rounded px-2 py-1 text-xs transition-colors ${
-                  editorState.paintClassification === c
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span
-                  className="inline-block h-3 w-3 rounded-sm"
-                  style={{ backgroundColor: CLASSIFICATION_COLORS[c] }}
-                />
-                {CLASSIFICATION_LABELS[c]}
-              </button>
-            ))}
+            {ALL_CLASSIFICATIONS.map((c) => {
+              const stat = provinceStats[c];
+              return (
+                <button
+                  key={c}
+                  onClick={() => onPaintClassChange(c)}
+                  className={`flex items-center justify-between rounded px-2 py-1 text-xs transition-colors ${
+                    editorState.paintClassification === c
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="inline-block h-3 w-3 rounded-sm"
+                      style={{ backgroundColor: CLASSIFICATION_COLORS[c] }}
+                    />
+                    {CLASSIFICATION_LABELS[c]}
+                  </span>
+                  <span className="text-muted-foreground">{stat?.hexCount ?? 0}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
