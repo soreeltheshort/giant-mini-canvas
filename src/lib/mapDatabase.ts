@@ -37,7 +37,7 @@ export function generateBlankMap(): MapState {
         cube_x,
         cube_y,
         cube_z,
-        classification: "MARCHES",
+        classification: "UNEXPLORED_MARCHES",
         region_id: null,
         has_system: false,
       };
