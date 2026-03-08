@@ -199,10 +199,6 @@ const HexMapEditor: React.FC = () => {
         const newSystems = new Map(prev.systems);
         for (const h of affected) {
           const updated = { ...h, classification: editorState.paintClassification };
-          if (editorState.paintClassification === "MARCHES" && h.has_system) {
-            updated.has_system = false;
-            newSystems.delete(h.hex_id);
-          }
           newHexes.set(hexKey(h.x, h.y), updated);
         }
         return { ...prev, hexes: newHexes, systems: newSystems };
