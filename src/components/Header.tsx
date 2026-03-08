@@ -16,6 +16,7 @@ const Header = () => {
   const isImpersonating = !!impersonatingFromAdmin && user && impersonatingFromAdmin !== user.id;
 
   const canAccessGameFeatures = isAdmin || isTester;
+  const isCombatTestingMode = location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/fleet-builder") || location.pathname.startsWith("/battle") || location.pathname.startsWith("/admin/battle") || location.pathname.startsWith("/admin/weapons") || location.pathname.startsWith("/admin/ships");
 
   const handleNewsletter = () => {
     if (location.pathname === "/") {
@@ -101,24 +102,26 @@ const Header = () => {
                 </Link>
               </>
             )}
-            {user && isAdmin && (
+            {user && isAdmin && isCombatTestingMode && (
               <>
-                <Link to="/admin/battle-debug" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                <Link to="/admin/battle-debug" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/battle-debug" ? "text-foreground" : ""}`}>
                   Debug
                 </Link>
-                <Link to="/admin/weapons" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                <Link to="/admin/weapons" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/weapons" ? "text-foreground" : ""}`}>
                   Weapons
                 </Link>
-                <Link to="/admin/battle-config" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                <Link to="/admin/battle-config" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/battle-config" ? "text-foreground" : ""}`}>
                   Config
                 </Link>
-                <Link to="/admin/users" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
-                  Users
-                </Link>
-                <Link to="/admin/ships" className="text-sm font-medium text-gold transition-colors hover:text-foreground">
+                <Link to="/admin/ships" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/ships" ? "text-foreground" : ""}`}>
                   Ships
                 </Link>
               </>
+            )}
+            {user && isAdmin && (
+              <Link to="/admin/users" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/users" ? "text-foreground" : ""}`}>
+                Users
+              </Link>
             )}
             <button
               onClick={handleNewsletter}
