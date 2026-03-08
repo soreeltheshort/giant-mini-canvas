@@ -281,6 +281,38 @@ const HexMapEditor: React.FC = () => {
     [mapState.hexes, toast]
   );
 
+  // Randomize state
+  const [preRandomizeState, setPreRandomizeState] = useState<MapState | null>(null);
+  const [randomizedCount, setRandomizedCount] = useState(0);
+
+  const handleRandomize = useCallback(() => {
+    const params = loadRandomizeParams();
+    setPreRandomizeState(mapState);
+    const newState = randomizeSystems(mapState, params);
+    const addedCount = newState.systems.size - mapState.systems.size;
+    setMapState(newState);
+    setRandomizedCount(addedCount);
+    toast({ title: "Randomized", description: `Added ${addedCount} systems` });
+  }, [mapState, toast]);
+
+  const handleUndoRandomize = useCallback(() => {
+    if (!preRandomizeState) return;
+    setMapState(preRandomizeState);
+    setPreRandomizeState(null);
+    setRandomizedCount(0);
+    toast({ title: "Undone", description: "Randomized systems removed" });
+  }, [preRandomizeState, toast]);
+
+  const handleReRandomize = useCallback(() => {
+    if (!preRandomizeState) return;
+    const params = loadRandomizeParams();
+    const newState = randomizeSystems(preRandomizeState, params);
+    const addedCount = newState.systems.size - preRandomizeState.systems.size;
+    setMapState(newState);
+    setRandomizedCount(addedCount);
+    toast({ title: "Re-randomized", description: `Added ${addedCount} systems` });
+  }, [preRandomizeState, toast]);
+
   const stats = useMemo(() => getProvinceStats(mapState), [mapState]);
 
   return (
