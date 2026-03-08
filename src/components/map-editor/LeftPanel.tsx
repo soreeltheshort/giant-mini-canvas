@@ -26,6 +26,11 @@ interface Props {
   onToggleCoordinates: () => void;
   onHighlightChange: (c: HexClassification | "ALL" | null) => void;
   provinceStats: Record<string, { hexCount: number; systemCount: number }>;
+  onRandomize: () => void;
+  onUndoRandomize: () => void;
+  onReRandomize: () => void;
+  canUndoRandomize: boolean;
+  randomizedCount: number;
 }
 
 const LeftPanel: React.FC<Props> = ({
