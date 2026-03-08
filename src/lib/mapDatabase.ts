@@ -101,7 +101,22 @@ export async function exportToSqlite(state: MapState): Promise<Blob> {
     hex_id INTEGER,
     system_name TEXT,
     classification TEXT,
-    importance_rank INTEGER DEFAULT 0
+    importance_rank INTEGER DEFAULT 0,
+    owner TEXT DEFAULT ''
+  )`);
+
+  db.run(`CREATE TABLE facility_types (
+    facility_type_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    description TEXT DEFAULT '',
+    icon TEXT DEFAULT '🏭'
+  )`);
+
+  db.run(`CREATE TABLE system_facilities (
+    system_id INTEGER,
+    facility_type_id INTEGER,
+    quantity INTEGER DEFAULT 1,
+    PRIMARY KEY (system_id, facility_type_id)
   )`);
 
   // Insert map
