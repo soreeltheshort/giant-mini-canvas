@@ -159,9 +159,7 @@ const RightPanel: React.FC<Props> = ({
           {/* Solar System */}
           <div>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Solar System</h3>
-            {hex.classification === "MARCHES" ? (
-              <p className="text-xs text-destructive">Systems not allowed in Marches</p>
-            ) : hex.has_system && system ? (
+            {hex.has_system && system ? (
               <div className="space-y-2">
                 <Input value={sysName} onChange={(e) => setSysName(e.target.value)} placeholder="System name" className="h-8 text-xs" />
                 <Input type="number" value={sysRank} onChange={(e) => setSysRank(parseInt(e.target.value) || 1)} placeholder="Importance rank" className="h-8 text-xs" />
