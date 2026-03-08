@@ -223,7 +223,7 @@ const HexMapEditor: React.FC = () => {
       <LeftPanel
         hasMap={true}
         editorState={editorState}
-        onImport={() => {}}
+        onImport={handleImport}
         onExport={handleExport}
         onToolChange={(t) => setEditorState((s) => ({ ...s, tool: t }))}
         onBrushSizeChange={(sz) => setEditorState((s) => ({ ...s, brushSize: sz }))}
