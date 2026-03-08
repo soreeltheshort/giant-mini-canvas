@@ -1,4 +1,3 @@
-import initSqlJs, { Database } from "sql.js";
 import {
   MapData,
   HexData,
@@ -9,29 +8,46 @@ import {
   hexKey,
 } from "./mapTypes";
 
-let SQL: Awaited<ReturnType<typeof initSqlJs>> | null = null;
+let sqlPromise: Promise<any> | null = null;
 
-async function getSql() {
-  if (!SQL) {
-    console.log("[sql.js] Initializing with v1.8.0...");
-    SQL = await initSqlJs({
-      locateFile: (file: string) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`,
-    });
-    console.log("[sql.js] Initialized successfully");
-  }
-  return SQL;
+function loadSqlJs(): Promise<any> {
+  if (sqlPromise) return sqlPromise;
+  
+  sqlPromise = new Promise((resolve, reject) => {
+    // Load sql.js entirely from CDN to avoid version mismatch
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js";
+    script.onload = () => {
+      const initSqlJs = (window as any).initSqlJs;
+      if (!initSqlJs) {
+        reject(new Error("initSqlJs not found on window"));
+        return;
+      }
+      initSqlJs({
+        locateFile: (file: string) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`,
+      }).then(resolve).catch(reject);
+    };
+    script.onerror = () => reject(new Error("Failed to load sql.js script"));
+    document.head.appendChild(script);
+  });
+  
+  return sqlPromise;
 }
 
-export async function loadMapFromFile(file: File): Promise<{ db: Database; state: MapState }> {
-  const sqlJs = await getSql();
+export async function loadMapFromFile(file: File): Promise<{ db: any; state: MapState }> {
+  console.log("[mapDB] Loading sql.js from CDN...");
+  const SQL = await loadSqlJs();
+  console.log("[mapDB] sql.js loaded, opening database...");
   const buf = await file.arrayBuffer();
-  const db = new sqlJs.Database(new Uint8Array(buf));
+  const db = new SQL.Database(new Uint8Array(buf));
+  console.log("[mapDB] Database opened, reading state...");
 
   const state = readMapState(db);
+  console.log("[mapDB] State read complete. Hexes:", state.hexes.size);
   return { db, state };
 }
 
-export function readMapState(db: Database): MapState {
+export function readMapState(db: any): MapState {
   // Read map
   const mapRows = db.exec("SELECT * FROM maps LIMIT 1");
   let mapData: MapData | null = null;
@@ -39,7 +55,7 @@ export function readMapState(db: Database): MapState {
     const cols = mapRows[0].columns;
     const row = mapRows[0].values[0];
     const obj: any = {};
-    cols.forEach((c, i) => (obj[c] = row[i]));
+    cols.forEach((c: string, i: number) => (obj[c] = row[i]));
     mapData = obj as MapData;
   }
 
@@ -50,7 +66,7 @@ export function readMapState(db: Database): MapState {
     const cols = hexRows[0].columns;
     for (const row of hexRows[0].values) {
       const obj: any = {};
-      cols.forEach((c, i) => (obj[c] = row[i]));
+      cols.forEach((c: string, i: number) => (obj[c] = row[i]));
       obj.has_system = !!obj.has_system;
       const hex = obj as HexData;
       hexes.set(hexKey(hex.x, hex.y), hex);
@@ -59,34 +75,42 @@ export function readMapState(db: Database): MapState {
 
   // Read systems
   const systems = new Map<number, SystemData>();
-  const sysRows = db.exec("SELECT * FROM systems");
-  if (sysRows.length > 0) {
-    const cols = sysRows[0].columns;
-    for (const row of sysRows[0].values) {
-      const obj: any = {};
-      cols.forEach((c, i) => (obj[c] = row[i]));
-      systems.set(obj.hex_id, obj as SystemData);
+  try {
+    const sysRows = db.exec("SELECT * FROM systems");
+    if (sysRows.length > 0) {
+      const cols = sysRows[0].columns;
+      for (const row of sysRows[0].values) {
+        const obj: any = {};
+        cols.forEach((c: string, i: number) => (obj[c] = row[i]));
+        systems.set(obj.hex_id, obj as SystemData);
+      }
     }
+  } catch (e) {
+    console.warn("[mapDB] No systems table found, skipping");
   }
 
   // Read regions
   const regions: ProvinceRegion[] = [];
-  const regRows = db.exec("SELECT * FROM province_regions");
-  if (regRows.length > 0) {
-    const cols = regRows[0].columns;
-    for (const row of regRows[0].values) {
-      const obj: any = {};
-      cols.forEach((c, i) => (obj[c] = row[i]));
-      obj.is_system_allowed = !!obj.is_system_allowed;
-      regions.push(obj as ProvinceRegion);
+  try {
+    const regRows = db.exec("SELECT * FROM province_regions");
+    if (regRows.length > 0) {
+      const cols = regRows[0].columns;
+      for (const row of regRows[0].values) {
+        const obj: any = {};
+        cols.forEach((c: string, i: number) => (obj[c] = row[i]));
+        obj.is_system_allowed = !!obj.is_system_allowed;
+        regions.push(obj as ProvinceRegion);
+      }
     }
+  } catch (e) {
+    console.warn("[mapDB] No province_regions table found, skipping");
   }
 
   return { mapData, hexes, systems, regions };
 }
 
 export function updateHexClassification(
-  db: Database,
+  db: any,
   hexId: number,
   classification: HexClassification,
   regionId: number | null
@@ -97,12 +121,12 @@ export function updateHexClassification(
   );
 }
 
-export function updateHexSystem(db: Database, hexId: number, hasSystem: boolean) {
+export function updateHexSystem(db: any, hexId: number, hasSystem: boolean) {
   db.run("UPDATE hexes SET has_system = ? WHERE hex_id = ?", [hasSystem ? 1 : 0, hexId]);
 }
 
 export function addSystem(
-  db: Database,
+  db: any,
   mapId: number,
   hexId: number,
   name: string,
@@ -117,7 +141,7 @@ export function addSystem(
 }
 
 export function updateSystem(
-  db: Database,
+  db: any,
   hexId: number,
   name: string,
   rank: number
@@ -128,12 +152,12 @@ export function updateSystem(
   );
 }
 
-export function removeSystem(db: Database, hexId: number) {
+export function removeSystem(db: any, hexId: number) {
   db.run("DELETE FROM systems WHERE hex_id = ?", [hexId]);
   db.run("UPDATE hexes SET has_system = 0 WHERE hex_id = ?", [hexId]);
 }
 
-export function exportDatabase(db: Database): Uint8Array {
+export function exportDatabase(db: any): Uint8Array {
   return db.export();
 }
 
@@ -145,4 +169,8 @@ export function getProvinceStats(state: MapState) {
     if (hex.has_system) stats[hex.classification].systemCount++;
   }
   return stats;
+}
+
+export function readMapStateFromDb(db: any): MapState {
+  return readMapState(db);
 }
