@@ -49,6 +49,11 @@ const LeftPanel: React.FC<Props> = ({
   onToggleCoordinates,
   onHighlightChange,
   provinceStats,
+  onRandomize,
+  onUndoRandomize,
+  onReRandomize,
+  canUndoRandomize,
+  randomizedCount,
 }) => {
   const fileRef = useRef<HTMLInputElement>(null);
 
