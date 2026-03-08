@@ -162,14 +162,8 @@ const HexMapEditor: React.FC = () => {
       setMapState((prev) => {
         const newHexes = new Map(prev.hexes);
         const updated = { ...hex, classification };
-        if (classification === "MARCHES" && hex.has_system) {
-          updated.has_system = false;
-        }
         newHexes.set(hexKey(hex.x, hex.y), updated);
         const newSystems = new Map(prev.systems);
-        if (classification === "MARCHES" && hex.has_system) {
-          newSystems.delete(hex.hex_id);
-        }
         return { ...prev, hexes: newHexes, systems: newSystems };
       });
     },
@@ -205,10 +199,6 @@ const HexMapEditor: React.FC = () => {
         const newSystems = new Map(prev.systems);
         for (const h of affected) {
           const updated = { ...h, classification: editorState.paintClassification };
-          if (editorState.paintClassification === "MARCHES" && h.has_system) {
-            updated.has_system = false;
-            newSystems.delete(h.hex_id);
-          }
           newHexes.set(hexKey(h.x, h.y), updated);
         }
         return { ...prev, hexes: newHexes, systems: newSystems };
@@ -229,7 +219,7 @@ const HexMapEditor: React.FC = () => {
     (hexId: number, name: string, rank: number) => {
       setMapState((prev) => {
         const hex = Array.from(prev.hexes.values()).find((h) => h.hex_id === hexId);
-        if (!hex || hex.classification === "MARCHES") return prev;
+        if (!hex) return prev;
         const newHexes = new Map(prev.hexes);
         newHexes.set(hexKey(hex.x, hex.y), { ...hex, has_system: true });
         const newSystems = new Map(prev.systems);
