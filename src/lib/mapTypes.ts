@@ -10,13 +10,13 @@ export type HexClassification =
 
 export const CLASSIFICATION_LABELS: Record<HexClassification, string> = {
   CORE: "Core",
-  PROVINCE_1: "Province 1",
-  PROVINCE_2: "Province 2",
-  PROVINCE_3: "Province 3",
-  PROVINCE_4: "Province 4",
-  PROVINCE_5: "Province 5",
-  PROVINCE_6: "Province 6",
-  MARCHES: "Marches",
+  PROVINCE_1: "Valerian",
+  PROVINCE_2: "Aurelian",
+  PROVINCE_3: "Cassian",
+  PROVINCE_4: "Dravian",
+  PROVINCE_5: "Marcellan",
+  PROVINCE_6: "Octavian",
+  MARCHES: "Tiberon",
 };
 
 export const CLASSIFICATION_COLORS: Record<HexClassification, string> = {
