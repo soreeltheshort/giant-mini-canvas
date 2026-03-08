@@ -20,7 +20,7 @@ import {
   removeSystem,
   exportDatabase,
   getProvinceStats,
-  readMapState,
+  readMapStateFromDb,
 } from "@/lib/mapDatabase";
 import { floodFill } from "@/lib/hexUtils";
 import { useToast } from "@/hooks/use-toast";
