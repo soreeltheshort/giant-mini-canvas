@@ -72,6 +72,7 @@ const HexMapEditor: React.FC = () => {
     }
   }, [toast]);
 
+  const applyClassificationToHex = useCallback(
     (hex: HexData, classification: HexClassification) => {
       setMapState((prev) => {
         const newHexes = new Map(prev.hexes);
