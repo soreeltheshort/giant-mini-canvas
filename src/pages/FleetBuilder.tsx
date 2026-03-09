@@ -193,6 +193,16 @@ const FleetBuilder = () => {
   const fighterOver = fighterUsed > fighterCapacity;
   const gunshipOver = gunshipUsed > gunshipCapacity;
 
+  const maxGroundUnits = entries.reduce((sum, e) => {
+    const st = shipTypes.find(s => s.id === e.ship_type_id);
+    return sum + (st ? st.ground_invasion * e.quantity : 0);
+  }, 0);
+
+  // Auto-sync remaining ground units when max changes (unless user has manually set it)
+  useEffect(() => {
+    setRemainingGroundUnits(prev => prev === null ? maxGroundUnits : Math.min(prev, maxGroundUnits));
+  }, [maxGroundUnits]);
+
   // Per-group capacity calculations
   const groupCapacities = useMemo(() => {
     const caps: Record<string, { fighterCap: number; fighterUsed: number; gunshipCap: number; gunshipUsed: number }> = {};
