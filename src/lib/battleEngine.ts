@@ -564,31 +564,39 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     // Ground Combat Sub-Phase: runs after ship combat in phases where System Defenses is a group
     const hasSystemDefenses = phase.groupsA.includes("System Defenses") || phase.groupsB.includes("System Defenses");
     if (hasSystemDefenses && activeGroundOutcomes.length > 0 && (currentGroundA > 0 || currentGroundB > 0)) {
-      function lookupCasualties(forceSize: number): number {
-        for (const o of activeGroundOutcomes) {
-          if (forceSize >= o.min_force && forceSize <= o.max_force) {
-            return o.casualties_inflicted;
+      // Per-unit probability roll: each unit rolls against the outcome table
+      function rollPerUnitDamage(unitCount: number): number {
+        let totalDamage = 0;
+        for (let i = 0; i < unitCount; i++) {
+          const roll = rng();
+          let cumulative = 0;
+          for (const o of activeGroundOutcomes) {
+            cumulative += o.probability;
+            if (roll < cumulative) {
+              totalDamage += o.damage;
+              break;
+            }
           }
         }
-        return 0;
+        return totalDamage;
       }
 
-      const casualtiesFromA = lookupCasualties(currentGroundA);
-      const casualtiesFromB = lookupCasualties(currentGroundB);
+      const damageFromA = rollPerUnitDamage(currentGroundA);
+      const damageFromB = rollPerUnitDamage(currentGroundB);
 
       const prevGroundA = currentGroundA;
       const prevGroundB = currentGroundB;
-      currentGroundA = Math.max(0, currentGroundA - casualtiesFromB);
-      currentGroundB = Math.max(0, currentGroundB - casualtiesFromA);
+      currentGroundA = Math.max(0, currentGroundA - damageFromB);
+      currentGroundB = Math.max(0, currentGroundB - damageFromA);
 
       emit("ground_combat", {
         phase: phase.name,
         groundA_before: prevGroundA, groundB_before: prevGroundB,
-        casualtiesFromA, casualtiesFromB,
+        damageFromA, damageFromB,
         groundA_after: currentGroundA, groundB_after: currentGroundB,
       },
-        `Ground Combat: Fleet A (${prevGroundA} units) inflicts ${casualtiesFromA} casualties → Fleet B ground: ${currentGroundB}. Fleet B (${prevGroundB} units) inflicts ${casualtiesFromB} casualties → Fleet A ground: ${currentGroundA}.`,
-        `Ground sub-phase in "${phase.name}". A force=${prevGroundA} → lookup casualties=${casualtiesFromA} on B. B force=${prevGroundB} → lookup casualties=${casualtiesFromB} on A. After: A=${currentGroundA}, B=${currentGroundB}.`
+        `Ground Combat: Fleet A (${prevGroundA} units) inflicts ${damageFromA.toFixed(1)} damage → Fleet B ground: ${currentGroundB.toFixed(1)}. Fleet B (${prevGroundB} units) inflicts ${damageFromB.toFixed(1)} damage → Fleet A ground: ${currentGroundA.toFixed(1)}.`,
+        `Ground sub-phase in "${phase.name}". A units=${prevGroundA} → per-unit rolls total damage=${damageFromA.toFixed(1)} on B. B units=${prevGroundB} → per-unit rolls total damage=${damageFromB.toFixed(1)} on A. After: A=${currentGroundA.toFixed(1)}, B=${currentGroundB.toFixed(1)}.`
       );
     }
   }

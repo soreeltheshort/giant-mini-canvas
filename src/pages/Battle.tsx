@@ -120,7 +120,7 @@ const Battle = () => {
       weapon_key: w.weapon_key, hull_class: w.hull_class, priority: w.priority,
     }));
     const groundOutcomes: GroundCombatOutcome[] | undefined = groundOutcomesData?.map(o => ({
-      min_force: o.min_force, max_force: o.max_force, casualties_inflicted: o.casualties_inflicted,
+      probability: Number(o.probability), damage: Number(o.damage),
     }));
 
     const usedSeed = seed || Math.random().toString(36).substring(2, 10);

@@ -51,9 +51,8 @@ interface WeaponTargetPref {
 
 interface GroundCombatOutcome {
   id: string;
-  min_force: number;
-  max_force: number;
-  casualties_inflicted: number;
+  probability: number;
+  damage: number;
   description: string;
   _dirty?: boolean;
   _new?: boolean;
