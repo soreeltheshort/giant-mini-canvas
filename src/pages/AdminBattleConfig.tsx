@@ -258,6 +258,14 @@ const AdminBattleConfig = () => {
       if (error) { errors++; console.error(error); }
     }
 
+    for (const o of groundOutcomes.filter(o => o._dirty)) {
+      const payload = { id: o.id, min_force: o.min_force, max_force: o.max_force, casualties_inflicted: o.casualties_inflicted, description: o.description };
+      const { error } = o._new
+        ? await supabase.from("ground_combat_outcomes").insert(payload)
+        : await supabase.from("ground_combat_outcomes").update(payload).eq("id", o.id);
+      if (error) { errors++; console.error(error); }
+    }
+
     if (errors) toast({ title: "Some saves failed", description: `${errors} error(s)`, variant: "destructive" });
     else toast({ title: "Saved" });
 
