@@ -290,14 +290,15 @@ const AdminShips = () => {
       }
     }
 
-    // Merge existing UUIDs into parsed rows so upsert matches correctly
-    const rows = csvPending.map(row => {
+    // Merge existing UUIDs into parsed rows and deduplicate by ship_id (last wins)
+    const deduped = new Map<string, Record<string, any>>();
+    for (const row of csvPending) {
       const sid = row.ship_id as string | null;
-      if (sid && shipIdToUuid.has(sid)) {
-        return { ...row, id: shipIdToUuid.get(sid) };
-      }
-      return row;
-    });
+      const key = sid || crypto.randomUUID();
+      const merged = sid && shipIdToUuid.has(sid) ? { ...row, id: shipIdToUuid.get(sid) } : row;
+      deduped.set(key, merged);
+    }
+    const rows = Array.from(deduped.values());
 
     // Upsert in batches of 50 (avoids FK constraint errors from fleet_ships references)
     let errors = 0;
