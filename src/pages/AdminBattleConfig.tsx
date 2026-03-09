@@ -104,7 +104,7 @@ const AdminBattleConfig = () => {
     if (g) setGroupMods(g.map(r => ({ ...r, attack_mod: Number(r.attack_mod), defense_mod: Number(r.defense_mod) })));
     if (c) setConstants(c.map(r => ({ ...r, value: Number(r.value) })));
     if (w) setWeaponPrefs(w);
-    if (go) setGroundOutcomes(go);
+    if (go) setGroundOutcomes(go.map(r => ({ ...r, probability: Number(r.probability), damage: Number(r.damage) })));
   };
 
   // --- Phase helpers ---

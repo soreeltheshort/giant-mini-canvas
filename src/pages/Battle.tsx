@@ -104,7 +104,7 @@ const Battle = () => {
       supabase.from("group_modifiers").select("*"),
       supabase.from("combat_constants").select("*"),
       supabase.from("weapon_target_preferences").select("*").order("priority"),
-      supabase.from("ground_combat_outcomes").select("*").order("min_force"),
+      supabase.from("ground_combat_outcomes").select("*").order("probability"),
     ]);
     const phases: PhaseConfig[] | undefined = phasesData?.map(p => ({
       name: p.name, groupsA: p.groups_a, groupsB: p.groups_b, modA: Number(p.mod_a), modB: Number(p.mod_b), requiredGroup: p.required_group ?? null,
