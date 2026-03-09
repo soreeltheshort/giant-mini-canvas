@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 import { useFactions } from "@/hooks/useFactions";
+import { DbFacilityType } from "@/hooks/useFacilityTypes";
 import { useSystemActions } from "@/hooks/useSystemActions";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
