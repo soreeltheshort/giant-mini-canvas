@@ -94,16 +94,18 @@ const AdminBattleConfig = () => {
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
-    const [{ data: p }, { data: g }, { data: c }, { data: w }] = await Promise.all([
+    const [{ data: p }, { data: g }, { data: c }, { data: w }, { data: go }] = await Promise.all([
       supabase.from("battle_phases").select("*").order("seq_order"),
       supabase.from("group_modifiers").select("*").order("group_name"),
       supabase.from("combat_constants").select("*").order("key"),
       supabase.from("weapon_target_preferences").select("*").order("weapon_key").order("priority"),
+      supabase.from("ground_combat_outcomes").select("*").order("min_force"),
     ]);
     if (p) setPhases(p.map(r => ({ ...r, mod_a: Number(r.mod_a), mod_b: Number(r.mod_b) })));
     if (g) setGroupMods(g.map(r => ({ ...r, attack_mod: Number(r.attack_mod), defense_mod: Number(r.defense_mod) })));
     if (c) setConstants(c.map(r => ({ ...r, value: Number(r.value) })));
     if (w) setWeaponPrefs(w);
+    if (go) setGroundOutcomes(go);
   };
 
   // --- Phase helpers ---
