@@ -54,7 +54,7 @@ interface FleetShipEntry {
   notes: string;
 }
 
-const SPECIAL_ROLES = ["Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish"];
+const SPECIAL_ROLES = ["Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish", "System Defenses"];
 
 const BASE_GROUPS = ["Core", "Attack"];
 const TAIL_GROUPS = ["Rear", "Retreat"];
