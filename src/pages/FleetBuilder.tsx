@@ -96,6 +96,7 @@ const FleetBuilder = () => {
   const [expandedHull, setExpandedHull] = useState<string | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
+  const [remainingGroundUnits, setRemainingGroundUnits] = useState<number | null>(null);
 
   // Build dynamic GROUPS list: Core, Attack, [role1], [role2], Rear, Retreat
   const GROUPS = useMemo(() => [
@@ -191,6 +192,16 @@ const FleetBuilder = () => {
 
   const fighterOver = fighterUsed > fighterCapacity;
   const gunshipOver = gunshipUsed > gunshipCapacity;
+
+  const maxGroundUnits = entries.reduce((sum, e) => {
+    const st = shipTypes.find(s => s.id === e.ship_type_id);
+    return sum + (st ? st.ground_invasion * e.quantity : 0);
+  }, 0);
+
+  // Auto-sync remaining ground units when max changes (unless user has manually set it)
+  useEffect(() => {
+    setRemainingGroundUnits(prev => prev === null ? maxGroundUnits : Math.min(prev, maxGroundUnits));
+  }, [maxGroundUnits]);
 
   // Per-group capacity calculations
   const groupCapacities = useMemo(() => {
@@ -411,6 +422,20 @@ const FleetBuilder = () => {
               <div className={`text-xs ${gunshipOver ? "text-destructive font-bold" : "text-foreground"}`}>
                 🚀 Gunships: <span className="font-semibold">{gunshipUsed}</span> / {gunshipCapacity} slots
                 {gunshipOver && <span className="ml-1">⚠ OVER</span>}
+              </div>
+              <div className="text-xs text-foreground">
+                🏴 Max Ground Units: <span className="font-semibold">{maxGroundUnits}</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-foreground">
+                <span>🎯 Remaining Ground Units:</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={maxGroundUnits}
+                  className="w-16 h-6 rounded border border-input bg-background px-1 text-xs text-foreground text-center"
+                  value={remainingGroundUnits ?? maxGroundUnits}
+                  onChange={e => setRemainingGroundUnits(Math.max(0, Math.min(maxGroundUnits, Number(e.target.value) || 0)))}
+                />
               </div>
             </div>
             {entries.length === 0 && <p className="mb-4 text-sm text-muted-foreground">Select ships from the catalog on the right to add them.</p>}
