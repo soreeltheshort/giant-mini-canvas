@@ -258,6 +258,12 @@ export interface WeaponTargetPref {
   priority: number;
 }
 
+export interface GroundCombatOutcome {
+  min_force: number;
+  max_force: number;
+  casualties_inflicted: number;
+}
+
 export interface CombatConstants {
   hit_chance_min: number;
   hit_chance_max: number;
