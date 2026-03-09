@@ -7,6 +7,13 @@ export interface DbFacilityType {
   name: string;
   description: string;
   icon: string;
+  cost: number;
+  maintenance: number;
+  condition_bonus: number;
+  tribute_flat: number;
+  tribute_percent: number;
+  survey_bonus: number;
+  ground_defense_bonus: number;
 }
 
 export function useFacilityTypes() {
