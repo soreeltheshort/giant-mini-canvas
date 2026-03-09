@@ -307,6 +307,36 @@ export type Database = {
         }
         Relationships: []
       }
+      ground_combat_outcomes: {
+        Row: {
+          casualties_inflicted: number
+          created_at: string
+          description: string
+          id: string
+          max_force: number
+          min_force: number
+          updated_at: string
+        }
+        Insert: {
+          casualties_inflicted?: number
+          created_at?: string
+          description?: string
+          id?: string
+          max_force?: number
+          min_force?: number
+          updated_at?: string
+        }
+        Update: {
+          casualties_inflicted?: number
+          created_at?: string
+          description?: string
+          id?: string
+          max_force?: number
+          min_force?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       group_modifiers: {
         Row: {
           attack_mod: number
