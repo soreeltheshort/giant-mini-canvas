@@ -274,19 +274,12 @@ const AdminShips = () => {
   const confirmUpload = async () => {
     if (!csvPending) return;
     setUploading(true);
-    // Delete all existing ships
-    const { error: delErr } = await supabase.from("ship_types").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    if (delErr) {
-      toast({ title: "Error deleting old ships", description: delErr.message, variant: "destructive" });
-      setUploading(false);
-      setCsvPending(null);
-      return;
-    }
-    // Insert in batches of 50
+
+    // Upsert in batches of 50 (avoids FK constraint errors from fleet_ships references)
     let errors = 0;
     for (let i = 0; i < csvPending.length; i += 50) {
       const batch = csvPending.slice(i, i + 50);
-      const { error } = await supabase.from("ship_types").insert(batch as any);
+      const { error } = await supabase.from("ship_types").upsert(batch as any, { onConflict: "id" });
       if (error) { errors++; console.error(error); }
     }
     if (errors) {
