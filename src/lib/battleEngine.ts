@@ -662,6 +662,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           `Planet invaded flag: ground combat occurred, defenders took casualties but hold. Defender ground=${currentGroundB.toFixed(1)}, attacker ground=${currentGroundA.toFixed(1)}.`);
       }
     }
+  }
 
   // 6) END CONDITIONS
   tick++;
