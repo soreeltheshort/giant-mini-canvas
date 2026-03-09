@@ -49,6 +49,16 @@ interface WeaponTargetPref {
   _new?: boolean;
 }
 
+interface GroundCombatOutcome {
+  id: string;
+  min_force: number;
+  max_force: number;
+  casualties_inflicted: number;
+  description: string;
+  _dirty?: boolean;
+  _new?: boolean;
+}
+
 const ALL_GROUPS = ["Core", "Attack", "Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish", "Rear", "Retreat", "System Defenses"];
 
 const ALL_HULL_CLASSES = ["FL", "FH", "GS", "DD", "CL", "CM", "CH", "BB", "T", "TT", "Titan"];
