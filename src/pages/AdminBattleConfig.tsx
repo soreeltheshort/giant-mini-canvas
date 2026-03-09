@@ -207,7 +207,7 @@ const AdminBattleConfig = () => {
 
   const addGroundOutcome = () => {
     setGroundOutcomes(prev => [...prev, {
-      id: crypto.randomUUID(), min_force: 0, max_force: 0, casualties_inflicted: 0, description: "",
+      id: crypto.randomUUID(), probability: 0, damage: 0, description: "",
       _dirty: true, _new: true,
     }]);
   };
