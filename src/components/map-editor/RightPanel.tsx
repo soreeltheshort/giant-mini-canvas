@@ -12,11 +12,13 @@ import {
   CLASSIFICATION_LABELS,
   CLASSIFICATION_COLORS,
 } from "@/lib/mapTypes";
+import { DbFaction } from "@/hooks/useFactions";
 
 interface Props {
   hex: HexData | null;
   system: SystemData | undefined;
   facilityTypes: FacilityType[];
+  factions: DbFaction[];
   onClassificationChange: (hexId: number, c: HexClassification) => void;
   onAddSystem: (hexId: number, name: string, rank: number) => void;
   onUpdateSystem: (hexId: number, updates: Partial<Omit<SystemData, "system_id" | "map_id" | "hex_id">>) => void;
@@ -28,6 +30,7 @@ const RightPanel: React.FC<Props> = ({
   hex,
   system,
   facilityTypes,
+  factions,
   onClassificationChange,
   onAddSystem,
   onUpdateSystem,
@@ -228,7 +231,19 @@ const RightPanel: React.FC<Props> = ({
                   ))}
                 </div>
 
-                <Input value={sysOwner} onChange={(e) => setSysOwner(e.target.value)} placeholder="Owner (faction)" className="h-8 text-xs" />
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Owner (Faction)</label>
+                  <select
+                    value={sysOwner}
+                    onChange={(e) => setSysOwner(e.target.value)}
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="">— None —</option>
+                    {factions.map((f) => (
+                      <option key={f.id} value={f.name}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Numeric fields in a compact grid */}
                 <div className="grid grid-cols-2 gap-x-2 gap-y-1">

@@ -25,12 +25,14 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
+import { useFactions } from "@/hooks/useFactions";
 import { randomizeSystems, loadRandomizeParams } from "@/lib/randomizeSystems";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { facilityTypes: dbFacilityTypes } = useFacilityTypes();
+  const { factions } = useFactions();
   const [mapState, setMapState] = useState<MapState>(() => generateBlankMap());
   const [saving, setSaving] = useState(false);
   const [loadingMap, setLoadingMap] = useState(true);
@@ -402,6 +404,7 @@ const HexMapEditor: React.FC = () => {
         hex={selectedHex}
         system={selectedSystem}
         facilityTypes={facilityTypesForUI}
+        factions={factions}
         onClassificationChange={handleClassificationChange}
         onAddSystem={handleAddSystem}
         onUpdateSystem={handleUpdateSystem}
