@@ -650,6 +650,16 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         emit("ground_combat_end", { result: "A_wins", remaining: currentGroundA },
           `Ground Combat: Fleet A's ground forces win with ${currentGroundA.toFixed(1)} units remaining.`,
           `Ground combat: Side A wins. Remaining=${currentGroundA.toFixed(1)}.`);
+        emit("planet_taken", { takenBy: "A", remainingGroundUnits: currentGroundA },
+          `🏴 Planet Taken! Fleet A's ground forces have conquered the planet with ${currentGroundA.toFixed(1)} units remaining.`,
+          `Planet taken by Side A. Defending ground forces eliminated. Remaining attacker ground units: ${currentGroundA.toFixed(1)}.`);
+      }
+
+      // If ground combat occurred but planet was NOT taken, flag as Planet Invaded
+      if (currentGroundB > 0 && prevGroundB > currentGroundB) {
+        emit("planet_invaded", { groundB_remaining: currentGroundB, groundA_remaining: currentGroundA },
+          `⚔️ Planet Invaded! Ground forces engaged but defenders hold with ${currentGroundB.toFixed(1)} units remaining.`,
+          `Planet invaded flag: ground combat occurred, defenders took casualties but hold. Defender ground=${currentGroundB.toFixed(1)}, attacker ground=${currentGroundA.toFixed(1)}.`);
       }
     }
   }
