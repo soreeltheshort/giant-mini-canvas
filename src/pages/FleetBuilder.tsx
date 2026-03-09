@@ -483,9 +483,6 @@ const FleetBuilder = () => {
                         );
                       })()}
                     </div>
-                    {groupEntries.length === 0 && (
-                      <p className="text-[10px] text-muted-foreground italic">Drag ships here</p>
-                    )}
                     <div className="space-y-1">
                       {groupEntries.map(entry => {
                         const st = shipTypes.find(s => s.id === entry.ship_type_id);
