@@ -99,11 +99,12 @@ const Battle = () => {
     if (!snapA || !snapB) { toast({ title: "Failed to load fleets", variant: "destructive" }); setRunning(false); return; }
 
     // Load battle config from DB
-    const [{ data: phasesData }, { data: modsData }, { data: constsData }, { data: weaponPrefsData }] = await Promise.all([
+    const [{ data: phasesData }, { data: modsData }, { data: constsData }, { data: weaponPrefsData }, { data: groundOutcomesData }] = await Promise.all([
       supabase.from("battle_phases").select("*").order("seq_order"),
       supabase.from("group_modifiers").select("*"),
       supabase.from("combat_constants").select("*"),
       supabase.from("weapon_target_preferences").select("*").order("priority"),
+      supabase.from("ground_combat_outcomes").select("*").order("min_force"),
     ]);
     const phases: PhaseConfig[] | undefined = phasesData?.map(p => ({
       name: p.name, groupsA: p.groups_a, groupsB: p.groups_b, modA: Number(p.mod_a), modB: Number(p.mod_b), requiredGroup: p.required_group ?? null,
