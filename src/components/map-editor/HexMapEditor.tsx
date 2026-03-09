@@ -232,7 +232,19 @@ const HexMapEditor: React.FC = () => {
           classification: hex.classification,
           importance_rank: rank,
           owner: "",
+          system_type: "system",
+          max_population: 0,
+          current_population: 0,
+          survey: 0,
+          tribute: 0,
+          upkeep: 0,
+          resources: 0,
           facilities: [],
+          condition: 0,
+          morale: 0,
+          max_ground_defenses: 0,
+          current_ground_defenses: 0,
+          planet_index: 0,
         });
         return { ...prev, hexes: newHexes, systems: newSystems };
       });
@@ -241,7 +253,7 @@ const HexMapEditor: React.FC = () => {
   );
 
   const handleUpdateSystem = useCallback(
-    (hexId: number, updates: Partial<Pick<SystemData, "system_name" | "importance_rank" | "owner" | "facilities">>) => {
+    (hexId: number, updates: Partial<Omit<SystemData, "system_id" | "map_id" | "hex_id">>) => {
       setMapState((prev) => {
         const newSystems = new Map(prev.systems);
         const existing = newSystems.get(hexId);
