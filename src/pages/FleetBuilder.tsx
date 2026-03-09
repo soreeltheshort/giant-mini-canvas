@@ -193,12 +193,10 @@ const FleetBuilder = () => {
   const fighterOver = fighterUsed > fighterCapacity;
   const gunshipOver = gunshipUsed > gunshipCapacity;
 
-  const maxGroundUnits = entries
-    .filter(e => e.tactical_group === "Attack Planet")
-    .reduce((sum, e) => {
-      const st = shipTypes.find(s => s.id === e.ship_type_id);
-      return sum + (st ? st.ground_invasion * e.quantity : 0);
-    }, 0);
+  const maxGroundUnits = entries.reduce((sum, e) => {
+    const st = shipTypes.find(s => s.id === e.ship_type_id);
+    return sum + (st ? st.ground_invasion * e.quantity : 0);
+  }, 0);
 
   // Auto-sync remaining ground units when max changes (unless user has manually set it)
   useEffect(() => {
