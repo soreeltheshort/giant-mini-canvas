@@ -492,17 +492,16 @@ const AdminBattleConfig = () => {
         {/* GROUND COMBAT OUTCOMES */}
         <div className="mt-10">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Ground Combat Outcomes (casualties by force size)</h2>
+            <h2 className="font-heading text-lg font-semibold text-foreground">Ground Combat Outcomes (per unit)</h2>
             <Button size="sm" variant="outline" onClick={addGroundOutcome}><Plus className="mr-1 h-4 w-4" /> Add Outcome</Button>
           </div>
-          <p className="text-xs text-muted-foreground mb-3">Define how many casualties a ground force inflicts based on its size. In phases with "System Defenses", a ground combat sub-phase runs after ship combat. Each side looks up their force size in this table to determine casualties inflicted on the opponent.</p>
+          <p className="text-xs text-muted-foreground mb-3">Each ground unit rolls against this table per phase. Probabilities should sum to ≤1.0 (remainder = miss/no damage). Example: 0.5 probability / 0.1 damage = 50% chance each unit deals 0.1 damage.</p>
           <div className="overflow-x-auto border border-border rounded">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">Min Force</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">Max Force</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Casualties Inflicted</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Probability</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Damage</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Description</th>
                   <th className="px-3 py-2 w-10"></th>
                 </tr>
@@ -511,13 +510,10 @@ const AdminBattleConfig = () => {
                 {groundOutcomes.map(o => (
                   <tr key={o.id} className={`border-b border-border ${o._dirty ? "bg-primary/5" : ""}`}>
                     <td className="px-1 py-1">
-                      <Input className="h-8 w-24 text-xs" type="number" value={o.min_force} onChange={e => updateGroundOutcome(o.id, "min_force", parseInt(e.target.value) || 0)} />
+                      <Input className="h-8 w-28 text-xs" type="number" step="0.01" value={o.probability} onChange={e => updateGroundOutcome(o.id, "probability", parseFloat(e.target.value) || 0)} />
                     </td>
                     <td className="px-1 py-1">
-                      <Input className="h-8 w-24 text-xs" type="number" value={o.max_force} onChange={e => updateGroundOutcome(o.id, "max_force", parseInt(e.target.value) || 0)} />
-                    </td>
-                    <td className="px-1 py-1">
-                      <Input className="h-8 w-28 text-xs" type="number" value={o.casualties_inflicted} onChange={e => updateGroundOutcome(o.id, "casualties_inflicted", parseInt(e.target.value) || 0)} />
+                      <Input className="h-8 w-28 text-xs" type="number" step="0.1" value={o.damage} onChange={e => updateGroundOutcome(o.id, "damage", parseFloat(e.target.value) || 0)} />
                     </td>
                     <td className="px-1 py-1">
                       <Input className="h-8 text-xs" value={o.description} onChange={e => updateGroundOutcome(o.id, "description", e.target.value)} />
