@@ -84,6 +84,7 @@ const AdminBattleConfig = () => {
   const [groupMods, setGroupMods] = useState<GroupMod[]>([]);
   const [constants, setConstants] = useState<CombatConst[]>([]);
   const [weaponPrefs, setWeaponPrefs] = useState<WeaponTargetPref[]>([]);
+  const [groundOutcomes, setGroundOutcomes] = useState<GroundCombatOutcome[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
