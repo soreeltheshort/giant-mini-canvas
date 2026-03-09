@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, Save, Upload } from "lucide-react";
+import { Plus, Trash2, Save, Upload, Download } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -379,6 +379,42 @@ const AdminShips = () => {
     [ships, filterClass]
   );
 
+  const downloadCSV = () => {
+    const CSV_COLUMNS: (keyof ShipType)[] = [
+      "ship_id", "name", "class", "hull_class", "hull", "armor", "point_cost", "maintenance",
+      "cbt_speed", "map_speed", "sensor_rating", "target_preference",
+      "laser_2_5cm", "laser_4_5cm", "laser_6_5cm", "laser_10cm", "laser_14cm", "laser_20cm", "laser_28cm", "laser_50cm",
+      "missile_10kg", "missile_50kg", "missile_100kg", "missile_half_kt",
+      "fighter_bay", "fighter_storage", "gun_ship_link", "gunship_storage",
+      "scout_sensors", "supply_pod", "repair_pod", "ground_invasion",
+      "virtual_atk_speed_attack", "virtual_atk_speed_core", "virtual_atk_speed_rear", "virtual_atk_speed_retreat",
+      "virtual_atk_speed_attack_planet", "virtual_atk_speed_outflank", "virtual_atk_speed_skirmish", "virtual_atk_speed_cover_retreat", "virtual_atk_speed_flank",
+      "virtual_def_speed_attack", "virtual_def_speed_core", "virtual_def_speed_rear", "virtual_def_speed_retreat",
+      "virtual_def_speed_attack_planet", "virtual_def_speed_outflank", "virtual_def_speed_skirmish", "virtual_def_speed_cover_retreat", "virtual_def_speed_flank",
+      "flavor_description",
+    ];
+    // Category row matching upload format
+    const catRow = CSV_COLUMNS.map(c => {
+      if (c.startsWith("virtual_atk_speed_")) return "Virtual Attack Speed";
+      if (c.startsWith("virtual_def_speed_")) return "Virtual Defense Speed";
+      return "";
+    });
+    const escapeCSV = (val: unknown) => {
+      const s = String(val ?? "");
+      return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const headerRow = CSV_COLUMNS.map(c => escapeCSV(c));
+    const dataRows = ships.map(ship => CSV_COLUMNS.map(c => escapeCSV(ship[c])));
+    const csv = [catRow.join(","), headerRow.join(","), ...dataRows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ship_catalog.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) return <div className="min-h-screen bg-background"><Header /><div className="container py-20 text-center text-muted-foreground">Loading...</div><Footer /></div>;
 
   return (
@@ -388,6 +424,9 @@ const AdminShips = () => {
         <div className="flex items-center justify-between mb-4">
           <h1 className="font-heading text-2xl font-bold text-foreground">Ship Catalog (Admin)</h1>
           <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={downloadCSV}>
+              <Download className="mr-1 h-4 w-4" /> Download CSV
+            </Button>
             <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileSelect} />
             <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
               <Upload className="mr-1 h-4 w-4" /> Upload CSV
