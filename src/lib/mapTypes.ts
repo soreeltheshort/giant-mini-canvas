@@ -81,6 +81,8 @@ export interface SystemFacility {
   quantity: number;
 }
 
+export type SystemType = "system" | "station";
+
 export interface SystemData {
   system_id: number;
   map_id: number;
@@ -89,7 +91,19 @@ export interface SystemData {
   classification: string;
   importance_rank: number;
   owner: string;
+  system_type: SystemType;
+  max_population: number;
+  current_population: number;
+  survey: number;
+  tribute: number;
+  upkeep: number;
+  resources: number;
   facilities: SystemFacility[];
+  condition: number;
+  morale: number;
+  max_ground_defenses: number;
+  current_ground_defenses: number;
+  planet_index: number;
 }
 
 export interface ProvinceRegion {
