@@ -217,6 +217,8 @@ const Battle = () => {
           <div>
             <label className="text-xs text-muted-foreground">Seed (optional)</label>
             <Input className="mt-1" placeholder="Random if empty" value={seed} onChange={e => setSeed(e.target.value)} />
+            <label className="mt-2 block text-xs text-muted-foreground">Planet Ground Defense</label>
+            <Input className="mt-1" type="number" min={0} placeholder="0" value={groundDefense} onChange={e => setGroundDefense(Number(e.target.value) || 0)} />
           </div>
         </div>
 
