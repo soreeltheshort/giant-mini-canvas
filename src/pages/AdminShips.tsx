@@ -242,6 +242,12 @@ const AdminShips = () => {
           row[mapped] = val;
         }
       });
+      // Derive class from ship_id prefix if not present
+      if (!row.class && row.ship_id) {
+        const sid = row.ship_id as string;
+        const match = sid.match(/^([A-Za-z]+)/);
+        if (match) row.class = match[1].toUpperCase();
+      }
       // Derive hull_class from class if not present
       if (!row.hull_class && row.class) {
         const cls = row.class as string;
