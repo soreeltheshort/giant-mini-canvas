@@ -3,9 +3,6 @@ import HexMapCanvas from "./HexMapCanvas";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
 import PlanetsPanel from "./PlanetsPanel";
-import LeftPanel from "./LeftPanel";
-import RightPanel from "./RightPanel";
-import PlanetsPanel from "./PlanetsPanel";
 import {
   MapState,
   EditorState,
