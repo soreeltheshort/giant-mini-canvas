@@ -309,30 +309,27 @@ export type Database = {
       }
       ground_combat_outcomes: {
         Row: {
-          casualties_inflicted: number
           created_at: string
+          damage: number
           description: string
           id: string
-          max_force: number
-          min_force: number
+          probability: number
           updated_at: string
         }
         Insert: {
-          casualties_inflicted?: number
           created_at?: string
+          damage?: number
           description?: string
           id?: string
-          max_force?: number
-          min_force?: number
+          probability?: number
           updated_at?: string
         }
         Update: {
-          casualties_inflicted?: number
           created_at?: string
+          damage?: number
           description?: string
           id?: string
-          max_force?: number
-          min_force?: number
+          probability?: number
           updated_at?: string
         }
         Relationships: []

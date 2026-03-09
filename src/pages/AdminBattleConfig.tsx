@@ -51,9 +51,8 @@ interface WeaponTargetPref {
 
 interface GroundCombatOutcome {
   id: string;
-  min_force: number;
-  max_force: number;
-  casualties_inflicted: number;
+  probability: number;
+  damage: number;
   description: string;
   _dirty?: boolean;
   _new?: boolean;
@@ -99,13 +98,13 @@ const AdminBattleConfig = () => {
       supabase.from("group_modifiers").select("*").order("group_name"),
       supabase.from("combat_constants").select("*").order("key"),
       supabase.from("weapon_target_preferences").select("*").order("weapon_key").order("priority"),
-      supabase.from("ground_combat_outcomes").select("*").order("min_force"),
+      supabase.from("ground_combat_outcomes").select("*").order("probability"),
     ]);
     if (p) setPhases(p.map(r => ({ ...r, mod_a: Number(r.mod_a), mod_b: Number(r.mod_b) })));
     if (g) setGroupMods(g.map(r => ({ ...r, attack_mod: Number(r.attack_mod), defense_mod: Number(r.defense_mod) })));
     if (c) setConstants(c.map(r => ({ ...r, value: Number(r.value) })));
     if (w) setWeaponPrefs(w);
-    if (go) setGroundOutcomes(go);
+    if (go) setGroundOutcomes(go.map(r => ({ ...r, probability: Number(r.probability), damage: Number(r.damage) })));
   };
 
   // --- Phase helpers ---
@@ -208,7 +207,7 @@ const AdminBattleConfig = () => {
 
   const addGroundOutcome = () => {
     setGroundOutcomes(prev => [...prev, {
-      id: crypto.randomUUID(), min_force: 0, max_force: 0, casualties_inflicted: 0, description: "",
+      id: crypto.randomUUID(), probability: 0, damage: 0, description: "",
       _dirty: true, _new: true,
     }]);
   };
@@ -259,7 +258,7 @@ const AdminBattleConfig = () => {
     }
 
     for (const o of groundOutcomes.filter(o => o._dirty)) {
-      const payload = { id: o.id, min_force: o.min_force, max_force: o.max_force, casualties_inflicted: o.casualties_inflicted, description: o.description };
+      const payload = { id: o.id, probability: o.probability, damage: o.damage, description: o.description };
       const { error } = o._new
         ? await supabase.from("ground_combat_outcomes").insert(payload)
         : await supabase.from("ground_combat_outcomes").update(payload).eq("id", o.id);
@@ -493,17 +492,16 @@ const AdminBattleConfig = () => {
         {/* GROUND COMBAT OUTCOMES */}
         <div className="mt-10">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Ground Combat Outcomes (casualties by force size)</h2>
+            <h2 className="font-heading text-lg font-semibold text-foreground">Ground Combat Outcomes (per unit)</h2>
             <Button size="sm" variant="outline" onClick={addGroundOutcome}><Plus className="mr-1 h-4 w-4" /> Add Outcome</Button>
           </div>
-          <p className="text-xs text-muted-foreground mb-3">Define how many casualties a ground force inflicts based on its size. In phases with "System Defenses", a ground combat sub-phase runs after ship combat. Each side looks up their force size in this table to determine casualties inflicted on the opponent.</p>
+          <p className="text-xs text-muted-foreground mb-3">Each ground unit rolls against this table per phase. Probabilities should sum to ≤1.0 (remainder = miss/no damage). Example: 0.5 probability / 0.1 damage = 50% chance each unit deals 0.1 damage.</p>
           <div className="overflow-x-auto border border-border rounded">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">Min Force</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">Max Force</th>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Casualties Inflicted</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Probability</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Damage</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Description</th>
                   <th className="px-3 py-2 w-10"></th>
                 </tr>
@@ -512,13 +510,10 @@ const AdminBattleConfig = () => {
                 {groundOutcomes.map(o => (
                   <tr key={o.id} className={`border-b border-border ${o._dirty ? "bg-primary/5" : ""}`}>
                     <td className="px-1 py-1">
-                      <Input className="h-8 w-24 text-xs" type="number" value={o.min_force} onChange={e => updateGroundOutcome(o.id, "min_force", parseInt(e.target.value) || 0)} />
+                      <Input className="h-8 w-28 text-xs" type="number" step="0.01" value={o.probability} onChange={e => updateGroundOutcome(o.id, "probability", parseFloat(e.target.value) || 0)} />
                     </td>
                     <td className="px-1 py-1">
-                      <Input className="h-8 w-24 text-xs" type="number" value={o.max_force} onChange={e => updateGroundOutcome(o.id, "max_force", parseInt(e.target.value) || 0)} />
-                    </td>
-                    <td className="px-1 py-1">
-                      <Input className="h-8 w-28 text-xs" type="number" value={o.casualties_inflicted} onChange={e => updateGroundOutcome(o.id, "casualties_inflicted", parseInt(e.target.value) || 0)} />
+                      <Input className="h-8 w-28 text-xs" type="number" step="0.1" value={o.damage} onChange={e => updateGroundOutcome(o.id, "damage", parseFloat(e.target.value) || 0)} />
                     </td>
                     <td className="px-1 py-1">
                       <Input className="h-8 text-xs" value={o.description} onChange={e => updateGroundOutcome(o.id, "description", e.target.value)} />

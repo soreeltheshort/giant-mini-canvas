@@ -104,7 +104,7 @@ const Battle = () => {
       supabase.from("group_modifiers").select("*"),
       supabase.from("combat_constants").select("*"),
       supabase.from("weapon_target_preferences").select("*").order("priority"),
-      supabase.from("ground_combat_outcomes").select("*").order("min_force"),
+      supabase.from("ground_combat_outcomes").select("*").order("probability"),
     ]);
     const phases: PhaseConfig[] | undefined = phasesData?.map(p => ({
       name: p.name, groupsA: p.groups_a, groupsB: p.groups_b, modA: Number(p.mod_a), modB: Number(p.mod_b), requiredGroup: p.required_group ?? null,
@@ -120,7 +120,7 @@ const Battle = () => {
       weapon_key: w.weapon_key, hull_class: w.hull_class, priority: w.priority,
     }));
     const groundOutcomes: GroundCombatOutcome[] | undefined = groundOutcomesData?.map(o => ({
-      min_force: o.min_force, max_force: o.max_force, casualties_inflicted: o.casualties_inflicted,
+      probability: Number(o.probability), damage: Number(o.damage),
     }));
 
     const usedSeed = seed || Math.random().toString(36).substring(2, 10);
