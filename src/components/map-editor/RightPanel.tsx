@@ -12,11 +12,13 @@ import {
   CLASSIFICATION_LABELS,
   CLASSIFICATION_COLORS,
 } from "@/lib/mapTypes";
+import { DbFaction } from "@/hooks/useFactions";
 
 interface Props {
   hex: HexData | null;
   system: SystemData | undefined;
   facilityTypes: FacilityType[];
+  factions: DbFaction[];
   onClassificationChange: (hexId: number, c: HexClassification) => void;
   onAddSystem: (hexId: number, name: string, rank: number) => void;
   onUpdateSystem: (hexId: number, updates: Partial<Omit<SystemData, "system_id" | "map_id" | "hex_id">>) => void;
@@ -28,6 +30,7 @@ const RightPanel: React.FC<Props> = ({
   hex,
   system,
   facilityTypes,
+  factions,
   onClassificationChange,
   onAddSystem,
   onUpdateSystem,
