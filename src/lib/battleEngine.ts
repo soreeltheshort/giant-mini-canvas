@@ -259,9 +259,8 @@ export interface WeaponTargetPref {
 }
 
 export interface GroundCombatOutcome {
-  min_force: number;
-  max_force: number;
-  casualties_inflicted: number;
+  probability: number;
+  damage: number;
 }
 
 export interface CombatConstants {
