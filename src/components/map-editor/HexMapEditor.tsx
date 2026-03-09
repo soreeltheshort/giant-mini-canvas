@@ -253,7 +253,7 @@ const HexMapEditor: React.FC = () => {
   );
 
   const handleUpdateSystem = useCallback(
-    (hexId: number, updates: Partial<Pick<SystemData, "system_name" | "importance_rank" | "owner" | "facilities">>) => {
+    (hexId: number, updates: Partial<Omit<SystemData, "system_id" | "map_id" | "hex_id">>) => {
       setMapState((prev) => {
         const newSystems = new Map(prev.systems);
         const existing = newSystems.get(hexId);
