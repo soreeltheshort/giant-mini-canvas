@@ -153,27 +153,48 @@ export type Database = {
       }
       facility_types: {
         Row: {
+          condition_bonus: number
+          cost: number
           created_at: string
           description: string
+          ground_defense_bonus: number
           icon: string
           id: string
+          maintenance: number
           name: string
+          survey_bonus: number
+          tribute_flat: number
+          tribute_percent: number
           updated_at: string
         }
         Insert: {
+          condition_bonus?: number
+          cost?: number
           created_at?: string
           description?: string
+          ground_defense_bonus?: number
           icon?: string
           id?: string
+          maintenance?: number
           name: string
+          survey_bonus?: number
+          tribute_flat?: number
+          tribute_percent?: number
           updated_at?: string
         }
         Update: {
+          condition_bonus?: number
+          cost?: number
           created_at?: string
           description?: string
+          ground_defense_bonus?: number
           icon?: string
           id?: string
+          maintenance?: number
           name?: string
+          survey_bonus?: number
+          tribute_flat?: number
+          tribute_percent?: number
           updated_at?: string
         }
         Relationships: []
