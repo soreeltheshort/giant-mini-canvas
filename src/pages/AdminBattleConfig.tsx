@@ -98,7 +98,7 @@ const AdminBattleConfig = () => {
       supabase.from("group_modifiers").select("*").order("group_name"),
       supabase.from("combat_constants").select("*").order("key"),
       supabase.from("weapon_target_preferences").select("*").order("weapon_key").order("priority"),
-      supabase.from("ground_combat_outcomes").select("*").order("min_force"),
+      supabase.from("ground_combat_outcomes").select("*").order("probability"),
     ]);
     if (p) setPhases(p.map(r => ({ ...r, mod_a: Number(r.mod_a), mod_b: Number(r.mod_b) })));
     if (g) setGroupMods(g.map(r => ({ ...r, attack_mod: Number(r.attack_mod), defense_mod: Number(r.defense_mod) })));
