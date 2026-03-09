@@ -201,6 +201,27 @@ const AdminBattleConfig = () => {
     toast({ title: "Deleted" });
   };
 
+  // --- Ground combat outcome helpers ---
+  const updateGroundOutcome = (id: string, field: keyof GroundCombatOutcome, value: any) => {
+    setGroundOutcomes(prev => prev.map(o => o.id === id ? { ...o, [field]: value, _dirty: true } : o));
+  };
+
+  const addGroundOutcome = () => {
+    setGroundOutcomes(prev => [...prev, {
+      id: crypto.randomUUID(), min_force: 0, max_force: 0, casualties_inflicted: 0, description: "",
+      _dirty: true, _new: true,
+    }]);
+  };
+
+  const deleteGroundOutcome = async (id: string, isNew?: boolean) => {
+    if (!isNew) {
+      const { error } = await supabase.from("ground_combat_outcomes").delete().eq("id", id);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    }
+    setGroundOutcomes(prev => prev.filter(o => o.id !== id));
+    toast({ title: "Deleted" });
+  };
+
   const saveAll = async () => {
     setSaving(true);
     let errors = 0;
