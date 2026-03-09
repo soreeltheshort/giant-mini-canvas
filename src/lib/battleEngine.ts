@@ -562,42 +562,95 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     }
 
     // Ground Combat Sub-Phase: runs after ship combat in phases where System Defenses is a group
+    // One round of simultaneous ground combat — all units attack, then deaths are applied
     const hasSystemDefenses = phase.groupsA.includes("System Defenses") || phase.groupsB.includes("System Defenses");
     if (hasSystemDefenses && activeGroundOutcomes.length > 0 && (currentGroundA > 0 || currentGroundB > 0)) {
-      // Per-unit probability roll: each unit rolls against the outcome table
-      function rollPerUnitDamage(unitCount: number): number {
-        let totalDamage = 0;
-        for (let i = 0; i < unitCount; i++) {
-          const roll = rng();
-          let cumulative = 0;
-          for (const o of activeGroundOutcomes) {
-            cumulative += o.probability;
-            if (roll < cumulative) {
-              totalDamage += o.damage;
-              break;
-            }
+      emit("ground_phase_start", {
+        phase: phase.name, groundA: currentGroundA, groundB: currentGroundB,
+      },
+        `Ground Combat begins in "${phase.name}": Fleet A has ${currentGroundA} ground units, Fleet B has ${currentGroundB} ground units.`,
+        `Ground combat sub-phase in "${phase.name}". A ground=${currentGroundA}, B ground=${currentGroundB} (includes planet defense).`
+      );
+
+      // Each unit rolls independently — all attacks are simultaneous
+      // We track per-unit rolls for detailed logging
+      let totalDamageFromA = 0;
+      const unitRollsA: { unit: number; roll: number; damage: number }[] = [];
+      for (let i = 0; i < Math.floor(currentGroundA); i++) {
+        const roll = rng();
+        let cumulative = 0;
+        let dmg = 0;
+        for (const o of activeGroundOutcomes) {
+          cumulative += o.probability;
+          if (roll < cumulative) {
+            dmg = o.damage;
+            break;
           }
         }
-        return totalDamage;
+        totalDamageFromA += dmg;
+        unitRollsA.push({ unit: i + 1, roll: Math.round(roll * 1000) / 1000, damage: dmg });
       }
 
-      const damageFromA = rollPerUnitDamage(currentGroundA);
-      const damageFromB = rollPerUnitDamage(currentGroundB);
+      let totalDamageFromB = 0;
+      const unitRollsB: { unit: number; roll: number; damage: number }[] = [];
+      for (let i = 0; i < Math.floor(currentGroundB); i++) {
+        const roll = rng();
+        let cumulative = 0;
+        let dmg = 0;
+        for (const o of activeGroundOutcomes) {
+          cumulative += o.probability;
+          if (roll < cumulative) {
+            dmg = o.damage;
+            break;
+          }
+        }
+        totalDamageFromB += dmg;
+        unitRollsB.push({ unit: i + 1, roll: Math.round(roll * 1000) / 1000, damage: dmg });
+      }
 
+      // Simultaneous application — deaths counted only after all attacks resolve
       const prevGroundA = currentGroundA;
       const prevGroundB = currentGroundB;
-      currentGroundA = Math.max(0, currentGroundA - damageFromB);
-      currentGroundB = Math.max(0, currentGroundB - damageFromA);
+      currentGroundA = Math.max(0, currentGroundA - totalDamageFromB);
+      currentGroundB = Math.max(0, currentGroundB - totalDamageFromA);
+
+      const killsA = Math.floor(prevGroundB) - Math.floor(currentGroundB);
+      const killsB = Math.floor(prevGroundA) - Math.floor(currentGroundA);
+
+      // Summarize roll distribution for admin log
+      const summarizeRolls = (rolls: { unit: number; roll: number; damage: number }[]) => {
+        const dmgCounts: Record<number, number> = {};
+        for (const r of rolls) {
+          dmgCounts[r.damage] = (dmgCounts[r.damage] || 0) + 1;
+        }
+        return Object.entries(dmgCounts).map(([d, c]) => `${c}×${Number(d).toFixed(1)}dmg`).join(", ");
+      };
 
       emit("ground_combat", {
         phase: phase.name,
         groundA_before: prevGroundA, groundB_before: prevGroundB,
-        damageFromA, damageFromB,
+        totalDamageFromA, totalDamageFromB,
+        killsFromA: killsA > 0 ? killsA : 0, killsFromB: killsB > 0 ? killsB : 0,
         groundA_after: currentGroundA, groundB_after: currentGroundB,
+        unitRollsA, unitRollsB,
       },
-        `Ground Combat: Fleet A (${prevGroundA} units) inflicts ${damageFromA.toFixed(1)} damage → Fleet B ground: ${currentGroundB.toFixed(1)}. Fleet B (${prevGroundB} units) inflicts ${damageFromB.toFixed(1)} damage → Fleet A ground: ${currentGroundA.toFixed(1)}.`,
-        `Ground sub-phase in "${phase.name}". A units=${prevGroundA} → per-unit rolls total damage=${damageFromA.toFixed(1)} on B. B units=${prevGroundB} → per-unit rolls total damage=${damageFromB.toFixed(1)} on A. After: A=${currentGroundA.toFixed(1)}, B=${currentGroundB.toFixed(1)}.`
+        `Ground Combat: Fleet A (${Math.floor(prevGroundA)} units) attacks → ${totalDamageFromA.toFixed(1)} total damage, ${killsA > 0 ? killsA : 0} kills. Fleet B (${Math.floor(prevGroundB)} units) attacks → ${totalDamageFromB.toFixed(1)} total damage, ${killsB > 0 ? killsB : 0} kills. Remaining: A=${currentGroundA.toFixed(1)}, B=${currentGroundB.toFixed(1)}.`,
+        `Ground sub-phase (simultaneous). A: ${Math.floor(prevGroundA)} units roll [${summarizeRolls(unitRollsA)}] = ${totalDamageFromA.toFixed(1)} total dmg on B. B: ${Math.floor(prevGroundB)} units roll [${summarizeRolls(unitRollsB)}] = ${totalDamageFromB.toFixed(1)} total dmg on A. After: A=${currentGroundA.toFixed(1)}, B=${currentGroundB.toFixed(1)}.`
       );
+
+      if (currentGroundA <= 0 && currentGroundB <= 0) {
+        emit("ground_combat_end", { result: "mutual_destruction" },
+          `Ground Combat: Both sides wiped out!`,
+          `Ground combat ended in mutual destruction.`);
+      } else if (currentGroundA <= 0) {
+        emit("ground_combat_end", { result: "B_wins", remaining: currentGroundB },
+          `Ground Combat: Fleet B's ground forces win with ${currentGroundB.toFixed(1)} units remaining.`,
+          `Ground combat: Side B wins. Remaining=${currentGroundB.toFixed(1)}.`);
+      } else if (currentGroundB <= 0) {
+        emit("ground_combat_end", { result: "A_wins", remaining: currentGroundA },
+          `Ground Combat: Fleet A's ground forces win with ${currentGroundA.toFixed(1)} units remaining.`,
+          `Ground combat: Side A wins. Remaining=${currentGroundA.toFixed(1)}.`);
+      }
     }
   }
 
