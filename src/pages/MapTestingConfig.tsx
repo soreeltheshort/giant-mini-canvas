@@ -139,19 +139,7 @@ const MapTestingConfig = () => {
               ))}
             </div>
           )}
-          {isAdmin && (
-            <div className="border border-border rounded-md p-4 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Add New Facility Type</p>
-              <div className="flex gap-2">
-                <Input value={newIcon} onChange={(e) => setNewIcon(e.target.value)} className="h-9 w-14 text-center" placeholder="🏭" />
-                <Input value={newName} onChange={(e) => setNewName(e.target.value)} className="h-9 flex-1" placeholder="Facility name" />
-              </div>
-              <Input value={newDesc} onChange={(e) => setNewDesc(e.target.value)} className="h-9" placeholder="Description (optional)" />
-              <Button size="sm" disabled={!newName.trim()} onClick={async () => { await addFacilityType(newName.trim(), newDesc.trim(), newIcon || "🏭"); setNewName(""); setNewDesc(""); setNewIcon("🏭"); }}>
-                Add Facility Type
-              </Button>
-            </div>
-          )}
+          {isAdmin && <AddFacilityForm onAdd={addFacilityType} />}
         </ConfigSection>
 
         {/* ── Random System Generation ── */}
