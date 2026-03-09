@@ -36,8 +36,8 @@ export function useFacilityTypes() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const addFacilityType = useCallback(async (name: string, description: string, icon: string) => {
-    const { error } = await supabase.from("facility_types").insert({ name, description, icon });
+  const addFacilityType = useCallback(async (fields: Omit<DbFacilityType, "id">) => {
+    const { error } = await supabase.from("facility_types").insert(fields as any);
     if (error) {
       toast({ title: "Failed to add", description: error.message, variant: "destructive" });
     } else {
@@ -45,8 +45,8 @@ export function useFacilityTypes() {
     }
   }, [fetchAll, toast]);
 
-  const updateFacilityType = useCallback(async (id: string, updates: Partial<Pick<DbFacilityType, "name" | "description" | "icon">>) => {
-    const { error } = await supabase.from("facility_types").update(updates).eq("id", id);
+  const updateFacilityType = useCallback(async (id: string, updates: Partial<Omit<DbFacilityType, "id">>) => {
+    const { error } = await supabase.from("facility_types").update(updates as any).eq("id", id);
     if (error) {
       toast({ title: "Failed to update", description: error.message, variant: "destructive" });
     } else {
