@@ -126,9 +126,11 @@ const Battle = () => {
     const usedSeed = seed || Math.random().toString(36).substring(2, 10);
     if (!seed) setSeed(usedSeed);
 
-    // Calculate ground units from fleet ship data
+    // Calculate ground units only from ships in "Attack Planet" tactical group
     const calcGroundUnits = (snap: FleetSnapshot) => {
-      return snap.ships.reduce((sum, s) => sum + (s.ship_type.ground_invasion || 0) * s.quantity, 0);
+      return snap.ships
+        .filter(s => s.tactical_group === "Attack Planet")
+        .reduce((sum, s) => sum + (s.ship_type.ground_invasion || 0) * s.quantity, 0);
     };
     const groundUnitsA = calcGroundUnits(snapA);
     const groundUnitsB = calcGroundUnits(snapB);
