@@ -318,6 +318,9 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
   const activeMods = groupModifiers && groupModifiers.length > 0 ? groupModifiers : DEFAULT_GROUP_MODS;
   const cc = combatConsts ?? DEFAULT_COMBAT_CONSTANTS;
   const weaponPrefs = weaponTargetPrefs ?? [];
+  const activeGroundOutcomes = groundOutcomes ?? [];
+  let currentGroundA = groundUnitsA;
+  let currentGroundB = groundUnitsB + groundDefense;
   const admiralBonusA = (admiralRatingA - 4) * 0.05;
   const admiralBonusB = (admiralRatingB - 4) * 0.05;
   const readinessA = fleetA.readiness ?? 2;
