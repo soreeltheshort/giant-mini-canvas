@@ -103,6 +103,7 @@ const FleetBuilder = () => {
     special1Role,
     ...(special2Role !== special1Role ? [special2Role] : []),
     ...TAIL_GROUPS,
+    ...FIXED_TAIL,
   ], [special1Role, special2Role]);
 
   const GROUP_LABELS: Record<string, string> = {
