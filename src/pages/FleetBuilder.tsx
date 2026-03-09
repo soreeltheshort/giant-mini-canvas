@@ -58,6 +58,7 @@ const SPECIAL_ROLES = ["Flank", "Outflank", "Attack Planet", "Cover Retreat", "S
 
 const BASE_GROUPS = ["Core", "Attack"];
 const TAIL_GROUPS = ["Rear", "Retreat"];
+const FIXED_TAIL = ["System Defenses"];
 const STANDING_ORDERS = ["move", "attack", "defend"] as const;
 type StandingOrder = typeof STANDING_ORDERS[number];
 const ORDER_LABELS: Record<StandingOrder, string> = { move: "Move", attack: "Attack", defend: "Defend" };
@@ -102,6 +103,7 @@ const FleetBuilder = () => {
     special1Role,
     ...(special2Role !== special1Role ? [special2Role] : []),
     ...TAIL_GROUPS,
+    ...FIXED_TAIL,
   ], [special1Role, special2Role]);
 
   const GROUP_LABELS: Record<string, string> = {
