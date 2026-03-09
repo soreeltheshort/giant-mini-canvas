@@ -1,0 +1,1 @@
+ALTER TABLE public.ship_types ADD CONSTRAINT ship_types_ship_id_unique UNIQUE (ship_id);
