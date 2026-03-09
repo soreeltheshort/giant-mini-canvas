@@ -96,6 +96,7 @@ const FleetBuilder = () => {
   const [expandedHull, setExpandedHull] = useState<string | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
+  const [remainingGroundUnits, setRemainingGroundUnits] = useState<number | null>(null);
 
   // Build dynamic GROUPS list: Core, Attack, [role1], [role2], Rear, Retreat
   const GROUPS = useMemo(() => [
