@@ -72,8 +72,8 @@ const PlanetsPanel: React.FC<Props> = ({ systems, hexes, facilityTypes, onSelect
                   <span className="text-xs font-medium text-foreground truncate">
                     {sys.system_name}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    Rank {sys.importance_rank}
+                  <span className="text-[10px] px-1 rounded bg-accent text-accent-foreground capitalize">
+                    {sys.system_type || "system"}
                   </span>
                 </div>
 
@@ -88,6 +88,9 @@ const PlanetsPanel: React.FC<Props> = ({ systems, hexes, facilityTypes, onSelect
                   {sys.hex && (
                     <span>({sys.hex.x}, {sys.hex.y})</span>
                   )}
+                  {sys.planet_index > 0 && (
+                    <span>P#{sys.planet_index}</span>
+                  )}
                 </div>
 
                 {sys.owner && (
@@ -95,6 +98,13 @@ const PlanetsPanel: React.FC<Props> = ({ systems, hexes, facilityTypes, onSelect
                     Owner: <span className="text-foreground">{sys.owner}</span>
                   </div>
                 )}
+
+                <div className="flex flex-wrap gap-x-3 gap-y-0 text-[10px] text-muted-foreground mt-0.5">
+                  {sys.current_population > 0 && <span>Pop: {sys.current_population}/{sys.max_population}</span>}
+                  {sys.resources > 0 && <span>Res: {sys.resources}</span>}
+                  {sys.morale > 0 && <span>Mor: {sys.morale}</span>}
+                  {sys.condition > 0 && <span>Cond: {sys.condition}</span>}
+                </div>
 
                 {sys.facilities && sys.facilities.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">

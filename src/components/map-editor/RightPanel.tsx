@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import {
   HexData,
   SystemData,
+  SystemType,
   FacilityType,
   SystemFacility,
   HexClassification,
@@ -18,7 +19,7 @@ interface Props {
   facilityTypes: FacilityType[];
   onClassificationChange: (hexId: number, c: HexClassification) => void;
   onAddSystem: (hexId: number, name: string, rank: number) => void;
-  onUpdateSystem: (hexId: number, updates: Partial<Pick<SystemData, "system_name" | "importance_rank" | "owner" | "facilities">>) => void;
+  onUpdateSystem: (hexId: number, updates: Partial<Omit<SystemData, "system_id" | "map_id" | "hex_id">>) => void;
   onRemoveSystem: (hexId: number) => void;
   onSearchCoords: (x: number, y: number) => void;
 }
@@ -36,6 +37,19 @@ const RightPanel: React.FC<Props> = ({
   const [sysName, setSysName] = useState("");
   const [sysRank, setSysRank] = useState(1);
   const [sysOwner, setSysOwner] = useState("");
+  const [sysType, setSysType] = useState<SystemType>("system");
+  const [maxPop, setMaxPop] = useState(0);
+  const [curPop, setCurPop] = useState(0);
+  const [survey, setSurvey] = useState(0);
+  const [tribute, setTribute] = useState(0);
+  const [upkeep, setUpkeep] = useState(0);
+  const [resources, setResources] = useState(0);
+  const [condition, setCondition] = useState(0);
+  const [morale, setMorale] = useState(0);
+  const [maxGD, setMaxGD] = useState(0);
+  const [curGD, setCurGD] = useState(0);
+  const [planetIndex, setPlanetIndex] = useState(0);
+
   const [searchX, setSearchX] = useState("");
   const [searchY, setSearchY] = useState("");
 
@@ -44,10 +58,34 @@ const RightPanel: React.FC<Props> = ({
       setSysName(system.system_name);
       setSysRank(system.importance_rank);
       setSysOwner(system.owner || "");
+      setSysType(system.system_type || "system");
+      setMaxPop(system.max_population || 0);
+      setCurPop(system.current_population || 0);
+      setSurvey(system.survey || 0);
+      setTribute(system.tribute || 0);
+      setUpkeep(system.upkeep || 0);
+      setResources(system.resources || 0);
+      setCondition(system.condition || 0);
+      setMorale(system.morale || 0);
+      setMaxGD(system.max_ground_defenses || 0);
+      setCurGD(system.current_ground_defenses || 0);
+      setPlanetIndex(system.planet_index || 0);
     } else {
       setSysName("");
       setSysRank(1);
       setSysOwner("");
+      setSysType("system");
+      setMaxPop(0);
+      setCurPop(0);
+      setSurvey(0);
+      setTribute(0);
+      setUpkeep(0);
+      setResources(0);
+      setCondition(0);
+      setMorale(0);
+      setMaxGD(0);
+      setCurGD(0);
+      setPlanetIndex(0);
     }
   }, [system, hex?.hex_id]);
 
@@ -57,6 +95,18 @@ const RightPanel: React.FC<Props> = ({
       system_name: sysName,
       importance_rank: sysRank,
       owner: sysOwner,
+      system_type: sysType,
+      max_population: maxPop,
+      current_population: curPop,
+      survey,
+      tribute,
+      upkeep,
+      resources,
+      condition,
+      morale,
+      max_ground_defenses: maxGD,
+      current_ground_defenses: curGD,
+      planet_index: planetIndex,
     });
   };
 
@@ -162,8 +212,45 @@ const RightPanel: React.FC<Props> = ({
             {hex.has_system && system ? (
               <div className="space-y-2">
                 <Input value={sysName} onChange={(e) => setSysName(e.target.value)} placeholder="System name" className="h-8 text-xs" />
-                <Input type="number" value={sysRank} onChange={(e) => setSysRank(parseInt(e.target.value) || 1)} placeholder="Importance rank" className="h-8 text-xs" />
-                <Input value={sysOwner} onChange={(e) => setSysOwner(e.target.value)} placeholder="Owner (faction/player)" className="h-8 text-xs" />
+
+                {/* Type selector */}
+                <div className="flex gap-1">
+                  {(["system", "station"] as SystemType[]).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setSysType(t)}
+                      className={`flex-1 rounded px-2 py-1 text-xs capitalize transition-colors ${
+                        sysType === t ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground hover:text-foreground border border-border"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+
+                <Input value={sysOwner} onChange={(e) => setSysOwner(e.target.value)} placeholder="Owner (faction)" className="h-8 text-xs" />
+
+                {/* Numeric fields in a compact grid */}
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                  <IntField label="Importance" value={sysRank} onChange={setSysRank} />
+                  <IntField label="Planet Index" value={planetIndex} onChange={setPlanetIndex} />
+                  <IntField label="Max Population" value={maxPop} onChange={setMaxPop} />
+                  <IntField label="Cur Population" value={curPop} onChange={setCurPop} />
+                  <IntField label="Survey" value={survey} onChange={setSurvey} />
+                  <IntField label="Tribute" value={tribute} onChange={setTribute} />
+                  <IntField label="Upkeep" value={upkeep} onChange={setUpkeep} />
+                  <FloatField label="Resources" value={resources} onChange={setResources} />
+                  <IntField label="Condition" value={condition} onChange={setCondition} />
+                  <IntField label="Morale" value={morale} onChange={setMorale} />
+                  <IntField label="Max Ground Def" value={maxGD} onChange={setMaxGD} />
+                  <IntField label="Cur Ground Def" value={curGD} onChange={setCurGD} />
+                </div>
+
+                {/* Location (read-only) */}
+                <div className="text-[10px] text-muted-foreground">
+                  Location: ({hex.x}, {hex.y})
+                </div>
+
                 <div className="flex gap-1">
                   <Button size="sm" variant="outline" className="text-xs" onClick={handleSave}>
                     Save
@@ -221,5 +308,34 @@ const RightPanel: React.FC<Props> = ({
     </div>
   );
 };
+
+function IntField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div>
+      <label className="text-[10px] text-muted-foreground">{label}</label>
+      <Input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+        className="h-7 text-xs"
+      />
+    </div>
+  );
+}
+
+function FloatField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div>
+      <label className="text-[10px] text-muted-foreground">{label}</label>
+      <Input
+        type="number"
+        step="0.1"
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        className="h-7 text-xs"
+      />
+    </div>
+  );
+}
 
 export default RightPanel;
