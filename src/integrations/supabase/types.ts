@@ -178,6 +178,30 @@ export type Database = {
         }
         Relationships: []
       }
+      factions: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       fleet_ships: {
         Row: {
           fleet_id: string
@@ -502,6 +526,33 @@ export type Database = {
           virtual_def_speed_rear?: number
           virtual_def_speed_retreat?: number
           virtual_def_speed_skirmish?: number
+        }
+        Relationships: []
+      }
+      system_actions: {
+        Row: {
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
