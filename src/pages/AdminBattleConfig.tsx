@@ -49,6 +49,16 @@ interface WeaponTargetPref {
   _new?: boolean;
 }
 
+interface GroundCombatOutcome {
+  id: string;
+  min_force: number;
+  max_force: number;
+  casualties_inflicted: number;
+  description: string;
+  _dirty?: boolean;
+  _new?: boolean;
+}
+
 const ALL_GROUPS = ["Core", "Attack", "Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish", "Rear", "Retreat", "System Defenses"];
 
 const ALL_HULL_CLASSES = ["FL", "FH", "GS", "DD", "CL", "CM", "CH", "BB", "T", "TT", "Titan"];
@@ -74,6 +84,7 @@ const AdminBattleConfig = () => {
   const [groupMods, setGroupMods] = useState<GroupMod[]>([]);
   const [constants, setConstants] = useState<CombatConst[]>([]);
   const [weaponPrefs, setWeaponPrefs] = useState<WeaponTargetPref[]>([]);
+  const [groundOutcomes, setGroundOutcomes] = useState<GroundCombatOutcome[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -83,16 +94,18 @@ const AdminBattleConfig = () => {
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
-    const [{ data: p }, { data: g }, { data: c }, { data: w }] = await Promise.all([
+    const [{ data: p }, { data: g }, { data: c }, { data: w }, { data: go }] = await Promise.all([
       supabase.from("battle_phases").select("*").order("seq_order"),
       supabase.from("group_modifiers").select("*").order("group_name"),
       supabase.from("combat_constants").select("*").order("key"),
       supabase.from("weapon_target_preferences").select("*").order("weapon_key").order("priority"),
+      supabase.from("ground_combat_outcomes").select("*").order("min_force"),
     ]);
     if (p) setPhases(p.map(r => ({ ...r, mod_a: Number(r.mod_a), mod_b: Number(r.mod_b) })));
     if (g) setGroupMods(g.map(r => ({ ...r, attack_mod: Number(r.attack_mod), defense_mod: Number(r.defense_mod) })));
     if (c) setConstants(c.map(r => ({ ...r, value: Number(r.value) })));
     if (w) setWeaponPrefs(w);
+    if (go) setGroundOutcomes(go);
   };
 
   // --- Phase helpers ---
@@ -188,6 +201,27 @@ const AdminBattleConfig = () => {
     toast({ title: "Deleted" });
   };
 
+  // --- Ground combat outcome helpers ---
+  const updateGroundOutcome = (id: string, field: keyof GroundCombatOutcome, value: any) => {
+    setGroundOutcomes(prev => prev.map(o => o.id === id ? { ...o, [field]: value, _dirty: true } : o));
+  };
+
+  const addGroundOutcome = () => {
+    setGroundOutcomes(prev => [...prev, {
+      id: crypto.randomUUID(), min_force: 0, max_force: 0, casualties_inflicted: 0, description: "",
+      _dirty: true, _new: true,
+    }]);
+  };
+
+  const deleteGroundOutcome = async (id: string, isNew?: boolean) => {
+    if (!isNew) {
+      const { error } = await supabase.from("ground_combat_outcomes").delete().eq("id", id);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    }
+    setGroundOutcomes(prev => prev.filter(o => o.id !== id));
+    toast({ title: "Deleted" });
+  };
+
   const saveAll = async () => {
     setSaving(true);
     let errors = 0;
@@ -224,6 +258,14 @@ const AdminBattleConfig = () => {
       if (error) { errors++; console.error(error); }
     }
 
+    for (const o of groundOutcomes.filter(o => o._dirty)) {
+      const payload = { id: o.id, min_force: o.min_force, max_force: o.max_force, casualties_inflicted: o.casualties_inflicted, description: o.description };
+      const { error } = o._new
+        ? await supabase.from("ground_combat_outcomes").insert(payload)
+        : await supabase.from("ground_combat_outcomes").update(payload).eq("id", o.id);
+      if (error) { errors++; console.error(error); }
+    }
+
     if (errors) toast({ title: "Some saves failed", description: `${errors} error(s)`, variant: "destructive" });
     else toast({ title: "Saved" });
 
@@ -231,7 +273,7 @@ const AdminBattleConfig = () => {
     setSaving(false);
   };
 
-  const hasDirty = phases.some(p => p._dirty) || groupMods.some(g => g._dirty) || constants.some(c => c._dirty) || weaponPrefs.some(w => w._dirty);
+  const hasDirty = phases.some(p => p._dirty) || groupMods.some(g => g._dirty) || constants.some(c => c._dirty) || weaponPrefs.some(w => w._dirty) || groundOutcomes.some(o => o._dirty);
 
   if (loading) return <div className="min-h-screen bg-background"><Header /><div className="container py-20 text-center text-muted-foreground">Loading...</div><Footer /></div>;
 
@@ -438,6 +480,51 @@ const AdminBattleConfig = () => {
                     </td>
                     <td className="px-1 py-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteWeaponPref(w.id, w._new)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* GROUND COMBAT OUTCOMES */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-heading text-lg font-semibold text-foreground">Ground Combat Outcomes (casualties by force size)</h2>
+            <Button size="sm" variant="outline" onClick={addGroundOutcome}><Plus className="mr-1 h-4 w-4" /> Add Outcome</Button>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">Define how many casualties a ground force inflicts based on its size. In phases with "System Defenses", a ground combat sub-phase runs after ship combat. Each side looks up their force size in this table to determine casualties inflicted on the opponent.</p>
+          <div className="overflow-x-auto border border-border rounded">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">Min Force</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">Max Force</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Casualties Inflicted</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Description</th>
+                  <th className="px-3 py-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {groundOutcomes.map(o => (
+                  <tr key={o.id} className={`border-b border-border ${o._dirty ? "bg-primary/5" : ""}`}>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 w-24 text-xs" type="number" value={o.min_force} onChange={e => updateGroundOutcome(o.id, "min_force", parseInt(e.target.value) || 0)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 w-24 text-xs" type="number" value={o.max_force} onChange={e => updateGroundOutcome(o.id, "max_force", parseInt(e.target.value) || 0)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 w-28 text-xs" type="number" value={o.casualties_inflicted} onChange={e => updateGroundOutcome(o.id, "casualties_inflicted", parseInt(e.target.value) || 0)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 text-xs" value={o.description} onChange={e => updateGroundOutcome(o.id, "description", e.target.value)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteGroundOutcome(o.id, o._new)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </td>

@@ -258,6 +258,12 @@ export interface WeaponTargetPref {
   priority: number;
 }
 
+export interface GroundCombatOutcome {
+  min_force: number;
+  max_force: number;
+  casualties_inflicted: number;
+}
+
 export interface CombatConstants {
   hit_chance_min: number;
   hit_chance_max: number;
@@ -307,11 +313,14 @@ function getGroupModifier(group: string, type: "attack" | "defense", modifiers: 
   return type === "attack" ? mod.attack_mod : mod.defense_mod;
 }
 
-export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants, weaponTargetPrefs?: WeaponTargetPref[], admiralRatingA: number = 4, admiralRatingB: number = 4): BattleResult {
+export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants, weaponTargetPrefs?: WeaponTargetPref[], admiralRatingA: number = 4, admiralRatingB: number = 4, groundOutcomes?: GroundCombatOutcome[], groundDefense: number = 0, groundUnitsA: number = 0, groundUnitsB: number = 0): BattleResult {
   const activePhases = phases && phases.length > 0 ? phases : DEFAULT_PHASES;
   const activeMods = groupModifiers && groupModifiers.length > 0 ? groupModifiers : DEFAULT_GROUP_MODS;
   const cc = combatConsts ?? DEFAULT_COMBAT_CONSTANTS;
   const weaponPrefs = weaponTargetPrefs ?? [];
+  const activeGroundOutcomes = groundOutcomes ?? [];
+  let currentGroundA = groundUnitsA;
+  let currentGroundB = groundUnitsB + groundDefense;
   const admiralBonusA = (admiralRatingA - 4) * 0.05;
   const admiralBonusB = (admiralRatingB - 4) * 0.05;
   const readinessA = fleetA.readiness ?? 2;
@@ -551,6 +560,37 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           ship.crippled = true;
         }
       }
+    }
+
+    // Ground Combat Sub-Phase: runs after ship combat in phases where System Defenses is a group
+    const hasSystemDefenses = phase.groupsA.includes("System Defenses") || phase.groupsB.includes("System Defenses");
+    if (hasSystemDefenses && activeGroundOutcomes.length > 0 && (currentGroundA > 0 || currentGroundB > 0)) {
+      function lookupCasualties(forceSize: number): number {
+        for (const o of activeGroundOutcomes) {
+          if (forceSize >= o.min_force && forceSize <= o.max_force) {
+            return o.casualties_inflicted;
+          }
+        }
+        return 0;
+      }
+
+      const casualtiesFromA = lookupCasualties(currentGroundA);
+      const casualtiesFromB = lookupCasualties(currentGroundB);
+
+      const prevGroundA = currentGroundA;
+      const prevGroundB = currentGroundB;
+      currentGroundA = Math.max(0, currentGroundA - casualtiesFromB);
+      currentGroundB = Math.max(0, currentGroundB - casualtiesFromA);
+
+      emit("ground_combat", {
+        phase: phase.name,
+        groundA_before: prevGroundA, groundB_before: prevGroundB,
+        casualtiesFromA, casualtiesFromB,
+        groundA_after: currentGroundA, groundB_after: currentGroundB,
+      },
+        `Ground Combat: Fleet A (${prevGroundA} units) inflicts ${casualtiesFromA} casualties → Fleet B ground: ${currentGroundB}. Fleet B (${prevGroundB} units) inflicts ${casualtiesFromB} casualties → Fleet A ground: ${currentGroundA}.`,
+        `Ground sub-phase in "${phase.name}". A force=${prevGroundA} → lookup casualties=${casualtiesFromA} on B. B force=${prevGroundB} → lookup casualties=${casualtiesFromB} on A. After: A=${currentGroundA}, B=${currentGroundB}.`
+      );
     }
   }
 
