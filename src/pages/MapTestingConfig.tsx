@@ -282,17 +282,41 @@ function ActionRow({ action, isAdmin, onUpdate, onRemove }: {
   );
 }
 
+/* ── Facility stat badges ── */
+const STAT_DEFS: { key: keyof DbFacilityType; label: string; prefix?: string; suffix?: string }[] = [
+  { key: "cost", label: "Cost" },
+  { key: "maintenance", label: "Maint" },
+  { key: "condition_bonus", label: "Condition", prefix: "+" },
+  { key: "tribute_flat", label: "Tribute", prefix: "+" },
+  { key: "tribute_percent", label: "Tribute %", prefix: "+", suffix: "%" },
+  { key: "survey_bonus", label: "Survey", prefix: "+" },
+  { key: "ground_defense_bonus", label: "Ground Def", prefix: "+" },
+];
+
+function StatBadges({ ft }: { ft: DbFacilityType }) {
+  const nonZero = STAT_DEFS.filter((s) => (ft[s.key] as number) !== 0);
+  if (nonZero.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {nonZero.map((s) => (
+        <span key={s.key} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
+          {s.label}: {s.prefix || ""}{ft[s.key] as number}{s.suffix || ""}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /* ── Facility Type row ── */
 function FacilityTypeRow({ ft, isAdmin, onUpdate, onRemove }: {
-  ft: { id: string; name: string; description: string; icon: string };
+  ft: DbFacilityType;
   isAdmin: boolean;
-  onUpdate: (id: string, updates: Partial<{ name: string; description: string; icon: string }>) => Promise<void>;
+  onUpdate: (id: string, updates: Partial<Omit<DbFacilityType, "id">>) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(ft.name);
-  const [desc, setDesc] = useState(ft.description);
-  const [icon, setIcon] = useState(ft.icon);
+  const [fields, setFields] = useState<Omit<DbFacilityType, "id">>({ ...ft });
+  const patch = (p: Partial<Omit<DbFacilityType, "id">>) => setFields((prev) => ({ ...prev, ...p }));
 
   if (!editing) {
     return (
@@ -300,7 +324,8 @@ function FacilityTypeRow({ ft, isAdmin, onUpdate, onRemove }: {
         <span className="text-lg">{ft.icon}</span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">{ft.name}</p>
-          {ft.description && <p className="text-xs text-muted-foreground">{ft.description}</p>}
+          {ft.description && <p className="text-xs text-muted-foreground line-clamp-2">{ft.description}</p>}
+          <StatBadges ft={ft} />
         </div>
         {isAdmin && (
           <div className="flex gap-1">
@@ -315,14 +340,63 @@ function FacilityTypeRow({ ft, isAdmin, onUpdate, onRemove }: {
   return (
     <div className="rounded border border-primary/50 px-3 py-2 space-y-2">
       <div className="flex gap-2">
-        <Input value={icon} onChange={(e) => setIcon(e.target.value)} className="h-8 w-14 text-center" />
-        <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 flex-1" />
+        <Input value={fields.icon} onChange={(e) => patch({ icon: e.target.value })} className="h-8 w-14 text-center" />
+        <Input value={fields.name} onChange={(e) => patch({ name: e.target.value })} className="h-8 flex-1" />
       </div>
-      <Input value={desc} onChange={(e) => setDesc(e.target.value)} className="h-8" placeholder="Description" />
+      <Input value={fields.description} onChange={(e) => patch({ description: e.target.value })} className="h-8" placeholder="Description" />
+      <FacilityNumericFields fields={fields} patch={patch} />
       <div className="flex gap-1">
-        <Button size="sm" className="h-7 text-xs" onClick={async () => { await onUpdate(ft.id, { name, description: desc, icon }); setEditing(false); }}>Save</Button>
-        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(false)}>Cancel</Button>
+        <Button size="sm" className="h-7 text-xs" onClick={async () => { await onUpdate(ft.id, fields); setEditing(false); }}>Save</Button>
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setFields({ ...ft }); setEditing(false); }}>Cancel</Button>
       </div>
+    </div>
+  );
+}
+
+/* ── Shared numeric fields for facility editing ── */
+function FacilityNumericFields({ fields, patch }: {
+  fields: Omit<DbFacilityType, "id">;
+  patch: (p: Partial<Omit<DbFacilityType, "id">>) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {STAT_DEFS.map((s) => (
+        <div key={s.key} className="flex flex-col gap-0.5">
+          <label className="text-[10px] text-muted-foreground">{s.label}</label>
+          <Input
+            type="number"
+            value={(fields as any)[s.key]}
+            onChange={(e) => patch({ [s.key]: parseInt(e.target.value) || 0 })}
+            className="h-7 text-xs"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Add Facility Form ── */
+function AddFacilityForm({ onAdd }: { onAdd: (fields: Omit<DbFacilityType, "id">) => Promise<void> }) {
+  const empty: Omit<DbFacilityType, "id"> = {
+    name: "", description: "", icon: "🏭",
+    cost: 0, maintenance: 0, condition_bonus: 0,
+    tribute_flat: 0, tribute_percent: 0, survey_bonus: 0, ground_defense_bonus: 0,
+  };
+  const [fields, setFields] = useState(empty);
+  const patch = (p: Partial<Omit<DbFacilityType, "id">>) => setFields((prev) => ({ ...prev, ...p }));
+
+  return (
+    <div className="border border-border rounded-md p-4 space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">Add New Facility Type</p>
+      <div className="flex gap-2">
+        <Input value={fields.icon} onChange={(e) => patch({ icon: e.target.value })} className="h-9 w-14 text-center" placeholder="🏭" />
+        <Input value={fields.name} onChange={(e) => patch({ name: e.target.value })} className="h-9 flex-1" placeholder="Facility name" />
+      </div>
+      <Input value={fields.description} onChange={(e) => patch({ description: e.target.value })} className="h-9" placeholder="Description (optional)" />
+      <FacilityNumericFields fields={fields} patch={patch} />
+      <Button size="sm" disabled={!fields.name.trim()} onClick={async () => { await onAdd({ ...fields, name: fields.name.trim() }); setFields(empty); }}>
+        Add Facility Type
+      </Button>
     </div>
   );
 }
