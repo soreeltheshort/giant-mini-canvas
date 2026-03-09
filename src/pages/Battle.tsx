@@ -126,7 +126,14 @@ const Battle = () => {
     const usedSeed = seed || Math.random().toString(36).substring(2, 10);
     if (!seed) setSeed(usedSeed);
 
-    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods, combatConsts, weaponPrefs, admiralA, admiralB);
+    // Calculate ground units from fleet ship data
+    const calcGroundUnits = (snap: FleetSnapshot) => {
+      return snap.ships.reduce((sum, s) => sum + (s.ship_type.ground_invasion || 0) * s.quantity, 0);
+    };
+    const groundUnitsA = calcGroundUnits(snapA);
+    const groundUnitsB = calcGroundUnits(snapB);
+
+    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods, combatConsts, weaponPrefs, admiralA, admiralB, groundOutcomes, groundDefense, groundUnitsA, groundUnitsB);
     setFleetASnap(snapA);
     setFleetBSnap(snapB);
     setResult(battleResult);
