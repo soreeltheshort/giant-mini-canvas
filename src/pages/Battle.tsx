@@ -26,6 +26,7 @@ const Battle = () => {
   const [seed, setSeed] = useState("");
   const [admiralA, setAdmiralA] = useState(4);
   const [admiralB, setAdmiralB] = useState(4);
+  const [groundDefense, setGroundDefense] = useState(0);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<BattleResult | null>(null);
   const [fleetASnap, setFleetASnap] = useState<FleetSnapshot | null>(null);
