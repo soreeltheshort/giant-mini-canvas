@@ -26,9 +26,7 @@ const MapTestingConfig = () => {
   const { factions, loading: facLoading, addFaction, updateFaction, removeFaction } = useFactions();
   const { actions, loading: actLoading, addAction, updateAction, removeAction } = useSystemActions();
 
-  const [newName, setNewName] = useState("");
-  const [newDesc, setNewDesc] = useState("");
-  const [newIcon, setNewIcon] = useState("🏭");
+  // facility form state removed — now in AddFacilityForm
 
   // Faction form
   const [newFacName, setNewFacName] = useState("");
