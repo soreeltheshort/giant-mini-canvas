@@ -273,7 +273,7 @@ const AdminBattleConfig = () => {
     setSaving(false);
   };
 
-  const hasDirty = phases.some(p => p._dirty) || groupMods.some(g => g._dirty) || constants.some(c => c._dirty) || weaponPrefs.some(w => w._dirty);
+  const hasDirty = phases.some(p => p._dirty) || groupMods.some(g => g._dirty) || constants.some(c => c._dirty) || weaponPrefs.some(w => w._dirty) || groundOutcomes.some(o => o._dirty);
 
   if (loading) return <div className="min-h-screen bg-background"><Header /><div className="container py-20 text-center text-muted-foreground">Loading...</div><Footer /></div>;
 
