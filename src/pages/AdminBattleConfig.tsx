@@ -489,6 +489,51 @@ const AdminBattleConfig = () => {
             </table>
           </div>
         </div>
+
+        {/* GROUND COMBAT OUTCOMES */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-heading text-lg font-semibold text-foreground">Ground Combat Outcomes (casualties by force size)</h2>
+            <Button size="sm" variant="outline" onClick={addGroundOutcome}><Plus className="mr-1 h-4 w-4" /> Add Outcome</Button>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">Define how many casualties a ground force inflicts based on its size. In phases with "System Defenses", a ground combat sub-phase runs after ship combat. Each side looks up their force size in this table to determine casualties inflicted on the opponent.</p>
+          <div className="overflow-x-auto border border-border rounded">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">Min Force</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">Max Force</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Casualties Inflicted</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Description</th>
+                  <th className="px-3 py-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {groundOutcomes.map(o => (
+                  <tr key={o.id} className={`border-b border-border ${o._dirty ? "bg-primary/5" : ""}`}>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 w-24 text-xs" type="number" value={o.min_force} onChange={e => updateGroundOutcome(o.id, "min_force", parseInt(e.target.value) || 0)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 w-24 text-xs" type="number" value={o.max_force} onChange={e => updateGroundOutcome(o.id, "max_force", parseInt(e.target.value) || 0)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 w-28 text-xs" type="number" value={o.casualties_inflicted} onChange={e => updateGroundOutcome(o.id, "casualties_inflicted", parseInt(e.target.value) || 0)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input className="h-8 text-xs" value={o.description} onChange={e => updateGroundOutcome(o.id, "description", e.target.value)} />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteGroundOutcome(o.id, o._new)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
       <Footer />
     </div>
