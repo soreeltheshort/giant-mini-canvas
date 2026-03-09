@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
+import { useFactions } from "@/hooks/useFactions";
 import { randomizeSystems, loadRandomizeParams } from "@/lib/randomizeSystems";
 
 const HexMapEditor: React.FC = () => {
