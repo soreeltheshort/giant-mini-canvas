@@ -274,25 +274,36 @@ const AdminShips = () => {
   const confirmUpload = async () => {
     if (!csvPending) return;
     setUploading(true);
-    // Delete all existing ships
-    const { error: delErr } = await supabase.from("ship_types").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    if (delErr) {
-      toast({ title: "Error deleting old ships", description: delErr.message, variant: "destructive" });
-      setUploading(false);
-      setCsvPending(null);
-      return;
+
+    // Look up existing ships by ship_id so we can preserve their UUIDs for upsert
+    const { data: existing } = await supabase.from("ship_types").select("id, ship_id");
+    const shipIdToUuid = new Map<string, string>();
+    if (existing) {
+      for (const s of existing) {
+        if (s.ship_id) shipIdToUuid.set(s.ship_id, s.id);
+      }
     }
-    // Insert in batches of 50
+
+    // Merge existing UUIDs into parsed rows so upsert matches correctly
+    const rows = csvPending.map(row => {
+      const sid = row.ship_id as string | null;
+      if (sid && shipIdToUuid.has(sid)) {
+        return { ...row, id: shipIdToUuid.get(sid) };
+      }
+      return row;
+    });
+
+    // Upsert in batches of 50 (avoids FK constraint errors from fleet_ships references)
     let errors = 0;
-    for (let i = 0; i < csvPending.length; i += 50) {
-      const batch = csvPending.slice(i, i + 50);
-      const { error } = await supabase.from("ship_types").insert(batch as any);
+    for (let i = 0; i < rows.length; i += 50) {
+      const batch = rows.slice(i, i + 50);
+      const { error } = await supabase.from("ship_types").upsert(batch as any, { onConflict: "id" });
       if (error) { errors++; console.error(error); }
     }
     if (errors) {
       toast({ title: "Upload partially failed", description: `${errors} batch error(s)`, variant: "destructive" });
     } else {
-      toast({ title: "Upload complete", description: `${csvPending.length} ships imported` });
+      toast({ title: "Upload complete", description: `${rows.length} ships imported` });
     }
     setCsvPending(null);
     setUploading(false);
