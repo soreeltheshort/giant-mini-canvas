@@ -35,6 +35,7 @@ const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { facilityTypes: dbFacilityTypes } = useFacilityTypes();
+  const { factions } = useFactions();
   const [mapState, setMapState] = useState<MapState>(() => generateBlankMap());
   const [saving, setSaving] = useState(false);
   const [loadingMap, setLoadingMap] = useState(true);
