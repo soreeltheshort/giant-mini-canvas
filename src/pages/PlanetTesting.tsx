@@ -53,6 +53,7 @@ const NUMERIC_FIELDS: { key: keyof SystemData; label: string }[] = [
   { key: "morale", label: "Morale" },
   { key: "max_ground_defenses", label: "Max Ground Defenses" },
   { key: "current_ground_defenses", label: "Current Ground Defenses" },
+  { key: "initial_condition", label: "Initial Condition" },
   { key: "planet_index", label: "Planet Index" },
 ];
 
