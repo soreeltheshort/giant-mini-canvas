@@ -487,6 +487,12 @@ const PlanetTesting = () => {
                 </select>
               </div>
               <div>
+                <label className="text-xs text-muted-foreground">Location</label>
+                <div className="h-8 text-sm flex items-center text-foreground">
+                  Hex {planet.hex_id || "—"}
+                </div>
+              </div>
+              <div>
                 <label className="text-xs text-muted-foreground">Owner</label>
                 <select
                   value={planet.owner}
