@@ -135,6 +135,18 @@ const PlanetTesting = () => {
     return planet.initial_condition + bonus;
   }, [planet.initial_condition, planet.facilities, facilityTypes]);
 
+  // Calculate max ground defenses = base max_ground_defenses + facility ground_defense_bonus
+  const calculatedMaxGroundDefenses = useMemo(() => {
+    let bonus = 0;
+    for (const f of planet.facilities || []) {
+      const ft = facilityTypes.find((t) => t.id === f.facility_type_id);
+      if (ft && ft.ground_defense_bonus) {
+        bonus += ft.ground_defense_bonus * f.quantity;
+      }
+    }
+    return planet.max_ground_defenses + bonus;
+  }, [planet.max_ground_defenses, planet.facilities, facilityTypes]);
+
   // Keep planet.condition in sync with the calculated value
   useEffect(() => {
     if (planet.condition !== calculatedCondition) {
@@ -446,7 +458,16 @@ const PlanetTesting = () => {
                 </div>
               </div>
 
-              {/* Ground defenses side by side */}
+              {/* Ground defenses */}
+              <div className="mb-3 p-2 rounded bg-accent/30 border border-border">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] text-muted-foreground">Max Ground Def. (calculated)</label>
+                  <span className="text-xs font-semibold text-foreground">{calculatedMaxGroundDefenses}</span>
+                </div>
+                <div className="text-[9px] text-muted-foreground mt-0.5">
+                  Base {planet.max_ground_defenses} + facility bonuses {calculatedMaxGroundDefenses - planet.max_ground_defenses}
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-2">
                 <div>
                   <label className="text-[10px] text-muted-foreground">Current Ground Def.</label>
@@ -458,7 +479,7 @@ const PlanetTesting = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground">Max Ground Def.</label>
+                  <label className="text-[10px] text-muted-foreground">Base Max Ground Def.</label>
                   <Input
                     type="number"
                     value={planet.max_ground_defenses}

@@ -74,8 +74,7 @@ function calculateMaxGroundDefenses(planet: SystemData, facilityTypes: DbFacilit
     const ft = findFT(facilityTypes, f.facility_type_id);
     if (ft?.ground_defense_bonus) bonus += ft.ground_defense_bonus * f.quantity;
   }
-  return planet.max_ground_defenses + bonus - bonus; // keep base for now — just return current max
-  // TODO: if max_ground_defenses becomes figured, update here
+  return planet.max_ground_defenses + bonus;
 }
 
 /**
@@ -158,6 +157,7 @@ export function processNextTurn(
 
   // --- Step 3: Recalculate figured characteristics ---
   p.condition = calculateCondition(p, facilityTypes);
+  const figuredMaxGD = calculateMaxGroundDefenses(p, facilityTypes);
 
   // --- Step 4: Simulated events (placeholder) ---
   // TODO: apply one-time planet events here
@@ -219,12 +219,12 @@ export function processNextTurn(
 
   // --- Step 9: Ground force replacement ---
   let groundForceReplacement = 0;
-  if (p.current_ground_defenses < p.max_ground_defenses) {
-    const deficit = p.max_ground_defenses - p.current_ground_defenses;
+  if (p.current_ground_defenses < figuredMaxGD) {
+    const deficit = figuredMaxGD - p.current_ground_defenses;
     const replenish = Math.ceil(deficit / 2);
     p.current_ground_defenses = Math.min(
       p.current_ground_defenses + replenish,
-      p.max_ground_defenses
+      figuredMaxGD
     );
     groundForceReplacement = replenish * constants.ground_force_replacement_cost;
   }
