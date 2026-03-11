@@ -154,6 +154,7 @@ export type Database = {
       facility_types: {
         Row: {
           condition_bonus: number
+          construction_kickback: number
           cost: number
           created_at: string
           description: string
@@ -165,10 +166,12 @@ export type Database = {
           survey_bonus: number
           tribute_flat: number
           tribute_percent: number
+          turns_to_build: number
           updated_at: string
         }
         Insert: {
           condition_bonus?: number
+          construction_kickback?: number
           cost?: number
           created_at?: string
           description?: string
@@ -180,10 +183,12 @@ export type Database = {
           survey_bonus?: number
           tribute_flat?: number
           tribute_percent?: number
+          turns_to_build?: number
           updated_at?: string
         }
         Update: {
           condition_bonus?: number
+          construction_kickback?: number
           cost?: number
           created_at?: string
           description?: string
@@ -195,6 +200,7 @@ export type Database = {
           survey_bonus?: number
           tribute_flat?: number
           tribute_percent?: number
+          turns_to_build?: number
           updated_at?: string
         }
         Relationships: []

@@ -14,6 +14,8 @@ export interface DbFacilityType {
   tribute_percent: number;
   survey_bonus: number;
   ground_defense_bonus: number;
+  turns_to_build: number;
+  construction_kickback: number;
 }
 
 export function useFacilityTypes() {
