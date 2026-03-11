@@ -63,6 +63,28 @@ const CURRENT_FIELDS: { key: keyof SystemData; label: string }[] = [
   { key: "morale", label: "Morale" },
 ];
 
+const sanitizePlanetNumbers = (planet: SystemData): SystemData => ({
+  ...planet,
+  current_population: Number.isFinite(planet.current_population) ? planet.current_population : 0,
+  morale: Number.isFinite(planet.morale) ? planet.morale : 0,
+  condition: Number.isFinite(planet.condition) ? planet.condition : 0,
+  survey: Number.isFinite(planet.survey) ? planet.survey : 0,
+  tribute: Number.isFinite(planet.tribute) ? planet.tribute : 0,
+  upkeep: Number.isFinite(planet.upkeep) ? planet.upkeep : 0,
+  resources: Number.isFinite(planet.resources) ? planet.resources : 0,
+  current_ground_defenses: Number.isFinite(planet.current_ground_defenses)
+    ? planet.current_ground_defenses
+    : 0,
+  initial_condition: Number.isFinite(planet.initial_condition) ? planet.initial_condition : 0,
+  importance_rank: Number.isFinite(planet.importance_rank) ? planet.importance_rank : 0,
+  planet_index: Number.isFinite(planet.planet_index) ? planet.planet_index : 0,
+});
+
+const parseNumberInput = (value: string): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const PlanetTesting = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -186,7 +208,7 @@ const PlanetTesting = () => {
   }, [user, toast]);
 
   const selectPlanet = (sys: SystemData) => {
-    setPlanet({ ...sys });
+    setPlanet(sanitizePlanetNumbers({ ...sys }));
     setShowLoadDialog(false);
     setDirty(false);
     setTurn(0);
@@ -195,7 +217,7 @@ const PlanetTesting = () => {
   };
 
   const createNewPlanet = () => {
-    setPlanet({ ...DEFAULT_PLANET });
+    setPlanet(sanitizePlanetNumbers({ ...DEFAULT_PLANET }));
     setDirty(false);
     setTurn(0);
     setTotalIncome(0);
@@ -203,7 +225,7 @@ const PlanetTesting = () => {
   };
 
   const updateField = <K extends keyof SystemData>(key: K, value: SystemData[K]) => {
-    setPlanet((p) => ({ ...p, [key]: value }));
+    setPlanet((p) => sanitizePlanetNumbers({ ...p, [key]: value } as SystemData));
     setDirty(true);
   };
 
@@ -276,10 +298,14 @@ const PlanetTesting = () => {
   };
 
   const handleNextTurn = () => {
-    console.log("BEFORE turn:", { pop: planet.current_population, morale: planet.morale, condition: planet.condition });
-    const result = processNextTurn(planet, facilityTypes, turnConstants, totalIncome, strikecraftTypes);
-    console.log("AFTER turn:", { pop: result.planet.current_population, morale: result.planet.morale, condition: result.planet.condition });
-    setPlanet(result.planet);
+    const result = processNextTurn(
+      sanitizePlanetNumbers(planet),
+      facilityTypes,
+      turnConstants,
+      totalIncome,
+      strikecraftTypes
+    );
+    setPlanet(sanitizePlanetNumbers(result.planet));
     setTotalIncome(result.income);
     setLastTurnResult(result);
     setTurn((t) => t + 1);
@@ -444,7 +470,7 @@ const PlanetTesting = () => {
                   <Input
                     type="number"
                     value={planet.current_population}
-                    onChange={(e) => updateField("current_population", Number(e.target.value))}
+                    onChange={(e) => updateField("current_population", parseNumberInput(e.target.value))}
                     className="h-7 text-xs"
                   />
                 </div>
@@ -466,7 +492,7 @@ const PlanetTesting = () => {
                   <Input
                     type="number"
                     value={planet.current_ground_defenses}
-                    onChange={(e) => updateField("current_ground_defenses", Number(e.target.value))}
+                    onChange={(e) => updateField("current_ground_defenses", parseNumberInput(e.target.value))}
                     className="h-7 text-xs"
                   />
                 </div>
@@ -482,7 +508,7 @@ const PlanetTesting = () => {
                     <Input
                       type="number"
                       value={planet[key] as number}
-                      onChange={(e) => updateField(key, Number(e.target.value))}
+                      onChange={(e) => updateField(key, parseNumberInput(e.target.value) as SystemData[typeof key])}
                       className="h-7 text-xs"
                     />
                   </div>
@@ -500,7 +526,7 @@ const PlanetTesting = () => {
                     <Input
                       type="number"
                       value={planet[key] as number}
-                      onChange={(e) => updateField(key, Number(e.target.value))}
+                      onChange={(e) => updateField(key, parseNumberInput(e.target.value) as SystemData[typeof key])}
                       className="h-7 text-xs"
                     />
                   </div>
