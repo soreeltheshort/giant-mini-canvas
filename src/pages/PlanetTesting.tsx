@@ -161,12 +161,16 @@ const PlanetTesting = () => {
     setShowLoadDialog(false);
     setDirty(false);
     setTurn(0);
+    setTotalIncome(0);
+    setLastTurnResult(null);
   };
 
   const createNewPlanet = () => {
     setPlanet({ ...DEFAULT_PLANET });
     setDirty(false);
     setTurn(0);
+    setTotalIncome(0);
+    setLastTurnResult(null);
   };
 
   const updateField = <K extends keyof SystemData>(key: K, value: SystemData[K]) => {
