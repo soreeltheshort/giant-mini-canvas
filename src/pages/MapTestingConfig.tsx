@@ -138,7 +138,7 @@ const MapTestingConfig = () => {
               ))}
             </div>
           )}
-          {isAdmin && <AddFacilityForm onAdd={addFacilityType} />}
+          {isAdmin && <AddFacilityForm onAdd={addFacilityType} allFacilityTypes={facilityTypes} />}
         </ConfigSection>
 
         {/* ── Random System Generation ── */}
