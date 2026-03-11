@@ -81,6 +81,11 @@ export interface SystemFacility {
   quantity: number;
 }
 
+export interface FacilityInProduction {
+  facility_type_id: number;
+  turns_remaining: number;
+}
+
 export type SystemType = "system" | "station";
 
 export interface SystemData {
