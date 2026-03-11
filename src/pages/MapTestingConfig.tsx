@@ -291,6 +291,8 @@ const STAT_DEFS: { key: keyof DbFacilityType; label: string; prefix?: string; su
   { key: "tribute_percent", label: "Tribute %", prefix: "+", suffix: "%" },
   { key: "survey_bonus", label: "Survey", prefix: "+" },
   { key: "ground_defense_bonus", label: "Ground Def", prefix: "+" },
+  { key: "turns_to_build", label: "Turns to Build" },
+  { key: "construction_kickback", label: "Kickback", suffix: "%" },
 ];
 
 function StatBadges({ ft }: { ft: DbFacilityType }) {
