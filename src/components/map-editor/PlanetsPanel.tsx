@@ -18,7 +18,7 @@ interface Props {
 
 const PlanetsPanel: React.FC<Props> = ({ systems, hexes, facilityTypes, onSelectSystem }) => {
   const ftMap = useMemo(() => {
-    const m = new Map<number, FacilityType>();
+    const m = new Map<string, FacilityType>();
     for (const ft of facilityTypes) m.set(ft.facility_type_id, ft);
     return m;
   }, [facilityTypes]);

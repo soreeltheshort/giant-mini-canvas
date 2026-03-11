@@ -126,7 +126,7 @@ const PlanetTesting = () => {
     let bonus = 0;
     for (const f of planet.facilities || []) {
       const ft = facilityTypes.find(
-        (t) => String(t.id) === String(f.facility_type_id) || Number(t.id) === f.facility_type_id
+        (t) => t.id === f.facility_type_id
       );
       if (ft && ft.condition_bonus) {
         bonus += ft.condition_bonus * f.quantity;
@@ -196,7 +196,7 @@ const PlanetTesting = () => {
     setDirty(true);
   };
 
-  const updateFacilityQty = (facilityTypeId: number, qty: number) => {
+  const updateFacilityQty = (facilityTypeId: string, qty: number) => {
     setPlanet((p) => {
       const facs = [...(p.facilities || [])];
       const idx = facs.findIndex((f) => f.facility_type_id === facilityTypeId);
@@ -211,8 +211,8 @@ const PlanetTesting = () => {
     setDirty(true);
   };
 
-  const addToProduction = (facilityTypeId: number) => {
-    const ft = facilityTypes.find((t) => Number(t.id) === facilityTypeId || t.id === String(facilityTypeId));
+  const addToProduction = (facilityTypeId: string) => {
+    const ft = facilityTypes.find((t) => t.id === facilityTypeId);
     const turnsNeeded = ft?.turns_to_build || 1;
     const cost = ft?.cost || 0;
     setPlanet((p) => ({
@@ -517,7 +517,7 @@ const PlanetTesting = () => {
                 <div className="space-y-1.5 max-h-60 overflow-y-auto">
                   {facilityTypes.map((ft) => {
                     const current = planet.facilities?.find(
-                      (f) => String(f.facility_type_id) === ft.id || f.facility_type_id === Number(ft.id)
+                      (f) => f.facility_type_id === ft.id
                     );
                     const qty = current?.quantity || 0;
                     return (
@@ -530,7 +530,7 @@ const PlanetTesting = () => {
                             variant="outline"
                             size="sm"
                             className="h-6 w-6 p-0 text-xs"
-                            onClick={() => updateFacilityQty(Number(ft.id) || (ft.id as any), Math.max(0, qty - 1))}
+                            onClick={() => updateFacilityQty(ft.id, Math.max(0, qty - 1))}
                           >
                             −
                           </Button>
@@ -539,7 +539,7 @@ const PlanetTesting = () => {
                             variant="outline"
                             size="sm"
                             className="h-6 w-6 p-0 text-xs"
-                            onClick={() => updateFacilityQty(Number(ft.id) || (ft.id as any), qty + 1)}
+                            onClick={() => updateFacilityQty(ft.id, qty + 1)}
                           >
                             +
                           </Button>
@@ -562,7 +562,7 @@ const PlanetTesting = () => {
                 <div className="space-y-1.5 mb-2">
                   {(planet.facilities_in_production || []).map((fip, idx) => {
                     const ft = facilityTypes.find(
-                      (t) => String(t.id) === String(fip.facility_type_id) || Number(t.id) === fip.facility_type_id
+                      (t) => t.id === fip.facility_type_id
                     );
                     return (
                       <div key={idx} className="flex items-center justify-between gap-2">
@@ -594,7 +594,7 @@ const PlanetTesting = () => {
                   className="w-full h-7 text-xs rounded border border-input bg-background px-2"
                   value=""
                   onChange={(e) => {
-                    if (e.target.value) addToProduction(Number(e.target.value));
+                    if (e.target.value) addToProduction(e.target.value);
                   }}
                 >
                   <option value="">Select facility...</option>

@@ -70,19 +70,19 @@ export interface HexData {
 }
 
 export interface FacilityType {
-  facility_type_id: number;
+  facility_type_id: string;
   name: string;
   description: string;
   icon: string; // emoji or short code
 }
 
 export interface SystemFacility {
-  facility_type_id: number;
+  facility_type_id: string;
   quantity: number;
 }
 
 export interface FacilityInProduction {
-  facility_type_id: number;
+  facility_type_id: string;
   turns_remaining: number;
 }
 

@@ -7,7 +7,7 @@ interface Props {
   facilityTypes: FacilityType[];
   onAdd: (name: string, description: string, icon: string) => void;
   onUpdate: (ft: FacilityType) => void;
-  onRemove: (id: number) => void;
+  onRemove: (id: string) => void;
 }
 
 const FacilityConfigPanel: React.FC<Props> = ({ facilityTypes, onAdd, onUpdate, onRemove }) => {

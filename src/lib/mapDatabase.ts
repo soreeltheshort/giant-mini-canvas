@@ -219,16 +219,19 @@ export async function importFromSqlite(file: File): Promise<MapState> {
 
   // Read systems and their facilities
   const systemFacilities = readRows("SELECT * FROM system_facilities");
-  const facBySystemId = new Map<number, { facility_type_id: number; quantity: number }[]>();
+  const facBySystemId = new Map<number, { facility_type_id: string; quantity: number }[]>();
   for (const sf of systemFacilities) {
     if (!facBySystemId.has(sf.system_id)) facBySystemId.set(sf.system_id, []);
-    facBySystemId.get(sf.system_id)!.push({ facility_type_id: sf.facility_type_id, quantity: sf.quantity });
+    facBySystemId.get(sf.system_id)!.push({ facility_type_id: String(sf.facility_type_id), quantity: sf.quantity });
   }
 
   const systems = new Map<number, SystemData>();
   for (const row of readRows("SELECT * FROM systems")) {
     row.owner = row.owner || "";
     row.facilities = facBySystemId.get(row.system_id) || [];
+    row.facilities_in_production = row.facilities_in_production || [];
+    row.stationed_fighters = row.stationed_fighters || [];
+    row.stationed_gunships = row.stationed_gunships || [];
     systems.set(row.hex_id, row as SystemData);
   }
 
