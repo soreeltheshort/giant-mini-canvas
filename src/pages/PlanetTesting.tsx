@@ -562,7 +562,7 @@ const PlanetTesting = () => {
                 <div className="space-y-1.5 mb-2">
                   {(planet.facilities_in_production || []).map((fip, idx) => {
                     const ft = facilityTypes.find(
-                      (t) => String(t.id) === String(fip.facility_type_id) || Number(t.id) === fip.facility_type_id
+                      (t) => t.id === fip.facility_type_id
                     );
                     return (
                       <div key={idx} className="flex items-center justify-between gap-2">
