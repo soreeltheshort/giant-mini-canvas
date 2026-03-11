@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
@@ -41,20 +41,22 @@ const DEFAULT_PLANET: SystemData = {
   planet_index: 1,
 };
 
-const NUMERIC_FIELDS: { key: keyof SystemData; label: string }[] = [
-  { key: "importance_rank", label: "Importance Rank" },
+const INITIAL_FIELDS: { key: keyof SystemData; label: string }[] = [
+  { key: "initial_condition", label: "Initial Condition" },
   { key: "max_population", label: "Max Population" },
+  { key: "max_ground_defenses", label: "Max Ground Defenses" },
+  { key: "importance_rank", label: "Importance Rank" },
+  { key: "planet_index", label: "Planet Index" },
+];
+
+const CURRENT_FIELDS: { key: keyof SystemData; label: string }[] = [
   { key: "current_population", label: "Current Population" },
+  { key: "current_ground_defenses", label: "Current Ground Defenses" },
   { key: "survey", label: "Survey" },
   { key: "tribute", label: "Tribute" },
   { key: "upkeep", label: "Upkeep" },
   { key: "resources", label: "Resources" },
-  { key: "condition", label: "Condition" },
   { key: "morale", label: "Morale" },
-  { key: "max_ground_defenses", label: "Max Ground Defenses" },
-  { key: "current_ground_defenses", label: "Current Ground Defenses" },
-  { key: "initial_condition", label: "Initial Condition" },
-  { key: "planet_index", label: "Planet Index" },
 ];
 
 const PlanetTesting = () => {
@@ -68,7 +70,6 @@ const PlanetTesting = () => {
   const [turn, setTurn] = useState(0);
   const [dirty, setDirty] = useState(false);
 
-  // For loading from map
   const [availablePlanets, setAvailablePlanets] = useState<SystemData[]>([]);
   const [loadingPlanets, setLoadingPlanets] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
@@ -77,11 +78,24 @@ const PlanetTesting = () => {
     if (!authLoading && !user) navigate("/login");
   }, [authLoading, user, navigate]);
 
+  // Calculate condition = initial_condition + sum of facility condition_bonus
+  const calculatedCondition = useMemo(() => {
+    let bonus = 0;
+    for (const f of planet.facilities || []) {
+      const ft = facilityTypes.find(
+        (t) => String(t.id) === String(f.facility_type_id) || Number(t.id) === f.facility_type_id
+      );
+      if (ft && ft.condition_bonus) {
+        bonus += ft.condition_bonus * f.quantity;
+      }
+    }
+    return planet.initial_condition + bonus;
+  }, [planet.initial_condition, planet.facilities, facilityTypes]);
+
   const loadPlanetsFromMap = useCallback(async () => {
     if (!user) return;
     setLoadingPlanets(true);
     try {
-      // Fetch the most recent saved map
       const { data: maps, error } = await supabase
         .from("saved_maps")
         .select("*")
@@ -144,7 +158,6 @@ const PlanetTesting = () => {
   };
 
   const handleSave = () => {
-    // Save planet to localStorage for now
     const saved = JSON.parse(localStorage.getItem("planet_testing_saves") || "[]");
     const existing = saved.findIndex((s: any) => s.system_name === planet.system_name);
     if (existing >= 0) saved[existing] = { ...planet, turn };
@@ -226,7 +239,7 @@ const PlanetTesting = () => {
 
         {/* Planet editor */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Core attributes */}
+          {/* Left: Identity + Simulated Events */}
           <div className="space-y-4">
             <div className="border border-border rounded p-4 space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Identity</h3>
@@ -275,14 +288,100 @@ const PlanetTesting = () => {
                 </select>
               </div>
             </div>
+
+            {/* Simulated Events */}
+            <div className="border border-border rounded p-4 space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Simulated Events</h3>
+              <Button variant="outline" size="sm" className="w-full">
+                ⚔️ Ground Battle
+              </Button>
+            </div>
           </div>
 
-          {/* Middle: Numeric stats */}
+          {/* Middle: Stats */}
           <div className="space-y-4">
+            {/* Current / Calculated Stats */}
             <div className="border border-border rounded p-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Stats</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Current Stats</h3>
+              
+              {/* Condition (calculated) */}
+              <div className="mb-3 p-2 rounded bg-accent/30 border border-border">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] text-muted-foreground">Condition (calculated)</label>
+                  <span className="text-xs font-semibold text-foreground">{calculatedCondition}</span>
+                </div>
+                <div className="text-[9px] text-muted-foreground mt-0.5">
+                  Base {planet.initial_condition} + facility bonuses {calculatedCondition - planet.initial_condition}
+                </div>
+              </div>
+
+              {/* Population side by side */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Current Population</label>
+                  <Input
+                    type="number"
+                    value={planet.current_population}
+                    onChange={(e) => updateField("current_population", Number(e.target.value))}
+                    className="h-7 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Max Population</label>
+                  <Input
+                    type="number"
+                    value={planet.max_population}
+                    onChange={(e) => updateField("max_population", Number(e.target.value))}
+                    className="h-7 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Ground defenses side by side */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Current Ground Def.</label>
+                  <Input
+                    type="number"
+                    value={planet.current_ground_defenses}
+                    onChange={(e) => updateField("current_ground_defenses", Number(e.target.value))}
+                    className="h-7 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Max Ground Def.</label>
+                  <Input
+                    type="number"
+                    value={planet.max_ground_defenses}
+                    onChange={(e) => updateField("max_ground_defenses", Number(e.target.value))}
+                    className="h-7 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Remaining current fields */}
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                {NUMERIC_FIELDS.map(({ key, label }) => (
+                {CURRENT_FIELDS.filter(f => 
+                  f.key !== "current_population" && f.key !== "current_ground_defenses"
+                ).map(({ key, label }) => (
+                  <div key={key}>
+                    <label className="text-[10px] text-muted-foreground">{label}</label>
+                    <Input
+                      type="number"
+                      value={planet[key] as number}
+                      onChange={(e) => updateField(key, Number(e.target.value))}
+                      className="h-7 text-xs"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Initial / Base Stats */}
+            <div className="border border-border rounded p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Initial Stats</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {INITIAL_FIELDS.map(({ key, label }) => (
                   <div key={key}>
                     <label className="text-[10px] text-muted-foreground">{label}</label>
                     <Input
