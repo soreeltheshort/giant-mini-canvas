@@ -134,7 +134,7 @@ const MapTestingConfig = () => {
           ) : (
             <div className="space-y-2">
               {facilityTypes.map((ft) => (
-                <FacilityTypeRow key={ft.id} ft={ft} isAdmin={isAdmin} onUpdate={updateFacilityType} onRemove={removeFacilityType} />
+                <FacilityTypeRow key={ft.id} ft={ft} isAdmin={isAdmin} onUpdate={updateFacilityType} onRemove={removeFacilityType} allFacilityTypes={facilityTypes} />
               ))}
             </div>
           )}
