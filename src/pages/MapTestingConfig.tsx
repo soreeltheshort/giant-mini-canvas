@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 import { useFactions } from "@/hooks/useFactions";
@@ -181,6 +182,9 @@ const MapTestingConfig = () => {
             </div>
           </label>
         </ConfigSection>
+
+        {/* ── Turn Economy Constants ── */}
+        <TurnConstantsSection isAdmin={isAdmin} />
       </div>
     </div>
   );
@@ -429,6 +433,68 @@ function AddFacilityForm({ onAdd, allFacilityTypes }: { onAdd: (fields: Omit<DbF
         Add Facility Type
       </Button>
     </div>
+  );
+}
+
+/* ── Turn Economy Constants ── */
+function TurnConstantsSection({ isAdmin }: { isAdmin: boolean }) {
+  const [constants, setConstants] = useState<{ id: string; key: string; value: number; description: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("combat_constants")
+        .select("id, key, value, description")
+        .order("key");
+      if (data) setConstants(data.map((r) => ({ ...r, value: Number(r.value) })));
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const updateValue = async (id: string, newValue: number) => {
+    setSaving(id);
+    await supabase.from("combat_constants").update({ value: newValue }).eq("id", id);
+    setConstants((prev) => prev.map((c) => (c.id === id ? { ...c, value: newValue } : c)));
+    setSaving(null);
+  };
+
+  if (loading) return <p className="text-xs text-muted-foreground">Loading constants...</p>;
+
+  return (
+    <ConfigSection title="Turn Economy Constants" desc="These constants control the Next Turn calculations for tribute, upkeep, and ground force replacement.">
+      <div className="space-y-3">
+        {constants.map((c) => (
+          <div key={c.id} className="flex items-center gap-3 rounded border border-border px-3 py-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground font-mono">{c.key}</p>
+              <p className="text-xs text-muted-foreground">{c.description}</p>
+            </div>
+            <Input
+              type="number"
+              step="any"
+              value={c.value}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v)) setConstants((prev) => prev.map((x) => (x.id === c.id ? { ...x, value: v } : x)));
+              }}
+              onBlur={(e) => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v) && isAdmin) updateValue(c.id, v);
+              }}
+              disabled={!isAdmin}
+              className="h-8 w-24 text-sm text-right font-mono"
+            />
+            {saving === c.id && <span className="text-[10px] text-muted-foreground">Saving...</span>}
+          </div>
+        ))}
+        {constants.length === 0 && (
+          <p className="text-sm text-muted-foreground">No constants defined yet.</p>
+        )}
+      </div>
+    </ConfigSection>
   );
 }
 
