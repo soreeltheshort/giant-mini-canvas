@@ -165,12 +165,10 @@ export function processNextTurn(
   // --- Step 5: Morale adjustment ---
   p.morale = Math.round(p.morale + (p.condition - p.morale) / 4);
 
-  // --- Step 6: Population adjustment ---
+  // --- Step 6: Population moves toward Morale ---
   p.current_population = Math.round(
     p.current_population + (p.morale - p.current_population) / 4
   );
-  // Cap at max
-  p.current_population = Math.min(p.current_population, p.max_population);
 
   // --- Step 7: Tribute calculation ---
   // 7a: Base tribute

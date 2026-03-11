@@ -435,23 +435,14 @@ const PlanetTesting = () => {
                 </div>
               </div>
 
-              {/* Population side by side */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-2">
+              {/* Population */}
+              <div className="grid grid-cols-1 gap-y-2 mb-2">
                 <div>
                   <label className="text-[10px] text-muted-foreground">Current Population</label>
                   <Input
                     type="number"
                     value={planet.current_population}
                     onChange={(e) => updateField("current_population", Number(e.target.value))}
-                    className="h-7 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Max Population</label>
-                  <Input
-                    type="number"
-                    value={planet.max_population}
-                    onChange={(e) => updateField("max_population", Number(e.target.value))}
                     className="h-7 text-xs"
                   />
                 </div>
