@@ -49,7 +49,6 @@ const DEFAULT_PLANET: SystemData = {
 const INITIAL_FIELDS: { key: keyof SystemData; label: string }[] = [
   { key: "initial_condition", label: "Initial Condition" },
   { key: "max_population", label: "Max Population" },
-  { key: "max_ground_defenses", label: "Max Ground Defenses" },
   { key: "importance_rank", label: "Importance Rank" },
   { key: "planet_index", label: "Planet Index" },
 ];
@@ -135,17 +134,17 @@ const PlanetTesting = () => {
     return planet.initial_condition + bonus;
   }, [planet.initial_condition, planet.facilities, facilityTypes]);
 
-  // Calculate max ground defenses = base max_ground_defenses + facility ground_defense_bonus
+  // Calculate max ground defenses = sum of facility ground_defense_bonus only
   const calculatedMaxGroundDefenses = useMemo(() => {
-    let bonus = 0;
+    let total = 0;
     for (const f of planet.facilities || []) {
       const ft = facilityTypes.find((t) => t.id === f.facility_type_id);
       if (ft && ft.ground_defense_bonus) {
-        bonus += ft.ground_defense_bonus * f.quantity;
+        total += ft.ground_defense_bonus * f.quantity;
       }
     }
-    return planet.max_ground_defenses + bonus;
-  }, [planet.max_ground_defenses, planet.facilities, facilityTypes]);
+    return total;
+  }, [planet.facilities, facilityTypes]);
 
   // Keep planet.condition in sync with the calculated value
   useEffect(() => {
@@ -465,7 +464,7 @@ const PlanetTesting = () => {
                   <span className="text-xs font-semibold text-foreground">{calculatedMaxGroundDefenses}</span>
                 </div>
                 <div className="text-[9px] text-muted-foreground mt-0.5">
-                  Base {planet.max_ground_defenses} + facility bonuses {calculatedMaxGroundDefenses - planet.max_ground_defenses}
+                  From facilities: {calculatedMaxGroundDefenses}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-2">
@@ -475,15 +474,6 @@ const PlanetTesting = () => {
                     type="number"
                     value={planet.current_ground_defenses}
                     onChange={(e) => updateField("current_ground_defenses", Number(e.target.value))}
-                    className="h-7 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Base Max Ground Def.</label>
-                  <Input
-                    type="number"
-                    value={planet.max_ground_defenses}
-                    onChange={(e) => updateField("max_ground_defenses", Number(e.target.value))}
                     className="h-7 text-xs"
                   />
                 </div>

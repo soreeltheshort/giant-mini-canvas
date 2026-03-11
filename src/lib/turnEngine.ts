@@ -69,12 +69,12 @@ function calculateCondition(planet: SystemData, facilityTypes: DbFacilityType[])
  * Calculate max ground defenses from facility bonuses.
  */
 function calculateMaxGroundDefenses(planet: SystemData, facilityTypes: DbFacilityType[]): number {
-  let bonus = 0;
+  let total = 0;
   for (const f of planet.facilities || []) {
     const ft = findFT(facilityTypes, f.facility_type_id);
-    if (ft?.ground_defense_bonus) bonus += ft.ground_defense_bonus * f.quantity;
+    if (ft?.ground_defense_bonus) total += ft.ground_defense_bonus * f.quantity;
   }
-  return planet.max_ground_defenses + bonus;
+  return total;
 }
 
 /**
