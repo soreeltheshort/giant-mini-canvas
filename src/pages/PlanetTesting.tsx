@@ -192,6 +192,7 @@ const PlanetTesting = () => {
   const addToProduction = (facilityTypeId: number) => {
     const ft = facilityTypes.find((t) => Number(t.id) === facilityTypeId || t.id === String(facilityTypeId));
     const turnsNeeded = ft?.turns_to_build || 1;
+    const cost = ft?.cost || 0;
     setPlanet((p) => ({
       ...p,
       facilities_in_production: [
@@ -199,10 +200,10 @@ const PlanetTesting = () => {
         { facility_type_id: facilityTypeId, turns_remaining: turnsNeeded },
       ],
     }));
+    // Step 0: Deduct construction cost from income
+    setTotalIncome((prev) => prev - cost);
     setDirty(true);
   };
-
-  const removeProduction = (index: number) => {
     setPlanet((p) => ({
       ...p,
       facilities_in_production: (p.facilities_in_production || []).filter((_, i) => i !== index),
