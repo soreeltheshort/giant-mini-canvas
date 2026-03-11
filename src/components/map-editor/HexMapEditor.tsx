@@ -52,11 +52,10 @@ const HexMapEditor: React.FC = () => {
   // Convert DB facility types to the format used by components
   const facilityTypesForUI: FacilityType[] = useMemo(() =>
     dbFacilityTypes.map((ft) => ({
-      facility_type_id: parseInt(ft.id.replace(/-/g, "").slice(0, 8), 16) || Date.now(),
+      facility_type_id: ft.id,
       name: ft.name,
       description: ft.description,
       icon: ft.icon,
-      db_id: ft.id,
     })),
     [dbFacilityTypes]
   );

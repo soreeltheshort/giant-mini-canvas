@@ -594,7 +594,7 @@ const PlanetTesting = () => {
                   className="w-full h-7 text-xs rounded border border-input bg-background px-2"
                   value=""
                   onChange={(e) => {
-                    if (e.target.value) addToProduction(Number(e.target.value));
+                    if (e.target.value) addToProduction(e.target.value);
                   }}
                 >
                   <option value="">Select facility...</option>
