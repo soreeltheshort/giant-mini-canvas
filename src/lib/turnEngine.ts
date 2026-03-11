@@ -205,16 +205,17 @@ export function processNextTurn(
     if (ft?.maintenance) facilityMaintenance += ft.maintenance * f.quantity;
   }
 
-  // Fighter and gunship capacity from facilities
-  let totalFighters = 0;
-  let totalGunships = 0;
-  for (const f of p.facilities || []) {
-    const ft = findFT(facilityTypes, f.facility_type_id);
-    if (ft?.fighter_capacity) totalFighters += ft.fighter_capacity * f.quantity;
-    if (ft?.gunship_capacity) totalGunships += ft.gunship_capacity * f.quantity;
+  // Fighter and gunship upkeep from stationed strikecraft using actual ship maintenance
+  let fighterUpkeep = 0;
+  for (const sf of p.stationed_fighters || []) {
+    const ship = shipTypes.find((s) => s.id === sf.ship_type_id);
+    if (ship) fighterUpkeep += ship.maintenance * sf.quantity;
   }
-  const fighterUpkeep = totalFighters * constants.fighter_upkeep_cost;
-  const gunshipUpkeep = totalGunships * constants.gunship_upkeep_cost;
+  let gunshipUpkeep = 0;
+  for (const sg of p.stationed_gunships || []) {
+    const ship = shipTypes.find((s) => s.id === sg.ship_type_id);
+    if (ship) gunshipUpkeep += ship.maintenance * sg.quantity;
+  }
 
   // --- Step 9: Ground force replacement ---
   let groundForceReplacement = 0;
