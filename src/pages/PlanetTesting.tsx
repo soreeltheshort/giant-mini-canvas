@@ -606,6 +606,70 @@ const PlanetTesting = () => {
                 </select>
               </div>
             </div>
+
+            {/* Stationed Fighters */}
+            <div className="border border-border rounded p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                Stationed Fighters
+              </h3>
+              {fighterTypes.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No fighter types in database.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {fighterTypes.map((st) => {
+                    const current = (planet.stationed_fighters || []).find((s) => s.ship_type_id === st.id);
+                    const qty = current?.quantity || 0;
+                    return (
+                      <div key={st.id} className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-foreground truncate flex-1">
+                          {st.name} <span className="text-muted-foreground">({st.class})</span>
+                        </span>
+                        <span className="text-[10px] text-muted-foreground w-12 text-right">{st.maintenance}/ea</span>
+                        <div className="flex items-center gap-1">
+                          <Button variant="outline" size="sm" className="h-6 w-6 p-0 text-xs"
+                            onClick={() => updateStrikecraft("stationed_fighters", st.id, Math.max(0, qty - 1))}>−</Button>
+                          <span className="text-xs w-6 text-center font-medium">{qty}</span>
+                          <Button variant="outline" size="sm" className="h-6 w-6 p-0 text-xs"
+                            onClick={() => updateStrikecraft("stationed_fighters", st.id, qty + 1)}>+</Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Stationed Gunships */}
+            <div className="border border-border rounded p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                Stationed Gunships
+              </h3>
+              {gunshipTypes.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No gunship types in database.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {gunshipTypes.map((st) => {
+                    const current = (planet.stationed_gunships || []).find((s) => s.ship_type_id === st.id);
+                    const qty = current?.quantity || 0;
+                    return (
+                      <div key={st.id} className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-foreground truncate flex-1">
+                          {st.name} <span className="text-muted-foreground">({st.class})</span>
+                        </span>
+                        <span className="text-[10px] text-muted-foreground w-12 text-right">{st.maintenance}/ea</span>
+                        <div className="flex items-center gap-1">
+                          <Button variant="outline" size="sm" className="h-6 w-6 p-0 text-xs"
+                            onClick={() => updateStrikecraft("stationed_gunships", st.id, Math.max(0, qty - 1))}>−</Button>
+                          <span className="text-xs w-6 text-center font-medium">{qty}</span>
+                          <Button variant="outline" size="sm" className="h-6 w-6 p-0 text-xs"
+                            onClick={() => updateStrikecraft("stationed_gunships", st.id, qty + 1)}>+</Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
