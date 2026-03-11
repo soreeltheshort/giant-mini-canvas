@@ -374,6 +374,9 @@ const PlanetTesting = () => {
             <Button variant="outline" size="sm" onClick={loadPlanetsFromMap} disabled={loadingPlanets}>
               {loadingPlanets ? "Loading..." : "Load from Map"}
             </Button>
+            <Button variant="outline" size="sm" onClick={handleLoadSaved}>
+              📂 Load Saved
+            </Button>
             <Button variant="outline" size="sm" onClick={handleSave} disabled={!dirty}>
               💾 Save
             </Button>
