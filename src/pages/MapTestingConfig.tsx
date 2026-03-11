@@ -327,7 +327,7 @@ function FacilityTypeRow({ ft, isAdmin, onUpdate, onRemove }: {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">{ft.name}</p>
           {ft.description && <p className="text-xs text-muted-foreground line-clamp-2">{ft.description}</p>}
-          <StatBadges ft={ft} />
+          <StatBadges ft={ft} allFacilityTypes={allFacilityTypes} />
         </div>
         {isAdmin && (
           <div className="flex gap-1">
