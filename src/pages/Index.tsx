@@ -43,6 +43,9 @@ const Index = () => {
                       <Link to="/map-testing">
                         <Button variant="outline">🗺 Map Testing</Button>
                       </Link>
+                      <Link to="/planet-testing">
+                        <Button variant="outline">🌍 Planet Testing</Button>
+                      </Link>
                     </>
                   )}
                 </div>
