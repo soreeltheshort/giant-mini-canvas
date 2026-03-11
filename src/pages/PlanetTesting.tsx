@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import {
   SystemData,
   SystemType,
+  FacilityInProduction,
   HexClassification,
   ALL_CLASSIFICATIONS,
   CLASSIFICATION_LABELS,
