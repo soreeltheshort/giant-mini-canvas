@@ -402,12 +402,12 @@ const PlanetTesting = () => {
           <div className="space-y-4">
             <div className="border border-border rounded p-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                Facilities
+                Built Facilities
               </h3>
               {facilityTypes.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No facility types configured.</p>
               ) : (
-                <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                <div className="space-y-1.5 max-h-60 overflow-y-auto">
                   {facilityTypes.map((ft) => {
                     const current = planet.facilities?.find(
                       (f) => String(f.facility_type_id) === ft.id || f.facility_type_id === Number(ft.id)
@@ -442,6 +442,62 @@ const PlanetTesting = () => {
                   })}
                 </div>
               )}
+            </div>
+
+            {/* In Production */}
+            <div className="border border-border rounded p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                In Production
+              </h3>
+              {(planet.facilities_in_production || []).length === 0 ? (
+                <p className="text-xs text-muted-foreground mb-2">Nothing under construction.</p>
+              ) : (
+                <div className="space-y-1.5 mb-2">
+                  {(planet.facilities_in_production || []).map((fip, idx) => {
+                    const ft = facilityTypes.find(
+                      (t) => String(t.id) === String(fip.facility_type_id) || Number(t.id) === fip.facility_type_id
+                    );
+                    return (
+                      <div key={idx} className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-foreground truncate flex-1">
+                          {ft?.icon || "🏗️"} {ft?.name || `#${fip.facility_type_id}`}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-muted-foreground">
+                            {fip.turns_remaining} turn{fip.turns_remaining !== 1 ? "s" : ""} left
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 text-xs text-destructive hover:text-destructive"
+                            onClick={() => removeProduction(idx)}
+                          >
+                            ✕
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {/* Add to production */}
+              <div className="border-t border-border pt-2">
+                <label className="text-[10px] text-muted-foreground mb-1 block">Start Construction</label>
+                <select
+                  className="w-full h-7 text-xs rounded border border-input bg-background px-2"
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) addToProduction(Number(e.target.value));
+                  }}
+                >
+                  <option value="">Select facility...</option>
+                  {facilityTypes.map((ft) => (
+                    <option key={ft.id} value={ft.id}>
+                      {ft.icon} {ft.name} ({ft.turns_to_build} turn{ft.turns_to_build !== 1 ? "s" : ""})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>

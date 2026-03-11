@@ -104,6 +104,7 @@ export interface SystemData {
   upkeep: number;
   resources: number;
   facilities: SystemFacility[];
+  facilities_in_production: FacilityInProduction[];
   condition: number;
   morale: number;
   max_ground_defenses: number;
