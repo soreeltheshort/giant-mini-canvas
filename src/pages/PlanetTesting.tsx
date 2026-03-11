@@ -70,6 +70,7 @@ const PlanetTesting = () => {
 
   const [planet, setPlanet] = useState<SystemData>({ ...DEFAULT_PLANET });
   const [turn, setTurn] = useState(0);
+  const [totalIncome, setTotalIncome] = useState(0);
   const [dirty, setDirty] = useState(false);
 
   const [availablePlanets, setAvailablePlanets] = useState<SystemData[]>([]);
@@ -220,6 +221,9 @@ const PlanetTesting = () => {
             <h1 className="font-heading text-2xl font-bold text-foreground">Planet Testing</h1>
             <span className="text-sm font-medium text-muted-foreground bg-accent px-2 py-0.5 rounded">
               Turn {turn}
+            </span>
+            <span className="text-sm font-medium text-muted-foreground bg-accent px-2 py-0.5 rounded">
+              Income: {totalIncome}
             </span>
           </div>
           <div className="flex items-center gap-2">
