@@ -508,7 +508,7 @@ const PlanetTesting = () => {
                     <Input
                       type="number"
                       value={planet[key] as number}
-                      onChange={(e) => updateField(key, Number(e.target.value))}
+                      onChange={(e) => updateField(key, parseNumberInput(e.target.value) as SystemData[typeof key])}
                       className="h-7 text-xs"
                     />
                   </div>
