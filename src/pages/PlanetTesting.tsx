@@ -248,8 +248,27 @@ const PlanetTesting = () => {
 
   const addToProduction = (facilityTypeId: string) => {
     const ft = facilityTypes.find((t) => t.id === facilityTypeId);
-    const turnsNeeded = ft?.turns_to_build || 1;
-    const cost = ft?.cost || 0;
+    if (!ft) return;
+
+    // Check max_per_system limit (0 = unlimited)
+    if (ft.max_per_system > 0) {
+      const builtQty = (planet.facilities || [])
+        .filter((f) => f.facility_type_id === facilityTypeId)
+        .reduce((sum, f) => sum + f.quantity, 0);
+      const inProdQty = (planet.facilities_in_production || [])
+        .filter((f) => f.facility_type_id === facilityTypeId).length;
+      if (builtQty + inProdQty >= ft.max_per_system) {
+        toast({
+          title: "Limit reached",
+          description: `Max ${ft.max_per_system} ${ft.name} per system`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const turnsNeeded = ft.turns_to_build || 1;
+    const cost = ft.cost || 0;
     setPlanet((p) => ({
       ...p,
       facilities_in_production: [
