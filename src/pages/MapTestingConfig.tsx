@@ -299,6 +299,7 @@ const STAT_DEFS: { key: keyof DbFacilityType; label: string; prefix?: string; su
   { key: "construction_kickback", label: "Kickback", suffix: "%" },
   { key: "fighter_capacity", label: "Fighter Cap" },
   { key: "gunship_capacity", label: "Gunship Cap" },
+  { key: "max_per_system", label: "Max/System" },
 ];
 
 function StatBadges({ ft, allFacilityTypes }: { ft: DbFacilityType; allFacilityTypes: DbFacilityType[] }) {
