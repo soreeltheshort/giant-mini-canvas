@@ -70,6 +70,7 @@ const PlanetTesting = () => {
 
   const [planet, setPlanet] = useState<SystemData>({ ...DEFAULT_PLANET });
   const [turn, setTurn] = useState(0);
+  const [totalIncome, setTotalIncome] = useState(0);
   const [dirty, setDirty] = useState(false);
 
   const [availablePlanets, setAvailablePlanets] = useState<SystemData[]>([]);
