@@ -492,7 +492,7 @@ const PlanetTesting = () => {
                   <Input
                     type="number"
                     value={planet.current_ground_defenses}
-                    onChange={(e) => updateField("current_ground_defenses", Number(e.target.value))}
+                    onChange={(e) => updateField("current_ground_defenses", parseNumberInput(e.target.value))}
                     className="h-7 text-xs"
                   />
                 </div>
