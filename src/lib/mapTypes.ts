@@ -103,6 +103,7 @@ export interface SystemData {
   morale: number;
   max_ground_defenses: number;
   current_ground_defenses: number;
+  initial_condition: number;
   planet_index: number;
 }
 

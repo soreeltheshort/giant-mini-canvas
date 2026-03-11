@@ -37,6 +37,7 @@ const DEFAULT_PLANET: SystemData = {
   morale: 100,
   max_ground_defenses: 0,
   current_ground_defenses: 0,
+  initial_condition: 40,
   planet_index: 1,
 };
 
@@ -52,6 +53,7 @@ const NUMERIC_FIELDS: { key: keyof SystemData; label: string }[] = [
   { key: "morale", label: "Morale" },
   { key: "max_ground_defenses", label: "Max Ground Defenses" },
   { key: "current_ground_defenses", label: "Current Ground Defenses" },
+  { key: "initial_condition", label: "Initial Condition" },
   { key: "planet_index", label: "Planet Index" },
 ];
 
