@@ -203,7 +203,8 @@ const PlanetTesting = () => {
     // Step 0: Deduct construction cost from income
     setTotalIncome((prev) => prev - cost);
     setDirty(true);
-  };
+
+  const removeProduction = (index: number) => {
     setPlanet((p) => ({
       ...p,
       facilities_in_production: (p.facilities_in_production || []).filter((_, i) => i !== index),
