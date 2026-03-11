@@ -37,6 +37,7 @@ const DEFAULT_PLANET: SystemData = {
   morale: 100,
   max_ground_defenses: 0,
   current_ground_defenses: 0,
+  initial_condition: 40,
   planet_index: 1,
 };
 
