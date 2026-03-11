@@ -293,6 +293,8 @@ const STAT_DEFS: { key: keyof DbFacilityType; label: string; prefix?: string; su
   { key: "ground_defense_bonus", label: "Ground Def", prefix: "+" },
   { key: "turns_to_build", label: "Turns to Build" },
   { key: "construction_kickback", label: "Kickback", suffix: "%" },
+  { key: "fighter_capacity", label: "Fighter Cap" },
+  { key: "gunship_capacity", label: "Gunship Cap" },
 ];
 
 function StatBadges({ ft, allFacilityTypes }: { ft: DbFacilityType; allFacilityTypes: DbFacilityType[] }) {
@@ -409,6 +411,7 @@ function AddFacilityForm({ onAdd, allFacilityTypes }: { onAdd: (fields: Omit<DbF
     cost: 0, maintenance: 0, condition_bonus: 0,
     tribute_flat: 0, tribute_percent: 0, survey_bonus: 0, ground_defense_bonus: 0,
     turns_to_build: 1, construction_kickback: 0, consumed_facility_id: null,
+    fighter_capacity: 0, gunship_capacity: 0,
   };
   const [fields, setFields] = useState(empty);
   const patch = (p: Partial<Omit<DbFacilityType, "id">>) => setFields((prev) => ({ ...prev, ...p }));

@@ -159,7 +159,9 @@ export type Database = {
           cost: number
           created_at: string
           description: string
+          fighter_capacity: number
           ground_defense_bonus: number
+          gunship_capacity: number
           icon: string
           id: string
           maintenance: number
@@ -177,7 +179,9 @@ export type Database = {
           cost?: number
           created_at?: string
           description?: string
+          fighter_capacity?: number
           ground_defense_bonus?: number
+          gunship_capacity?: number
           icon?: string
           id?: string
           maintenance?: number
@@ -195,7 +199,9 @@ export type Database = {
           cost?: number
           created_at?: string
           description?: string
+          fighter_capacity?: number
           ground_defense_bonus?: number
+          gunship_capacity?: number
           icon?: string
           id?: string
           maintenance?: number
