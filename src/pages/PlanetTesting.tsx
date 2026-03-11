@@ -17,7 +17,7 @@ import {
   CLASSIFICATION_LABELS,
 } from "@/lib/mapTypes";
 import { importFromSqlite } from "@/lib/mapDatabase";
-import { processNextTurn, TurnConstants, DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
+import { processNextTurn, TurnConstants, DEFAULT_TURN_CONSTANTS, ShipTypeForUpkeep } from "@/lib/turnEngine";
 
 const DEFAULT_PLANET: SystemData = {
   system_id: 0,
@@ -42,6 +42,8 @@ const DEFAULT_PLANET: SystemData = {
   current_ground_defenses: 0,
   initial_condition: 40,
   planet_index: 1,
+  stationed_fighters: [],
+  stationed_gunships: [],
 };
 
 const INITIAL_FIELDS: { key: keyof SystemData; label: string }[] = [
@@ -87,13 +89,29 @@ const PlanetTesting = () => {
           pop_and_resource_tribute: map.pop_and_resource_tribute ?? DEFAULT_TURN_CONSTANTS.pop_and_resource_tribute,
           pop_or_resources_tribute: map.pop_or_resources_tribute ?? DEFAULT_TURN_CONSTANTS.pop_or_resources_tribute,
           ground_force_replacement_cost: map.ground_force_replacement_cost ?? DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost,
-          fighter_upkeep_cost: map.fighter_upkeep_cost ?? DEFAULT_TURN_CONSTANTS.fighter_upkeep_cost,
-          gunship_upkeep_cost: map.gunship_upkeep_cost ?? DEFAULT_TURN_CONSTANTS.gunship_upkeep_cost,
         });
       }
     };
     loadConstants();
   }, []);
+
+  // Load strikecraft ship types (FH, FL, GS)
+  const [strikecraftTypes, setStrikecraftTypes] = useState<ShipTypeForUpkeep[]>([]);
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("ship_types")
+        .select("id, name, class, maintenance")
+        .in("class", ["FH", "FL", "GS"])
+        .order("class")
+        .order("name");
+      if (data) setStrikecraftTypes(data);
+    };
+    load();
+  }, []);
+
+  const fighterTypes = useMemo(() => strikecraftTypes.filter((s) => s.class === "FH" || s.class === "FL"), [strikecraftTypes]);
+  const gunshipTypes = useMemo(() => strikecraftTypes.filter((s) => s.class === "GS"), [strikecraftTypes]);
 
   const [availablePlanets, setAvailablePlanets] = useState<SystemData[]>([]);
   const [loadingPlanets, setLoadingPlanets] = useState(false);
@@ -217,6 +235,25 @@ const PlanetTesting = () => {
     setDirty(true);
   };
 
+  const updateStrikecraft = (
+    field: "stationed_fighters" | "stationed_gunships",
+    shipTypeId: string,
+    qty: number
+  ) => {
+    setPlanet((p) => {
+      const list = [...(p[field] || [])];
+      const idx = list.findIndex((s) => s.ship_type_id === shipTypeId);
+      if (qty <= 0) {
+        if (idx >= 0) list.splice(idx, 1);
+      } else {
+        if (idx >= 0) list[idx] = { ...list[idx], quantity: qty };
+        else list.push({ ship_type_id: shipTypeId, quantity: qty });
+      }
+      return { ...p, [field]: list };
+    });
+    setDirty(true);
+  };
+
   const handleSave = () => {
     const saved = JSON.parse(localStorage.getItem("planet_testing_saves") || "[]");
     const existing = saved.findIndex((s: any) => s.system_name === planet.system_name);
@@ -228,7 +265,7 @@ const PlanetTesting = () => {
   };
 
   const handleNextTurn = () => {
-    const result = processNextTurn(planet, facilityTypes, turnConstants, totalIncome);
+    const result = processNextTurn(planet, facilityTypes, turnConstants, totalIncome, strikecraftTypes);
     setPlanet(result.planet);
     setTotalIncome(result.income);
     setLastTurnResult(result);
@@ -568,6 +605,70 @@ const PlanetTesting = () => {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Stationed Fighters */}
+            <div className="border border-border rounded p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                Stationed Fighters
+              </h3>
+              {fighterTypes.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No fighter types in database.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {fighterTypes.map((st) => {
+                    const current = (planet.stationed_fighters || []).find((s) => s.ship_type_id === st.id);
+                    const qty = current?.quantity || 0;
+                    return (
+                      <div key={st.id} className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-foreground truncate flex-1">
+                          {st.name} <span className="text-muted-foreground">({st.class})</span>
+                        </span>
+                        <span className="text-[10px] text-muted-foreground w-12 text-right">{st.maintenance}/ea</span>
+                        <div className="flex items-center gap-1">
+                          <Button variant="outline" size="sm" className="h-6 w-6 p-0 text-xs"
+                            onClick={() => updateStrikecraft("stationed_fighters", st.id, Math.max(0, qty - 1))}>−</Button>
+                          <span className="text-xs w-6 text-center font-medium">{qty}</span>
+                          <Button variant="outline" size="sm" className="h-6 w-6 p-0 text-xs"
+                            onClick={() => updateStrikecraft("stationed_fighters", st.id, qty + 1)}>+</Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Stationed Gunships */}
+            <div className="border border-border rounded p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                Stationed Gunships
+              </h3>
+              {gunshipTypes.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No gunship types in database.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {gunshipTypes.map((st) => {
+                    const current = (planet.stationed_gunships || []).find((s) => s.ship_type_id === st.id);
+                    const qty = current?.quantity || 0;
+                    return (
+                      <div key={st.id} className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-foreground truncate flex-1">
+                          {st.name} <span className="text-muted-foreground">({st.class})</span>
+                        </span>
+                        <span className="text-[10px] text-muted-foreground w-12 text-right">{st.maintenance}/ea</span>
+                        <div className="flex items-center gap-1">
+                          <Button variant="outline" size="sm" className="h-6 w-6 p-0 text-xs"
+                            onClick={() => updateStrikecraft("stationed_gunships", st.id, Math.max(0, qty - 1))}>−</Button>
+                          <span className="text-xs w-6 text-center font-medium">{qty}</span>
+                          <Button variant="outline" size="sm" className="h-6 w-6 p-0 text-xs"
+                            onClick={() => updateStrikecraft("stationed_gunships", st.id, qty + 1)}>+</Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

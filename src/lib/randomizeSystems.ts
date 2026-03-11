@@ -173,6 +173,8 @@ function placeSystem(
     current_ground_defenses: 0,
     initial_condition: 40,
     planet_index: 0,
+    stationed_fighters: [],
+    stationed_gunships: [],
   });
 }
 
