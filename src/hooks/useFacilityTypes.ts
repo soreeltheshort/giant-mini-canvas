@@ -16,6 +16,7 @@ export interface DbFacilityType {
   ground_defense_bonus: number;
   turns_to_build: number;
   construction_kickback: number;
+  consumed_facility_id: string | null;
 }
 
 export function useFacilityTypes() {

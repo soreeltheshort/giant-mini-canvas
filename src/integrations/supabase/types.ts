@@ -155,6 +155,7 @@ export type Database = {
         Row: {
           condition_bonus: number
           construction_kickback: number
+          consumed_facility_id: string | null
           cost: number
           created_at: string
           description: string
@@ -172,6 +173,7 @@ export type Database = {
         Insert: {
           condition_bonus?: number
           construction_kickback?: number
+          consumed_facility_id?: string | null
           cost?: number
           created_at?: string
           description?: string
@@ -189,6 +191,7 @@ export type Database = {
         Update: {
           condition_bonus?: number
           construction_kickback?: number
+          consumed_facility_id?: string | null
           cost?: number
           created_at?: string
           description?: string
@@ -203,7 +206,15 @@ export type Database = {
           turns_to_build?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "facility_types_consumed_facility_id_fkey"
+            columns: ["consumed_facility_id"]
+            isOneToOne: false
+            referencedRelation: "facility_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       factions: {
         Row: {
