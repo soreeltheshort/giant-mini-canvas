@@ -316,11 +316,12 @@ function StatBadges({ ft, allFacilityTypes }: { ft: DbFacilityType; allFacilityT
 }
 
 /* ── Facility Type row ── */
-function FacilityTypeRow({ ft, isAdmin, onUpdate, onRemove }: {
+function FacilityTypeRow({ ft, isAdmin, onUpdate, onRemove, allFacilityTypes }: {
   ft: DbFacilityType;
   isAdmin: boolean;
   onUpdate: (id: string, updates: Partial<Omit<DbFacilityType, "id">>) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
+  allFacilityTypes: DbFacilityType[];
 }) {
   const [editing, setEditing] = useState(false);
   const [fields, setFields] = useState<Omit<DbFacilityType, "id">>({ ...ft });
