@@ -95,6 +95,24 @@ const PlanetTesting = () => {
     loadConstants();
   }, []);
 
+  // Load strikecraft ship types (FH, FL, GS)
+  const [strikecraftTypes, setStrikecraftTypes] = useState<ShipTypeForUpkeep[]>([]);
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("ship_types")
+        .select("id, name, class, maintenance")
+        .in("class", ["FH", "FL", "GS"])
+        .order("class")
+        .order("name");
+      if (data) setStrikecraftTypes(data);
+    };
+    load();
+  }, []);
+
+  const fighterTypes = useMemo(() => strikecraftTypes.filter((s) => s.class === "FH" || s.class === "FL"), [strikecraftTypes]);
+  const gunshipTypes = useMemo(() => strikecraftTypes.filter((s) => s.class === "GS"), [strikecraftTypes]);
+
   const [availablePlanets, setAvailablePlanets] = useState<SystemData[]>([]);
   const [loadingPlanets, setLoadingPlanets] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
