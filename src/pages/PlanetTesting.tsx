@@ -48,7 +48,7 @@ const DEFAULT_PLANET: SystemData = {
 
 const INITIAL_FIELDS: { key: keyof SystemData; label: string }[] = [
   { key: "initial_condition", label: "Initial Condition" },
-  { key: "max_population", label: "Max Population" },
+  
   { key: "importance_rank", label: "Importance Rank" },
   { key: "planet_index", label: "Planet Index" },
 ];
