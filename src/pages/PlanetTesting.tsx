@@ -208,7 +208,7 @@ const PlanetTesting = () => {
   }, [user, toast]);
 
   const selectPlanet = (sys: SystemData) => {
-    setPlanet({ ...sys });
+    setPlanet(sanitizePlanetNumbers({ ...sys }));
     setShowLoadDialog(false);
     setDirty(false);
     setTurn(0);
@@ -217,7 +217,7 @@ const PlanetTesting = () => {
   };
 
   const createNewPlanet = () => {
-    setPlanet({ ...DEFAULT_PLANET });
+    setPlanet(sanitizePlanetNumbers({ ...DEFAULT_PLANET }));
     setDirty(false);
     setTurn(0);
     setTotalIncome(0);
@@ -225,7 +225,7 @@ const PlanetTesting = () => {
   };
 
   const updateField = <K extends keyof SystemData>(key: K, value: SystemData[K]) => {
-    setPlanet((p) => ({ ...p, [key]: value }));
+    setPlanet((p) => sanitizePlanetNumbers({ ...p, [key]: value } as SystemData));
     setDirty(true);
   };
 
