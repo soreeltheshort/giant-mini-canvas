@@ -517,7 +517,7 @@ const PlanetTesting = () => {
                 <div className="space-y-1.5 max-h-60 overflow-y-auto">
                   {facilityTypes.map((ft) => {
                     const current = planet.facilities?.find(
-                      (f) => String(f.facility_type_id) === ft.id || f.facility_type_id === Number(ft.id)
+                      (f) => f.facility_type_id === ft.id
                     );
                     const qty = current?.quantity || 0;
                     return (
