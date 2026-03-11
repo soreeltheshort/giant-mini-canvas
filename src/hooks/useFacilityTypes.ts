@@ -17,6 +17,8 @@ export interface DbFacilityType {
   turns_to_build: number;
   construction_kickback: number;
   consumed_facility_id: string | null;
+  fighter_capacity: number;
+  gunship_capacity: number;
 }
 
 export function useFacilityTypes() {
