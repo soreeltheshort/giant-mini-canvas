@@ -70,7 +70,7 @@ export interface HexData {
 }
 
 export interface FacilityType {
-  facility_type_id: number;
+  facility_type_id: string;
   name: string;
   description: string;
   icon: string; // emoji or short code

@@ -211,8 +211,8 @@ const PlanetTesting = () => {
     setDirty(true);
   };
 
-  const addToProduction = (facilityTypeId: number) => {
-    const ft = facilityTypes.find((t) => Number(t.id) === facilityTypeId || t.id === String(facilityTypeId));
+  const addToProduction = (facilityTypeId: string) => {
+    const ft = facilityTypes.find((t) => t.id === facilityTypeId);
     const turnsNeeded = ft?.turns_to_build || 1;
     const cost = ft?.cost || 0;
     setPlanet((p) => ({
