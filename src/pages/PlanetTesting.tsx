@@ -17,6 +17,7 @@ import {
   CLASSIFICATION_LABELS,
 } from "@/lib/mapTypes";
 import { importFromSqlite } from "@/lib/mapDatabase";
+import { processNextTurn, TurnConstants, DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
 
 const DEFAULT_PLANET: SystemData = {
   system_id: 0,
