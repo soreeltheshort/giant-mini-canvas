@@ -137,6 +137,8 @@ const PlanetTesting = () => {
   const [availablePlanets, setAvailablePlanets] = useState<SystemData[]>([]);
   const [loadingPlanets, setLoadingPlanets] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
+  const [showSavedDialog, setShowSavedDialog] = useState(false);
+  const [savedPlanets, setSavedPlanets] = useState<(SystemData & { turn?: number })[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
@@ -297,6 +299,31 @@ const PlanetTesting = () => {
     toast({ title: "Planet saved" });
   };
 
+  const handleLoadSaved = () => {
+    const saved = JSON.parse(localStorage.getItem("planet_testing_saves") || "[]");
+    setSavedPlanets(saved);
+    setShowSavedDialog(true);
+    setShowLoadDialog(false);
+  };
+
+  const selectSavedPlanet = (saved: SystemData & { turn?: number }) => {
+    const savedTurn = saved.turn || 0;
+    setPlanet(sanitizePlanetNumbers({ ...saved }));
+    setShowSavedDialog(false);
+    setDirty(false);
+    setTurn(savedTurn);
+    setTotalIncome(0);
+    setLastTurnResult(null);
+  };
+
+  const deleteSavedPlanet = (name: string) => {
+    const saved = JSON.parse(localStorage.getItem("planet_testing_saves") || "[]");
+    const filtered = saved.filter((s: any) => s.system_name !== name);
+    localStorage.setItem("planet_testing_saves", JSON.stringify(filtered));
+    setSavedPlanets(filtered);
+    toast({ title: "Deleted", description: `Removed "${name}"` });
+  };
+
   const handleNextTurn = () => {
     const result = processNextTurn(
       sanitizePlanetNumbers(planet),
@@ -347,6 +374,9 @@ const PlanetTesting = () => {
             <Button variant="outline" size="sm" onClick={loadPlanetsFromMap} disabled={loadingPlanets}>
               {loadingPlanets ? "Loading..." : "Load from Map"}
             </Button>
+            <Button variant="outline" size="sm" onClick={handleLoadSaved}>
+              📂 Load Saved
+            </Button>
             <Button variant="outline" size="sm" onClick={handleSave} disabled={!dirty}>
               💾 Save
             </Button>
@@ -379,6 +409,40 @@ const PlanetTesting = () => {
                       {sys.owner && ` · ${sys.owner}`}
                     </div>
                   </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Load saved dialog */}
+        {showSavedDialog && (
+          <div className="mb-6 border border-border rounded p-4 bg-card">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-foreground">Load Saved Planet</h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowSavedDialog(false)}>✕</Button>
+            </div>
+            {savedPlanets.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No saved planets found.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+                {savedPlanets.map((sys) => (
+                  <div
+                    key={sys.system_name}
+                    className="text-left border border-border rounded px-3 py-2 hover:bg-accent/50 transition-colors flex items-center justify-between gap-1"
+                  >
+                    <button onClick={() => selectSavedPlanet(sys)} className="flex-1 text-left min-w-0">
+                      <div className="text-xs font-medium text-foreground truncate">{sys.system_name}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        Turn {sys.turn || 0} · Pop {sys.current_population}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => deleteSavedPlanet(sys.system_name)}
+                      className="text-xs text-destructive hover:text-destructive/80 shrink-0"
+                      title="Delete"
+                    >🗑</button>
+                  </div>
                 ))}
               </div>
             )}
