@@ -107,7 +107,7 @@ const Header = () => {
                 </Link>
               </>
             )}
-            {user && isAdmin && isMapTestingMode && (
+            {user && isAdmin && (isMapTestingMode || isPlanetTestingMode) && (
               <Link to="/map-testing/config" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/map-testing/config" ? "text-foreground" : ""}`}>
                 Config
               </Link>
