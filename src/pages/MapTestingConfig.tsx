@@ -383,6 +383,7 @@ function AddFacilityForm({ onAdd }: { onAdd: (fields: Omit<DbFacilityType, "id">
     name: "", description: "", icon: "🏭",
     cost: 0, maintenance: 0, condition_bonus: 0,
     tribute_flat: 0, tribute_percent: 0, survey_bonus: 0, ground_defense_bonus: 0,
+    turns_to_build: 1, construction_kickback: 0,
   };
   const [fields, setFields] = useState(empty);
   const patch = (p: Partial<Omit<DbFacilityType, "id">>) => setFields((prev) => ({ ...prev, ...p }));
