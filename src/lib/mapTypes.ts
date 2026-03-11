@@ -116,6 +116,8 @@ export interface SystemData {
   current_ground_defenses: number;
   initial_condition: number;
   planet_index: number;
+  stationed_fighters: StationedStrikecraft[];
+  stationed_gunships: StationedStrikecraft[];
 }
 
 export interface ProvinceRegion {
