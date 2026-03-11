@@ -126,7 +126,7 @@ const PlanetTesting = () => {
     let bonus = 0;
     for (const f of planet.facilities || []) {
       const ft = facilityTypes.find(
-        (t) => String(t.id) === String(f.facility_type_id) || Number(t.id) === f.facility_type_id
+        (t) => t.id === f.facility_type_id
       );
       if (ft && ft.condition_bonus) {
         bonus += ft.condition_bonus * f.quantity;
