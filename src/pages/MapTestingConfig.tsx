@@ -402,12 +402,12 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
 }
 
 /* ── Add Facility Form ── */
-function AddFacilityForm({ onAdd }: { onAdd: (fields: Omit<DbFacilityType, "id">) => Promise<void> }) {
+function AddFacilityForm({ onAdd, allFacilityTypes }: { onAdd: (fields: Omit<DbFacilityType, "id">) => Promise<void>; allFacilityTypes: DbFacilityType[] }) {
   const empty: Omit<DbFacilityType, "id"> = {
     name: "", description: "", icon: "🏭",
     cost: 0, maintenance: 0, condition_bonus: 0,
     tribute_flat: 0, tribute_percent: 0, survey_bonus: 0, ground_defense_bonus: 0,
-    turns_to_build: 1, construction_kickback: 0,
+    turns_to_build: 1, construction_kickback: 0, consumed_facility_id: null,
   };
   const [fields, setFields] = useState(empty);
   const patch = (p: Partial<Omit<DbFacilityType, "id">>) => setFields((prev) => ({ ...prev, ...p }));
@@ -420,7 +420,7 @@ function AddFacilityForm({ onAdd }: { onAdd: (fields: Omit<DbFacilityType, "id">
         <Input value={fields.name} onChange={(e) => patch({ name: e.target.value })} className="h-9 flex-1" placeholder="Facility name" />
       </div>
       <Input value={fields.description} onChange={(e) => patch({ description: e.target.value })} className="h-9" placeholder="Description (optional)" />
-      <FacilityNumericFields fields={fields} patch={patch} />
+      <FacilityNumericFields fields={fields} patch={patch} allFacilityTypes={allFacilityTypes} />
       <Button size="sm" disabled={!fields.name.trim()} onClick={async () => { await onAdd({ ...fields, name: fields.name.trim() }); setFields(empty); }}>
         Add Facility Type
       </Button>
