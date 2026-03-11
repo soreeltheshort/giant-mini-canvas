@@ -246,6 +246,7 @@ const HexMapEditor: React.FC = () => {
           morale: 0,
           max_ground_defenses: 0,
           current_ground_defenses: 0,
+          initial_condition: 40,
           planet_index: 0,
         });
         return { ...prev, hexes: newHexes, systems: newSystems };
