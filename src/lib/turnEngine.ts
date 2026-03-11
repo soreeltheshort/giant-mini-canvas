@@ -74,8 +74,7 @@ function calculateMaxGroundDefenses(planet: SystemData, facilityTypes: DbFacilit
     const ft = findFT(facilityTypes, f.facility_type_id);
     if (ft?.ground_defense_bonus) bonus += ft.ground_defense_bonus * f.quantity;
   }
-  return planet.max_ground_defenses + bonus - bonus; // keep base for now — just return current max
-  // TODO: if max_ground_defenses becomes figured, update here
+  return planet.max_ground_defenses + bonus;
 }
 
 /**
