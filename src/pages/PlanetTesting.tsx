@@ -530,7 +530,7 @@ const PlanetTesting = () => {
                             variant="outline"
                             size="sm"
                             className="h-6 w-6 p-0 text-xs"
-                            onClick={() => updateFacilityQty(Number(ft.id) || (ft.id as any), Math.max(0, qty - 1))}
+                            onClick={() => updateFacilityQty(ft.id, Math.max(0, qty - 1))}
                           >
                             −
                           </Button>
