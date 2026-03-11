@@ -157,6 +157,7 @@ export function processNextTurn(
 
   // --- Step 3: Recalculate figured characteristics ---
   p.condition = calculateCondition(p, facilityTypes);
+  const figuredMaxGD = calculateMaxGroundDefenses(p, facilityTypes);
 
   // --- Step 4: Simulated events (placeholder) ---
   // TODO: apply one-time planet events here
