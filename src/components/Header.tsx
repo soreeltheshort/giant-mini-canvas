@@ -102,6 +102,9 @@ const Header = () => {
                 <Link to="/map-testing" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/map-testing") ? "text-foreground" : "text-muted-foreground"}`}>
                   Map Testing
                 </Link>
+                <Link to="/planet-testing" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/planet-testing") ? "text-foreground" : "text-muted-foreground"}`}>
+                  Planet Testing
+                </Link>
               </>
             )}
             {user && isAdmin && isMapTestingMode && (
