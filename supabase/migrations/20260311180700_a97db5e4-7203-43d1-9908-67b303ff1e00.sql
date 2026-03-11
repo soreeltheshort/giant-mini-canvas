@@ -1,0 +1,1 @@
+ALTER TABLE public.facility_types ADD COLUMN max_per_system integer NOT NULL DEFAULT 0;

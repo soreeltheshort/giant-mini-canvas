@@ -19,6 +19,7 @@ export interface DbFacilityType {
   consumed_facility_id: string | null;
   fighter_capacity: number;
   gunship_capacity: number;
+  max_per_system: number;
 }
 
 export function useFacilityTypes() {
