@@ -137,6 +137,8 @@ const PlanetTesting = () => {
   const [availablePlanets, setAvailablePlanets] = useState<SystemData[]>([]);
   const [loadingPlanets, setLoadingPlanets] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
+  const [showSavedDialog, setShowSavedDialog] = useState(false);
+  const [savedPlanets, setSavedPlanets] = useState<(SystemData & { turn?: number })[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
