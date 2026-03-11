@@ -3,15 +3,20 @@
  * Designed for reuse in both Planet Testing and the main game engine.
  */
 
-import { SystemData, SystemFacility } from "./mapTypes";
+import { SystemData, SystemFacility, StationedStrikecraft } from "./mapTypes";
 import { DbFacilityType } from "@/hooks/useFacilityTypes";
+
+export interface ShipTypeForUpkeep {
+  id: string;
+  name: string;
+  class: string;
+  maintenance: number;
+}
 
 export interface TurnConstants {
   pop_and_resource_tribute: number;
   pop_or_resources_tribute: number;
   ground_force_replacement_cost: number;
-  fighter_upkeep_cost: number;
-  gunship_upkeep_cost: number;
 }
 
 export const DEFAULT_TURN_CONSTANTS: TurnConstants = {
