@@ -86,6 +86,11 @@ export interface FacilityInProduction {
   turns_remaining: number;
 }
 
+export interface StationedStrikecraft {
+  ship_type_id: string;
+  quantity: number;
+}
+
 export type SystemType = "system" | "station";
 
 export interface SystemData {
