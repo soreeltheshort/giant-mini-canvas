@@ -89,8 +89,6 @@ const PlanetTesting = () => {
           pop_and_resource_tribute: map.pop_and_resource_tribute ?? DEFAULT_TURN_CONSTANTS.pop_and_resource_tribute,
           pop_or_resources_tribute: map.pop_or_resources_tribute ?? DEFAULT_TURN_CONSTANTS.pop_or_resources_tribute,
           ground_force_replacement_cost: map.ground_force_replacement_cost ?? DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost,
-          fighter_upkeep_cost: map.fighter_upkeep_cost ?? DEFAULT_TURN_CONSTANTS.fighter_upkeep_cost,
-          gunship_upkeep_cost: map.gunship_upkeep_cost ?? DEFAULT_TURN_CONSTANTS.gunship_upkeep_cost,
         });
       }
     };
