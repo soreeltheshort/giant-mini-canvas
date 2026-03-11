@@ -221,7 +221,16 @@ const PlanetTesting = () => {
   };
 
   const handleNextTurn = () => {
+    const result = processNextTurn(planet, facilityTypes, turnConstants, totalIncome);
+    setPlanet(result.planet);
+    setTotalIncome(result.income);
+    setLastTurnResult(result);
     setTurn((t) => t + 1);
+    setDirty(true);
+
+    if (result.completedFacilities.length > 0) {
+      toast({ title: `Completed: ${result.completedFacilities.join(", ")}` });
+    }
   };
 
   if (authLoading) {
