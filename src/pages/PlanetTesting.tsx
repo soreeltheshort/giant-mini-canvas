@@ -298,10 +298,14 @@ const PlanetTesting = () => {
   };
 
   const handleNextTurn = () => {
-    console.log("BEFORE turn:", { pop: planet.current_population, morale: planet.morale, condition: planet.condition });
-    const result = processNextTurn(planet, facilityTypes, turnConstants, totalIncome, strikecraftTypes);
-    console.log("AFTER turn:", { pop: result.planet.current_population, morale: result.planet.morale, condition: result.planet.condition });
-    setPlanet(result.planet);
+    const result = processNextTurn(
+      sanitizePlanetNumbers(planet),
+      facilityTypes,
+      turnConstants,
+      totalIncome,
+      strikecraftTypes
+    );
+    setPlanet(sanitizePlanetNumbers(result.planet));
     setTotalIncome(result.income);
     setLastTurnResult(result);
     setTurn((t) => t + 1);
