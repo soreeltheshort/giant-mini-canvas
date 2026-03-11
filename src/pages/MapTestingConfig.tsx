@@ -346,7 +346,7 @@ function FacilityTypeRow({ ft, isAdmin, onUpdate, onRemove }: {
         <Input value={fields.name} onChange={(e) => patch({ name: e.target.value })} className="h-8 flex-1" />
       </div>
       <Input value={fields.description} onChange={(e) => patch({ description: e.target.value })} className="h-8" placeholder="Description" />
-      <FacilityNumericFields fields={fields} patch={patch} />
+      <FacilityNumericFields fields={fields} patch={patch} allFacilityTypes={allFacilityTypes} currentId={ft.id} />
       <div className="flex gap-1">
         <Button size="sm" className="h-7 text-xs" onClick={async () => { await onUpdate(ft.id, fields); setEditing(false); }}>Save</Button>
         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setFields({ ...ft }); setEditing(false); }}>Cancel</Button>
