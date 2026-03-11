@@ -165,6 +165,7 @@ export type Database = {
           icon: string
           id: string
           maintenance: number
+          max_per_system: number
           name: string
           survey_bonus: number
           tribute_flat: number
@@ -185,6 +186,7 @@ export type Database = {
           icon?: string
           id?: string
           maintenance?: number
+          max_per_system?: number
           name: string
           survey_bonus?: number
           tribute_flat?: number
@@ -205,6 +207,7 @@ export type Database = {
           icon?: string
           id?: string
           maintenance?: number
+          max_per_system?: number
           name?: string
           survey_bonus?: number
           tribute_flat?: number
