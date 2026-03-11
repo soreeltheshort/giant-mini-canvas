@@ -94,6 +94,13 @@ const PlanetTesting = () => {
     return planet.initial_condition + bonus;
   }, [planet.initial_condition, planet.facilities, facilityTypes]);
 
+  // Keep planet.condition in sync with the calculated value
+  useEffect(() => {
+    if (planet.condition !== calculatedCondition) {
+      setPlanet((p) => ({ ...p, condition: calculatedCondition }));
+    }
+  }, [calculatedCondition]);
+
   const loadPlanetsFromMap = useCallback(async () => {
     if (!user) return;
     setLoadingPlanets(true);
