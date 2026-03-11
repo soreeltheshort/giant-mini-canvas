@@ -100,6 +100,7 @@ export function processNextTurn(
   facilityTypes: DbFacilityType[],
   constants: TurnConstants,
   currentIncome: number,
+  shipTypes: ShipTypeForUpkeep[],
 ): TurnResult {
   let income = currentIncome;
   const completedFacilities: string[] = [];
