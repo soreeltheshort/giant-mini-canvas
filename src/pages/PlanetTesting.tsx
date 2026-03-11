@@ -134,17 +134,17 @@ const PlanetTesting = () => {
     return planet.initial_condition + bonus;
   }, [planet.initial_condition, planet.facilities, facilityTypes]);
 
-  // Calculate max ground defenses = base max_ground_defenses + facility ground_defense_bonus
+  // Calculate max ground defenses = sum of facility ground_defense_bonus only
   const calculatedMaxGroundDefenses = useMemo(() => {
-    let bonus = 0;
+    let total = 0;
     for (const f of planet.facilities || []) {
       const ft = facilityTypes.find((t) => t.id === f.facility_type_id);
       if (ft && ft.ground_defense_bonus) {
-        bonus += ft.ground_defense_bonus * f.quantity;
+        total += ft.ground_defense_bonus * f.quantity;
       }
     }
-    return planet.max_ground_defenses + bonus;
-  }, [planet.max_ground_defenses, planet.facilities, facilityTypes]);
+    return total;
+  }, [planet.facilities, facilityTypes]);
 
   // Keep planet.condition in sync with the calculated value
   useEffect(() => {
