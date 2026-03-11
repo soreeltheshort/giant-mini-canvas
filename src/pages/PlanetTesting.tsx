@@ -34,6 +34,7 @@ const DEFAULT_PLANET: SystemData = {
   upkeep: 0,
   resources: 0,
   facilities: [],
+  facilities_in_production: [],
   condition: 100,
   morale: 100,
   max_ground_defenses: 0,
