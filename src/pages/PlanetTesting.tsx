@@ -159,6 +159,27 @@ const PlanetTesting = () => {
     setDirty(true);
   };
 
+  const addToProduction = (facilityTypeId: number) => {
+    const ft = facilityTypes.find((t) => Number(t.id) === facilityTypeId || t.id === String(facilityTypeId));
+    const turnsNeeded = ft?.turns_to_build || 1;
+    setPlanet((p) => ({
+      ...p,
+      facilities_in_production: [
+        ...(p.facilities_in_production || []),
+        { facility_type_id: facilityTypeId, turns_remaining: turnsNeeded },
+      ],
+    }));
+    setDirty(true);
+  };
+
+  const removeProduction = (index: number) => {
+    setPlanet((p) => ({
+      ...p,
+      facilities_in_production: (p.facilities_in_production || []).filter((_, i) => i !== index),
+    }));
+    setDirty(true);
+  };
+
   const handleSave = () => {
     const saved = JSON.parse(localStorage.getItem("planet_testing_saves") || "[]");
     const existing = saved.findIndex((s: any) => s.system_name === planet.system_name);
