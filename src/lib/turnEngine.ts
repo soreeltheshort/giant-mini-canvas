@@ -1,0 +1,252 @@
+/**
+ * Shared Turn Engine — processes a single "Next Turn" for a planet/system.
+ * Designed for reuse in both Planet Testing and the main game engine.
+ */
+
+import { SystemData, SystemFacility } from "./mapTypes";
+import { DbFacilityType } from "@/hooks/useFacilityTypes";
+
+export interface TurnConstants {
+  pop_and_resource_tribute: number;
+  pop_or_resources_tribute: number;
+  ground_force_replacement_cost: number;
+  fighter_upkeep_cost: number;
+  gunship_upkeep_cost: number;
+}
+
+export const DEFAULT_TURN_CONSTANTS: TurnConstants = {
+  pop_and_resource_tribute: 1,
+  pop_or_resources_tribute: 0.5,
+  ground_force_replacement_cost: 2,
+  fighter_upkeep_cost: 1,
+  gunship_upkeep_cost: 1,
+};
+
+export interface TurnResult {
+  planet: SystemData;
+  income: number;
+  tributeBreakdown: {
+    baseTribute: number;
+    facilityFlatBonus: number;
+    facilityPercentMultiplier: number;
+    totalTribute: number;
+  };
+  upkeepBreakdown: {
+    facilityMaintenance: number;
+    fighterUpkeep: number;
+    gunshipUpkeep: number;
+    groundForceReplacement: number;
+    totalUpkeep: number;
+  };
+  completedFacilities: string[]; // names of facilities completed this turn
+}
+
+/**
+ * Find a facility type by ID, handling string/number mismatch.
+ */
+function findFT(facilityTypes: DbFacilityType[], id: number): DbFacilityType | undefined {
+  return facilityTypes.find(
+    (t) => String(t.id) === String(id) || Number(t.id) === id
+  );
+}
+
+/**
+ * Calculate the figured condition value (initial_condition + facility bonuses).
+ */
+function calculateCondition(planet: SystemData, facilityTypes: DbFacilityType[]): number {
+  let bonus = 0;
+  for (const f of planet.facilities || []) {
+    const ft = findFT(facilityTypes, f.facility_type_id);
+    if (ft?.condition_bonus) bonus += ft.condition_bonus * f.quantity;
+  }
+  return planet.initial_condition + bonus;
+}
+
+/**
+ * Calculate max ground defenses from facility bonuses.
+ */
+function calculateMaxGroundDefenses(planet: SystemData, facilityTypes: DbFacilityType[]): number {
+  let bonus = 0;
+  for (const f of planet.facilities || []) {
+    const ft = findFT(facilityTypes, f.facility_type_id);
+    if (ft?.ground_defense_bonus) bonus += ft.ground_defense_bonus * f.quantity;
+  }
+  return planet.max_ground_defenses + bonus - bonus; // keep base for now — just return current max
+  // TODO: if max_ground_defenses becomes figured, update here
+}
+
+/**
+ * Process one turn for a single planet.
+ *
+ * Steps (in order):
+ *  0. Income -= cost of newly started facilities (already deducted when added to production)
+ *  1. All facilities in production: turns_remaining -= 1
+ *  2. Completed facilities (turns_remaining == 0) → added to built, consumed facility removed
+ *  3. Recalculate figured characteristics (condition, etc.)
+ *  4. Simulated events impact (placeholder)
+ *  5. Morale += (Condition - Morale) / 4
+ *  6. Population += (Morale - Population) / 4
+ *  7. Tribute calculation
+ *  8. Upkeep calculation
+ *  9. Ground force replacement
+ * 10. Income += Tribute
+ * 11. Income -= Upkeep
+ */
+export function processNextTurn(
+  planet: SystemData,
+  facilityTypes: DbFacilityType[],
+  constants: TurnConstants,
+  currentIncome: number,
+): TurnResult {
+  let income = currentIncome;
+  const completedFacilities: string[] = [];
+  let p = { ...planet };
+
+  // --- Step 0: Cost of new production is deducted when items are added (handled in UI) ---
+
+  // --- Step 1: Decrement turns_remaining ---
+  let inProd = (p.facilities_in_production || []).map((fip) => ({
+    ...fip,
+    turns_remaining: fip.turns_remaining - 1,
+  }));
+
+  // --- Step 2: Complete facilities at 0 turns ---
+  const completed = inProd.filter((fip) => fip.turns_remaining <= 0);
+  const remaining = inProd.filter((fip) => fip.turns_remaining > 0);
+
+  let facilities: SystemFacility[] = [...(p.facilities || [])];
+
+  for (const done of completed) {
+    const ft = findFT(facilityTypes, done.facility_type_id);
+    completedFacilities.push(ft?.name || `Facility #${done.facility_type_id}`);
+
+    // Add to built facilities
+    const existingIdx = facilities.findIndex(
+      (f) => f.facility_type_id === done.facility_type_id
+    );
+    if (existingIdx >= 0) {
+      facilities[existingIdx] = {
+        ...facilities[existingIdx],
+        quantity: facilities[existingIdx].quantity + 1,
+      };
+    } else {
+      facilities.push({ facility_type_id: done.facility_type_id, quantity: 1 });
+    }
+
+    // Remove one consumed facility if required
+    if (ft?.consumed_facility_id) {
+      const consumedId = Number(ft.consumed_facility_id) || (ft.consumed_facility_id as any);
+      const cIdx = facilities.findIndex(
+        (f) => String(f.facility_type_id) === String(consumedId) || f.facility_type_id === consumedId
+      );
+      if (cIdx >= 0) {
+        if (facilities[cIdx].quantity <= 1) {
+          facilities.splice(cIdx, 1);
+        } else {
+          facilities[cIdx] = { ...facilities[cIdx], quantity: facilities[cIdx].quantity - 1 };
+        }
+      }
+    }
+  }
+
+  p.facilities = facilities;
+  p.facilities_in_production = remaining;
+
+  // --- Step 3: Recalculate figured characteristics ---
+  p.condition = calculateCondition(p, facilityTypes);
+
+  // --- Step 4: Simulated events (placeholder) ---
+  // TODO: apply one-time planet events here
+
+  // --- Step 5: Morale adjustment ---
+  p.morale = Math.round(p.morale + (p.condition - p.morale) / 4);
+
+  // --- Step 6: Population adjustment ---
+  p.current_population = Math.round(
+    p.current_population + (p.morale - p.current_population) / 4
+  );
+  // Cap at max
+  p.current_population = Math.min(p.current_population, p.max_population);
+
+  // --- Step 7: Tribute calculation ---
+  // 7a: Base tribute
+  const pop = p.current_population;
+  const res = p.resources;
+  const baseTribute =
+    Math.min(pop, res) * constants.pop_and_resource_tribute +
+    Math.abs(pop - res) * constants.pop_or_resources_tribute;
+
+  // 7b: Facility flat tribute bonuses
+  let facilityFlatBonus = 0;
+  for (const f of p.facilities || []) {
+    const ft = findFT(facilityTypes, f.facility_type_id);
+    if (ft?.tribute_flat) facilityFlatBonus += ft.tribute_flat * f.quantity;
+  }
+
+  // 7c: Facility tribute percentage multiplier
+  let tributePercentSum = 0;
+  for (const f of p.facilities || []) {
+    const ft = findFT(facilityTypes, f.facility_type_id);
+    if (ft?.tribute_percent) tributePercentSum += ft.tribute_percent * f.quantity;
+  }
+  const facilityPercentMultiplier = 1 + tributePercentSum / 100;
+
+  const totalTribute = Math.round((baseTribute + facilityFlatBonus) * facilityPercentMultiplier);
+  p.tribute = totalTribute;
+
+  // --- Step 8: Upkeep calculation ---
+  let facilityMaintenance = 0;
+  for (const f of p.facilities || []) {
+    const ft = findFT(facilityTypes, f.facility_type_id);
+    if (ft?.maintenance) facilityMaintenance += ft.maintenance * f.quantity;
+  }
+
+  // Fighter and gunship capacity from facilities
+  let totalFighters = 0;
+  let totalGunships = 0;
+  for (const f of p.facilities || []) {
+    const ft = findFT(facilityTypes, f.facility_type_id);
+    if (ft?.fighter_capacity) totalFighters += ft.fighter_capacity * f.quantity;
+    if (ft?.gunship_capacity) totalGunships += ft.gunship_capacity * f.quantity;
+  }
+  const fighterUpkeep = totalFighters * constants.fighter_upkeep_cost;
+  const gunshipUpkeep = totalGunships * constants.gunship_upkeep_cost;
+
+  // --- Step 9: Ground force replacement ---
+  let groundForceReplacement = 0;
+  if (p.current_ground_defenses < p.max_ground_defenses) {
+    const deficit = p.max_ground_defenses - p.current_ground_defenses;
+    const replenish = Math.ceil(deficit / 2);
+    p.current_ground_defenses = Math.min(
+      p.current_ground_defenses + replenish,
+      p.max_ground_defenses
+    );
+    groundForceReplacement = replenish * constants.ground_force_replacement_cost;
+  }
+
+  const totalUpkeep = facilityMaintenance + fighterUpkeep + gunshipUpkeep + groundForceReplacement;
+  p.upkeep = totalUpkeep;
+
+  // --- Step 10 & 11: Income ---
+  income += totalTribute;
+  income -= totalUpkeep;
+
+  return {
+    planet: p,
+    income,
+    tributeBreakdown: {
+      baseTribute: Math.round(baseTribute),
+      facilityFlatBonus,
+      facilityPercentMultiplier,
+      totalTribute,
+    },
+    upkeepBreakdown: {
+      facilityMaintenance,
+      fighterUpkeep,
+      gunshipUpkeep,
+      groundForceReplacement,
+      totalUpkeep,
+    },
+    completedFacilities,
+  };
+}

@@ -17,6 +17,7 @@ import {
   CLASSIFICATION_LABELS,
 } from "@/lib/mapTypes";
 import { importFromSqlite } from "@/lib/mapDatabase";
+import { processNextTurn, TurnConstants, DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
 
 const DEFAULT_PLANET: SystemData = {
   system_id: 0,
@@ -72,6 +73,27 @@ const PlanetTesting = () => {
   const [turn, setTurn] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [dirty, setDirty] = useState(false);
+  const [turnConstants, setTurnConstants] = useState<TurnConstants>(DEFAULT_TURN_CONSTANTS);
+  const [lastTurnResult, setLastTurnResult] = useState<ReturnType<typeof processNextTurn> | null>(null);
+
+  // Load turn constants from DB
+  useEffect(() => {
+    const loadConstants = async () => {
+      const { data } = await supabase.from("combat_constants").select("key, value");
+      if (data) {
+        const map: Record<string, number> = {};
+        for (const row of data) map[row.key] = Number(row.value);
+        setTurnConstants({
+          pop_and_resource_tribute: map.pop_and_resource_tribute ?? DEFAULT_TURN_CONSTANTS.pop_and_resource_tribute,
+          pop_or_resources_tribute: map.pop_or_resources_tribute ?? DEFAULT_TURN_CONSTANTS.pop_or_resources_tribute,
+          ground_force_replacement_cost: map.ground_force_replacement_cost ?? DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost,
+          fighter_upkeep_cost: map.fighter_upkeep_cost ?? DEFAULT_TURN_CONSTANTS.fighter_upkeep_cost,
+          gunship_upkeep_cost: map.gunship_upkeep_cost ?? DEFAULT_TURN_CONSTANTS.gunship_upkeep_cost,
+        });
+      }
+    };
+    loadConstants();
+  }, []);
 
   const [availablePlanets, setAvailablePlanets] = useState<SystemData[]>([]);
   const [loadingPlanets, setLoadingPlanets] = useState(false);
@@ -139,12 +161,16 @@ const PlanetTesting = () => {
     setShowLoadDialog(false);
     setDirty(false);
     setTurn(0);
+    setTotalIncome(0);
+    setLastTurnResult(null);
   };
 
   const createNewPlanet = () => {
     setPlanet({ ...DEFAULT_PLANET });
     setDirty(false);
     setTurn(0);
+    setTotalIncome(0);
+    setLastTurnResult(null);
   };
 
   const updateField = <K extends keyof SystemData>(key: K, value: SystemData[K]) => {
@@ -170,6 +196,7 @@ const PlanetTesting = () => {
   const addToProduction = (facilityTypeId: number) => {
     const ft = facilityTypes.find((t) => Number(t.id) === facilityTypeId || t.id === String(facilityTypeId));
     const turnsNeeded = ft?.turns_to_build || 1;
+    const cost = ft?.cost || 0;
     setPlanet((p) => ({
       ...p,
       facilities_in_production: [
@@ -177,6 +204,8 @@ const PlanetTesting = () => {
         { facility_type_id: facilityTypeId, turns_remaining: turnsNeeded },
       ],
     }));
+    // Step 0: Deduct construction cost from income
+    setTotalIncome((prev) => prev - cost);
     setDirty(true);
   };
 
@@ -199,7 +228,16 @@ const PlanetTesting = () => {
   };
 
   const handleNextTurn = () => {
+    const result = processNextTurn(planet, facilityTypes, turnConstants, totalIncome);
+    setPlanet(result.planet);
+    setTotalIncome(result.income);
+    setLastTurnResult(result);
     setTurn((t) => t + 1);
+    setDirty(true);
+
+    if (result.completedFacilities.length > 0) {
+      toast({ title: `Completed: ${result.completedFacilities.join(", ")}` });
+    }
   };
 
   if (authLoading) {
