@@ -196,7 +196,7 @@ const PlanetTesting = () => {
     setDirty(true);
   };
 
-  const updateFacilityQty = (facilityTypeId: number, qty: number) => {
+  const updateFacilityQty = (facilityTypeId: string, qty: number) => {
     setPlanet((p) => {
       const facs = [...(p.facilities || [])];
       const idx = facs.findIndex((f) => f.facility_type_id === facilityTypeId);
