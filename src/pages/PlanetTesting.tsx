@@ -246,7 +246,7 @@ const PlanetTesting = () => {
   };
 
   const handleNextTurn = () => {
-    const result = processNextTurn(planet, facilityTypes, turnConstants, totalIncome);
+    const result = processNextTurn(planet, facilityTypes, turnConstants, totalIncome, strikecraftTypes);
     setPlanet(result.planet);
     setTotalIncome(result.income);
     setLastTurnResult(result);
