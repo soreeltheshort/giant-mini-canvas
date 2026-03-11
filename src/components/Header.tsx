@@ -18,6 +18,7 @@ const Header = () => {
   const canAccessGameFeatures = isAdmin || isTester;
   const isCombatTestingMode = location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/fleet-builder") || location.pathname.startsWith("/battle") || location.pathname.startsWith("/admin/battle") || location.pathname.startsWith("/admin/weapons") || location.pathname.startsWith("/admin/ships");
   const isMapTestingMode = location.pathname.startsWith("/map-testing");
+  const isPlanetTestingMode = location.pathname.startsWith("/planet-testing");
 
   const handleNewsletter = () => {
     if (location.pathname === "/") {
@@ -101,9 +102,12 @@ const Header = () => {
                 <Link to="/map-testing" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/map-testing") ? "text-foreground" : "text-muted-foreground"}`}>
                   Map Testing
                 </Link>
+                <Link to="/planet-testing" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/planet-testing") ? "text-foreground" : "text-muted-foreground"}`}>
+                  Planet Testing
+                </Link>
               </>
             )}
-            {user && isAdmin && isMapTestingMode && (
+            {user && isAdmin && (isMapTestingMode || isPlanetTestingMode) && (
               <Link to="/map-testing/config" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/map-testing/config" ? "text-foreground" : ""}`}>
                 Config
               </Link>
