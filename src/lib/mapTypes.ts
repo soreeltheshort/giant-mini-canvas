@@ -81,6 +81,11 @@ export interface SystemFacility {
   quantity: number;
 }
 
+export interface FacilityInProduction {
+  facility_type_id: number;
+  turns_remaining: number;
+}
+
 export type SystemType = "system" | "station";
 
 export interface SystemData {
@@ -99,6 +104,7 @@ export interface SystemData {
   upkeep: number;
   resources: number;
   facilities: SystemFacility[];
+  facilities_in_production: FacilityInProduction[];
   condition: number;
   morale: number;
   max_ground_defenses: number;

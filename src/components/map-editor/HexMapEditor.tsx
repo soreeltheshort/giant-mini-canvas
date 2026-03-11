@@ -242,6 +242,7 @@ const HexMapEditor: React.FC = () => {
           upkeep: 0,
           resources: 0,
           facilities: [],
+          facilities_in_production: [],
           condition: 0,
           morale: 0,
           max_ground_defenses: 0,
