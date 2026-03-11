@@ -63,6 +63,28 @@ const CURRENT_FIELDS: { key: keyof SystemData; label: string }[] = [
   { key: "morale", label: "Morale" },
 ];
 
+const sanitizePlanetNumbers = (planet: SystemData): SystemData => ({
+  ...planet,
+  current_population: Number.isFinite(planet.current_population) ? planet.current_population : 0,
+  morale: Number.isFinite(planet.morale) ? planet.morale : 0,
+  condition: Number.isFinite(planet.condition) ? planet.condition : 0,
+  survey: Number.isFinite(planet.survey) ? planet.survey : 0,
+  tribute: Number.isFinite(planet.tribute) ? planet.tribute : 0,
+  upkeep: Number.isFinite(planet.upkeep) ? planet.upkeep : 0,
+  resources: Number.isFinite(planet.resources) ? planet.resources : 0,
+  current_ground_defenses: Number.isFinite(planet.current_ground_defenses)
+    ? planet.current_ground_defenses
+    : 0,
+  initial_condition: Number.isFinite(planet.initial_condition) ? planet.initial_condition : 0,
+  importance_rank: Number.isFinite(planet.importance_rank) ? planet.importance_rank : 0,
+  planet_index: Number.isFinite(planet.planet_index) ? planet.planet_index : 0,
+});
+
+const parseNumberInput = (value: string): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const PlanetTesting = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
