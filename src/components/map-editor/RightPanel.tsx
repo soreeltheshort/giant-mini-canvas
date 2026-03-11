@@ -113,7 +113,7 @@ const RightPanel: React.FC<Props> = ({
     });
   };
 
-  const toggleFacility = (ftId: number) => {
+  const toggleFacility = (ftId: string) => {
     if (!hex || !system) return;
     const existing = system.facilities || [];
     const has = existing.find((f) => f.facility_type_id === ftId);
@@ -123,7 +123,7 @@ const RightPanel: React.FC<Props> = ({
     onUpdateSystem(hex.hex_id, { facilities: updated });
   };
 
-  const updateFacilityQty = (ftId: number, qty: number) => {
+  const updateFacilityQty = (ftId: string, qty: number) => {
     if (!hex || !system) return;
     const updated = (system.facilities || []).map((f) =>
       f.facility_type_id === ftId ? { ...f, quantity: Math.max(1, qty) } : f
