@@ -464,7 +464,7 @@ const PlanetTesting = () => {
                   <span className="text-xs font-semibold text-foreground">{calculatedMaxGroundDefenses}</span>
                 </div>
                 <div className="text-[9px] text-muted-foreground mt-0.5">
-                  Base {planet.max_ground_defenses} + facility bonuses {calculatedMaxGroundDefenses - planet.max_ground_defenses}
+                  From facilities: {calculatedMaxGroundDefenses}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-2">
@@ -474,15 +474,6 @@ const PlanetTesting = () => {
                     type="number"
                     value={planet.current_ground_defenses}
                     onChange={(e) => updateField("current_ground_defenses", Number(e.target.value))}
-                    className="h-7 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Base Max Ground Def.</label>
-                  <Input
-                    type="number"
-                    value={planet.max_ground_defenses}
-                    onChange={(e) => updateField("max_ground_defenses", Number(e.target.value))}
                     className="h-7 text-xs"
                   />
                 </div>
