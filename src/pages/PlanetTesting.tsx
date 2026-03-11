@@ -299,6 +299,31 @@ const PlanetTesting = () => {
     toast({ title: "Planet saved" });
   };
 
+  const handleLoadSaved = () => {
+    const saved = JSON.parse(localStorage.getItem("planet_testing_saves") || "[]");
+    setSavedPlanets(saved);
+    setShowSavedDialog(true);
+    setShowLoadDialog(false);
+  };
+
+  const selectSavedPlanet = (saved: SystemData & { turn?: number }) => {
+    const savedTurn = saved.turn || 0;
+    setPlanet(sanitizePlanetNumbers({ ...saved }));
+    setShowSavedDialog(false);
+    setDirty(false);
+    setTurn(savedTurn);
+    setTotalIncome(0);
+    setLastTurnResult(null);
+  };
+
+  const deleteSavedPlanet = (name: string) => {
+    const saved = JSON.parse(localStorage.getItem("planet_testing_saves") || "[]");
+    const filtered = saved.filter((s: any) => s.system_name !== name);
+    localStorage.setItem("planet_testing_saves", JSON.stringify(filtered));
+    setSavedPlanets(filtered);
+    toast({ title: "Deleted", description: `Removed "${name}"` });
+  };
+
   const handleNextTurn = () => {
     const result = processNextTurn(
       sanitizePlanetNumbers(planet),
