@@ -293,6 +293,8 @@ const STAT_DEFS: { key: keyof DbFacilityType; label: string; prefix?: string; su
   { key: "ground_defense_bonus", label: "Ground Def", prefix: "+" },
   { key: "turns_to_build", label: "Turns to Build" },
   { key: "construction_kickback", label: "Kickback", suffix: "%" },
+  { key: "fighter_capacity", label: "Fighter Cap" },
+  { key: "gunship_capacity", label: "Gunship Cap" },
 ];
 
 function StatBadges({ ft, allFacilityTypes }: { ft: DbFacilityType; allFacilityTypes: DbFacilityType[] }) {
