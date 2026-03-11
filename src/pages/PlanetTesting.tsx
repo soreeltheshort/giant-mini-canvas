@@ -235,6 +235,25 @@ const PlanetTesting = () => {
     setDirty(true);
   };
 
+  const updateStrikecraft = (
+    field: "stationed_fighters" | "stationed_gunships",
+    shipTypeId: string,
+    qty: number
+  ) => {
+    setPlanet((p) => {
+      const list = [...(p[field] || [])];
+      const idx = list.findIndex((s) => s.ship_type_id === shipTypeId);
+      if (qty <= 0) {
+        if (idx >= 0) list.splice(idx, 1);
+      } else {
+        if (idx >= 0) list[idx] = { ...list[idx], quantity: qty };
+        else list.push({ ship_type_id: shipTypeId, quantity: qty });
+      }
+      return { ...p, [field]: list };
+    });
+    setDirty(true);
+  };
+
   const handleSave = () => {
     const saved = JSON.parse(localStorage.getItem("planet_testing_saves") || "[]");
     const existing = saved.findIndex((s: any) => s.system_name === planet.system_name);
