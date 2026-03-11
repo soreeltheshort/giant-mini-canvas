@@ -73,6 +73,27 @@ const PlanetTesting = () => {
   const [turn, setTurn] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [dirty, setDirty] = useState(false);
+  const [turnConstants, setTurnConstants] = useState<TurnConstants>(DEFAULT_TURN_CONSTANTS);
+  const [lastTurnResult, setLastTurnResult] = useState<ReturnType<typeof processNextTurn> | null>(null);
+
+  // Load turn constants from DB
+  useEffect(() => {
+    const loadConstants = async () => {
+      const { data } = await supabase.from("combat_constants").select("key, value");
+      if (data) {
+        const map: Record<string, number> = {};
+        for (const row of data) map[row.key] = Number(row.value);
+        setTurnConstants({
+          pop_and_resource_tribute: map.pop_and_resource_tribute ?? DEFAULT_TURN_CONSTANTS.pop_and_resource_tribute,
+          pop_or_resources_tribute: map.pop_or_resources_tribute ?? DEFAULT_TURN_CONSTANTS.pop_or_resources_tribute,
+          ground_force_replacement_cost: map.ground_force_replacement_cost ?? DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost,
+          fighter_upkeep_cost: map.fighter_upkeep_cost ?? DEFAULT_TURN_CONSTANTS.fighter_upkeep_cost,
+          gunship_upkeep_cost: map.gunship_upkeep_cost ?? DEFAULT_TURN_CONSTANTS.gunship_upkeep_cost,
+        });
+      }
+    };
+    loadConstants();
+  }, []);
 
   const [availablePlanets, setAvailablePlanets] = useState<SystemData[]>([]);
   const [loadingPlanets, setLoadingPlanets] = useState(false);
