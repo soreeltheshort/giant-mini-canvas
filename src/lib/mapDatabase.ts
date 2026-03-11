@@ -229,6 +229,9 @@ export async function importFromSqlite(file: File): Promise<MapState> {
   for (const row of readRows("SELECT * FROM systems")) {
     row.owner = row.owner || "";
     row.facilities = facBySystemId.get(row.system_id) || [];
+    row.facilities_in_production = row.facilities_in_production || [];
+    row.stationed_fighters = row.stationed_fighters || [];
+    row.stationed_gunships = row.stationed_gunships || [];
     systems.set(row.hex_id, row as SystemData);
   }
 
