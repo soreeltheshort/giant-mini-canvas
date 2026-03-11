@@ -77,12 +77,12 @@ export interface FacilityType {
 }
 
 export interface SystemFacility {
-  facility_type_id: number;
+  facility_type_id: string;
   quantity: number;
 }
 
 export interface FacilityInProduction {
-  facility_type_id: number;
+  facility_type_id: string;
   turns_remaining: number;
 }
 
