@@ -47,9 +47,9 @@ export interface TurnResult {
 /**
  * Find a facility type by ID, handling string/number mismatch.
  */
-function findFT(facilityTypes: DbFacilityType[], id: number): DbFacilityType | undefined {
+function findFT(facilityTypes: DbFacilityType[], id: string | number): DbFacilityType | undefined {
   return facilityTypes.find(
-    (t) => String(t.id) === String(id) || Number(t.id) === id
+    (t) => String(t.id) === String(id)
   );
 }
 
