@@ -182,6 +182,9 @@ const MapTestingConfig = () => {
             </div>
           </label>
         </ConfigSection>
+
+        {/* ── Turn Economy Constants ── */}
+        <TurnConstantsSection isAdmin={isAdmin} />
       </div>
     </div>
   );
