@@ -23,8 +23,6 @@ export const DEFAULT_TURN_CONSTANTS: TurnConstants = {
   pop_and_resource_tribute: 1,
   pop_or_resources_tribute: 0.5,
   ground_force_replacement_cost: 2,
-  fighter_upkeep_cost: 1,
-  gunship_upkeep_cost: 1,
 };
 
 export interface TurnResult {
