@@ -539,7 +539,7 @@ const PlanetTesting = () => {
                             variant="outline"
                             size="sm"
                             className="h-6 w-6 p-0 text-xs"
-                            onClick={() => updateFacilityQty(Number(ft.id) || (ft.id as any), qty + 1)}
+                            onClick={() => updateFacilityQty(ft.id, qty + 1)}
                           >
                             +
                           </Button>
