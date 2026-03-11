@@ -221,6 +221,9 @@ const PlanetTesting = () => {
             <span className="text-sm font-medium text-muted-foreground bg-accent px-2 py-0.5 rounded">
               Turn {turn}
             </span>
+            <span className="text-sm font-medium text-muted-foreground bg-accent px-2 py-0.5 rounded">
+              Income: {totalIncome}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={createNewPlanet}>
