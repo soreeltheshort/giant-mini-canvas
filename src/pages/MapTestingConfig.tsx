@@ -362,23 +362,41 @@ function FacilityTypeRow({ ft, isAdmin, onUpdate, onRemove }: {
 }
 
 /* ── Shared numeric fields for facility editing ── */
-function FacilityNumericFields({ fields, patch }: {
+function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
   fields: Omit<DbFacilityType, "id">;
   patch: (p: Partial<Omit<DbFacilityType, "id">>) => void;
+  allFacilityTypes: DbFacilityType[];
+  currentId?: string;
 }) {
+  const selectableTypes = allFacilityTypes.filter(f => f.id !== currentId);
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-      {STAT_DEFS.map((s) => (
-        <div key={s.key} className="flex flex-col gap-0.5">
-          <label className="text-[10px] text-muted-foreground">{s.label}</label>
-          <Input
-            type="number"
-            value={(fields as any)[s.key]}
-            onChange={(e) => patch({ [s.key]: parseInt(e.target.value) || 0 })}
-            className="h-7 text-xs"
-          />
-        </div>
-      ))}
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {STAT_DEFS.map((s) => (
+          <div key={s.key} className="flex flex-col gap-0.5">
+            <label className="text-[10px] text-muted-foreground">{s.label}</label>
+            <Input
+              type="number"
+              value={(fields as any)[s.key]}
+              onChange={(e) => patch({ [s.key]: parseInt(e.target.value) || 0 })}
+              className="h-7 text-xs"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <label className="text-[10px] text-muted-foreground">Consumed Facility</label>
+        <select
+          value={fields.consumed_facility_id || ""}
+          onChange={(e) => patch({ consumed_facility_id: e.target.value || null })}
+          className="h-7 text-xs rounded border border-input bg-background px-2"
+        >
+          <option value="">None</option>
+          {selectableTypes.map(f => (
+            <option key={f.id} value={f.id}>{f.icon} {f.name}</option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
