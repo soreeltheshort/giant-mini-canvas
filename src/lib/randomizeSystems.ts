@@ -1,5 +1,6 @@
 import { HexData, HexClassification, SystemData, MapState, hexKey } from "./mapTypes";
 import { offsetToCube, cubeDistance } from "./hexUtils";
+import { DbPlanetType } from "@/hooks/usePlanetTypes";
 
 export interface RandomizeParams {
   provinces: HexClassification[];
