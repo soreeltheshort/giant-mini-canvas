@@ -32,7 +32,7 @@ export function saveRandomizeParams(params: RandomizeParams) {
  * Generate random systems on a map without removing existing ones.
  * Returns a new MapState with the added systems.
  */
-export function randomizeSystems(state: MapState, params: RandomizeParams): MapState {
+export function randomizeSystems(state: MapState, params: RandomizeParams, planetTypes?: DbPlanetType[]): MapState {
   const { provinces, hexesPerSystem, minDistance, forceEvenDistribution } = params;
 
   // Collect existing system cube coords for distance checks
