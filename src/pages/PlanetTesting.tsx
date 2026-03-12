@@ -91,6 +91,9 @@ const PlanetTesting = () => {
   const { toast } = useToast();
   const { facilityTypes } = useFacilityTypes();
   const { factions } = useFactions();
+  const { planetTypes } = usePlanetTypes();
+
+  const [selectedPlanetTypeId, setSelectedPlanetTypeId] = useState("");
 
   const [planet, setPlanet] = useState<SystemData>({ ...DEFAULT_PLANET });
   const [turn, setTurn] = useState(0);
