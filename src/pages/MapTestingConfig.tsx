@@ -238,7 +238,7 @@ function PlanetTypeRow({ pt, isAdmin, onUpdate, onRemove }: {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">{pt.name}</p>
           <p className="text-xs text-muted-foreground">
-            Condition: {pt.min_initial_condition}–{pt.max_initial_condition} · Resources: {pt.min_resources}–{pt.max_resources}
+            Condition: {pt.min_initial_condition}–{pt.max_initial_condition} · Resources: {pt.min_resources}–{pt.max_resources} · Weight: {pt.weight}
           </p>
         </div>
         {isAdmin && (
