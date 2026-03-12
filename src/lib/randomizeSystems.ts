@@ -127,6 +127,23 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
   return arr;
 }
 
+/** Pick a random planet type using weighted distribution */
+function pickWeightedPlanetType(planetTypes?: DbPlanetType[]): DbPlanetType | undefined {
+  if (!planetTypes || planetTypes.length === 0) return undefined;
+  const totalWeight = planetTypes.reduce((sum, pt) => sum + Math.max(0, pt.weight), 0);
+  if (totalWeight <= 0) return planetTypes[Math.floor(Math.random() * planetTypes.length)];
+  let roll = Math.random() * totalWeight;
+  for (const pt of planetTypes) {
+    roll -= Math.max(0, pt.weight);
+    if (roll <= 0) return pt;
+  }
+  return planetTypes[planetTypes.length - 1];
+}
+
+function randBetween(min: number, max: number): number {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
 function isFarEnough(
   hex: HexData,
   placedCubes: [number, number, number][],
