@@ -9,6 +9,7 @@ export interface DbPlanetType {
   max_initial_condition: number;
   min_resources: number;
   max_resources: number;
+  weight: number;
 }
 
 export function usePlanetTypes() {
