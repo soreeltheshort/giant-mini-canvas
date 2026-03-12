@@ -294,6 +294,7 @@ function AddPlanetTypeForm({ onAdd }: { onAdd: (fields: Omit<DbPlanetType, "id">
   const [maxCond, setMaxCond] = useState(100);
   const [minRes, setMinRes] = useState(0);
   const [maxRes, setMaxRes] = useState(100);
+  const [weight, setWeight] = useState(1);
 
   return (
     <div className="border border-border rounded-md p-4 space-y-2">
