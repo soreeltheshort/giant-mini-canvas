@@ -313,7 +313,7 @@ const HexMapEditor: React.FC = () => {
       systems: new Map(Array.from(mapState.systems.entries()).map(([k, v]) => [k, { ...v, facilities: [...(v.facilities || [])] }])),
     };
     setPreRandomizeState(snapshot);
-    const newState = randomizeSystems(snapshot, params);
+    const newState = randomizeSystems(snapshot, params, planetTypes);
     const addedCount = newState.systems.size - snapshot.systems.size;
     setMapState(newState);
     setRandomizedCount(addedCount);
