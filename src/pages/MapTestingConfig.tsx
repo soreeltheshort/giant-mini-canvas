@@ -6,6 +6,7 @@ import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 import { useFactions } from "@/hooks/useFactions";
 import { DbFacilityType } from "@/hooks/useFacilityTypes";
 import { useSystemActions } from "@/hooks/useSystemActions";
+import { usePlanetTypes, DbPlanetType } from "@/hooks/usePlanetTypes";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
