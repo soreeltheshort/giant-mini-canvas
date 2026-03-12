@@ -64,7 +64,7 @@ const MapTestingConfig = () => {
     if (!loading && !user) navigate("/login");
   }, [loading, user, navigate]);
 
-  if (loading || ftLoading || facLoading || actLoading) {
+  if (loading || ftLoading || facLoading || actLoading || ptLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
