@@ -38,7 +38,7 @@ const DEFAULT_PLANET: SystemData = {
   facilities: [],
   facilities_in_production: [],
   condition: 40,
-  morale: 100,
+  morale: 0,
   max_ground_defenses: 0,
   current_ground_defenses: 0,
   initial_condition: 40,
@@ -593,7 +593,7 @@ const PlanetTesting = () => {
               {/* Remaining current fields */}
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {CURRENT_FIELDS.filter(f => 
-                  f.key !== "current_population" && f.key !== "current_ground_defenses"
+                  f.key !== "current_population" && f.key !== "current_ground_defenses" && f.key !== "tribute" && f.key !== "upkeep"
                 ).map(({ key, label }) => (
                   <div key={key}>
                     <label className="text-[10px] text-muted-foreground">{label}</label>
@@ -605,6 +605,39 @@ const PlanetTesting = () => {
                     />
                   </div>
                 ))}
+              </div>
+
+              {/* Tribute breakdown */}
+              <div className="mt-3 p-2 rounded bg-accent/30 border border-border">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] text-muted-foreground">Tribute</label>
+                  <span className="text-xs font-semibold text-foreground">{planet.tribute}</span>
+                </div>
+                {lastTurnResult && (
+                  <div className="text-[9px] text-muted-foreground mt-0.5 space-y-0.5">
+                    <div>Base tribute: {lastTurnResult.tributeBreakdown.baseTribute}</div>
+                    <div>Facility flat bonus: +{lastTurnResult.tributeBreakdown.facilityFlatBonus}</div>
+                    <div>Facility % multiplier: ×{lastTurnResult.tributeBreakdown.facilityPercentMultiplier.toFixed(2)}</div>
+                    <div className="font-medium">Total: {lastTurnResult.tributeBreakdown.totalTribute}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Upkeep breakdown */}
+              <div className="mt-2 p-2 rounded bg-accent/30 border border-border">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] text-muted-foreground">Upkeep</label>
+                  <span className="text-xs font-semibold text-foreground">{planet.upkeep}</span>
+                </div>
+                {lastTurnResult && (
+                  <div className="text-[9px] text-muted-foreground mt-0.5 space-y-0.5">
+                    <div>Facility maintenance: {lastTurnResult.upkeepBreakdown.facilityMaintenance}</div>
+                    <div>Fighter upkeep: {lastTurnResult.upkeepBreakdown.fighterUpkeep}</div>
+                    <div>Gunship upkeep: {lastTurnResult.upkeepBreakdown.gunshipUpkeep}</div>
+                    <div>Ground force replacement: {lastTurnResult.upkeepBreakdown.groundForceReplacement}</div>
+                    <div className="font-medium">Total: {lastTurnResult.upkeepBreakdown.totalUpkeep}</div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -623,8 +656,18 @@ const PlanetTesting = () => {
                     if (id) {
                       const pt = planetTypes.find((p) => p.id === id);
                       if (pt) {
-                        updateField("initial_condition", pt.min_initial_condition);
-                        updateField("resources", pt.min_resources);
+                        const randCond = pt.min_initial_condition + Math.floor(Math.random() * (pt.max_initial_condition - pt.min_initial_condition + 1));
+                        const randRes = pt.min_resources + Math.floor(Math.random() * (pt.max_resources - pt.min_resources + 1));
+                        setPlanet(sanitizePlanetNumbers({
+                          ...DEFAULT_PLANET,
+                          initial_condition: randCond,
+                          condition: randCond,
+                          resources: randRes,
+                        }));
+                        setTurn(0);
+                        setTotalIncome(0);
+                        setLastTurnResult(null);
+                        setDirty(false);
                       }
                     }
                   }}
