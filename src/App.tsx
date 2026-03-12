@@ -43,9 +43,9 @@ const App = () => (
             <Route path="/fleet-builder" element={<FleetBuilder />} />
             <Route path="/battle" element={<Battle />} />
             <Route path="/manual" element={<Manual />} />
-            <Route path="/map-testing" element={<MapTesting />} />
-            <Route path="/map-testing/config" element={<MapTestingConfig />} />
-            <Route path="/planet-testing" element={<PlanetTesting />} />
+            <Route path="/map-testing" element={<RequireRole roles={["admin", "tester"]}><MapTesting /></RequireRole>} />
+            <Route path="/map-testing/config" element={<RequireRole roles={["admin", "tester"]}><MapTestingConfig /></RequireRole>} />
+            <Route path="/planet-testing" element={<RequireRole roles={["admin", "tester"]}><PlanetTesting /></RequireRole>} />
             <Route path="/admin/battle-debug" element={<AdminBattleDebug />} />
             <Route path="/admin/weapons" element={<AdminWeapons />} />
             <Route path="/admin/battle-config" element={<AdminBattleConfig />} />
