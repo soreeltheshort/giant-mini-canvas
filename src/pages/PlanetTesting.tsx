@@ -59,7 +59,6 @@ const CURRENT_FIELDS: { key: keyof SystemData; label: string }[] = [
   { key: "survey", label: "Survey" },
   { key: "tribute", label: "Tribute" },
   { key: "upkeep", label: "Upkeep" },
-  { key: "resources", label: "Resources" },
   { key: "morale", label: "Morale" },
 ];
 
