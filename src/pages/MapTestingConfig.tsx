@@ -271,6 +271,10 @@ function PlanetTypeRow({ pt, isAdmin, onUpdate, onRemove }: {
           <label className="text-[10px] text-muted-foreground">Max Resources</label>
           <Input type="number" value={maxRes} onChange={(e) => setMaxRes(Number(e.target.value))} className="h-7 text-xs" />
         </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Weight</label>
+          <Input type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value))} className="h-7 text-xs" min={0} />
+        </div>
       </div>
       <div className="flex gap-1">
         <Button size="sm" className="h-7 text-xs" onClick={async () => {
