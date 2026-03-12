@@ -230,6 +230,7 @@ function PlanetTypeRow({ pt, isAdmin, onUpdate, onRemove }: {
   const [maxCond, setMaxCond] = useState(pt.max_initial_condition);
   const [minRes, setMinRes] = useState(pt.min_resources);
   const [maxRes, setMaxRes] = useState(pt.max_resources);
+  const [weight, setWeight] = useState(pt.weight);
 
   if (!editing) {
     return (
