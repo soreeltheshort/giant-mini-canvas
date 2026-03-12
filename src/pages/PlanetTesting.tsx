@@ -608,6 +608,32 @@ const PlanetTesting = () => {
             {/* Initial / Base Stats */}
             <div className="border border-border rounded p-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Initial Stats</h3>
+              {/* Base Planet Type dropdown */}
+              <div className="mb-3">
+                <label className="text-[10px] text-muted-foreground">Base Planet Type</label>
+                <select
+                  className="w-full h-7 text-xs rounded border border-border bg-background text-foreground px-2"
+                  value={selectedPlanetTypeId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setSelectedPlanetTypeId(id);
+                    if (id) {
+                      const pt = planetTypes.find((p) => p.id === id);
+                      if (pt) {
+                        updateField("initial_condition", pt.min_initial_condition);
+                        updateField("resources", pt.min_resources);
+                      }
+                    }
+                  }}
+                >
+                  <option value="">— None —</option>
+                  {planetTypes.map((pt) => (
+                    <option key={pt.id} value={pt.id}>
+                      {pt.name} (Cond {pt.min_initial_condition}–{pt.max_initial_condition}, Res {pt.min_resources}–{pt.max_resources})
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {INITIAL_FIELDS.map(({ key, label }) => (
                   <div key={key}>
