@@ -278,7 +278,7 @@ function PlanetTypeRow({ pt, isAdmin, onUpdate, onRemove }: {
       </div>
       <div className="flex gap-1">
         <Button size="sm" className="h-7 text-xs" onClick={async () => {
-          await onUpdate(pt.id, { name, min_initial_condition: minCond, max_initial_condition: maxCond, min_resources: minRes, max_resources: maxRes });
+          await onUpdate(pt.id, { name, min_initial_condition: minCond, max_initial_condition: maxCond, min_resources: minRes, max_resources: maxRes, weight });
           setEditing(false);
         }}>Save</Button>
         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(false)}>Cancel</Button>
