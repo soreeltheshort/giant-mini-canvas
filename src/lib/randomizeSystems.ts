@@ -229,7 +229,8 @@ function placeEvenInQuadrant(
   placedCubes: [number, number, number][],
   newHexes: Map<string, HexData>,
   newSystems: Map<number, SystemData>,
-  province: HexClassification
+  province: HexClassification,
+  planetTypes?: DbPlanetType[]
 ) {
   const remaining = [...eligible];
   let placed = 0;
@@ -259,7 +260,7 @@ function placeEvenInQuadrant(
     }
 
     if (bestIdx === -1) break;
-    placeSystem(remaining[bestIdx], province, placedCubes, newHexes, newSystems);
+    placeSystem(remaining[bestIdx], province, placedCubes, newHexes, newSystems, planetTypes);
     remaining.splice(bestIdx, 1);
     placed++;
   }
