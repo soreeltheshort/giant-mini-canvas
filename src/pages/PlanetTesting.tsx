@@ -48,7 +48,7 @@ const DEFAULT_PLANET: SystemData = {
 
 const INITIAL_FIELDS: { key: keyof SystemData; label: string }[] = [
   { key: "initial_condition", label: "Initial Condition" },
-  
+  { key: "resources", label: "Resources" },
   { key: "importance_rank", label: "Importance Rank" },
   { key: "planet_index", label: "Planet Index" },
 ];
@@ -59,7 +59,6 @@ const CURRENT_FIELDS: { key: keyof SystemData; label: string }[] = [
   { key: "survey", label: "Survey" },
   { key: "tribute", label: "Tribute" },
   { key: "upkeep", label: "Upkeep" },
-  { key: "resources", label: "Resources" },
   { key: "morale", label: "Morale" },
 ];
 
