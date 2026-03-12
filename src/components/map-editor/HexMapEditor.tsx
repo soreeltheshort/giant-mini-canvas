@@ -331,7 +331,7 @@ const HexMapEditor: React.FC = () => {
   const handleReRandomize = useCallback(() => {
     if (!preRandomizeState) return;
     const params = loadRandomizeParams();
-    const newState = randomizeSystems(preRandomizeState, params);
+    const newState = randomizeSystems(preRandomizeState, params, planetTypes);
     const addedCount = newState.systems.size - preRandomizeState.systems.size;
     setMapState(newState);
     setRandomizedCount(addedCount);
