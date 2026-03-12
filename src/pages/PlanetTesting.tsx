@@ -623,8 +623,18 @@ const PlanetTesting = () => {
                     if (id) {
                       const pt = planetTypes.find((p) => p.id === id);
                       if (pt) {
-                        updateField("initial_condition", pt.min_initial_condition);
-                        updateField("resources", pt.min_resources);
+                        const randCond = pt.min_initial_condition + Math.floor(Math.random() * (pt.max_initial_condition - pt.min_initial_condition + 1));
+                        const randRes = pt.min_resources + Math.floor(Math.random() * (pt.max_resources - pt.min_resources + 1));
+                        setPlanet(sanitizePlanetNumbers({
+                          ...DEFAULT_PLANET,
+                          initial_condition: randCond,
+                          condition: randCond,
+                          resources: randRes,
+                        }));
+                        setTurn(0);
+                        setTotalIncome(0);
+                        setLastTurnResult(null);
+                        setDirty(false);
                       }
                     }
                   }}
