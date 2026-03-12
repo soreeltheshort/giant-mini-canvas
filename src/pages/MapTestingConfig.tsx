@@ -27,6 +27,7 @@ const MapTestingConfig = () => {
   const { facilityTypes, loading: ftLoading, addFacilityType, updateFacilityType, removeFacilityType } = useFacilityTypes();
   const { factions, loading: facLoading, addFaction, updateFaction, removeFaction } = useFactions();
   const { actions, loading: actLoading, addAction, updateAction, removeAction } = useSystemActions();
+  const { planetTypes, loading: ptLoading, addPlanetType, updatePlanetType, removePlanetType } = usePlanetTypes();
 
   // facility form state removed — now in AddFacilityForm
 
