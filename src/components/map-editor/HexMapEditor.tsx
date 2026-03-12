@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 import { useFactions } from "@/hooks/useFactions";
 import { randomizeSystems, loadRandomizeParams } from "@/lib/randomizeSystems";
+import { usePlanetTypes } from "@/hooks/usePlanetTypes";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
