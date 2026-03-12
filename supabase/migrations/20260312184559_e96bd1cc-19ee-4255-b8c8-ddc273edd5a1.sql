@@ -1,0 +1,1 @@
+ALTER TABLE public.planet_types ADD COLUMN weight integer NOT NULL DEFAULT 1;
