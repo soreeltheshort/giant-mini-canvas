@@ -616,6 +616,9 @@ const PlanetTesting = () => {
                 {lastTurnResult && (
                   <div className="text-[9px] text-muted-foreground mt-0.5 space-y-0.5">
                     <div>Base tribute: {lastTurnResult.tributeBreakdown.baseTribute}</div>
+                    <div className="text-[8px] ml-2 opacity-75">
+                      MIN(Pop {planet.current_population}, Res {planet.resources}) × {turnConstants.pop_and_resource_tribute} + ABS({planet.current_population} − {planet.resources}) × {turnConstants.pop_or_resources_tribute}
+                    </div>
                     <div>Facility flat bonus: +{lastTurnResult.tributeBreakdown.facilityFlatBonus}</div>
                     <div>Facility % multiplier: ×{lastTurnResult.tributeBreakdown.facilityPercentMultiplier.toFixed(2)}</div>
                     <div className="font-medium">Total: {lastTurnResult.tributeBreakdown.totalTribute}</div>
