@@ -6,6 +6,7 @@ import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 import { useFactions } from "@/hooks/useFactions";
 import { DbFacilityType } from "@/hooks/useFacilityTypes";
 import { useSystemActions } from "@/hooks/useSystemActions";
+import { usePlanetTypes, DbPlanetType } from "@/hooks/usePlanetTypes";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ const MapTestingConfig = () => {
   const { facilityTypes, loading: ftLoading, addFacilityType, updateFacilityType, removeFacilityType } = useFacilityTypes();
   const { factions, loading: facLoading, addFaction, updateFaction, removeFaction } = useFactions();
   const { actions, loading: actLoading, addAction, updateAction, removeAction } = useSystemActions();
+  const { planetTypes, loading: ptLoading, addPlanetType, updatePlanetType, removePlanetType } = usePlanetTypes();
 
   // facility form state removed — now in AddFacilityForm
 
@@ -62,7 +64,7 @@ const MapTestingConfig = () => {
     if (!loading && !user) navigate("/login");
   }, [loading, user, navigate]);
 
-  if (loading || ftLoading || facLoading || actLoading) {
+  if (loading || ftLoading || facLoading || actLoading || ptLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -126,6 +128,20 @@ const MapTestingConfig = () => {
               </Button>
             </div>
           )}
+        </ConfigSection>
+
+        {/* ── Planet Types ── */}
+        <ConfigSection title="Base Planet Types" desc="Define planet types with min/max ranges for Initial Condition and Resources. These are used during planet creation and testing.">
+          {planetTypes.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">No planet types defined yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {planetTypes.map((pt) => (
+                <PlanetTypeRow key={pt.id} pt={pt} isAdmin={isAdmin} onUpdate={updatePlanetType} onRemove={removePlanetType} />
+              ))}
+            </div>
+          )}
+          {isAdmin && <AddPlanetTypeForm onAdd={addPlanetType} />}
         </ConfigSection>
 
         {/* ── Facility Types ── */}
@@ -197,6 +213,111 @@ function ConfigSection({ title, desc, children }: { title: string; desc: string;
       <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{title}</h2>
       <p className="text-xs text-muted-foreground">{desc}</p>
       {children}
+    </div>
+  );
+}
+
+/* ── Planet Type row ── */
+function PlanetTypeRow({ pt, isAdmin, onUpdate, onRemove }: {
+  pt: DbPlanetType;
+  isAdmin: boolean;
+  onUpdate: (id: string, updates: Partial<Omit<DbPlanetType, "id">>) => Promise<void>;
+  onRemove: (id: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(pt.name);
+  const [minCond, setMinCond] = useState(pt.min_initial_condition);
+  const [maxCond, setMaxCond] = useState(pt.max_initial_condition);
+  const [minRes, setMinRes] = useState(pt.min_resources);
+  const [maxRes, setMaxRes] = useState(pt.max_resources);
+
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-3 rounded border border-border px-3 py-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground">{pt.name}</p>
+          <p className="text-xs text-muted-foreground">
+            Condition: {pt.min_initial_condition}–{pt.max_initial_condition} · Resources: {pt.min_resources}–{pt.max_resources}
+          </p>
+        </div>
+        {isAdmin && (
+          <div className="flex gap-1">
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(true)}>Edit</Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={() => onRemove(pt.id)}>Delete</Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded border border-primary/50 px-3 py-2 space-y-2">
+      <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8" placeholder="Planet type name" />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] text-muted-foreground">Min Condition</label>
+          <Input type="number" value={minCond} onChange={(e) => setMinCond(Number(e.target.value))} className="h-7 text-xs" />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Max Condition</label>
+          <Input type="number" value={maxCond} onChange={(e) => setMaxCond(Number(e.target.value))} className="h-7 text-xs" />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Min Resources</label>
+          <Input type="number" value={minRes} onChange={(e) => setMinRes(Number(e.target.value))} className="h-7 text-xs" />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Max Resources</label>
+          <Input type="number" value={maxRes} onChange={(e) => setMaxRes(Number(e.target.value))} className="h-7 text-xs" />
+        </div>
+      </div>
+      <div className="flex gap-1">
+        <Button size="sm" className="h-7 text-xs" onClick={async () => {
+          await onUpdate(pt.id, { name, min_initial_condition: minCond, max_initial_condition: maxCond, min_resources: minRes, max_resources: maxRes });
+          setEditing(false);
+        }}>Save</Button>
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(false)}>Cancel</Button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Add Planet Type form ── */
+function AddPlanetTypeForm({ onAdd }: { onAdd: (fields: Omit<DbPlanetType, "id">) => Promise<void> }) {
+  const [name, setName] = useState("");
+  const [minCond, setMinCond] = useState(0);
+  const [maxCond, setMaxCond] = useState(100);
+  const [minRes, setMinRes] = useState(0);
+  const [maxRes, setMaxRes] = useState(100);
+
+  return (
+    <div className="border border-border rounded-md p-4 space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">Add New Planet Type</p>
+      <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9" placeholder="Planet type name" />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] text-muted-foreground">Min Condition</label>
+          <Input type="number" value={minCond} onChange={(e) => setMinCond(Number(e.target.value))} className="h-7 text-xs" />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Max Condition</label>
+          <Input type="number" value={maxCond} onChange={(e) => setMaxCond(Number(e.target.value))} className="h-7 text-xs" />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Min Resources</label>
+          <Input type="number" value={minRes} onChange={(e) => setMinRes(Number(e.target.value))} className="h-7 text-xs" />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Max Resources</label>
+          <Input type="number" value={maxRes} onChange={(e) => setMaxRes(Number(e.target.value))} className="h-7 text-xs" />
+        </div>
+      </div>
+      <Button size="sm" disabled={!name.trim()} onClick={async () => {
+        await onAdd({ name: name.trim(), min_initial_condition: minCond, max_initial_condition: maxCond, min_resources: minRes, max_resources: maxRes });
+        setName(""); setMinCond(0); setMaxCond(100); setMinRes(0); setMaxRes(100);
+      }}>
+        Add Planet Type
+      </Button>
     </div>
   );
 }

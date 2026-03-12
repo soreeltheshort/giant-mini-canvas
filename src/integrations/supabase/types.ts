@@ -387,6 +387,39 @@ export type Database = {
         }
         Relationships: []
       }
+      planet_types: {
+        Row: {
+          created_at: string
+          id: string
+          max_initial_condition: number
+          max_resources: number
+          min_initial_condition: number
+          min_resources: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_initial_condition?: number
+          max_resources?: number
+          min_initial_condition?: number
+          min_resources?: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_initial_condition?: number
+          max_resources?: number
+          min_initial_condition?: number
+          min_resources?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
