@@ -317,10 +317,14 @@ function AddPlanetTypeForm({ onAdd }: { onAdd: (fields: Omit<DbPlanetType, "id">
           <label className="text-[10px] text-muted-foreground">Max Resources</label>
           <Input type="number" value={maxRes} onChange={(e) => setMaxRes(Number(e.target.value))} className="h-7 text-xs" />
         </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Weight</label>
+          <Input type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value))} className="h-7 text-xs" min={0} />
+        </div>
       </div>
       <Button size="sm" disabled={!name.trim()} onClick={async () => {
-        await onAdd({ name: name.trim(), min_initial_condition: minCond, max_initial_condition: maxCond, min_resources: minRes, max_resources: maxRes });
-        setName(""); setMinCond(0); setMaxCond(100); setMinRes(0); setMaxRes(100);
+        await onAdd({ name: name.trim(), min_initial_condition: minCond, max_initial_condition: maxCond, min_resources: minRes, max_resources: maxRes, weight });
+        setName(""); setMinCond(0); setMaxCond(100); setMinRes(0); setMaxRes(100); setWeight(1);
       }}>
         Add Planet Type
       </Button>
