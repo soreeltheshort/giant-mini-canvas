@@ -230,6 +230,7 @@ function PlanetTypeRow({ pt, isAdmin, onUpdate, onRemove }: {
   const [maxCond, setMaxCond] = useState(pt.max_initial_condition);
   const [minRes, setMinRes] = useState(pt.min_resources);
   const [maxRes, setMaxRes] = useState(pt.max_resources);
+  const [weight, setWeight] = useState(pt.weight);
 
   if (!editing) {
     return (
@@ -237,7 +238,7 @@ function PlanetTypeRow({ pt, isAdmin, onUpdate, onRemove }: {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">{pt.name}</p>
           <p className="text-xs text-muted-foreground">
-            Condition: {pt.min_initial_condition}–{pt.max_initial_condition} · Resources: {pt.min_resources}–{pt.max_resources}
+            Condition: {pt.min_initial_condition}–{pt.max_initial_condition} · Resources: {pt.min_resources}–{pt.max_resources} · Weight: {pt.weight}
           </p>
         </div>
         {isAdmin && (
@@ -270,10 +271,14 @@ function PlanetTypeRow({ pt, isAdmin, onUpdate, onRemove }: {
           <label className="text-[10px] text-muted-foreground">Max Resources</label>
           <Input type="number" value={maxRes} onChange={(e) => setMaxRes(Number(e.target.value))} className="h-7 text-xs" />
         </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Weight</label>
+          <Input type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value))} className="h-7 text-xs" min={0} />
+        </div>
       </div>
       <div className="flex gap-1">
         <Button size="sm" className="h-7 text-xs" onClick={async () => {
-          await onUpdate(pt.id, { name, min_initial_condition: minCond, max_initial_condition: maxCond, min_resources: minRes, max_resources: maxRes });
+          await onUpdate(pt.id, { name, min_initial_condition: minCond, max_initial_condition: maxCond, min_resources: minRes, max_resources: maxRes, weight });
           setEditing(false);
         }}>Save</Button>
         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(false)}>Cancel</Button>
@@ -289,6 +294,7 @@ function AddPlanetTypeForm({ onAdd }: { onAdd: (fields: Omit<DbPlanetType, "id">
   const [maxCond, setMaxCond] = useState(100);
   const [minRes, setMinRes] = useState(0);
   const [maxRes, setMaxRes] = useState(100);
+  const [weight, setWeight] = useState(1);
 
   return (
     <div className="border border-border rounded-md p-4 space-y-2">
@@ -311,10 +317,14 @@ function AddPlanetTypeForm({ onAdd }: { onAdd: (fields: Omit<DbPlanetType, "id">
           <label className="text-[10px] text-muted-foreground">Max Resources</label>
           <Input type="number" value={maxRes} onChange={(e) => setMaxRes(Number(e.target.value))} className="h-7 text-xs" />
         </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">Weight</label>
+          <Input type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value))} className="h-7 text-xs" min={0} />
+        </div>
       </div>
       <Button size="sm" disabled={!name.trim()} onClick={async () => {
-        await onAdd({ name: name.trim(), min_initial_condition: minCond, max_initial_condition: maxCond, min_resources: minRes, max_resources: maxRes });
-        setName(""); setMinCond(0); setMaxCond(100); setMinRes(0); setMaxRes(100);
+        await onAdd({ name: name.trim(), min_initial_condition: minCond, max_initial_condition: maxCond, min_resources: minRes, max_resources: maxRes, weight });
+        setName(""); setMinCond(0); setMaxCond(100); setMinRes(0); setMaxRes(100); setWeight(1);
       }}>
         Add Planet Type
       </Button>

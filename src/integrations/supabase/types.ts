@@ -397,6 +397,7 @@ export type Database = {
           min_resources: number
           name: string
           updated_at: string
+          weight: number
         }
         Insert: {
           created_at?: string
@@ -407,6 +408,7 @@ export type Database = {
           min_resources?: number
           name: string
           updated_at?: string
+          weight?: number
         }
         Update: {
           created_at?: string
@@ -417,6 +419,7 @@ export type Database = {
           min_resources?: number
           name?: string
           updated_at?: string
+          weight?: number
         }
         Relationships: []
       }

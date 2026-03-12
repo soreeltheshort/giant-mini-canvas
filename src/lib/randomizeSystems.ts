@@ -1,5 +1,6 @@
 import { HexData, HexClassification, SystemData, MapState, hexKey } from "./mapTypes";
 import { offsetToCube, cubeDistance } from "./hexUtils";
+import { DbPlanetType } from "@/hooks/usePlanetTypes";
 
 export interface RandomizeParams {
   provinces: HexClassification[];
@@ -31,7 +32,7 @@ export function saveRandomizeParams(params: RandomizeParams) {
  * Generate random systems on a map without removing existing ones.
  * Returns a new MapState with the added systems.
  */
-export function randomizeSystems(state: MapState, params: RandomizeParams): MapState {
+export function randomizeSystems(state: MapState, params: RandomizeParams, planetTypes?: DbPlanetType[]): MapState {
   const { provinces, hexesPerSystem, minDistance, forceEvenDistribution } = params;
 
   // Collect existing system cube coords for distance checks
@@ -107,9 +108,9 @@ export function randomizeSystems(state: MapState, params: RandomizeParams): MapS
       const qEligible = quadrants.get(qk)!;
 
       if (forceEvenDistribution) {
-        placeEvenInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province);
+        placeEvenInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province, planetTypes);
       } else {
-        placeRandomInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province);
+        placeRandomInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province, planetTypes);
       }
     }
   }
@@ -124,6 +125,23 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+/** Pick a random planet type using weighted distribution */
+function pickWeightedPlanetType(planetTypes?: DbPlanetType[]): DbPlanetType | undefined {
+  if (!planetTypes || planetTypes.length === 0) return undefined;
+  const totalWeight = planetTypes.reduce((sum, pt) => sum + Math.max(0, pt.weight), 0);
+  if (totalWeight <= 0) return planetTypes[Math.floor(Math.random() * planetTypes.length)];
+  let roll = Math.random() * totalWeight;
+  for (const pt of planetTypes) {
+    roll -= Math.max(0, pt.weight);
+    if (roll <= 0) return pt;
+  }
+  return planetTypes[planetTypes.length - 1];
+}
+
+function randBetween(min: number, max: number): number {
+  return min + Math.floor(Math.random() * (max - min + 1));
 }
 
 function isFarEnough(
@@ -143,11 +161,16 @@ function placeSystem(
   province: HexClassification,
   placedCubes: [number, number, number][],
   newHexes: Map<string, HexData>,
-  newSystems: Map<number, SystemData>
+  newSystems: Map<number, SystemData>,
+  planetTypes?: DbPlanetType[]
 ) {
   const key = hexKey(hex.x, hex.y);
   newHexes.set(key, { ...hex, has_system: true });
   placedCubes.push(offsetToCube(hex.x, hex.y));
+
+  const pt = pickWeightedPlanetType(planetTypes);
+  const initialCondition = pt ? randBetween(pt.min_initial_condition, pt.max_initial_condition) : 40;
+  const resources = pt ? randBetween(pt.min_resources, pt.max_resources) : 0;
 
   const systemId = Date.now() + Math.floor(Math.random() * 100000);
   newSystems.set(hex.hex_id, {
@@ -164,17 +187,18 @@ function placeSystem(
     survey: 0,
     tribute: 0,
     upkeep: 0,
-    resources: 0,
+    resources,
     facilities: [],
     facilities_in_production: [],
-    condition: 0,
+    condition: initialCondition,
     morale: 0,
     max_ground_defenses: 0,
     current_ground_defenses: 0,
-    initial_condition: 40,
+    initial_condition: initialCondition,
     planet_index: 0,
     stationed_fighters: [],
     stationed_gunships: [],
+    planet_type_id: pt?.id,
   });
 }
 
@@ -185,14 +209,15 @@ function placeRandomInQuadrant(
   placedCubes: [number, number, number][],
   newHexes: Map<string, HexData>,
   newSystems: Map<number, SystemData>,
-  province: HexClassification
+  province: HexClassification,
+  planetTypes?: DbPlanetType[]
 ) {
   const shuffled = fisherYatesShuffle([...eligible]);
   let placed = 0;
   for (const hex of shuffled) {
     if (placed >= targetCount) break;
     if (!isFarEnough(hex, placedCubes, minDistance)) continue;
-    placeSystem(hex, province, placedCubes, newHexes, newSystems);
+    placeSystem(hex, province, placedCubes, newHexes, newSystems, planetTypes);
     placed++;
   }
 }
@@ -204,7 +229,8 @@ function placeEvenInQuadrant(
   placedCubes: [number, number, number][],
   newHexes: Map<string, HexData>,
   newSystems: Map<number, SystemData>,
-  province: HexClassification
+  province: HexClassification,
+  planetTypes?: DbPlanetType[]
 ) {
   const remaining = [...eligible];
   let placed = 0;
@@ -234,7 +260,7 @@ function placeEvenInQuadrant(
     }
 
     if (bestIdx === -1) break;
-    placeSystem(remaining[bestIdx], province, placedCubes, newHexes, newSystems);
+    placeSystem(remaining[bestIdx], province, placedCubes, newHexes, newSystems, planetTypes);
     remaining.splice(bestIdx, 1);
     placed++;
   }

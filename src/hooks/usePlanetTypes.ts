@@ -9,6 +9,7 @@ export interface DbPlanetType {
   max_initial_condition: number;
   min_resources: number;
   max_resources: number;
+  weight: number;
 }
 
 export function usePlanetTypes() {
@@ -19,7 +20,7 @@ export function usePlanetTypes() {
   const fetchAll = useCallback(async () => {
     const { data, error } = await supabase
       .from("planet_types")
-      .select("id, name, min_initial_condition, max_initial_condition, min_resources, max_resources")
+      .select("id, name, min_initial_condition, max_initial_condition, min_resources, max_resources, weight")
       .order("name", { ascending: true });
     if (error) {
       console.error("[PlanetTypes] fetch error", error);

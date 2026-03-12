@@ -27,12 +27,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 import { useFactions } from "@/hooks/useFactions";
 import { randomizeSystems, loadRandomizeParams } from "@/lib/randomizeSystems";
+import { usePlanetTypes } from "@/hooks/usePlanetTypes";
 
 const HexMapEditor: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { facilityTypes: dbFacilityTypes } = useFacilityTypes();
   const { factions } = useFactions();
+  const { planetTypes } = usePlanetTypes();
   const [mapState, setMapState] = useState<MapState>(() => generateBlankMap());
   const [saving, setSaving] = useState(false);
   const [loadingMap, setLoadingMap] = useState(true);
@@ -311,7 +313,7 @@ const HexMapEditor: React.FC = () => {
       systems: new Map(Array.from(mapState.systems.entries()).map(([k, v]) => [k, { ...v, facilities: [...(v.facilities || [])] }])),
     };
     setPreRandomizeState(snapshot);
-    const newState = randomizeSystems(snapshot, params);
+    const newState = randomizeSystems(snapshot, params, planetTypes);
     const addedCount = newState.systems.size - snapshot.systems.size;
     setMapState(newState);
     setRandomizedCount(addedCount);
@@ -329,7 +331,7 @@ const HexMapEditor: React.FC = () => {
   const handleReRandomize = useCallback(() => {
     if (!preRandomizeState) return;
     const params = loadRandomizeParams();
-    const newState = randomizeSystems(preRandomizeState, params);
+    const newState = randomizeSystems(preRandomizeState, params, planetTypes);
     const addedCount = newState.systems.size - preRandomizeState.systems.size;
     setMapState(newState);
     setRandomizedCount(addedCount);

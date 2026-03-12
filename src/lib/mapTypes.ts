@@ -118,6 +118,7 @@ export interface SystemData {
   planet_index: number;
   stationed_fighters: StationedStrikecraft[];
   stationed_gunships: StationedStrikecraft[];
+  planet_type_id?: string;
 }
 
 export interface ProvinceRegion {
