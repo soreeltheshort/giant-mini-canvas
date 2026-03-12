@@ -130,6 +130,20 @@ const MapTestingConfig = () => {
           )}
         </ConfigSection>
 
+        {/* ── Planet Types ── */}
+        <ConfigSection title="Base Planet Types" desc="Define planet types with min/max ranges for Initial Condition and Resources. These are used during planet creation and testing.">
+          {planetTypes.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">No planet types defined yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {planetTypes.map((pt) => (
+                <PlanetTypeRow key={pt.id} pt={pt} isAdmin={isAdmin} onUpdate={updatePlanetType} onRemove={removePlanetType} />
+              ))}
+            </div>
+          )}
+          {isAdmin && <AddPlanetTypeForm onAdd={addPlanetType} />}
+        </ConfigSection>
+
         {/* ── Facility Types ── */}
         <ConfigSection title="Facility Types" desc="Define the types of facilities that can be placed on planets. These are shared across all maps.">
           {facilityTypes.length === 0 ? (
