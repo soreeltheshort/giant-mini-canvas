@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const activeGame = games.find((g) => g.inDevelopment);
-  const { user } = useAuth();
+  const { user, isAdmin, isTester } = useAuth();
+  const canAccessTesting = isAdmin || isTester;
 
   return (
     <div className="min-h-screen bg-background">
@@ -35,7 +36,7 @@ const Index = () => {
                       <Button variant="outline">Create Free Account</Button>
                     </Link>
                   )}
-                  {activeGame.id === "third-republic" && user && (
+                  {activeGame.id === "third-republic" && canAccessTesting && (
                     <>
                       <Link to="/dashboard">
                         <Button className="bg-gold text-secondary-foreground hover:bg-gold/90">⚔ Combat Testing</Button>

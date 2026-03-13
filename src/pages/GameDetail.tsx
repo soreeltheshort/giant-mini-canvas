@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 const GameDetail = () => {
   const { id } = useParams<{ id: string }>();
   const game = games.find((g) => g.id === id);
-  const { user } = useAuth();
+  const { user, isAdmin, isTester } = useAuth();
+  const canAccessTesting = isAdmin || isTester;
   const navigate = useNavigate();
 
   if (!game) {
@@ -50,14 +51,14 @@ const GameDetail = () => {
           {/* Auth / Combat Testing CTA */}
           {isThirdRepublic && (
             <div className="mt-6 flex gap-3">
-              {user ? (
+              {user && canAccessTesting ? (
                 <Button
                   onClick={() => navigate("/dashboard")}
                   className="bg-gold text-secondary-foreground hover:bg-gold/90"
                 >
                   ⚔ Combat Testing
                 </Button>
-              ) : (
+              ) : !user ? (
                 <>
                   <Link to="/login">
                     <Button>Sign In</Button>
@@ -66,7 +67,7 @@ const GameDetail = () => {
                     <Button variant="outline">Create Free Account</Button>
                   </Link>
                 </>
-              )}
+              ) : null}
             </div>
           )}
 

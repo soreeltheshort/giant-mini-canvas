@@ -39,9 +39,9 @@ const App = () => (
             <Route path="/games/:id" element={<GameDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/fleet-builder" element={<FleetBuilder />} />
-            <Route path="/battle" element={<Battle />} />
+            <Route path="/dashboard" element={<RequireRole roles={["admin", "tester"]}><Dashboard /></RequireRole>} />
+            <Route path="/fleet-builder" element={<RequireRole roles={["admin", "tester"]}><FleetBuilder /></RequireRole>} />
+            <Route path="/battle" element={<RequireRole roles={["admin", "tester"]}><Battle /></RequireRole>} />
             <Route path="/manual" element={<Manual />} />
             <Route path="/map-testing" element={<RequireRole roles={["admin", "tester"]}><MapTesting /></RequireRole>} />
             <Route path="/map-testing/config" element={<RequireRole roles={["admin", "tester"]}><MapTestingConfig /></RequireRole>} />
