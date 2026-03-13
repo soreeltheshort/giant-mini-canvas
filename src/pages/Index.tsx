@@ -36,7 +36,7 @@ const Index = () => {
                       <Button variant="outline">Create Free Account</Button>
                     </Link>
                   )}
-                  {activeGame.id === "third-republic" && user && (
+                  {activeGame.id === "third-republic" && canAccessTesting && (
                     <>
                       <Link to="/dashboard">
                         <Button className="bg-gold text-secondary-foreground hover:bg-gold/90">⚔ Combat Testing</Button>

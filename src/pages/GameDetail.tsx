@@ -51,14 +51,14 @@ const GameDetail = () => {
           {/* Auth / Combat Testing CTA */}
           {isThirdRepublic && (
             <div className="mt-6 flex gap-3">
-              {user ? (
+              {user && canAccessTesting ? (
                 <Button
                   onClick={() => navigate("/dashboard")}
                   className="bg-gold text-secondary-foreground hover:bg-gold/90"
                 >
                   ⚔ Combat Testing
                 </Button>
-              ) : (
+              ) : !user ? (
                 <>
                   <Link to="/login">
                     <Button>Sign In</Button>
