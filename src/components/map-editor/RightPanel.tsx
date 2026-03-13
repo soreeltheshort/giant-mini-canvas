@@ -32,6 +32,7 @@ const RightPanel: React.FC<Props> = ({
   hex,
   system,
   facilityTypes,
+  dbFacilityTypes,
   factions,
   onClassificationChange,
   onAddSystem,
