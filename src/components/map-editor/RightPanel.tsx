@@ -96,7 +96,6 @@ const RightPanel: React.FC<Props> = ({
       importance_rank: sysRank,
       owner: sysOwner,
       system_type: sysType,
-      max_population: maxPop,
       current_population: curPop,
       survey,
       tribute,
