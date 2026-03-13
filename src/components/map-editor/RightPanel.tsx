@@ -132,6 +132,7 @@ const RightPanel: React.FC<Props> = ({
       upkeep,
       resources,
       condition: calculatedCondition,
+      initial_condition: initialCondition,
       morale: calculatedMorale,
       max_ground_defenses: maxGD,
       current_ground_defenses: curGD,
