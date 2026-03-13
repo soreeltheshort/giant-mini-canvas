@@ -61,7 +61,6 @@ const RightPanel: React.FC<Props> = ({
       setSysRank(system.importance_rank);
       setSysOwner(system.owner || "");
       setSysType(system.system_type || "system");
-      setMaxPop(system.max_population || 0);
       setCurPop(system.current_population || 0);
       setSurvey(system.survey || 0);
       setTribute(system.tribute || 0);
