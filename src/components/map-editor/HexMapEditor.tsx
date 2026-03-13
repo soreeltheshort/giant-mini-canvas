@@ -236,7 +236,6 @@ const HexMapEditor: React.FC = () => {
           importance_rank: rank,
           owner: "",
           system_type: "system",
-          max_population: 0,
           current_population: 0,
           survey: 0,
           tribute: 0,

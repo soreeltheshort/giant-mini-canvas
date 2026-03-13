@@ -29,7 +29,6 @@ const DEFAULT_PLANET: SystemData = {
   importance_rank: 0,
   owner: "",
   system_type: "system",
-  max_population: 100,
   current_population: 0,
   survey: 0,
   tribute: 0,

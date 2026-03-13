@@ -41,7 +41,6 @@ const RightPanel: React.FC<Props> = ({
   const [sysRank, setSysRank] = useState(1);
   const [sysOwner, setSysOwner] = useState("");
   const [sysType, setSysType] = useState<SystemType>("system");
-  const [maxPop, setMaxPop] = useState(0);
   const [curPop, setCurPop] = useState(0);
   const [survey, setSurvey] = useState(0);
   const [tribute, setTribute] = useState(0);
@@ -62,7 +61,6 @@ const RightPanel: React.FC<Props> = ({
       setSysRank(system.importance_rank);
       setSysOwner(system.owner || "");
       setSysType(system.system_type || "system");
-      setMaxPop(system.max_population || 0);
       setCurPop(system.current_population || 0);
       setSurvey(system.survey || 0);
       setTribute(system.tribute || 0);
@@ -78,7 +76,6 @@ const RightPanel: React.FC<Props> = ({
       setSysRank(1);
       setSysOwner("");
       setSysType("system");
-      setMaxPop(0);
       setCurPop(0);
       setSurvey(0);
       setTribute(0);
@@ -99,7 +96,6 @@ const RightPanel: React.FC<Props> = ({
       importance_rank: sysRank,
       owner: sysOwner,
       system_type: sysType,
-      max_population: maxPop,
       current_population: curPop,
       survey,
       tribute,
@@ -249,7 +245,6 @@ const RightPanel: React.FC<Props> = ({
                 <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                   <IntField label="Importance" value={sysRank} onChange={setSysRank} />
                   <IntField label="Planet Index" value={planetIndex} onChange={setPlanetIndex} />
-                  <IntField label="Max Population" value={maxPop} onChange={setMaxPop} />
                   <IntField label="Cur Population" value={curPop} onChange={setCurPop} />
                   <IntField label="Survey" value={survey} onChange={setSurvey} />
                   <IntField label="Tribute" value={tribute} onChange={setTribute} />

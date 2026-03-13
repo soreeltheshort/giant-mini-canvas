@@ -100,7 +100,7 @@ const PlanetsPanel: React.FC<Props> = ({ systems, hexes, facilityTypes, onSelect
                 )}
 
                 <div className="flex flex-wrap gap-x-3 gap-y-0 text-[10px] text-muted-foreground mt-0.5">
-                  {sys.current_population > 0 && <span>Pop: {sys.current_population}/{sys.max_population}</span>}
+                  {sys.current_population > 0 && <span>Pop: {sys.current_population}</span>}
                   {sys.resources > 0 && <span>Res: {sys.resources}</span>}
                   {sys.morale > 0 && <span>Mor: {sys.morale}</span>}
                   {sys.condition > 0 && <span>Cond: {sys.condition}</span>}
