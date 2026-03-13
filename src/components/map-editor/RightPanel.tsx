@@ -277,10 +277,8 @@ const RightPanel: React.FC<Props> = ({
                   <IntField label="Planet Index" value={planetIndex} onChange={setPlanetIndex} />
                   <IntField label="Cur Population" value={curPop} onChange={setCurPop} />
                   <IntField label="Survey" value={survey} onChange={setSurvey} />
-                  <IntField label="Tribute" value={tribute} onChange={setTribute} />
-                  <IntField label="Upkeep" value={upkeep} onChange={setUpkeep} />
                   <FloatField label="Resources" value={resources} onChange={setResources} />
-                  <IntField label="Condition" value={condition} onChange={setCondition} />
+                  <IntField label="Base Condition" value={condition} onChange={setCondition} />
                   <IntField label="Morale" value={morale} onChange={setMorale} />
                   <IntField label="Max Ground Def" value={maxGD} onChange={setMaxGD} />
                   <IntField label="Cur Ground Def" value={curGD} onChange={setCurGD} />
