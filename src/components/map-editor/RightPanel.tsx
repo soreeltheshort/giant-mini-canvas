@@ -13,7 +13,8 @@ import {
   CLASSIFICATION_COLORS,
 } from "@/lib/mapTypes";
 import { DbFaction } from "@/hooks/useFactions";
-
+import { DbFacilityType } from "@/hooks/useFacilityTypes";
+import { DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
 interface Props {
   hex: HexData | null;
   system: SystemData | undefined;
