@@ -41,7 +41,6 @@ const RightPanel: React.FC<Props> = ({
   const [sysRank, setSysRank] = useState(1);
   const [sysOwner, setSysOwner] = useState("");
   const [sysType, setSysType] = useState<SystemType>("system");
-  const [maxPop, setMaxPop] = useState(0);
   const [curPop, setCurPop] = useState(0);
   const [survey, setSurvey] = useState(0);
   const [tribute, setTribute] = useState(0);
