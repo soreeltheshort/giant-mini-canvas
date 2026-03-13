@@ -101,7 +101,7 @@ const RightPanel: React.FC<Props> = ({
       const ft = dbFacilityTypes.find((t) => t.id === f.facility_type_id);
       if (ft?.condition_bonus) conditionBonus += ft.condition_bonus * f.quantity;
     }
-    const calculatedCondition = condition + conditionBonus;
+    const calculatedCondition = initialCondition + conditionBonus;
 
     // Calculate tribute: MIN(pop, res) * constA + ABS(pop - res) * constB, then facility modifiers
     const pop = curPop;
