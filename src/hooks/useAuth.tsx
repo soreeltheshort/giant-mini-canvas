@@ -31,11 +31,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      // Always reset roles immediately to prevent stale state from previous user
+      setIsAdmin(false);
+      setIsTester(false);
       if (session?.user) {
         setTimeout(() => checkRoles(session.user.id), 0);
-      } else {
-        setIsAdmin(false);
-        setIsTester(false);
       }
       setLoading(false);
     });
