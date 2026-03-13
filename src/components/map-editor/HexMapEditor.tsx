@@ -408,6 +408,7 @@ const HexMapEditor: React.FC = () => {
         hex={selectedHex}
         system={selectedSystem}
         facilityTypes={facilityTypesForUI}
+        dbFacilityTypes={dbFacilityTypes}
         factions={factions}
         onClassificationChange={handleClassificationChange}
         onAddSystem={handleAddSystem}
