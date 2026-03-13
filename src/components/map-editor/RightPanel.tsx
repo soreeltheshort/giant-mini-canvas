@@ -84,7 +84,7 @@ const RightPanel: React.FC<Props> = ({
       setTribute(0);
       setUpkeep(0);
       setResources(0);
-      setCondition(0);
+      setInitialCondition(0);
       setMorale(0);
       setMaxGD(0);
       setCurGD(0);
