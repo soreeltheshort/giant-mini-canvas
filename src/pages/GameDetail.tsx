@@ -67,7 +67,7 @@ const GameDetail = () => {
                     <Button variant="outline">Create Free Account</Button>
                   </Link>
                 </>
-              )}
+              ) : null}
             </div>
           )}
 
