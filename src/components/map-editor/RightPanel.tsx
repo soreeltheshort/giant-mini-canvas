@@ -69,7 +69,7 @@ const RightPanel: React.FC<Props> = ({
       setTribute(system.tribute || 0);
       setUpkeep(system.upkeep || 0);
       setResources(system.resources || 0);
-      setCondition(system.condition || 0);
+      setInitialCondition(system.initial_condition || 0);
       setMorale(system.morale || 0);
       setMaxGD(system.max_ground_defenses || 0);
       setCurGD(system.current_ground_defenses || 0);
