@@ -49,7 +49,7 @@ const RightPanel: React.FC<Props> = ({
   const [tribute, setTribute] = useState(0);
   const [upkeep, setUpkeep] = useState(0);
   const [resources, setResources] = useState(0);
-  const [condition, setCondition] = useState(0);
+  const [initialCondition, setInitialCondition] = useState(0);
   const [morale, setMorale] = useState(0);
   const [maxGD, setMaxGD] = useState(0);
   const [curGD, setCurGD] = useState(0);
@@ -69,7 +69,7 @@ const RightPanel: React.FC<Props> = ({
       setTribute(system.tribute || 0);
       setUpkeep(system.upkeep || 0);
       setResources(system.resources || 0);
-      setCondition(system.condition || 0);
+      setInitialCondition(system.initial_condition || 0);
       setMorale(system.morale || 0);
       setMaxGD(system.max_ground_defenses || 0);
       setCurGD(system.current_ground_defenses || 0);
@@ -84,7 +84,7 @@ const RightPanel: React.FC<Props> = ({
       setTribute(0);
       setUpkeep(0);
       setResources(0);
-      setCondition(0);
+      setInitialCondition(0);
       setMorale(0);
       setMaxGD(0);
       setCurGD(0);
@@ -101,7 +101,7 @@ const RightPanel: React.FC<Props> = ({
       const ft = dbFacilityTypes.find((t) => t.id === f.facility_type_id);
       if (ft?.condition_bonus) conditionBonus += ft.condition_bonus * f.quantity;
     }
-    const calculatedCondition = condition + conditionBonus;
+    const calculatedCondition = initialCondition + conditionBonus;
 
     // Calculate tribute: MIN(pop, res) * constA + ABS(pop - res) * constB, then facility modifiers
     const pop = curPop;
@@ -132,6 +132,7 @@ const RightPanel: React.FC<Props> = ({
       upkeep,
       resources,
       condition: calculatedCondition,
+      initial_condition: initialCondition,
       morale: calculatedMorale,
       max_ground_defenses: maxGD,
       current_ground_defenses: curGD,
@@ -278,7 +279,16 @@ const RightPanel: React.FC<Props> = ({
                   <IntField label="Cur Population" value={curPop} onChange={setCurPop} />
                   <IntField label="Survey" value={survey} onChange={setSurvey} />
                   <FloatField label="Resources" value={resources} onChange={setResources} />
-                  <IntField label="Base Condition" value={condition} onChange={setCondition} />
+                  <IntField label="Initial Condition" value={initialCondition} onChange={setInitialCondition} />
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Condition (calc)</label>
+                    <div className="flex h-8 w-full items-center rounded-md border border-input bg-muted px-2 text-xs text-muted-foreground">
+                      {initialCondition + (system?.facilities || []).reduce((sum, f) => {
+                        const ft = dbFacilityTypes.find((t) => t.id === f.facility_type_id);
+                        return sum + (ft?.condition_bonus || 0) * f.quantity;
+                      }, 0)}
+                    </div>
+                  </div>
                   <IntField label="Morale" value={morale} onChange={setMorale} />
                   <IntField label="Max Ground Def" value={maxGD} onChange={setMaxGD} />
                   <IntField label="Cur Ground Def" value={curGD} onChange={setCurGD} />
