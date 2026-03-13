@@ -19,6 +19,7 @@ interface Props {
   hex: HexData | null;
   system: SystemData | undefined;
   facilityTypes: FacilityType[];
+  dbFacilityTypes: DbFacilityType[];
   factions: DbFaction[];
   onClassificationChange: (hexId: number, c: HexClassification) => void;
   onAddSystem: (hexId: number, name: string, rank: number) => void;
