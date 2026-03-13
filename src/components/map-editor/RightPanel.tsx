@@ -279,7 +279,16 @@ const RightPanel: React.FC<Props> = ({
                   <IntField label="Cur Population" value={curPop} onChange={setCurPop} />
                   <IntField label="Survey" value={survey} onChange={setSurvey} />
                   <FloatField label="Resources" value={resources} onChange={setResources} />
-                  <IntField label="Base Condition" value={condition} onChange={setCondition} />
+                  <IntField label="Initial Condition" value={initialCondition} onChange={setInitialCondition} />
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Condition (calc)</label>
+                    <div className="flex h-8 w-full items-center rounded-md border border-input bg-muted px-2 text-xs text-muted-foreground">
+                      {initialCondition + (system?.facilities || []).reduce((sum, f) => {
+                        const ft = dbFacilityTypes.find((t) => t.id === f.facility_type_id);
+                        return sum + (ft?.condition_bonus || 0) * f.quantity;
+                      }, 0)}
+                    </div>
+                  </div>
                   <IntField label="Morale" value={morale} onChange={setMorale} />
                   <IntField label="Max Ground Def" value={maxGD} onChange={setMaxGD} />
                   <IntField label="Cur Ground Def" value={curGD} onChange={setCurGD} />
