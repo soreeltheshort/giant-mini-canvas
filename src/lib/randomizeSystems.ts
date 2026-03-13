@@ -182,7 +182,6 @@ function placeSystem(
     importance_rank: 0,
     owner: "",
     system_type: "system",
-    max_population: 0,
     current_population: 0,
     survey: 0,
     tribute: 0,

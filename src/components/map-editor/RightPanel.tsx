@@ -245,7 +245,6 @@ const RightPanel: React.FC<Props> = ({
                 <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                   <IntField label="Importance" value={sysRank} onChange={setSysRank} />
                   <IntField label="Planet Index" value={planetIndex} onChange={setPlanetIndex} />
-                  <IntField label="Max Population" value={maxPop} onChange={setMaxPop} />
                   <IntField label="Cur Population" value={curPop} onChange={setCurPop} />
                   <IntField label="Survey" value={survey} onChange={setSurvey} />
                   <IntField label="Tribute" value={tribute} onChange={setTribute} />

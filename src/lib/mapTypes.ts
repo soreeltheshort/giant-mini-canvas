@@ -102,7 +102,6 @@ export interface SystemData {
   importance_rank: number;
   owner: string;
   system_type: SystemType;
-  max_population: number;
   current_population: number;
   survey: number;
   tribute: number;
