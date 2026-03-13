@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const activeGame = games.find((g) => g.inDevelopment);
-  const { user } = useAuth();
+  const { user, isAdmin, isTester } = useAuth();
+  const canAccessTesting = isAdmin || isTester;
 
   return (
     <div className="min-h-screen bg-background">

@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 const GameDetail = () => {
   const { id } = useParams<{ id: string }>();
   const game = games.find((g) => g.id === id);
-  const { user } = useAuth();
+  const { user, isAdmin, isTester } = useAuth();
+  const canAccessTesting = isAdmin || isTester;
   const navigate = useNavigate();
 
   if (!game) {
