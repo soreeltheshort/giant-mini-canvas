@@ -94,6 +94,33 @@ const RightPanel: React.FC<Props> = ({
 
   const handleSave = () => {
     if (!hex || !system) return;
+
+    // Calculate current condition from initial_condition + facility bonuses
+    let conditionBonus = 0;
+    for (const f of system.facilities || []) {
+      const ft = dbFacilityTypes.find((t) => t.id === f.facility_type_id);
+      if (ft?.condition_bonus) conditionBonus += ft.condition_bonus * f.quantity;
+    }
+    const calculatedCondition = condition + conditionBonus;
+
+    // Calculate tribute: MIN(pop, res) * constA + ABS(pop - res) * constB, then facility modifiers
+    const pop = curPop;
+    const res = resources;
+    const baseTribute =
+      Math.min(pop, res) * DEFAULT_TURN_CONSTANTS.pop_and_resource_tribute +
+      Math.abs(pop - res) * DEFAULT_TURN_CONSTANTS.pop_or_resources_tribute;
+    let facilityFlatBonus = 0;
+    let tributePercentSum = 0;
+    for (const f of system.facilities || []) {
+      const ft = dbFacilityTypes.find((t) => t.id === f.facility_type_id);
+      if (ft?.tribute_flat) facilityFlatBonus += ft.tribute_flat * f.quantity;
+      if (ft?.tribute_percent) tributePercentSum += ft.tribute_percent * f.quantity;
+    }
+    const calculatedTribute = Math.round((baseTribute + facilityFlatBonus) * (1 + tributePercentSum / 100));
+
+    // If population > 0, morale = current condition
+    const calculatedMorale = curPop > 0 ? calculatedCondition : morale;
+
     onUpdateSystem(hex.hex_id, {
       system_name: sysName,
       importance_rank: sysRank,
@@ -101,11 +128,11 @@ const RightPanel: React.FC<Props> = ({
       system_type: sysType,
       current_population: curPop,
       survey,
-      tribute,
+      tribute: calculatedTribute,
       upkeep,
       resources,
-      condition,
-      morale,
+      condition: calculatedCondition,
+      morale: calculatedMorale,
       max_ground_defenses: maxGD,
       current_ground_defenses: curGD,
       planet_index: planetIndex,
