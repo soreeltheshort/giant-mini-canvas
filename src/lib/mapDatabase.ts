@@ -102,9 +102,39 @@ export async function exportToSqlite(state: MapState): Promise<Blob> {
     system_name TEXT,
     classification TEXT,
     importance_rank INTEGER DEFAULT 0,
-    owner TEXT DEFAULT ''
+    owner TEXT DEFAULT '',
+    system_type TEXT DEFAULT 'system',
+    current_population INTEGER DEFAULT 0,
+    survey INTEGER DEFAULT 0,
+    tribute INTEGER DEFAULT 0,
+    upkeep INTEGER DEFAULT 0,
+    resources INTEGER DEFAULT 0,
+    condition INTEGER DEFAULT 0,
+    morale INTEGER DEFAULT 0,
+    max_ground_defenses INTEGER DEFAULT 0,
+    current_ground_defenses INTEGER DEFAULT 0,
+    initial_condition INTEGER DEFAULT 40,
+    planet_index INTEGER DEFAULT 0,
+    planet_type_id TEXT DEFAULT ''
   )`);
 
+  db.run(`CREATE TABLE facilities_in_production (
+    system_id INTEGER,
+    facility_type_id TEXT,
+    turns_remaining INTEGER DEFAULT 1
+  )`);
+
+  db.run(`CREATE TABLE stationed_fighters (
+    system_id INTEGER,
+    ship_type_id TEXT,
+    quantity INTEGER DEFAULT 0
+  )`);
+
+  db.run(`CREATE TABLE stationed_gunships (
+    system_id INTEGER,
+    ship_type_id TEXT,
+    quantity INTEGER DEFAULT 0
+  )`);
   db.run(`CREATE TABLE facility_types (
     facility_type_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
