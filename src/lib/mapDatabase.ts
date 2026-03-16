@@ -280,13 +280,49 @@ export async function importFromSqlite(file: File): Promise<MapState> {
     facBySystemId.get(sf.system_id)!.push({ facility_type_id: String(sf.facility_type_id), quantity: sf.quantity });
   }
 
+  // Read facilities in production
+  const fipRows = readRows("SELECT * FROM facilities_in_production");
+  const fipBySystemId = new Map<number, { facility_type_id: string; turns_remaining: number }[]>();
+  for (const fip of fipRows) {
+    if (!fipBySystemId.has(fip.system_id)) fipBySystemId.set(fip.system_id, []);
+    fipBySystemId.get(fip.system_id)!.push({ facility_type_id: String(fip.facility_type_id), turns_remaining: fip.turns_remaining });
+  }
+
+  // Read stationed strikecraft
+  const fighterRows = readRows("SELECT * FROM stationed_fighters");
+  const fightersBySystemId = new Map<number, { ship_type_id: string; quantity: number }[]>();
+  for (const f of fighterRows) {
+    if (!fightersBySystemId.has(f.system_id)) fightersBySystemId.set(f.system_id, []);
+    fightersBySystemId.get(f.system_id)!.push({ ship_type_id: String(f.ship_type_id), quantity: f.quantity });
+  }
+
+  const gunshipRows = readRows("SELECT * FROM stationed_gunships");
+  const gunshipsBySystemId = new Map<number, { ship_type_id: string; quantity: number }[]>();
+  for (const g of gunshipRows) {
+    if (!gunshipsBySystemId.has(g.system_id)) gunshipsBySystemId.set(g.system_id, []);
+    gunshipsBySystemId.get(g.system_id)!.push({ ship_type_id: String(g.ship_type_id), quantity: g.quantity });
+  }
+
   const systems = new Map<number, SystemData>();
   for (const row of readRows("SELECT * FROM systems")) {
     row.owner = row.owner || "";
+    row.system_type = row.system_type || "system";
+    row.current_population = row.current_population || 0;
+    row.survey = row.survey || 0;
+    row.tribute = row.tribute || 0;
+    row.upkeep = row.upkeep || 0;
+    row.resources = row.resources || 0;
+    row.condition = row.condition || 0;
+    row.morale = row.morale || 0;
+    row.max_ground_defenses = row.max_ground_defenses || 0;
+    row.current_ground_defenses = row.current_ground_defenses || 0;
+    row.initial_condition = row.initial_condition ?? 40;
+    row.planet_index = row.planet_index || 0;
+    row.planet_type_id = row.planet_type_id || undefined;
     row.facilities = facBySystemId.get(row.system_id) || [];
-    row.facilities_in_production = row.facilities_in_production || [];
-    row.stationed_fighters = row.stationed_fighters || [];
-    row.stationed_gunships = row.stationed_gunships || [];
+    row.facilities_in_production = fipBySystemId.get(row.system_id) || [];
+    row.stationed_fighters = fightersBySystemId.get(row.system_id) || [];
+    row.stationed_gunships = gunshipsBySystemId.get(row.system_id) || [];
     systems.set(row.hex_id, row as SystemData);
   }
 
