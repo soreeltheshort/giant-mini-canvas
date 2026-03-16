@@ -102,9 +102,39 @@ export async function exportToSqlite(state: MapState): Promise<Blob> {
     system_name TEXT,
     classification TEXT,
     importance_rank INTEGER DEFAULT 0,
-    owner TEXT DEFAULT ''
+    owner TEXT DEFAULT '',
+    system_type TEXT DEFAULT 'system',
+    current_population INTEGER DEFAULT 0,
+    survey INTEGER DEFAULT 0,
+    tribute INTEGER DEFAULT 0,
+    upkeep INTEGER DEFAULT 0,
+    resources INTEGER DEFAULT 0,
+    condition INTEGER DEFAULT 0,
+    morale INTEGER DEFAULT 0,
+    max_ground_defenses INTEGER DEFAULT 0,
+    current_ground_defenses INTEGER DEFAULT 0,
+    initial_condition INTEGER DEFAULT 40,
+    planet_index INTEGER DEFAULT 0,
+    planet_type_id TEXT DEFAULT ''
   )`);
 
+  db.run(`CREATE TABLE facilities_in_production (
+    system_id INTEGER,
+    facility_type_id TEXT,
+    turns_remaining INTEGER DEFAULT 1
+  )`);
+
+  db.run(`CREATE TABLE stationed_fighters (
+    system_id INTEGER,
+    ship_type_id TEXT,
+    quantity INTEGER DEFAULT 0
+  )`);
+
+  db.run(`CREATE TABLE stationed_gunships (
+    system_id INTEGER,
+    ship_type_id TEXT,
+    quantity INTEGER DEFAULT 0
+  )`);
   db.run(`CREATE TABLE facility_types (
     facility_type_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
@@ -142,15 +172,40 @@ export async function exportToSqlite(state: MapState): Promise<Blob> {
   db.run("BEGIN TRANSACTION");
   for (const sys of state.systems.values()) {
     db.run(
-      "INSERT INTO systems (map_id, hex_id, system_name, classification, importance_rank, owner) VALUES (?,?,?,?,?,?)",
-      [sys.map_id, sys.hex_id, sys.system_name, sys.classification, sys.importance_rank, sys.owner || ""]
+      `INSERT INTO systems (map_id, hex_id, system_name, classification, importance_rank, owner,
+        system_type, current_population, survey, tribute, upkeep, resources,
+        condition, morale, max_ground_defenses, current_ground_defenses,
+        initial_condition, planet_index, planet_type_id)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [sys.map_id, sys.hex_id, sys.system_name, sys.classification, sys.importance_rank, sys.owner || "",
+       sys.system_type || "system", sys.current_population || 0, sys.survey || 0, sys.tribute || 0,
+       sys.upkeep || 0, sys.resources || 0, sys.condition || 0, sys.morale || 0,
+       sys.max_ground_defenses || 0, sys.current_ground_defenses || 0,
+       sys.initial_condition || 40, sys.planet_index || 0, sys.planet_type_id || ""]
     );
-    // Get the inserted system_id
     const lastId = db.exec("SELECT last_insert_rowid()")[0].values[0][0] as number;
     for (const fac of sys.facilities || []) {
       db.run(
         "INSERT INTO system_facilities (system_id, facility_type_id, quantity) VALUES (?,?,?)",
         [lastId, fac.facility_type_id, fac.quantity]
+      );
+    }
+    for (const fip of sys.facilities_in_production || []) {
+      db.run(
+        "INSERT INTO facilities_in_production (system_id, facility_type_id, turns_remaining) VALUES (?,?,?)",
+        [lastId, fip.facility_type_id, fip.turns_remaining]
+      );
+    }
+    for (const f of sys.stationed_fighters || []) {
+      db.run(
+        "INSERT INTO stationed_fighters (system_id, ship_type_id, quantity) VALUES (?,?,?)",
+        [lastId, f.ship_type_id, f.quantity]
+      );
+    }
+    for (const g of sys.stationed_gunships || []) {
+      db.run(
+        "INSERT INTO stationed_gunships (system_id, ship_type_id, quantity) VALUES (?,?,?)",
+        [lastId, g.ship_type_id, g.quantity]
       );
     }
   }
@@ -225,13 +280,49 @@ export async function importFromSqlite(file: File): Promise<MapState> {
     facBySystemId.get(sf.system_id)!.push({ facility_type_id: String(sf.facility_type_id), quantity: sf.quantity });
   }
 
+  // Read facilities in production
+  const fipRows = readRows("SELECT * FROM facilities_in_production");
+  const fipBySystemId = new Map<number, { facility_type_id: string; turns_remaining: number }[]>();
+  for (const fip of fipRows) {
+    if (!fipBySystemId.has(fip.system_id)) fipBySystemId.set(fip.system_id, []);
+    fipBySystemId.get(fip.system_id)!.push({ facility_type_id: String(fip.facility_type_id), turns_remaining: fip.turns_remaining });
+  }
+
+  // Read stationed strikecraft
+  const fighterRows = readRows("SELECT * FROM stationed_fighters");
+  const fightersBySystemId = new Map<number, { ship_type_id: string; quantity: number }[]>();
+  for (const f of fighterRows) {
+    if (!fightersBySystemId.has(f.system_id)) fightersBySystemId.set(f.system_id, []);
+    fightersBySystemId.get(f.system_id)!.push({ ship_type_id: String(f.ship_type_id), quantity: f.quantity });
+  }
+
+  const gunshipRows = readRows("SELECT * FROM stationed_gunships");
+  const gunshipsBySystemId = new Map<number, { ship_type_id: string; quantity: number }[]>();
+  for (const g of gunshipRows) {
+    if (!gunshipsBySystemId.has(g.system_id)) gunshipsBySystemId.set(g.system_id, []);
+    gunshipsBySystemId.get(g.system_id)!.push({ ship_type_id: String(g.ship_type_id), quantity: g.quantity });
+  }
+
   const systems = new Map<number, SystemData>();
   for (const row of readRows("SELECT * FROM systems")) {
     row.owner = row.owner || "";
+    row.system_type = row.system_type || "system";
+    row.current_population = row.current_population || 0;
+    row.survey = row.survey || 0;
+    row.tribute = row.tribute || 0;
+    row.upkeep = row.upkeep || 0;
+    row.resources = row.resources || 0;
+    row.condition = row.condition || 0;
+    row.morale = row.morale || 0;
+    row.max_ground_defenses = row.max_ground_defenses || 0;
+    row.current_ground_defenses = row.current_ground_defenses || 0;
+    row.initial_condition = row.initial_condition ?? 40;
+    row.planet_index = row.planet_index || 0;
+    row.planet_type_id = row.planet_type_id || undefined;
     row.facilities = facBySystemId.get(row.system_id) || [];
-    row.facilities_in_production = row.facilities_in_production || [];
-    row.stationed_fighters = row.stationed_fighters || [];
-    row.stationed_gunships = row.stationed_gunships || [];
+    row.facilities_in_production = fipBySystemId.get(row.system_id) || [];
+    row.stationed_fighters = fightersBySystemId.get(row.system_id) || [];
+    row.stationed_gunships = gunshipsBySystemId.get(row.system_id) || [];
     systems.set(row.hex_id, row as SystemData);
   }
 
