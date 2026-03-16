@@ -172,15 +172,40 @@ export async function exportToSqlite(state: MapState): Promise<Blob> {
   db.run("BEGIN TRANSACTION");
   for (const sys of state.systems.values()) {
     db.run(
-      "INSERT INTO systems (map_id, hex_id, system_name, classification, importance_rank, owner) VALUES (?,?,?,?,?,?)",
-      [sys.map_id, sys.hex_id, sys.system_name, sys.classification, sys.importance_rank, sys.owner || ""]
+      `INSERT INTO systems (map_id, hex_id, system_name, classification, importance_rank, owner,
+        system_type, current_population, survey, tribute, upkeep, resources,
+        condition, morale, max_ground_defenses, current_ground_defenses,
+        initial_condition, planet_index, planet_type_id)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [sys.map_id, sys.hex_id, sys.system_name, sys.classification, sys.importance_rank, sys.owner || "",
+       sys.system_type || "system", sys.current_population || 0, sys.survey || 0, sys.tribute || 0,
+       sys.upkeep || 0, sys.resources || 0, sys.condition || 0, sys.morale || 0,
+       sys.max_ground_defenses || 0, sys.current_ground_defenses || 0,
+       sys.initial_condition || 40, sys.planet_index || 0, sys.planet_type_id || ""]
     );
-    // Get the inserted system_id
     const lastId = db.exec("SELECT last_insert_rowid()")[0].values[0][0] as number;
     for (const fac of sys.facilities || []) {
       db.run(
         "INSERT INTO system_facilities (system_id, facility_type_id, quantity) VALUES (?,?,?)",
         [lastId, fac.facility_type_id, fac.quantity]
+      );
+    }
+    for (const fip of sys.facilities_in_production || []) {
+      db.run(
+        "INSERT INTO facilities_in_production (system_id, facility_type_id, turns_remaining) VALUES (?,?,?)",
+        [lastId, fip.facility_type_id, fip.turns_remaining]
+      );
+    }
+    for (const f of sys.stationed_fighters || []) {
+      db.run(
+        "INSERT INTO stationed_fighters (system_id, ship_type_id, quantity) VALUES (?,?,?)",
+        [lastId, f.ship_type_id, f.quantity]
+      );
+    }
+    for (const g of sys.stationed_gunships || []) {
+      db.run(
+        "INSERT INTO stationed_gunships (system_id, ship_type_id, quantity) VALUES (?,?,?)",
+        [lastId, g.ship_type_id, g.quantity]
       );
     }
   }
