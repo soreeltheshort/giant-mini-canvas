@@ -275,7 +275,12 @@ const RightPanel: React.FC<Props> = ({
                 {/* Numeric fields in a compact grid */}
                 <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                   <IntField label="Importance" value={sysRank} onChange={setSysRank} />
-                  <IntField label="Planet Index" value={planetIndex} onChange={setPlanetIndex} />
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">System ID</label>
+                    <div className="flex h-7 w-full items-center rounded-md border border-input bg-muted px-2 text-xs text-muted-foreground">
+                      {system.system_id}
+                    </div>
+                  </div>
                   <IntField label="Cur Population" value={curPop} onChange={setCurPop} />
                   <IntField label="Survey" value={survey} onChange={setSurvey} />
                   <FloatField label="Resources" value={resources} onChange={setResources} />
