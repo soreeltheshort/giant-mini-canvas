@@ -88,7 +88,7 @@ const RightPanel: React.FC<Props> = ({
       setMorale(0);
       setMaxGD(0);
       setCurGD(0);
-      setPlanetIndex(0);
+      
     }
   }, [system, hex?.hex_id]);
 
