@@ -53,7 +53,7 @@ const RightPanel: React.FC<Props> = ({
   const [morale, setMorale] = useState(0);
   const [maxGD, setMaxGD] = useState(0);
   const [curGD, setCurGD] = useState(0);
-  const [planetIndex, setPlanetIndex] = useState(0);
+  
 
   const [searchX, setSearchX] = useState("");
   const [searchY, setSearchY] = useState("");
