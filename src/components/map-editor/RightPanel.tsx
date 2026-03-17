@@ -136,7 +136,7 @@ const RightPanel: React.FC<Props> = ({
       morale: calculatedMorale,
       max_ground_defenses: maxGD,
       current_ground_defenses: curGD,
-      planet_index: planetIndex,
+      
     });
   };
 
