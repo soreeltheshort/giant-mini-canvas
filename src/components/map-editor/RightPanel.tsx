@@ -73,7 +73,7 @@ const RightPanel: React.FC<Props> = ({
       setMorale(system.morale || 0);
       setMaxGD(system.max_ground_defenses || 0);
       setCurGD(system.current_ground_defenses || 0);
-      setPlanetIndex(system.planet_index || 0);
+      
     } else {
       setSysName("");
       setSysRank(1);
