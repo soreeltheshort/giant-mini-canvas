@@ -88,9 +88,7 @@ const PlanetsPanel: React.FC<Props> = ({ systems, hexes, facilityTypes, onSelect
                   {sys.hex && (
                     <span>({sys.hex.x}, {sys.hex.y})</span>
                   )}
-                  {sys.planet_index > 0 && (
-                    <span>P#{sys.planet_index}</span>
-                  )}
+                  <span>ID: {sys.system_id}</span>
                 </div>
 
                 {sys.owner && (
