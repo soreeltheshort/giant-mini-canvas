@@ -168,8 +168,114 @@ function placeSystem(
   placedCubes: [number, number, number][],
   newHexes: Map<string, HexData>,
   newSystems: Map<number, SystemData>,
+  systemId: number,
   planetTypes?: DbPlanetType[]
 ) {
+  const key = hexKey(hex.x, hex.y);
+  newHexes.set(key, { ...hex, has_system: true });
+  placedCubes.push(offsetToCube(hex.x, hex.y));
+
+  const pt = pickWeightedPlanetType(planetTypes);
+  const initialCondition = pt ? randBetween(pt.min_initial_condition, pt.max_initial_condition) : 40;
+  const resources = pt ? randBetween(pt.min_resources, pt.max_resources) : 0;
+
+  newSystems.set(hex.hex_id, {
+    system_id: systemId,
+    map_id: 1,
+    hex_id: hex.hex_id,
+    system_name: `System ${hex.x},${hex.y}`,
+    classification: province,
+    importance_rank: 0,
+    owner: "",
+    system_type: "system",
+    current_population: 0,
+    survey: 0,
+    tribute: 0,
+    upkeep: 0,
+    resources,
+    facilities: [],
+    facilities_in_production: [],
+    condition: initialCondition,
+    morale: 0,
+    max_ground_defenses: 0,
+    current_ground_defenses: 0,
+    initial_condition: initialCondition,
+    planet_index: 0,
+    stationed_fighters: [],
+    stationed_gunships: [],
+    planet_type_id: pt?.id,
+  });
+}
+
+function placeRandomInQuadrant(
+  eligible: HexData[],
+  targetCount: number,
+  minDistance: number,
+  placedCubes: [number, number, number][],
+  newHexes: Map<string, HexData>,
+  newSystems: Map<number, SystemData>,
+  province: HexClassification,
+  nextSystemId: number,
+  planetTypes?: DbPlanetType[]
+): number {
+  const shuffled = fisherYatesShuffle([...eligible]);
+  let placed = 0;
+  for (const hex of shuffled) {
+    if (placed >= targetCount) break;
+    if (!isFarEnough(hex, placedCubes, minDistance)) continue;
+    placeSystem(hex, province, placedCubes, newHexes, newSystems, nextSystemId, planetTypes);
+    nextSystemId++;
+    placed++;
+  }
+  return nextSystemId;
+}
+
+function placeEvenInQuadrant(
+  eligible: HexData[],
+  targetCount: number,
+  minDistance: number,
+  placedCubes: [number, number, number][],
+  newHexes: Map<string, HexData>,
+  newSystems: Map<number, SystemData>,
+  province: HexClassification,
+  nextSystemId: number,
+  planetTypes?: DbPlanetType[]
+): number {
+  const remaining = [...eligible];
+  let placed = 0;
+
+  while (placed < targetCount && remaining.length > 0) {
+    let bestIdx = -1;
+    let bestMinDist = -1;
+
+    for (let i = 0; i < remaining.length; i++) {
+      const hex = remaining[i];
+      const [cx, cy, cz] = offsetToCube(hex.x, hex.y);
+
+      let minD = Infinity;
+      for (const [px, py, pz] of placedCubes) {
+        const d = cubeDistance(cx, cy, cz, px, py, pz);
+        if (d < minD) minD = d;
+      }
+
+      if (placedCubes.length === 0) {
+        minD = cubeDistance(cx, cy, cz, 0, 0, 0);
+      }
+
+      if (minD >= minDistance && minD > bestMinDist) {
+        bestMinDist = minD;
+        bestIdx = i;
+      }
+    }
+
+    if (bestIdx === -1) break;
+    placeSystem(remaining[bestIdx], province, placedCubes, newHexes, newSystems, nextSystemId, planetTypes);
+    nextSystemId++;
+    remaining.splice(bestIdx, 1);
+    placed++;
+  }
+  return nextSystemId;
+}
   const key = hexKey(hex.x, hex.y);
   newHexes.set(key, { ...hex, has_system: true });
   placedCubes.push(offsetToCube(hex.x, hex.y));
