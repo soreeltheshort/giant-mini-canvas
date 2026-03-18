@@ -82,10 +82,12 @@ const AdminGames = () => {
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [mapState, setMapState] = useState<MapState | null>(null);
   const [shipTypes, setShipTypes] = useState<ShipTypeForUpkeep[]>([]);
+  const [snapshots, setSnapshots] = useState<GameSnapshotRow[]>([]);
 
   // new game form
   const [newGameName, setNewGameName] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [snapshotLabel, setSnapshotLabel] = useState("");
 
   /* ── fetch helpers ── */
   const fetchGames = useCallback(async () => {
