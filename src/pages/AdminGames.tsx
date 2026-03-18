@@ -434,7 +434,7 @@ function AddPlayerForm({ availableSlots, availableUsers, onAdd }: { availableSlo
         </SelectContent>
       </Select>
       <Select value={slot} onValueChange={setSlot}>
-        <SelectTrigger className="w-24"><SelectValue placeholder="Slot" /></SelectTrigger>
+        <SelectTrigger className="w-40"><SelectValue placeholder="Province" /></SelectTrigger>
         <SelectContent>
           {availableSlots.map(s => <SelectItem key={s} value={String(s)}>{PROVINCE_NAMES[s] || `Slot ${s}`}</SelectItem>)}
         </SelectContent>
