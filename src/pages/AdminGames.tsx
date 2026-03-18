@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
-import { useFactions, DbFaction } from "@/hooks/useFactions";
+
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
