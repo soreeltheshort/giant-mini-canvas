@@ -350,9 +350,8 @@ const AdminGames = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Province</TableHead>
+                    <TableHead>Province / Faction</TableHead>
                     <TableHead>Player</TableHead>
-                    <TableHead>Faction</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -361,18 +360,6 @@ const AdminGames = () => {
                     <TableRow key={p.id}>
                       <TableCell>{PROVINCE_NAMES[p.player_slot] || `Slot ${p.player_slot}`}</TableCell>
                       <TableCell>{getProfileLabel(p.user_id)}</TableCell>
-                      <TableCell>
-                        <Select value={p.faction_id || ""} onValueChange={v => updatePlayerFaction(p.id, v || null)}>
-                          <SelectTrigger className="w-40"><SelectValue placeholder="No faction" /></SelectTrigger>
-                          <SelectContent>
-                            {factions.map(f => (
-                              <SelectItem key={f.id} value={f.id}>
-                                <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: f.color }} /> {f.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="destructive" onClick={() => removePlayer(p.id)}>Remove</Button>
                       </TableCell>
