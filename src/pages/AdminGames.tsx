@@ -19,6 +19,11 @@ import { processNextTurn, DEFAULT_TURN_CONSTANTS, ShipTypeForUpkeep } from "@/li
 import { SystemData, MapState } from "@/lib/mapTypes";
 import { Badge } from "@/components/ui/badge";
 
+const PROVINCE_NAMES: Record<number, string> = {
+  1: "Valerian", 2: "Aurelian", 3: "Cassian",
+  4: "Dravian", 5: "Marcellan", 6: "Octavan",
+};
+
 /* ───────── types ───────── */
 interface GameRow {
   id: string;
@@ -346,11 +351,11 @@ const AdminGames = () => {
 
             {/* ── Players Section ── */}
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Players ({players.length}/6)</h3>
+              <h3 className="text-lg font-semibold">Players ({players.length}/6) — Provinces</h3>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Slot</TableHead>
+                    <TableHead>Province</TableHead>
                     <TableHead>Player</TableHead>
                     <TableHead>Faction</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -359,7 +364,7 @@ const AdminGames = () => {
                 <TableBody>
                   {players.map(p => (
                     <TableRow key={p.id}>
-                      <TableCell>{p.player_slot}</TableCell>
+                      <TableCell>{PROVINCE_NAMES[p.player_slot] || `Slot ${p.player_slot}`}</TableCell>
                       <TableCell>{getProfileLabel(p.user_id)}</TableCell>
                       <TableCell>
                         <Select value={p.faction_id || ""} onValueChange={v => updatePlayerFaction(p.id, v || null)}>
@@ -449,7 +454,7 @@ function AddPlayerForm({ availableSlots, availableUsers, onAdd }: { availableSlo
       <Select value={slot} onValueChange={setSlot}>
         <SelectTrigger className="w-24"><SelectValue placeholder="Slot" /></SelectTrigger>
         <SelectContent>
-          {availableSlots.map(s => <SelectItem key={s} value={String(s)}>Slot {s}</SelectItem>)}
+          {availableSlots.map(s => <SelectItem key={s} value={String(s)}>{PROVINCE_NAMES[s] || `Slot ${s}`}</SelectItem>)}
         </SelectContent>
       </Select>
       <Button size="sm" onClick={() => { if (userId && slot) { onAdd(userId, Number(slot)); setUserId(""); setSlot(""); } }} disabled={!userId || !slot}>Add</Button>
