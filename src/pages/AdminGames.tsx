@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
-import { useFactions, DbFaction } from "@/hooks/useFactions";
+
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,7 @@ const AdminGames = () => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { factions } = useFactions();
+  
   const { facilityTypes } = useFacilityTypes();
 
   // games list
@@ -179,11 +179,6 @@ const AdminGames = () => {
     await loadGame(selectedGame);
   };
 
-  const updatePlayerFaction = async (playerId: string, factionId: string | null) => {
-    if (!selectedGame) return;
-    await (supabase as any).from("game_players").update({ faction_id: factionId }).eq("id", playerId);
-    await loadGame(selectedGame);
-  };
 
   /* ── update game status ── */
   const updateStatus = async (status: string) => {
@@ -355,9 +350,8 @@ const AdminGames = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Province</TableHead>
+                    <TableHead>Province / Faction</TableHead>
                     <TableHead>Player</TableHead>
-                    <TableHead>Faction</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -366,18 +360,6 @@ const AdminGames = () => {
                     <TableRow key={p.id}>
                       <TableCell>{PROVINCE_NAMES[p.player_slot] || `Slot ${p.player_slot}`}</TableCell>
                       <TableCell>{getProfileLabel(p.user_id)}</TableCell>
-                      <TableCell>
-                        <Select value={p.faction_id || ""} onValueChange={v => updatePlayerFaction(p.id, v || null)}>
-                          <SelectTrigger className="w-40"><SelectValue placeholder="No faction" /></SelectTrigger>
-                          <SelectContent>
-                            {factions.map(f => (
-                              <SelectItem key={f.id} value={f.id}>
-                                <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: f.color }} /> {f.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="destructive" onClick={() => removePlayer(p.id)}>Remove</Button>
                       </TableCell>
@@ -452,7 +434,7 @@ function AddPlayerForm({ availableSlots, availableUsers, onAdd }: { availableSlo
         </SelectContent>
       </Select>
       <Select value={slot} onValueChange={setSlot}>
-        <SelectTrigger className="w-24"><SelectValue placeholder="Slot" /></SelectTrigger>
+        <SelectTrigger className="w-40"><SelectValue placeholder="Province" /></SelectTrigger>
         <SelectContent>
           {availableSlots.map(s => <SelectItem key={s} value={String(s)}>{PROVINCE_NAMES[s] || `Slot ${s}`}</SelectItem>)}
         </SelectContent>
