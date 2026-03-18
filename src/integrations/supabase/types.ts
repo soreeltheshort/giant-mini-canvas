@@ -377,6 +377,7 @@ export type Database = {
           faction_id: string | null
           game_id: string
           id: string
+          initialized: boolean
           player_slot: number
           user_id: string
         }
@@ -385,6 +386,7 @@ export type Database = {
           faction_id?: string | null
           game_id: string
           id?: string
+          initialized?: boolean
           player_slot: number
           user_id: string
         }
@@ -393,6 +395,7 @@ export type Database = {
           faction_id?: string | null
           game_id?: string
           id?: string
+          initialized?: boolean
           player_slot?: number
           user_id?: string
         }
