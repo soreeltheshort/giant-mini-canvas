@@ -24,6 +24,7 @@ import MapTesting from "./pages/MapTesting";
 import MapTestingConfig from "./pages/MapTestingConfig";
 import PlanetTesting from "./pages/PlanetTesting";
 import RequireRole from "@/components/RequireRole";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
