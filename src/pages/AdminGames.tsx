@@ -140,13 +140,11 @@ const AdminGames = () => {
     input.type = "file";
     input.accept = ".sqlite,.db";
     input.onchange = async (e: any) => {
-      const file = e.target.files?.[0];
+      const file = e.target.files?.[0] as File | undefined;
       if (!file) return;
       try {
-        const buf = await file.arrayBuffer();
-        const state = await importFromSqlite(new Uint8Array(buf));
+        const state = await importFromSqlite(file);
         setMapState(state);
-        // Save to game
         const serialized = serializeMapState(state);
         await (supabase as any).from("games").update({ map_data_json: serialized }).eq("id", selectedGame.id);
         await addLog(selectedGame.id, "map_imported", `Map imported from file: ${file.name}`);

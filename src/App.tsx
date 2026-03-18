@@ -52,6 +52,7 @@ const App = () => (
             <Route path="/admin/battle-config" element={<AdminBattleConfig />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/ships" element={<AdminShips />} />
+            <Route path="/admin/games" element={<RequireRole roles={["admin"]}><AdminGames /></RequireRole>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
