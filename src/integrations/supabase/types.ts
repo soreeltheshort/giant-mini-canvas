@@ -413,6 +413,41 @@ export type Database = {
           },
         ]
       }
+      game_snapshots: {
+        Row: {
+          created_at: string
+          game_id: string
+          id: string
+          label: string
+          map_data_json: Json
+          turn_number: number
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          id?: string
+          label?: string
+          map_data_json?: Json
+          turn_number?: number
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          id?: string
+          label?: string
+          map_data_json?: Json
+          turn_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_snapshots_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       games: {
         Row: {
           created_at: string
