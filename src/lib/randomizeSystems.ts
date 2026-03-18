@@ -276,7 +276,6 @@ function placeEvenInQuadrant(
   }
   return nextSystemId;
 }
-  placedCubes.push(offsetToCube(hex.x, hex.y));
 
   const pt = pickWeightedPlanetType(planetTypes);
   const initialCondition = pt ? randBetween(pt.min_initial_condition, pt.max_initial_condition) : 40;
