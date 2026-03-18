@@ -19,6 +19,11 @@ import { processNextTurn, DEFAULT_TURN_CONSTANTS, ShipTypeForUpkeep } from "@/li
 import { SystemData, MapState } from "@/lib/mapTypes";
 import { Badge } from "@/components/ui/badge";
 
+const PROVINCE_NAMES: Record<number, string> = {
+  1: "Valerian", 2: "Aurelian", 3: "Cassian",
+  4: "Dravian", 5: "Marcellan", 6: "Octavan",
+};
+
 /* ───────── types ───────── */
 interface GameRow {
   id: string;
