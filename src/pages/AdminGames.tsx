@@ -193,7 +193,57 @@ const AdminGames = () => {
   };
 
 
-  /* ── update game status ── */
+  /* ── login as player (stub) ── */
+  const loginAsPlayer = (player: GamePlayerRow) => {
+    toast({ title: "Not yet implemented", description: `Login as ${getProfileLabel(player.user_id)} (${PROVINCE_NAMES[player.player_slot]}) — coming soon` });
+  };
+
+  /* ── snapshot management ── */
+  const saveSnapshot = async () => {
+    if (!selectedGame || !mapState) return;
+    const label = snapshotLabel.trim() || `Turn ${selectedGame.turn_number} snapshot`;
+    const serialized = serializeMapState(mapState);
+    const { error } = await (supabase as any).from("game_snapshots").insert({
+      game_id: selectedGame.id,
+      turn_number: selectedGame.turn_number,
+      label,
+      map_data_json: serialized,
+    });
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    await addLog(selectedGame.id, "snapshot_saved", `Snapshot saved: "${label}" at turn ${selectedGame.turn_number}`);
+    setSnapshotLabel("");
+    await loadGame(selectedGame);
+    toast({ title: "Snapshot saved", description: label });
+  };
+
+  const loadSnapshot = async (snapshot: GameSnapshotRow) => {
+    if (!selectedGame) return;
+    if (!confirm(`Restore game to "${snapshot.label}" (turn ${snapshot.turn_number})? This will overwrite the current game state.`)) return;
+    // Fetch the full snapshot data
+    const { data } = await (supabase as any).from("game_snapshots").select("map_data_json").eq("id", snapshot.id).single();
+    if (!data) return;
+    // Update the game with the snapshot's map and turn number
+    await (supabase as any).from("games").update({ map_data_json: data.map_data_json, turn_number: snapshot.turn_number }).eq("id", selectedGame.id);
+    await addLog(selectedGame.id, "snapshot_restored", `Restored to snapshot: "${snapshot.label}" (turn ${snapshot.turn_number})`);
+    // Reload
+    const updatedGame = { ...selectedGame, turn_number: snapshot.turn_number };
+    setSelectedGame(updatedGame);
+    try { setMapState(deserializeMapState(data.map_data_json)); } catch { setMapState(null); }
+    await fetchGames();
+    await refreshLogs(selectedGame.id);
+    const { data: sData } = await (supabase as any).from("game_snapshots").select("id, game_id, turn_number, label, created_at").eq("game_id", selectedGame.id).order("turn_number", { ascending: false });
+    setSnapshots(sData || []);
+    toast({ title: "Snapshot restored", description: `Now at turn ${snapshot.turn_number}` });
+  };
+
+  const deleteSnapshot = async (snapshotId: string) => {
+    if (!selectedGame) return;
+    await (supabase as any).from("game_snapshots").delete().eq("id", snapshotId);
+    const { data: sData } = await (supabase as any).from("game_snapshots").select("id, game_id, turn_number, label, created_at").eq("game_id", selectedGame.id).order("turn_number", { ascending: false });
+    setSnapshots(sData || []);
+    toast({ title: "Snapshot deleted" });
+  };
+
   const updateStatus = async (status: string) => {
     if (!selectedGame) return;
     await (supabase as any).from("games").update({ status }).eq("id", selectedGame.id);
