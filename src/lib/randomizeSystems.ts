@@ -114,9 +114,9 @@ export function randomizeSystems(state: MapState, params: RandomizeParams, plane
       const qEligible = quadrants.get(qk)!;
 
       if (forceEvenDistribution) {
-        placeEvenInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province, planetTypes);
+        nextSystemId = placeEvenInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province, nextSystemId, planetTypes);
       } else {
-        placeRandomInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province, planetTypes);
+        nextSystemId = placeRandomInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province, nextSystemId, planetTypes);
       }
     }
   }
