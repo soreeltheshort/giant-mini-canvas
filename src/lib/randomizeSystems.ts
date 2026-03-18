@@ -43,6 +43,12 @@ export function randomizeSystems(state: MapState, params: RandomizeParams, plane
     }
   }
 
+  // Find the highest existing system_id to start incrementing from
+  let nextSystemId = 1;
+  for (const sys of state.systems.values()) {
+    if (sys.system_id >= nextSystemId) nextSystemId = sys.system_id + 1;
+  }
+
   const newHexes = new Map(state.hexes);
   const newSystems = new Map(state.systems);
   const placedCubes = [...existingCubes];
