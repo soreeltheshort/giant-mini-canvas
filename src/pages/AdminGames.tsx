@@ -60,7 +60,7 @@ const AdminGames = () => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { factions } = useFactions();
+  
   const { facilityTypes } = useFacilityTypes();
 
   // games list
