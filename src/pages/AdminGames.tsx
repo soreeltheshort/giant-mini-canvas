@@ -363,7 +363,7 @@ const AdminGames = () => {
                 <TableBody>
                   {players.map(p => (
                     <TableRow key={p.id}>
-                      <TableCell>{p.player_slot}</TableCell>
+                      <TableCell>{PROVINCE_NAMES[p.player_slot] || `Slot ${p.player_slot}`}</TableCell>
                       <TableCell>{getProfileLabel(p.user_id)}</TableCell>
                       <TableCell>
                         <Select value={p.faction_id || ""} onValueChange={v => updatePlayerFaction(p.id, v || null)}>
