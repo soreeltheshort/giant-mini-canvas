@@ -276,8 +276,6 @@ function placeEvenInQuadrant(
   }
   return nextSystemId;
 }
-  const key = hexKey(hex.x, hex.y);
-  newHexes.set(key, { ...hex, has_system: true });
   placedCubes.push(offsetToCube(hex.x, hex.y));
 
   const pt = pickWeightedPlanetType(planetTypes);
