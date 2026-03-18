@@ -179,11 +179,6 @@ const AdminGames = () => {
     await loadGame(selectedGame);
   };
 
-  const updatePlayerFaction = async (playerId: string, factionId: string | null) => {
-    if (!selectedGame) return;
-    await (supabase as any).from("game_players").update({ faction_id: factionId }).eq("id", playerId);
-    await loadGame(selectedGame);
-  };
 
   /* ── update game status ── */
   const updateStatus = async (status: string) => {
