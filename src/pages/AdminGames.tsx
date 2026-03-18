@@ -350,7 +350,7 @@ const AdminGames = () => {
 
             {/* ── Players Section ── */}
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Players ({players.length}/6)</h3>
+              <h3 className="text-lg font-semibold">Players ({players.length}/6) — Provinces</h3>
               <Table>
                 <TableHeader>
                   <TableRow>
