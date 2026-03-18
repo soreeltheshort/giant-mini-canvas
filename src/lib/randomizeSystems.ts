@@ -43,6 +43,12 @@ export function randomizeSystems(state: MapState, params: RandomizeParams, plane
     }
   }
 
+  // Find the highest existing system_id to start incrementing from
+  let nextSystemId = 1;
+  for (const sys of state.systems.values()) {
+    if (sys.system_id >= nextSystemId) nextSystemId = sys.system_id + 1;
+  }
+
   const newHexes = new Map(state.hexes);
   const newSystems = new Map(state.systems);
   const placedCubes = [...existingCubes];
@@ -108,9 +114,9 @@ export function randomizeSystems(state: MapState, params: RandomizeParams, plane
       const qEligible = quadrants.get(qk)!;
 
       if (forceEvenDistribution) {
-        placeEvenInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province, planetTypes);
+        nextSystemId = placeEvenInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province, nextSystemId, planetTypes);
       } else {
-        placeRandomInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province, planetTypes);
+        nextSystemId = placeRandomInQuadrant(qEligible, qTarget, minDistance, placedCubes, newHexes, newSystems, province, nextSystemId, planetTypes);
       }
     }
   }
@@ -162,6 +168,7 @@ function placeSystem(
   placedCubes: [number, number, number][],
   newHexes: Map<string, HexData>,
   newSystems: Map<number, SystemData>,
+  systemId: number,
   planetTypes?: DbPlanetType[]
 ) {
   const key = hexKey(hex.x, hex.y);
@@ -172,7 +179,6 @@ function placeSystem(
   const initialCondition = pt ? randBetween(pt.min_initial_condition, pt.max_initial_condition) : 40;
   const resources = pt ? randBetween(pt.min_resources, pt.max_resources) : 0;
 
-  const systemId = Date.now() + Math.floor(Math.random() * 100000);
   newSystems.set(hex.hex_id, {
     system_id: systemId,
     map_id: 1,
@@ -209,16 +215,19 @@ function placeRandomInQuadrant(
   newHexes: Map<string, HexData>,
   newSystems: Map<number, SystemData>,
   province: HexClassification,
+  nextSystemId: number,
   planetTypes?: DbPlanetType[]
-) {
+): number {
   const shuffled = fisherYatesShuffle([...eligible]);
   let placed = 0;
   for (const hex of shuffled) {
     if (placed >= targetCount) break;
     if (!isFarEnough(hex, placedCubes, minDistance)) continue;
-    placeSystem(hex, province, placedCubes, newHexes, newSystems, planetTypes);
+    placeSystem(hex, province, placedCubes, newHexes, newSystems, nextSystemId, planetTypes);
+    nextSystemId++;
     placed++;
   }
+  return nextSystemId;
 }
 
 function placeEvenInQuadrant(
@@ -229,8 +238,9 @@ function placeEvenInQuadrant(
   newHexes: Map<string, HexData>,
   newSystems: Map<number, SystemData>,
   province: HexClassification,
+  nextSystemId: number,
   planetTypes?: DbPlanetType[]
-) {
+): number {
   const remaining = [...eligible];
   let placed = 0;
 
@@ -259,8 +269,10 @@ function placeEvenInQuadrant(
     }
 
     if (bestIdx === -1) break;
-    placeSystem(remaining[bestIdx], province, placedCubes, newHexes, newSystems, planetTypes);
+    placeSystem(remaining[bestIdx], province, placedCubes, newHexes, newSystems, nextSystemId, planetTypes);
+    nextSystemId++;
     remaining.splice(bestIdx, 1);
     placed++;
   }
+  return nextSystemId;
 }
