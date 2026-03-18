@@ -354,7 +354,7 @@ const AdminGames = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Slot</TableHead>
+                    <TableHead>Province</TableHead>
                     <TableHead>Player</TableHead>
                     <TableHead>Faction</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
