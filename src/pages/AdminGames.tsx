@@ -253,6 +253,10 @@ const AdminGames = () => {
     return p?.display_name || p?.email || userId.slice(0, 8);
   };
 
+  const PROVINCE_NAMES: Record<number, string> = {
+    1: "Valerian", 2: "Aurelian", 3: "Cassian",
+    4: "Dravian", 5: "Marcellan", 6: "Octavan",
+  };
   const usedSlots = players.map(p => p.player_slot);
   const usedUserIds = players.map(p => p.user_id);
   const availableSlots = [1, 2, 3, 4, 5, 6].filter(s => !usedSlots.includes(s));
