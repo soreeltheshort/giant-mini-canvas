@@ -117,6 +117,9 @@ const AdminGames = () => {
     // logs
     const { data: lData } = await (supabase as any).from("game_logs").select("id, turn_number, log_type, message, created_at").eq("game_id", game.id).order("created_at", { ascending: false }).limit(100);
     setLogs(lData || []);
+    // snapshots
+    const { data: sData } = await (supabase as any).from("game_snapshots").select("id, game_id, turn_number, label, created_at").eq("game_id", game.id).order("turn_number", { ascending: false });
+    setSnapshots(sData || []);
     // map state from json
     const { data: gData } = await (supabase as any).from("games").select("map_data_json").eq("id", game.id).single();
     if (gData?.map_data_json && Object.keys(gData.map_data_json).length > 0) {
