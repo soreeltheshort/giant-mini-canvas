@@ -130,6 +130,11 @@ const Header = () => {
               </>
             )}
             {user && isAdmin && (
+              <Link to="/admin/games" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname.startsWith("/admin/games") ? "text-foreground" : ""}`}>
+                Games
+              </Link>
+            )}
+            {user && isAdmin && (
               <Link to="/admin/users" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/users" ? "text-foreground" : ""}`}>
                 Users
               </Link>
