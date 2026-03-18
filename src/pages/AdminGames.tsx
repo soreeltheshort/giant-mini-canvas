@@ -453,7 +453,7 @@ function AddPlayerForm({ availableSlots, availableUsers, onAdd }: { availableSlo
       <Select value={slot} onValueChange={setSlot}>
         <SelectTrigger className="w-24"><SelectValue placeholder="Slot" /></SelectTrigger>
         <SelectContent>
-          {availableSlots.map(s => <SelectItem key={s} value={String(s)}>Slot {s}</SelectItem>)}
+          {availableSlots.map(s => <SelectItem key={s} value={String(s)}>{PROVINCE_NAMES[s] || `Slot ${s}`}</SelectItem>)}
         </SelectContent>
       </Select>
       <Button size="sm" onClick={() => { if (userId && slot) { onAdd(userId, Number(slot)); setUserId(""); setSlot(""); } }} disabled={!userId || !slot}>Add</Button>
