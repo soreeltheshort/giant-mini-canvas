@@ -19,6 +19,7 @@ import AdminBattleConfig from "./pages/AdminBattleConfig";
 import AdminUsers from "./pages/AdminUsers";
 import AdminShips from "./pages/AdminShips";
 import AdminGames from "./pages/AdminGames";
+import PlayerGame from "./pages/PlayerGame";
 import MapTesting from "./pages/MapTesting";
 import MapTestingConfig from "./pages/MapTestingConfig";
 import PlanetTesting from "./pages/PlanetTesting";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/ships" element={<AdminShips />} />
             <Route path="/admin/games" element={<RequireRole roles={["admin"]}><AdminGames /></RequireRole>} />
+            <Route path="/play/:gameId" element={<PlayerGame />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
