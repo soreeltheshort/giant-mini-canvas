@@ -448,7 +448,49 @@ const AdminGames = () => {
               </div>
             </div>
 
-            {/* ── Logs Section ── */}
+            {/* ── Snapshots Section ── */}
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Snapshots ({snapshots.length})</h3>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder={`Label (default: "Turn ${selectedGame.turn_number} snapshot")`}
+                  value={snapshotLabel}
+                  onChange={e => setSnapshotLabel(e.target.value)}
+                  className="max-w-xs"
+                />
+                <Button variant="outline" onClick={saveSnapshot} disabled={!mapState}>
+                  Save Snapshot
+                </Button>
+              </div>
+              {snapshots.length > 0 && (
+                <div className="max-h-48 overflow-y-auto border border-border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Label</TableHead>
+                        <TableHead className="w-16">Turn</TableHead>
+                        <TableHead className="w-32">Saved</TableHead>
+                        <TableHead className="text-right w-40">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {snapshots.map(s => (
+                        <TableRow key={s.id}>
+                          <TableCell className="text-sm">{s.label}</TableCell>
+                          <TableCell className="text-xs">{s.turn_number}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleString()}</TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button size="sm" variant="outline" onClick={() => loadSnapshot(s)}>Restore</Button>
+                            <Button size="sm" variant="destructive" onClick={() => deleteSnapshot(s.id)}>Delete</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Game Log ({logs.length})</h3>
               <div className="max-h-64 overflow-y-auto border border-border rounded-md">
