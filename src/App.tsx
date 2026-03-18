@@ -18,6 +18,7 @@ import AdminWeapons from "./pages/AdminWeapons";
 import AdminBattleConfig from "./pages/AdminBattleConfig";
 import AdminUsers from "./pages/AdminUsers";
 import AdminShips from "./pages/AdminShips";
+import AdminGames from "./pages/AdminGames";
 import MapTesting from "./pages/MapTesting";
 import MapTestingConfig from "./pages/MapTestingConfig";
 import PlanetTesting from "./pages/PlanetTesting";
