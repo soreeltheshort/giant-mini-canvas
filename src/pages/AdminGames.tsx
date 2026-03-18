@@ -55,6 +55,14 @@ interface GameLogRow {
   created_at: string;
 }
 
+interface GameSnapshotRow {
+  id: string;
+  game_id: string;
+  turn_number: number;
+  label: string;
+  created_at: string;
+}
+
 /* ───────── component ───────── */
 const AdminGames = () => {
   const { user, isAdmin } = useAuth();
