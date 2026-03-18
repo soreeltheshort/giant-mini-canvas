@@ -333,6 +333,119 @@ export type Database = {
         }
         Relationships: []
       }
+      game_logs: {
+        Row: {
+          created_at: string
+          details_json: Json
+          game_id: string
+          id: string
+          log_type: string
+          message: string
+          turn_number: number
+        }
+        Insert: {
+          created_at?: string
+          details_json?: Json
+          game_id: string
+          id?: string
+          log_type?: string
+          message?: string
+          turn_number?: number
+        }
+        Update: {
+          created_at?: string
+          details_json?: Json
+          game_id?: string
+          id?: string
+          log_type?: string
+          message?: string
+          turn_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_logs_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_players: {
+        Row: {
+          created_at: string
+          faction_id: string | null
+          game_id: string
+          id: string
+          player_slot: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          faction_id?: string | null
+          game_id: string
+          id?: string
+          player_slot: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          faction_id?: string | null
+          game_id?: string
+          id?: string
+          player_slot?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_players_faction_id_fkey"
+            columns: ["faction_id"]
+            isOneToOne: false
+            referencedRelation: "factions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_players_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      games: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          map_data_json: Json
+          name: string
+          status: Database["public"]["Enums"]["game_status"]
+          turn_number: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          map_data_json?: Json
+          name: string
+          status?: Database["public"]["Enums"]["game_status"]
+          turn_number?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          map_data_json?: Json
+          name?: string
+          status?: Database["public"]["Enums"]["game_status"]
+          turn_number?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ground_combat_outcomes: {
         Row: {
           created_at: string
@@ -804,6 +917,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "tester"
+      game_status: "setup" | "active" | "paused" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -932,6 +1046,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "tester"],
+      game_status: ["setup", "active", "paused", "completed"],
     },
   },
 } as const

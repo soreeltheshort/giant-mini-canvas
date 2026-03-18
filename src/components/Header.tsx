@@ -19,6 +19,7 @@ const Header = () => {
   const isCombatTestingMode = location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/fleet-builder") || location.pathname.startsWith("/battle") || location.pathname.startsWith("/admin/battle") || location.pathname.startsWith("/admin/weapons") || location.pathname.startsWith("/admin/ships");
   const isMapTestingMode = location.pathname.startsWith("/map-testing");
   const isPlanetTestingMode = location.pathname.startsWith("/planet-testing");
+  const isGameMode = location.pathname.startsWith("/admin/games");
 
   const handleNewsletter = () => {
     if (location.pathname === "/") {
@@ -127,6 +128,11 @@ const Header = () => {
                   Ships
                 </Link>
               </>
+            )}
+            {user && isAdmin && (
+              <Link to="/admin/games" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname.startsWith("/admin/games") ? "text-foreground" : ""}`}>
+                Games
+              </Link>
             )}
             {user && isAdmin && (
               <Link to="/admin/users" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/users" ? "text-foreground" : ""}`}>
