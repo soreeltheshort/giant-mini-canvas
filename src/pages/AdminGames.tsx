@@ -55,6 +55,14 @@ interface GameLogRow {
   created_at: string;
 }
 
+interface GameSnapshotRow {
+  id: string;
+  game_id: string;
+  turn_number: number;
+  label: string;
+  created_at: string;
+}
+
 /* ───────── component ───────── */
 const AdminGames = () => {
   const { user, isAdmin } = useAuth();
@@ -74,10 +82,12 @@ const AdminGames = () => {
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [mapState, setMapState] = useState<MapState | null>(null);
   const [shipTypes, setShipTypes] = useState<ShipTypeForUpkeep[]>([]);
+  const [snapshots, setSnapshots] = useState<GameSnapshotRow[]>([]);
 
   // new game form
   const [newGameName, setNewGameName] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [snapshotLabel, setSnapshotLabel] = useState("");
 
   /* ── fetch helpers ── */
   const fetchGames = useCallback(async () => {
@@ -107,6 +117,9 @@ const AdminGames = () => {
     // logs
     const { data: lData } = await (supabase as any).from("game_logs").select("id, turn_number, log_type, message, created_at").eq("game_id", game.id).order("created_at", { ascending: false }).limit(100);
     setLogs(lData || []);
+    // snapshots
+    const { data: sData } = await (supabase as any).from("game_snapshots").select("id, game_id, turn_number, label, created_at").eq("game_id", game.id).order("turn_number", { ascending: false });
+    setSnapshots(sData || []);
     // map state from json
     const { data: gData } = await (supabase as any).from("games").select("map_data_json").eq("id", game.id).single();
     if (gData?.map_data_json && Object.keys(gData.map_data_json).length > 0) {
@@ -180,7 +193,57 @@ const AdminGames = () => {
   };
 
 
-  /* ── update game status ── */
+  /* ── login as player (stub) ── */
+  const loginAsPlayer = (player: GamePlayerRow) => {
+    toast({ title: "Not yet implemented", description: `Login as ${getProfileLabel(player.user_id)} (${PROVINCE_NAMES[player.player_slot]}) — coming soon` });
+  };
+
+  /* ── snapshot management ── */
+  const saveSnapshot = async () => {
+    if (!selectedGame || !mapState) return;
+    const label = snapshotLabel.trim() || `Turn ${selectedGame.turn_number} snapshot`;
+    const serialized = serializeMapState(mapState);
+    const { error } = await (supabase as any).from("game_snapshots").insert({
+      game_id: selectedGame.id,
+      turn_number: selectedGame.turn_number,
+      label,
+      map_data_json: serialized,
+    });
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    await addLog(selectedGame.id, "snapshot_saved", `Snapshot saved: "${label}" at turn ${selectedGame.turn_number}`);
+    setSnapshotLabel("");
+    await loadGame(selectedGame);
+    toast({ title: "Snapshot saved", description: label });
+  };
+
+  const loadSnapshot = async (snapshot: GameSnapshotRow) => {
+    if (!selectedGame) return;
+    if (!confirm(`Restore game to "${snapshot.label}" (turn ${snapshot.turn_number})? This will overwrite the current game state.`)) return;
+    // Fetch the full snapshot data
+    const { data } = await (supabase as any).from("game_snapshots").select("map_data_json").eq("id", snapshot.id).single();
+    if (!data) return;
+    // Update the game with the snapshot's map and turn number
+    await (supabase as any).from("games").update({ map_data_json: data.map_data_json, turn_number: snapshot.turn_number }).eq("id", selectedGame.id);
+    await addLog(selectedGame.id, "snapshot_restored", `Restored to snapshot: "${snapshot.label}" (turn ${snapshot.turn_number})`);
+    // Reload
+    const updatedGame = { ...selectedGame, turn_number: snapshot.turn_number };
+    setSelectedGame(updatedGame);
+    try { setMapState(deserializeMapState(data.map_data_json)); } catch { setMapState(null); }
+    await fetchGames();
+    await refreshLogs(selectedGame.id);
+    const { data: sData } = await (supabase as any).from("game_snapshots").select("id, game_id, turn_number, label, created_at").eq("game_id", selectedGame.id).order("turn_number", { ascending: false });
+    setSnapshots(sData || []);
+    toast({ title: "Snapshot restored", description: `Now at turn ${snapshot.turn_number}` });
+  };
+
+  const deleteSnapshot = async (snapshotId: string) => {
+    if (!selectedGame) return;
+    await (supabase as any).from("game_snapshots").delete().eq("id", snapshotId);
+    const { data: sData } = await (supabase as any).from("game_snapshots").select("id, game_id, turn_number, label, created_at").eq("game_id", selectedGame.id).order("turn_number", { ascending: false });
+    setSnapshots(sData || []);
+    toast({ title: "Snapshot deleted" });
+  };
+
   const updateStatus = async (status: string) => {
     if (!selectedGame) return;
     await (supabase as any).from("games").update({ status }).eq("id", selectedGame.id);
@@ -360,7 +423,8 @@ const AdminGames = () => {
                     <TableRow key={p.id}>
                       <TableCell>{PROVINCE_NAMES[p.player_slot] || `Slot ${p.player_slot}`}</TableCell>
                       <TableCell>{getProfileLabel(p.user_id)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-2">
+                        <Button size="sm" variant="secondary" onClick={() => loginAsPlayer(p)}>Log in as</Button>
                         <Button size="sm" variant="destructive" onClick={() => removePlayer(p.id)}>Remove</Button>
                       </TableCell>
                     </TableRow>
@@ -384,7 +448,49 @@ const AdminGames = () => {
               </div>
             </div>
 
-            {/* ── Logs Section ── */}
+            {/* ── Snapshots Section ── */}
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Snapshots ({snapshots.length})</h3>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder={`Label (default: "Turn ${selectedGame.turn_number} snapshot")`}
+                  value={snapshotLabel}
+                  onChange={e => setSnapshotLabel(e.target.value)}
+                  className="max-w-xs"
+                />
+                <Button variant="outline" onClick={saveSnapshot} disabled={!mapState}>
+                  Save Snapshot
+                </Button>
+              </div>
+              {snapshots.length > 0 && (
+                <div className="max-h-48 overflow-y-auto border border-border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Label</TableHead>
+                        <TableHead className="w-16">Turn</TableHead>
+                        <TableHead className="w-32">Saved</TableHead>
+                        <TableHead className="text-right w-40">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {snapshots.map(s => (
+                        <TableRow key={s.id}>
+                          <TableCell className="text-sm">{s.label}</TableCell>
+                          <TableCell className="text-xs">{s.turn_number}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleString()}</TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button size="sm" variant="outline" onClick={() => loadSnapshot(s)}>Restore</Button>
+                            <Button size="sm" variant="destructive" onClick={() => deleteSnapshot(s.id)}>Delete</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Game Log ({logs.length})</h3>
               <div className="max-h-64 overflow-y-auto border border-border rounded-md">
