@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,49 +6,63 @@
 
 @layer base {
   :root {
-    --background: 213 19% 9%;
-    --foreground: 213 18% 91%;
+    /* Ivory marble surfaces */
+    --background: 40 20% 95%;
+    --foreground: 20 15% 15%;
 
-    --card: 213 19% 12%;
-    --card-foreground: 213 18% 91%;
+    --card: 40 25% 92%;
+    --card-foreground: 20 15% 15%;
 
-    --popover: 213 19% 12%;
-    --popover-foreground: 213 18% 91%;
+    --popover: 40 25% 92%;
+    --popover-foreground: 20 15% 15%;
 
-    --primary: 211 48% 44%;
-    --primary-foreground: 213 18% 91%;
+    /* Deep crimson accent */
+    --primary: 0 65% 38%;
+    --primary-foreground: 40 20% 95%;
 
-    --secondary: 43 50% 57%;
-    --secondary-foreground: 213 19% 9%;
+    /* Bronze / gold-bronze */
+    --secondary: 35 55% 45%;
+    --secondary-foreground: 40 20% 95%;
 
-    --muted: 213 19% 14%;
-    --muted-foreground: 219 14% 60%;
+    --muted: 40 15% 88%;
+    --muted-foreground: 20 10% 45%;
 
-    --accent: 211 48% 44%;
-    --accent-foreground: 213 18% 91%;
+    --accent: 35 55% 45%;
+    --accent-foreground: 40 20% 95%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 213 14% 20%;
-    --input: 213 14% 20%;
-    --ring: 211 48% 44%;
+    --border: 35 25% 78%;
+    --input: 35 25% 78%;
+    --ring: 0 65% 38%;
 
-    --radius: 0.25rem;
+    --radius: 0.125rem;
 
-    --sidebar-background: 213 19% 9%;
-    --sidebar-foreground: 213 18% 91%;
-    --sidebar-primary: 211 48% 44%;
-    --sidebar-primary-foreground: 213 18% 91%;
-    --sidebar-accent: 213 19% 14%;
-    --sidebar-accent-foreground: 213 18% 91%;
-    --sidebar-border: 213 14% 20%;
-    --sidebar-ring: 211 48% 44%;
+    /* Game-specific tokens */
+    --bronze: 35 55% 45%;
+    --bronze-light: 35 50% 60%;
+    --bronze-dark: 35 55% 32%;
+    --crimson: 0 65% 38%;
+    --crimson-light: 0 55% 52%;
+    --ivory: 40 20% 95%;
+    --ivory-dark: 40 18% 88%;
+    --marble: 40 25% 92%;
+    --marble-dark: 40 15% 82%;
+    --senate-dark: 20 15% 15%;
 
-    --gold: 43 50% 57%;
+    --sidebar-background: 40 18% 88%;
+    --sidebar-foreground: 20 15% 15%;
+    --sidebar-primary: 0 65% 38%;
+    --sidebar-primary-foreground: 40 20% 95%;
+    --sidebar-accent: 35 55% 45%;
+    --sidebar-accent-foreground: 40 20% 95%;
+    --sidebar-border: 35 25% 78%;
+    --sidebar-ring: 0 65% 38%;
   }
 
   .dark {
+    /* Keep dark mode for admin pages */
     --background: 213 19% 9%;
     --foreground: 213 18% 91%;
     --card: 213 19% 12%;
@@ -68,6 +82,24 @@
     --border: 213 14% 20%;
     --input: 213 14% 20%;
     --ring: 211 48% 44%;
+    --bronze: 35 55% 45%;
+    --bronze-light: 35 50% 60%;
+    --bronze-dark: 35 55% 32%;
+    --crimson: 0 65% 38%;
+    --crimson-light: 0 55% 52%;
+    --ivory: 40 20% 95%;
+    --ivory-dark: 40 18% 88%;
+    --marble: 213 19% 12%;
+    --marble-dark: 213 19% 9%;
+    --senate-dark: 213 19% 6%;
+    --sidebar-background: 213 19% 9%;
+    --sidebar-foreground: 213 18% 91%;
+    --sidebar-primary: 211 48% 44%;
+    --sidebar-primary-foreground: 213 18% 91%;
+    --sidebar-accent: 213 19% 14%;
+    --sidebar-accent-foreground: 213 18% 91%;
+    --sidebar-border: 213 14% 20%;
+    --sidebar-ring: 211 48% 44%;
   }
 }
 
@@ -84,5 +116,71 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Space Grotesk', sans-serif;
     letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  /* Bronze border ornament - top/bottom only */
+  .bronze-border-t {
+    border-top: 2px solid hsl(var(--bronze));
+  }
+  .bronze-border-b {
+    border-bottom: 2px solid hsl(var(--bronze));
+  }
+  .bronze-border-y {
+    border-top: 2px solid hsl(var(--bronze));
+    border-bottom: 2px solid hsl(var(--bronze));
+  }
+  /* Corner accents via pseudo-elements */
+  .bronze-corners {
+    position: relative;
+  }
+  .bronze-corners::before,
+  .bronze-corners::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-color: hsl(var(--bronze));
+  }
+  .bronze-corners::before {
+    top: -1px;
+    left: -1px;
+    border-top: 2px solid;
+    border-left: 2px solid;
+    border-color: hsl(var(--bronze));
+  }
+  .bronze-corners::after {
+    top: -1px;
+    right: -1px;
+    border-top: 2px solid;
+    border-right: 2px solid;
+    border-color: hsl(var(--bronze));
+  }
+
+  /* Laurel separator */
+  .laurel-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: hsl(var(--bronze));
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .laurel-divider::before,
+  .laurel-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, hsl(var(--bronze) / 0.5), transparent);
+  }
+
+  /* Bronze glow on hover */
+  .bronze-glow-hover {
+    transition: box-shadow 0.2s ease;
+  }
+  .bronze-glow-hover:hover {
+    box-shadow: 0 0 8px 0 hsl(var(--bronze) / 0.3), inset 0 0 4px 0 hsl(var(--bronze) / 0.1);
   }
 }
