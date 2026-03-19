@@ -36,6 +36,7 @@ const MAP_RANGE = 70;
 const HexMapCanvas: React.FC<Props> = ({
   hexes,
   systems,
+  fleets = [],
   editorState,
   onHexClick,
   onHexHover,
