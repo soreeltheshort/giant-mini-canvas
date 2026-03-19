@@ -196,7 +196,7 @@ const AdminGames = () => {
   /* ── login as player ── */
   const loginAsPlayer = (player: GamePlayerRow) => {
     if (!selectedGame) return;
-    navigate(`/play/${selectedGame.id}`);
+    navigate(`/my-games`);
   };
 
   /* ── snapshot management ── */
