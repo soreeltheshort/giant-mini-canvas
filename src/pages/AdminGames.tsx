@@ -247,10 +247,47 @@ const AdminGames = () => {
 
   const updateStatus = async (status: string) => {
     if (!selectedGame) return;
+
+    // When transitioning to active, process initial player visibility
+    if (status === "active" && selectedGame.status === "setup") {
+      await processInitialVisibility(selectedGame.id);
+    }
+
     await (supabase as any).from("games").update({ status }).eq("id", selectedGame.id);
     await addLog(selectedGame.id, "status_changed", `Game status changed to ${status}`);
     setSelectedGame({ ...selectedGame, status });
     await fetchGames();
+  };
+
+  /** When a game starts, all players can see every built system in Core + Provinces */
+  const processInitialVisibility = async (gameId: string) => {
+    if (!mapState) return;
+
+    const builtSystemIds: number[] = [];
+    for (const [, sys] of mapState.systems) {
+      const cls = sys.classification?.toUpperCase() ?? "";
+      const isRelevant = cls === "CORE" || cls.startsWith("PROVINCE_");
+      if (isRelevant && sys.current_population > 0) {
+        builtSystemIds.push(sys.system_id);
+      }
+    }
+
+    // Give every player in this game the same initial visibility
+    const { data: gamePlayers } = await (supabase as any)
+      .from("game_players")
+      .select("id")
+      .eq("game_id", gameId);
+
+    if (gamePlayers && gamePlayers.length > 0) {
+      for (const gp of gamePlayers) {
+        await (supabase as any)
+          .from("game_players")
+          .update({ visible_system_ids: builtSystemIds })
+          .eq("id", gp.id);
+      }
+    }
+
+    toast({ title: "Visibility processed", description: `${builtSystemIds.length} systems visible to ${gamePlayers?.length ?? 0} players` });
   };
 
   /* ── run turn ── */
