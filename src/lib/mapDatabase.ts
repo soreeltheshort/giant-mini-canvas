@@ -232,6 +232,16 @@ export async function exportToSqlite(state: MapState): Promise<Blob> {
   }
   db.run("COMMIT");
 
+  // Insert fleets
+  db.run("BEGIN TRANSACTION");
+  for (const fl of state.fleets || []) {
+    db.run(
+      "INSERT INTO map_fleets (fleet_id, fleet_name, owner_classification, hex_x, hex_y, source_fleet_id) VALUES (?,?,?,?,?,?)",
+      [fl.fleet_id, fl.fleet_name, fl.owner_classification, fl.hex_x, fl.hex_y, fl.source_fleet_id]
+    );
+  }
+  db.run("COMMIT");
+
   const data = db.export();
   db.close();
   return new Blob([data.buffer as ArrayBuffer], { type: "application/x-sqlite3" });
