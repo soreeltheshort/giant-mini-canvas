@@ -1,9 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+
+import GameHeader from "@/components/game-shell/GameHeader";
+import NavRail from "@/components/game-shell/NavRail";
+import RightPanel from "@/components/game-shell/RightPanel";
+import BottomSheet from "@/components/game-shell/BottomSheet";
+import MapArea from "@/components/game-shell/MapArea";
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
@@ -39,7 +45,12 @@ const PlayerGame = () => {
   const [player, setPlayer] = useState<PlayerInfo | null>(null);
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initStep, setInitStep] = useState(0); // 0=not started, 1-3=screens
+  const [initStep, setInitStep] = useState(0);
+
+  // Shell state
+  const [activeTab, setActiveTab] = useState("map");
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
+  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
@@ -74,7 +85,6 @@ const PlayerGame = () => {
       setInitStep(initStep + 1);
       return;
     }
-    // Step 3 → mark initialized
     if (player) {
       await (supabase as any).from("game_players").update({ initialized: true }).eq("id", player.id);
       setPlayer({ ...player, initialized: true });
@@ -84,8 +94,8 @@ const PlayerGame = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen bg-ivory flex items-center justify-center">
+        <p className="text-muted-foreground font-heading uppercase tracking-widest text-sm">Loading...</p>
       </div>
     );
   }
@@ -100,40 +110,48 @@ const PlayerGame = () => {
     return <InitScreen step={initStep} factionName={factionName} onContinue={advanceInit} />;
   }
 
-  /* ── Main Player Screen ── */
+  /* ── Main Game Shell ── */
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border px-4 py-3 flex items-center justify-between bg-card">
-        <div className="flex items-center gap-4">
-          <Link
-            to={isAdmin ? "/admin/games" : "/my-games"}
-            className="font-heading font-bold text-lg text-primary hover:text-primary/80 transition-colors cursor-pointer"
-          >
-            Third Republic
-          </Link>
-          <span className="text-muted-foreground">|</span>
-          <span className="font-medium">{game.name}</span>
-          <span className="text-muted-foreground text-sm">Turn {game.turn_number}</span>
-        </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-secondary font-semibold">{factionName}</span>
-          <span className="text-muted-foreground">{playerName}</span>
-        </div>
-      </header>
+    <div className="h-screen flex flex-col bg-ivory overflow-hidden">
+      <GameHeader
+        gameName={game.name}
+        turnNumber={game.turn_number}
+        factionName={factionName}
+        playerName={playerName}
+        backTo={isAdmin ? "/admin/games" : "/my-games"}
+      />
 
-      {/* Map Area */}
-      <div className="flex-1 overflow-auto relative">
-        <div className="min-h-[800px] min-w-[1200px] flex items-center justify-center">
-          <div className="text-center text-muted-foreground space-y-2">
-            <p className="text-lg">Map View</p>
-            {player.visible_system_ids.length > 0 ? (
-              <p className="text-sm">{player.visible_system_ids.length} systems visible. Map rendering coming soon.</p>
-            ) : (
-              <p className="text-sm">No systems visible yet. The game may not have started.</p>
-            )}
-          </div>
+      <div className="flex-1 flex overflow-hidden">
+        <NavRail activeTab={activeTab} onTabChange={(tab) => {
+          setActiveTab(tab);
+          if (tab !== "map") {
+            setRightPanelOpen(true);
+          }
+        }} />
+
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <MapArea
+            visibleSystems={player.visible_system_ids.length}
+            onSystemClick={() => setRightPanelOpen(true)}
+          />
+
+          <BottomSheet open={bottomSheetOpen} onClose={() => setBottomSheetOpen(false)} />
+
+          {/* Bottom sheet toggle */}
+          {!bottomSheetOpen && (
+            <button
+              onClick={() => setBottomSheetOpen(true)}
+              className="h-7 bg-marble border-t border-border flex items-center justify-center text-[10px] text-muted-foreground hover:text-foreground font-heading uppercase tracking-widest transition-colors"
+            >
+              ▲ Turn Orders
+            </button>
+          )}
         </div>
+
+        <RightPanel
+          open={rightPanelOpen}
+          onClose={() => setRightPanelOpen(false)}
+        />
       </div>
     </div>
   );
@@ -159,14 +177,19 @@ function InitScreen({ step, factionName, onContinue }: { step: number; factionNa
   const screen = screens[step - 1];
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+    <div className="min-h-screen bg-ivory flex items-center justify-center p-6">
       <div className="max-w-xl w-full space-y-8 text-center">
         <div className="space-y-1">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">{step} of 3</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-bronze font-heading font-semibold">{step} of 3</p>
           <h1 className="text-3xl font-heading font-bold text-foreground">{screen.title}</h1>
         </div>
+        <div className="laurel-divider">❦</div>
         <p className="text-muted-foreground leading-relaxed text-base">{screen.body}</p>
-        <Button size="lg" onClick={onContinue} className="px-10">
+        <Button
+          size="lg"
+          onClick={onContinue}
+          className="px-10 bg-crimson hover:bg-crimson-light text-primary-foreground font-heading uppercase tracking-wider"
+        >
           {step < 3 ? "Continue" : "Enter the Republic"}
         </Button>
       </div>
