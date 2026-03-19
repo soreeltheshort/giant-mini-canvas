@@ -21,6 +21,7 @@ import AdminShips from "./pages/AdminShips";
 import AdminGames from "./pages/AdminGames";
 import MyGames from "./pages/MyGames";
 import PlayerGame from "./pages/PlayerGame";
+import UIShowcase from "./pages/UIShowcase";
 import MapTesting from "./pages/MapTesting";
 import MapTestingConfig from "./pages/MapTestingConfig";
 import PlanetTesting from "./pages/PlanetTesting";
