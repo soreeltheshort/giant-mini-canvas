@@ -158,13 +158,16 @@ const PlayerGame = () => {
           onViewNews={handleViewNews}
         />
 
-        {/* Center Map */}
-        <StrategicMap
-          markers={DUMMY_MARKERS}
-          mode={activeMode}
-          selection={selection}
-          onSelect={handleMapSelect}
-        />
+        {/* Center Map + Overlay Demo */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <StrategicMap
+            markers={DUMMY_MARKERS}
+            mode={activeMode}
+            selection={selection}
+            onSelect={handleMapSelect}
+          />
+          <OverlayDemoBar />
+        </div>
 
         {/* Right Context Panel */}
         {rightPanelOpen && (
