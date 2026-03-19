@@ -423,6 +423,7 @@ const HexMapEditor: React.FC = () => {
         <HexMapCanvas
           hexes={mapState.hexes}
           systems={mapState.systems}
+          fleets={mapState.fleets || []}
           editorState={editorState}
           onHexClick={handleHexClick}
           onHexHover={(key) => setEditorState((s) => ({ ...s, hoveredHexKey: key }))}
