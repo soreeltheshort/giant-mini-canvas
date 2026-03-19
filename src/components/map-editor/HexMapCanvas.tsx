@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useCallback, useState } from "react";
 import {
   HexData,
   SystemData,
+  MapFleet,
   HexClassification,
   CLASSIFICATION_COLORS,
   EditorState,
@@ -20,6 +21,7 @@ import {
 interface Props {
   hexes: Map<string, HexData>;
   systems: Map<number, SystemData>;
+  fleets?: MapFleet[];
   editorState: EditorState;
   onHexClick: (hex: HexData) => void;
   onHexHover: (key: string | null) => void;
