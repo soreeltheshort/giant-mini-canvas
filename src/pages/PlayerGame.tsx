@@ -10,6 +10,7 @@ import LeftPanel from "@/components/game-shell/LeftPanel";
 import ContextPanel from "@/components/game-shell/ContextPanel";
 import StrategicMap from "@/components/game-shell/StrategicMap";
 import BottomStrip from "@/components/game-shell/BottomStrip";
+import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
 import type { GameMode, MapSelection } from "@/components/game-shell/gameShellTypes";
 import { DUMMY_STATS, DUMMY_NEWS, DUMMY_MARKERS } from "@/components/game-shell/gameShellTypes";
 
@@ -157,13 +158,16 @@ const PlayerGame = () => {
           onViewNews={handleViewNews}
         />
 
-        {/* Center Map */}
-        <StrategicMap
-          markers={DUMMY_MARKERS}
-          mode={activeMode}
-          selection={selection}
-          onSelect={handleMapSelect}
-        />
+        {/* Center Map + Overlay Demo */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <StrategicMap
+            markers={DUMMY_MARKERS}
+            mode={activeMode}
+            selection={selection}
+            onSelect={handleMapSelect}
+          />
+          <OverlayDemoBar />
+        </div>
 
         {/* Right Context Panel */}
         {rightPanelOpen && (
