@@ -31,7 +31,7 @@ interface ProfileInfo {
 
 const PlayerGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
