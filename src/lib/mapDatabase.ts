@@ -341,8 +341,14 @@ export async function importFromSqlite(file: File): Promise<MapState> {
     facilityTypes.push(row as FacilityType);
   }
 
+  // Read fleets
+  const fleets: MapFleet[] = [];
+  for (const row of readRows("SELECT * FROM map_fleets")) {
+    fleets.push(row as MapFleet);
+  }
+
   db.close();
-  return { mapData, hexes, systems, regions, facilityTypes };
+  return { mapData, hexes, systems, regions, facilityTypes, fleets };
 }
 
 // Load sql.js from CDN (for export only)
