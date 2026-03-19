@@ -4,6 +4,7 @@ import {
   SystemData,
   ProvinceRegion,
   MapState,
+  MapFleet,
   FacilityType,
   HexClassification,
   hexKey,
@@ -51,6 +52,7 @@ export function generateBlankMap(): MapState {
     systems: new Map(),
     regions: [],
     facilityTypes: [],
+    fleets: [],
   };
 }
 
@@ -142,6 +144,15 @@ export async function exportToSqlite(state: MapState): Promise<Blob> {
     icon TEXT DEFAULT '🏭'
   )`);
 
+  db.run(`CREATE TABLE map_fleets (
+    fleet_id TEXT PRIMARY KEY,
+    fleet_name TEXT DEFAULT '',
+    owner_classification TEXT DEFAULT '',
+    hex_x INTEGER DEFAULT 0,
+    hex_y INTEGER DEFAULT 0,
+    source_fleet_id TEXT DEFAULT ''
+  )`);
+
   db.run(`CREATE TABLE system_facilities (
     system_id INTEGER,
     facility_type_id INTEGER,
@@ -217,6 +228,16 @@ export async function exportToSqlite(state: MapState): Promise<Blob> {
     db.run(
       "INSERT INTO facility_types (facility_type_id, name, description, icon) VALUES (?,?,?,?)",
       [ft.facility_type_id, ft.name, ft.description, ft.icon]
+    );
+  }
+  db.run("COMMIT");
+
+  // Insert fleets
+  db.run("BEGIN TRANSACTION");
+  for (const fl of state.fleets || []) {
+    db.run(
+      "INSERT INTO map_fleets (fleet_id, fleet_name, owner_classification, hex_x, hex_y, source_fleet_id) VALUES (?,?,?,?,?,?)",
+      [fl.fleet_id, fl.fleet_name, fl.owner_classification, fl.hex_x, fl.hex_y, fl.source_fleet_id]
     );
   }
   db.run("COMMIT");
@@ -339,8 +360,14 @@ export async function importFromSqlite(file: File): Promise<MapState> {
     facilityTypes.push(row as FacilityType);
   }
 
+  // Read fleets
+  const fleets: MapFleet[] = [];
+  for (const row of readRows("SELECT * FROM map_fleets")) {
+    fleets.push(row as MapFleet);
+  }
+
   db.close();
-  return { mapData, hexes, systems, regions, facilityTypes };
+  return { mapData, hexes, systems, regions, facilityTypes, fleets };
 }
 
 // Load sql.js from CDN (for export only)

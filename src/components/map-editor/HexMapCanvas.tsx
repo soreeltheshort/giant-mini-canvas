@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useCallback, useState } from "react";
 import {
   HexData,
   SystemData,
+  MapFleet,
   HexClassification,
   CLASSIFICATION_COLORS,
   EditorState,
@@ -20,6 +21,7 @@ import {
 interface Props {
   hexes: Map<string, HexData>;
   systems: Map<number, SystemData>;
+  fleets?: MapFleet[];
   editorState: EditorState;
   onHexClick: (hex: HexData) => void;
   onHexHover: (key: string | null) => void;
@@ -34,6 +36,7 @@ const MAP_RANGE = 70;
 const HexMapCanvas: React.FC<Props> = ({
   hexes,
   systems,
+  fleets = [],
   editorState,
   onHexClick,
   onHexHover,
@@ -176,8 +179,37 @@ const HexMapCanvas: React.FC<Props> = ({
     ctx.arc(cx, cy, size * 0.15, 0, Math.PI * 2);
     ctx.stroke();
 
+    // Fleet markers
+    for (const fleet of fleets) {
+      const [fx, fy] = hexToPixel(fleet.hex_x, fleet.hex_y, size);
+      if (fx < left || fx > right || fy < top || fy > bottom) continue;
+
+      const fleetColor = CLASSIFICATION_COLORS[fleet.owner_classification as HexClassification] || "#fff";
+
+      // Fleet triangle marker
+      const triSize = size * 0.5;
+      ctx.fillStyle = fleetColor;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy - triSize);
+      ctx.lineTo(fx + triSize * 0.8, fy + triSize * 0.5);
+      ctx.lineTo(fx - triSize * 0.8, fy + triSize * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Fleet name when zoomed
+      if (zoom > 2) {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${Math.max(6, size * 0.25)}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText(fleet.fleet_name, fx, fy + triSize + size * 0.4);
+      }
+    }
+
     ctx.restore();
-  }, [hexes, systems, editorState]);
+  }, [hexes, systems, fleets, editorState]);
 
   useEffect(() => {
     const loop = () => {

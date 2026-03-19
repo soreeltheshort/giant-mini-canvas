@@ -333,6 +333,54 @@ export type Database = {
         }
         Relationships: []
       }
+      game_fleets: {
+        Row: {
+          created_at: string
+          fleet_id: string
+          fleet_name: string
+          game_id: string
+          hex_x: number
+          hex_y: number
+          id: string
+          owner_classification: string
+        }
+        Insert: {
+          created_at?: string
+          fleet_id: string
+          fleet_name?: string
+          game_id: string
+          hex_x?: number
+          hex_y?: number
+          id?: string
+          owner_classification?: string
+        }
+        Update: {
+          created_at?: string
+          fleet_id?: string
+          fleet_name?: string
+          game_id?: string
+          hex_x?: number
+          hex_y?: number
+          id?: string
+          owner_classification?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_fleets_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "fleets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_fleets_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_logs: {
         Row: {
           created_at: string

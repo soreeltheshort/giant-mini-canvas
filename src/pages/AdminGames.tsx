@@ -596,6 +596,7 @@ function serializeMapState(state: MapState): any {
     systems: Array.from(state.systems.entries()),
     regions: state.regions,
     facilityTypes: state.facilityTypes,
+    fleets: state.fleets || [],
   };
 }
 
@@ -606,6 +607,7 @@ function deserializeMapState(json: any): MapState {
     systems: new Map(json.systems),
     regions: json.regions || [],
     facilityTypes: json.facilityTypes || [],
+    fleets: json.fleets || [],
   };
 }
 
