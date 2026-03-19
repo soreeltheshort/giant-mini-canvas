@@ -6,6 +6,7 @@ import PlanetsPanel from "./PlanetsPanel";
 import FleetsPanel from "./FleetsPanel";
 import {
   MapState,
+  MapFleet,
   EditorState,
   EditorTool,
   BrushSize,
