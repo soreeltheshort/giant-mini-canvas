@@ -122,7 +122,11 @@ const PlayerGame = () => {
         <div className="min-h-[800px] min-w-[1200px] flex items-center justify-center">
           <div className="text-center text-muted-foreground space-y-2">
             <p className="text-lg">Map View</p>
-            <p className="text-sm">Your systems will appear here after turn processing populates the map.</p>
+            {player.visible_system_ids.length > 0 ? (
+              <p className="text-sm">{player.visible_system_ids.length} systems visible. Map rendering coming soon.</p>
+            ) : (
+              <p className="text-sm">No systems visible yet. The game may not have started.</p>
+            )}
           </div>
         </div>
       </div>
