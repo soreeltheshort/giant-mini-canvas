@@ -144,6 +144,15 @@ export async function exportToSqlite(state: MapState): Promise<Blob> {
     icon TEXT DEFAULT '🏭'
   )`);
 
+  db.run(`CREATE TABLE map_fleets (
+    fleet_id TEXT PRIMARY KEY,
+    fleet_name TEXT DEFAULT '',
+    owner_classification TEXT DEFAULT '',
+    hex_x INTEGER DEFAULT 0,
+    hex_y INTEGER DEFAULT 0,
+    source_fleet_id TEXT DEFAULT ''
+  )`);
+
   db.run(`CREATE TABLE system_facilities (
     system_id INTEGER,
     facility_type_id INTEGER,

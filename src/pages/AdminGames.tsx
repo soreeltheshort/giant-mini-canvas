@@ -596,6 +596,7 @@ function serializeMapState(state: MapState): any {
     systems: Array.from(state.systems.entries()),
     regions: state.regions,
     facilityTypes: state.facilityTypes,
+    fleets: state.fleets || [],
   };
 }
 
