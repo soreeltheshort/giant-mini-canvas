@@ -193,9 +193,10 @@ const AdminGames = () => {
   };
 
 
-  /* ── login as player (stub) ── */
+  /* ── login as player ── */
   const loginAsPlayer = (player: GamePlayerRow) => {
-    toast({ title: "Not yet implemented", description: `Login as ${getProfileLabel(player.user_id)} (${PROVINCE_NAMES[player.player_slot]}) — coming soon` });
+    if (!selectedGame) return;
+    navigate(`/play/${selectedGame.id}`);
   };
 
   /* ── snapshot management ── */
