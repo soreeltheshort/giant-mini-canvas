@@ -132,12 +132,22 @@ export interface ProvinceRegion {
   is_system_allowed: boolean;
 }
 
+export interface MapFleet {
+  fleet_id: string;
+  fleet_name: string;
+  owner_classification: string;
+  hex_x: number;
+  hex_y: number;
+  source_fleet_id: string; // reference to the fleets table
+}
+
 export interface MapState {
   mapData: MapData | null;
   hexes: Map<string, HexData>;
   systems: Map<number, SystemData>;
   regions: ProvinceRegion[];
   facilityTypes: FacilityType[];
+  fleets: MapFleet[];
 }
 
 export type EditorTool = "select" | "paint" | "fill" | "brush";

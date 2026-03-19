@@ -4,6 +4,7 @@ import {
   SystemData,
   ProvinceRegion,
   MapState,
+  MapFleet,
   FacilityType,
   HexClassification,
   hexKey,
