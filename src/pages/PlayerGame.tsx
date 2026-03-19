@@ -6,10 +6,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
 import GameHeader from "@/components/game-shell/GameHeader";
-import NavRail from "@/components/game-shell/NavRail";
-import RightPanel from "@/components/game-shell/RightPanel";
-import BottomSheet from "@/components/game-shell/BottomSheet";
-import MapArea from "@/components/game-shell/MapArea";
+import LeftPanel from "@/components/game-shell/LeftPanel";
+import ContextPanel from "@/components/game-shell/ContextPanel";
+import StrategicMap from "@/components/game-shell/StrategicMap";
+import BottomStrip from "@/components/game-shell/BottomStrip";
+import type { GameMode, MapSelection } from "@/components/game-shell/gameShellTypes";
+import { DUMMY_STATS, DUMMY_NEWS, DUMMY_MARKERS } from "@/components/game-shell/gameShellTypes";
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
@@ -48,9 +50,9 @@ const PlayerGame = () => {
   const [initStep, setInitStep] = useState(0);
 
   // Shell state
-  const [activeTab, setActiveTab] = useState("map");
-  const [rightPanelOpen, setRightPanelOpen] = useState(false);
-  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
+  const [activeMode, setActiveMode] = useState<GameMode>("military");
+  const [selection, setSelection] = useState<MapSelection>({ type: "none" });
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
@@ -92,10 +94,34 @@ const PlayerGame = () => {
     }
   };
 
+  const handleModeChange = (mode: GameMode) => {
+    setActiveMode(mode);
+    setSelection({ type: "none" });
+    setRightPanelOpen(true);
+  };
+
+  const handleViewNews = () => {
+    const firstUnread = DUMMY_NEWS.find((n) => !n.read);
+    if (firstUnread) {
+      setSelection({ type: "news", id: firstUnread.id });
+    }
+    setRightPanelOpen(true);
+  };
+
+  const handleMapSelect = (sel: MapSelection) => {
+    setSelection(sel);
+    setRightPanelOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-ivory flex items-center justify-center">
-        <p className="text-muted-foreground font-heading uppercase tracking-widest text-sm">Loading...</p>
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-2 border-bronze/30 border-t-bronze rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground font-heading uppercase tracking-widest text-[10px]">
+            Establishing Command Link...
+          </p>
+        </div>
       </div>
     );
   }
@@ -122,37 +148,41 @@ const PlayerGame = () => {
       />
 
       <div className="flex-1 flex overflow-hidden">
-        <NavRail activeTab={activeTab} onTabChange={(tab) => {
-          setActiveTab(tab);
-          if (tab !== "map") {
-            setRightPanelOpen(true);
-          }
-        }} />
-
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <MapArea
-            visibleSystems={player.visible_system_ids.length}
-            onSystemClick={() => setRightPanelOpen(true)}
-          />
-
-          <BottomSheet open={bottomSheetOpen} onClose={() => setBottomSheetOpen(false)} />
-
-          {/* Bottom sheet toggle */}
-          {!bottomSheetOpen && (
-            <button
-              onClick={() => setBottomSheetOpen(true)}
-              className="h-7 bg-marble border-t border-border flex items-center justify-center text-[10px] text-muted-foreground hover:text-foreground font-heading uppercase tracking-widest transition-colors"
-            >
-              ▲ Turn Orders
-            </button>
-          )}
-        </div>
-
-        <RightPanel
-          open={rightPanelOpen}
-          onClose={() => setRightPanelOpen(false)}
+        {/* Left Strategic Panel */}
+        <LeftPanel
+          stats={DUMMY_STATS}
+          news={DUMMY_NEWS}
+          activeMode={activeMode}
+          onModeChange={handleModeChange}
+          onViewNews={handleViewNews}
         />
+
+        {/* Center Map */}
+        <StrategicMap
+          markers={DUMMY_MARKERS}
+          mode={activeMode}
+          selection={selection}
+          onSelect={handleMapSelect}
+        />
+
+        {/* Right Context Panel */}
+        {rightPanelOpen && (
+          <ContextPanel
+            mode={activeMode}
+            selection={selection}
+            news={DUMMY_NEWS}
+            onClose={() => setRightPanelOpen(false)}
+            onClearSelection={() => setSelection({ type: "none" })}
+          />
+        )}
       </div>
+
+      {/* Bottom Status Strip */}
+      <BottomStrip
+        mode={activeMode}
+        turnNumber={game.turn_number}
+        factionName={factionName}
+      />
     </div>
   );
 };
