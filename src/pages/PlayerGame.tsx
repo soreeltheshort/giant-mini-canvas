@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ interface ProfileInfo {
 
 const PlayerGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -106,7 +106,12 @@ const PlayerGame = () => {
       {/* Header */}
       <header className="border-b border-border px-4 py-3 flex items-center justify-between bg-card">
         <div className="flex items-center gap-4">
-          <span className="font-heading font-bold text-lg text-primary">Third Republic</span>
+          <Link
+            to={isAdmin ? "/admin/games" : "/my-games"}
+            className="font-heading font-bold text-lg text-primary hover:text-primary/80 transition-colors cursor-pointer"
+          >
+            Third Republic
+          </Link>
           <span className="text-muted-foreground">|</span>
           <span className="font-medium">{game.name}</span>
           <span className="text-muted-foreground text-sm">Turn {game.turn_number}</span>
