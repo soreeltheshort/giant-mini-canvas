@@ -131,7 +131,7 @@ const UIShowcase = () => {
                 <div className={`relative w-12 h-12 flex flex-col items-center justify-center rounded-sm border transition-all ${cls}`}>
                   <Icon className="w-4 h-4" />
                   <span className="text-[7px] font-medium mt-0.5 leading-none uppercase tracking-wider">{Icon === Map ? "Map" : Icon === Swords ? "Military" : Icon === Landmark ? "Diplomacy" : Icon === Hammer ? "Production" : "Messages"}</span>
-                  {badge && (
+                  {badge > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-crimson text-primary-foreground text-[9px] font-bold flex items-center justify-center rounded-sm">{badge}</span>
                   )}
                 </div>
