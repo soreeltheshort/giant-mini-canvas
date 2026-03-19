@@ -4,15 +4,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import type { MapState, SystemData } from "@/lib/mapTypes";
 
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
 import ContextPanel from "@/components/game-shell/ContextPanel";
-import StrategicMap from "@/components/game-shell/StrategicMap";
+import PlayerMapCanvas from "@/components/game-shell/PlayerMapCanvas";
 import BottomStrip from "@/components/game-shell/BottomStrip";
 import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
 import type { GameMode, MapSelection } from "@/components/game-shell/gameShellTypes";
-import { DUMMY_STATS, DUMMY_NEWS, DUMMY_MARKERS } from "@/components/game-shell/gameShellTypes";
+import { DUMMY_STATS, DUMMY_NEWS } from "@/components/game-shell/gameShellTypes";
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
@@ -38,6 +39,16 @@ interface ProfileInfo {
   email: string | null;
 }
 
+function deserializeMapState(json: any): MapState {
+  return {
+    mapData: json.mapData,
+    hexes: new Map(json.hexes),
+    systems: new Map(json.systems),
+    regions: json.regions || [],
+    facilityTypes: json.facilityTypes || [],
+  };
+}
+
 const PlayerGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const { user, isAdmin } = useAuth();
@@ -47,6 +58,7 @@ const PlayerGame = () => {
   const [game, setGame] = useState<GameInfo | null>(null);
   const [player, setPlayer] = useState<PlayerInfo | null>(null);
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
+  const [mapState, setMapState] = useState<MapState | null>(null);
   const [loading, setLoading] = useState(true);
   const [initStep, setInitStep] = useState(0);
 
@@ -73,6 +85,21 @@ const PlayerGame = () => {
     setGame(gData);
     setPlayer(pData);
     setProfile(prData);
+
+    // Load map data
+    const { data: mapRow } = await (supabase as any)
+      .from("games")
+      .select("map_data_json")
+      .eq("id", gameId)
+      .single();
+
+    if (mapRow?.map_data_json && Object.keys(mapRow.map_data_json).length > 0) {
+      try {
+        setMapState(deserializeMapState(mapRow.map_data_json));
+      } catch (e) {
+        console.error("Failed to deserialize map:", e);
+      }
+    }
 
     if (!pData.initialized) {
       setInitStep(1);
@@ -109,8 +136,8 @@ const PlayerGame = () => {
     setRightPanelOpen(true);
   };
 
-  const handleMapSelect = (sel: MapSelection) => {
-    setSelection(sel);
+  const handleSystemClick = (system: SystemData) => {
+    setSelection({ type: "region", id: `sys-${system.system_id}` });
     setRightPanelOpen(true);
   };
 
@@ -137,6 +164,8 @@ const PlayerGame = () => {
     return <InitScreen step={initStep} factionName={factionName} onContinue={advanceInit} />;
   }
 
+  const visibleSystemIds = (player.visible_system_ids || []) as number[];
+
   /* ── Main Game Shell ── */
   return (
     <div className="h-screen flex flex-col bg-ivory overflow-hidden">
@@ -160,12 +189,21 @@ const PlayerGame = () => {
 
         {/* Center Map + Overlay Demo */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <StrategicMap
-            markers={DUMMY_MARKERS}
-            mode={activeMode}
-            selection={selection}
-            onSelect={handleMapSelect}
-          />
+          {mapState ? (
+            <PlayerMapCanvas
+              hexes={mapState.hexes}
+              systems={mapState.systems}
+              visibleSystemIds={visibleSystemIds}
+              onSystemClick={handleSystemClick}
+              className="flex-1"
+            />
+          ) : (
+            <div className="flex-1 bg-ivory-dark flex items-center justify-center">
+              <p className="text-muted-foreground font-heading uppercase tracking-widest text-[10px]">
+                No map data available
+              </p>
+            </div>
+          )}
           <OverlayDemoBar />
         </div>
 
