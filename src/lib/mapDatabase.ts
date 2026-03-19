@@ -52,6 +52,7 @@ export function generateBlankMap(): MapState {
     systems: new Map(),
     regions: [],
     facilityTypes: [],
+    fleets: [],
   };
 }
 
