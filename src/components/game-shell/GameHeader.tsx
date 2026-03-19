@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
+import type { GlobalStats } from "./gameShellTypes";
 
 interface GameHeaderProps {
   gameName: string;
@@ -7,7 +8,6 @@ interface GameHeaderProps {
   factionName: string;
   playerName: string;
   backTo: string;
-  resources?: { credits: number; materials: number; influence: number };
 }
 
 const LaurelIcon = () => (
@@ -22,10 +22,9 @@ export default function GameHeader({
   factionName,
   playerName,
   backTo,
-  resources = { credits: 12450, materials: 3200, influence: 87 },
 }: GameHeaderProps) {
   return (
-    <header className="h-12 flex items-center justify-between px-4 bg-marble border-b-2 border-bronze/60 relative z-30">
+    <header className="h-11 flex items-center justify-between px-4 bg-marble border-b-2 border-bronze/60 relative z-30 shrink-0">
       {/* Left: title block */}
       <div className="flex items-center gap-3">
         <Link
@@ -39,38 +38,21 @@ export default function GameHeader({
         </Link>
         <span className="text-bronze/40">|</span>
         <span className="font-heading text-sm font-semibold text-foreground">{gameName}</span>
-        <span className="text-xs text-muted-foreground font-medium">Turn {turnNumber}</span>
-      </div>
-
-      {/* Center: resource bar */}
-      <div className="hidden md:flex items-center gap-6">
-        <ResourceStat label="Credits" value={resources.credits.toLocaleString()} icon="₡" />
-        <ResourceStat label="Materials" value={resources.materials.toLocaleString()} icon="◆" />
-        <ResourceStat label="Influence" value={resources.influence.toString()} icon="★" />
+        <span className="text-[10px] text-muted-foreground font-medium bg-ivory-dark px-2 py-0.5 rounded-sm border border-border">
+          Turn {turnNumber}
+        </span>
       </div>
 
       {/* Right: faction & player */}
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <p className="text-xs font-heading font-semibold text-bronze-dark uppercase tracking-wider">{factionName}</p>
-          <p className="text-[10px] text-muted-foreground">{playerName}</p>
+          <p className="text-[10px] font-heading font-semibold text-bronze-dark uppercase tracking-wider">{factionName}</p>
+          <p className="text-[9px] text-muted-foreground">{playerName}</p>
         </div>
-        <button className="w-8 h-8 rounded-sm border border-bronze/40 bg-ivory-dark flex items-center justify-center text-bronze hover:border-bronze transition-colors bronze-glow-hover">
-          <ChevronDown className="w-4 h-4" />
+        <button className="w-7 h-7 rounded-sm border border-bronze/40 bg-ivory-dark flex items-center justify-center text-bronze hover:border-bronze transition-colors bronze-glow-hover">
+          <ChevronDown className="w-3.5 h-3.5" />
         </button>
       </div>
     </header>
-  );
-}
-
-function ResourceStat({ label, value, icon }: { label: string; value: string; icon: string }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-bronze text-sm">{icon}</span>
-      <div>
-        <p className="text-xs font-semibold text-foreground leading-none">{value}</p>
-        <p className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</p>
-      </div>
-    </div>
   );
 }
