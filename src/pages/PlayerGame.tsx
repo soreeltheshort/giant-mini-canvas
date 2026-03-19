@@ -106,7 +106,12 @@ const PlayerGame = () => {
       {/* Header */}
       <header className="border-b border-border px-4 py-3 flex items-center justify-between bg-card">
         <div className="flex items-center gap-4">
-          <span className="font-heading font-bold text-lg text-primary">Third Republic</span>
+          <Link
+            to={isAdmin ? "/admin/games" : "/my-games"}
+            className="font-heading font-bold text-lg text-primary hover:text-primary/80 transition-colors cursor-pointer"
+          >
+            Third Republic
+          </Link>
           <span className="text-muted-foreground">|</span>
           <span className="font-medium">{game.name}</span>
           <span className="text-muted-foreground text-sm">Turn {game.turn_number}</span>
