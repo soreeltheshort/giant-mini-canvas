@@ -141,18 +141,16 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.globalAlpha = 1;
     }
 
+    // Build hexId -> hex lookup
+    const hexIdMap = new Map<number, HexData>();
+    for (const h of hexes.values()) {
+      if (h.has_system) hexIdMap.set(h.hex_id, h);
+    }
+
     // Draw visible systems
     for (const [sysId, sys] of systems) {
       if (!visibleSet.has(sysId)) continue;
-      const hex = hexes.get(hexKey(
-        // find hex by hex_id — we need x,y from hex
-        0, 0 // placeholder
-      ));
-      // Actually find the hex for this system
-      let sysHex: HexData | undefined;
-      for (const h of hexes.values()) {
-        if (h.hex_id === sys.hex_id) { sysHex = h; break; }
-      }
+      const sysHex = hexIdMap.get(sys.hex_id);
       if (!sysHex) continue;
 
       const [px, py] = hexToPixel(sysHex.x, sysHex.y, size);
