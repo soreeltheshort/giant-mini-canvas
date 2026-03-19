@@ -21,6 +21,7 @@ interface PlayerInfo {
   id: string;
   player_slot: number;
   initialized: boolean;
+  visible_system_ids: number[];
 }
 
 interface ProfileInfo {
