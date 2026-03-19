@@ -19,6 +19,7 @@ import AdminBattleConfig from "./pages/AdminBattleConfig";
 import AdminUsers from "./pages/AdminUsers";
 import AdminShips from "./pages/AdminShips";
 import AdminGames from "./pages/AdminGames";
+import MyGames from "./pages/MyGames";
 import PlayerGame from "./pages/PlayerGame";
 import MapTesting from "./pages/MapTesting";
 import MapTestingConfig from "./pages/MapTestingConfig";
