@@ -46,6 +46,7 @@ function deserializeMapState(json: any): MapState {
     systems: new Map(json.systems),
     regions: json.regions || [],
     facilityTypes: json.facilityTypes || [],
+    fleets: json.fleets || [],
   };
 }
 
