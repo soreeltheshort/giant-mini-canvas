@@ -21,6 +21,7 @@ interface PlayerInfo {
   id: string;
   player_slot: number;
   initialized: boolean;
+  visible_system_ids: number[];
 }
 
 interface ProfileInfo {
@@ -45,7 +46,7 @@ const PlayerGame = () => {
 
     const [{ data: gData }, { data: pData }, { data: prData }] = await Promise.all([
       (supabase as any).from("games").select("id, name, turn_number, status").eq("id", gameId).single(),
-      (supabase as any).from("game_players").select("id, player_slot, initialized").eq("game_id", gameId).eq("user_id", user.id).single(),
+      (supabase as any).from("game_players").select("id, player_slot, initialized, visible_system_ids").eq("game_id", gameId).eq("user_id", user.id).single(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
     ]);
 
@@ -121,7 +122,11 @@ const PlayerGame = () => {
         <div className="min-h-[800px] min-w-[1200px] flex items-center justify-center">
           <div className="text-center text-muted-foreground space-y-2">
             <p className="text-lg">Map View</p>
-            <p className="text-sm">Your systems will appear here after turn processing populates the map.</p>
+            {player.visible_system_ids.length > 0 ? (
+              <p className="text-sm">{player.visible_system_ids.length} systems visible. Map rendering coming soon.</p>
+            ) : (
+              <p className="text-sm">No systems visible yet. The game may not have started.</p>
+            )}
           </div>
         </div>
       </div>
