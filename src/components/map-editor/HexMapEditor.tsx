@@ -341,12 +341,27 @@ const HexMapEditor: React.FC = () => {
 
   const stats = useMemo(() => getProvinceStats(mapState), [mapState]);
 
+  const handleAddFleet = useCallback((fleet: MapFleet) => {
+    setMapState((prev) => ({ ...prev, fleets: [...(prev.fleets || []), fleet] }));
+  }, []);
+
+  const handleRemoveFleet = useCallback((fleetId: string) => {
+    setMapState((prev) => ({ ...prev, fleets: (prev.fleets || []).filter(f => f.fleet_id !== fleetId) }));
+  }, []);
+
+  const handleUpdateFleet = useCallback((fleetId: string, updates: Partial<MapFleet>) => {
+    setMapState((prev) => ({
+      ...prev,
+      fleets: (prev.fleets || []).map(f => f.fleet_id === fleetId ? { ...f, ...updates } : f),
+    }));
+  }, []);
+
   return (
     <div className="flex h-[calc(100vh-4rem)] w-full">
       <div className="flex h-full w-64 flex-col border-r border-border bg-background">
         {/* Tab buttons */}
         <div className="flex border-b border-border">
-          {(["editor", "planets"] as const).map((tab) => (
+          {(["editor", "planets", "fleets"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setLeftTab(tab)}
@@ -359,7 +374,17 @@ const HexMapEditor: React.FC = () => {
           ))}
         </div>
 
-        {leftTab === "planets" ? (
+        {leftTab === "fleets" ? (
+          <FleetsPanel
+            fleets={mapState.fleets || []}
+            selectedHexKey={editorState.selectedHexKey}
+            hexes={mapState.hexes}
+            onAddFleet={handleAddFleet}
+            onRemoveFleet={handleRemoveFleet}
+            onUpdateFleet={handleUpdateFleet}
+            onSelectHex={(key) => setEditorState((s) => ({ ...s, selectedHexKey: key }))}
+          />
+        ) : leftTab === "planets" ? (
           <PlanetsPanel
             systems={mapState.systems}
             hexes={mapState.hexes}
