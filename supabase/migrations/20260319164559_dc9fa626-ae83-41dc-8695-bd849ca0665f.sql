@@ -1,0 +1,1 @@
+ALTER TABLE public.game_players ADD COLUMN visible_system_ids jsonb NOT NULL DEFAULT '[]'::jsonb;

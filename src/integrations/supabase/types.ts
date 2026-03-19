@@ -380,6 +380,7 @@ export type Database = {
           initialized: boolean
           player_slot: number
           user_id: string
+          visible_system_ids: Json
         }
         Insert: {
           created_at?: string
@@ -389,6 +390,7 @@ export type Database = {
           initialized?: boolean
           player_slot: number
           user_id: string
+          visible_system_ids?: Json
         }
         Update: {
           created_at?: string
@@ -398,6 +400,7 @@ export type Database = {
           initialized?: boolean
           player_slot?: number
           user_id?: string
+          visible_system_ids?: Json
         }
         Relationships: [
           {
