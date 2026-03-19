@@ -40,7 +40,7 @@ const HexMapEditor: React.FC = () => {
   const [mapState, setMapState] = useState<MapState>(() => generateBlankMap());
   const [saving, setSaving] = useState(false);
   const [loadingMap, setLoadingMap] = useState(true);
-  const [leftTab, setLeftTab] = useState<"editor" | "planets">("editor");
+  const [leftTab, setLeftTab] = useState<"editor" | "planets" | "fleets">("editor");
   const [editorState, setEditorState] = useState<EditorState>({
     tool: "select",
     brushSize: 1,
