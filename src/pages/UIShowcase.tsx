@@ -120,12 +120,12 @@ const UIShowcase = () => {
         <Section title="Navigation Rail Items">
           <div className="flex gap-3 flex-wrap">
             {([
-              { label: "Idle", cls: "text-muted-foreground bg-transparent border-transparent", icon: Map },
-              { label: "Hover", cls: "text-foreground bg-ivory-dark border-bronze/20 shadow-[0_0_8px_0_hsl(35_55%_45%/0.3)]", icon: Swords },
-              { label: "Active", cls: "bg-crimson text-primary-foreground border-crimson shadow-sm", icon: Landmark },
-              { label: "Disabled", cls: "text-muted-foreground/40 bg-transparent border-transparent opacity-50 cursor-not-allowed", icon: Hammer },
+              { label: "Idle", cls: "text-muted-foreground bg-transparent border-transparent", icon: Map, badge: 0 },
+              { label: "Hover", cls: "text-foreground bg-ivory-dark border-bronze/20 shadow-[0_0_8px_0_hsl(35_55%_45%/0.3)]", icon: Swords, badge: 0 },
+              { label: "Active", cls: "bg-crimson text-primary-foreground border-crimson shadow-sm", icon: Landmark, badge: 0 },
+              { label: "Disabled", cls: "text-muted-foreground/40 bg-transparent border-transparent opacity-50 cursor-not-allowed", icon: Hammer, badge: 0 },
               { label: "With Badge", cls: "text-muted-foreground bg-transparent border-transparent", icon: MessageSquare, badge: 3 },
-            ] as const).map(({ label, cls, icon: Icon, badge }) => (
+            ]).map(({ label, cls, icon: Icon, badge }) => (
               <div key={label} className="text-center">
                 <StateLabel>{label}</StateLabel>
                 <div className={`relative w-12 h-12 flex flex-col items-center justify-center rounded-sm border transition-all ${cls}`}>
