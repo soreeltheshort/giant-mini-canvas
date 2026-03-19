@@ -14,6 +14,7 @@ import BottomStrip from "@/components/game-shell/BottomStrip";
 import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
 import type { GameMode, MapSelection } from "@/components/game-shell/gameShellTypes";
 import { DUMMY_STATS, DUMMY_NEWS } from "@/components/game-shell/gameShellTypes";
+import { useIsTablet } from "@/hooks/useIsTablet";
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
@@ -55,6 +56,7 @@ const PlayerGame = () => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isTablet = useIsTablet();
 
   const [game, setGame] = useState<GameInfo | null>(null);
   const [player, setPlayer] = useState<PlayerInfo | null>(null);
@@ -87,7 +89,6 @@ const PlayerGame = () => {
     setPlayer(pData);
     setProfile(prData);
 
-    // Load map data
     const { data: mapRow } = await (supabase as any)
       .from("games")
       .select("map_data_json")
@@ -160,14 +161,12 @@ const PlayerGame = () => {
   const factionName = PROVINCE_NAMES[player.player_slot] || `Faction ${player.player_slot}`;
   const playerName = profile?.display_name || profile?.email || "Unknown";
 
-  /* ── Initialization Screens ── */
   if (!player.initialized && initStep > 0) {
     return <InitScreen step={initStep} factionName={factionName} onContinue={advanceInit} />;
   }
 
   const visibleSystemIds = (player.visible_system_ids || []) as number[];
 
-  /* ── Main Game Shell ── */
   return (
     <div className="h-screen flex flex-col bg-ivory overflow-hidden">
       <GameHeader
@@ -179,13 +178,19 @@ const PlayerGame = () => {
       />
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Strategic Panel */}
+        {/* Left Strategic Panel — includes inline context on tablet */}
         <LeftPanel
           stats={DUMMY_STATS}
           news={DUMMY_NEWS}
           activeMode={activeMode}
           onModeChange={handleModeChange}
           onViewNews={handleViewNews}
+          inlineContext={isTablet ? {
+            mode: activeMode,
+            selection,
+            news: DUMMY_NEWS,
+            onClearSelection: () => setSelection({ type: "none" }),
+          } : undefined}
         />
 
         {/* Center Map + Overlay Demo */}
@@ -208,8 +213,8 @@ const PlayerGame = () => {
           <OverlayDemoBar />
         </div>
 
-        {/* Right Context Panel */}
-        {rightPanelOpen && (
+        {/* Right Context Panel — hidden on tablet */}
+        {!isTablet && rightPanelOpen && (
           <ContextPanel
             mode={activeMode}
             selection={selection}
@@ -220,7 +225,6 @@ const PlayerGame = () => {
         )}
       </div>
 
-      {/* Bottom Status Strip */}
       <BottomStrip
         mode={activeMode}
         turnNumber={game.turn_number}
