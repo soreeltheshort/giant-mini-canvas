@@ -10,6 +10,7 @@ import LeftPanel from "@/components/game-shell/LeftPanel";
 import ContextPanel from "@/components/game-shell/ContextPanel";
 import StrategicMap from "@/components/game-shell/StrategicMap";
 import BottomStrip from "@/components/game-shell/BottomStrip";
+import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
 import type { GameMode, MapSelection } from "@/components/game-shell/gameShellTypes";
 import { DUMMY_STATS, DUMMY_NEWS, DUMMY_MARKERS } from "@/components/game-shell/gameShellTypes";
 
