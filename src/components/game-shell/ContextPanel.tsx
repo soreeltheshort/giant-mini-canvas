@@ -240,7 +240,8 @@ function RegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) 
 
         <ImperialCard title="Defenses">
           <div className="space-y-2">
-            <ProgressBar label="Ground Defense" value={realSys.current_ground_defenses} max={realSys.max_ground_defenses || 1} color="bronze" />
+            <ProgressBar label="Ground Forces" value={realSys.current_ground_defenses} max={realSys.max_ground_defenses || 1} color="bronze" />
+            <StrikecraftDisplay system={realSys} gameData={gameData!} />
           </div>
         </ImperialCard>
       </>
