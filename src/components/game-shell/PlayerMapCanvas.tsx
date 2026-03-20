@@ -50,14 +50,22 @@ const PlayerMapCanvas: React.FC<Props> = ({
 
   const visibleSet = React.useMemo(() => new Set(visibleSystemIds), [visibleSystemIds]);
 
-  // Build a set of hex_ids that have visible systems
-  const visibleHexIds = React.useMemo(() => {
-    const set = new Set<number>();
-    for (const [sysId, sys] of systems) {
-      if (visibleSet.has(sysId)) set.add(sys.hex_id);
+  // Build a set of hex keys that are in CORE or PROVINCE classifications (visible to player)
+  const visibleHexKeys = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const [key, hex] of hexes) {
+      const cls = hex.classification;
+      if (cls === "CORE" || cls.startsWith("PROVINCE_")) {
+        set.add(key);
+      }
     }
     return set;
-  }, [systems, visibleSet]);
+  }, [hexes]);
+
+  // Filter fleets to only those in visible hexes
+  const visibleFleets = React.useMemo(() => {
+    return fleets.filter(f => visibleHexKeys.has(hexKey(f.hex_x, f.hex_y)));
+  }, [fleets, visibleHexKeys]);
 
   // Resize
   useEffect(() => {
