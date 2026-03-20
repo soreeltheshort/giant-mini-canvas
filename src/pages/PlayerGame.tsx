@@ -207,6 +207,7 @@ const PlayerGame = () => {
               visibleSystemIds={visibleSystemIds}
               fleets={mapState.fleets}
               onSystemClick={handleSystemClick}
+              onFleetClick={handleFleetClick}
               className="flex-1"
             />
           ) : (
