@@ -333,6 +333,12 @@ const AdminGames = () => {
       // Per-player accumulators: slot → { tribute, maintenance }
       const playerEcon = new Map<number, { tribute: number; maintenance: number }>();
 
+      // Build reverse lookup: faction name → player slot
+      const nameToSlot = new Map<string, number>();
+      for (const [slot, name] of Object.entries(PROVINCE_NAMES)) {
+        nameToSlot.set(name.toLowerCase(), parseInt(slot, 10));
+      }
+
       for (const sys of eligible) {
         const result = processNextTurn(sys, facilityTypes, DEFAULT_TURN_CONSTANTS, 0, shipTypes);
         updatedSystems.set(sys.system_id, result.planet);
@@ -341,10 +347,15 @@ const AdminGames = () => {
           turnLogs.push(`  → Completed: ${result.completedFacilities.join(", ")}`);
         }
 
-        // Accumulate per-player economics based on owner (PROVINCE_N → slot N)
+        // Accumulate per-player economics based on owner name or PROVINCE_N pattern
+        let slot: number | undefined;
         const ownerMatch = sys.owner?.match(/PROVINCE_(\d+)/);
         if (ownerMatch) {
-          const slot = parseInt(ownerMatch[1], 10);
+          slot = parseInt(ownerMatch[1], 10);
+        } else if (sys.owner) {
+          slot = nameToSlot.get(sys.owner.toLowerCase());
+        }
+        if (slot !== undefined) {
           const existing = playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
           existing.tribute += result.tributeBreakdown.totalTribute;
           existing.maintenance += result.upkeepBreakdown.totalUpkeep;
