@@ -65,7 +65,7 @@ export default function ContextPanel({ mode, selection, news, onClose, onClearSe
         {selection.type === "news" ? (
           <NewsDetail story={news.find((n) => n.id === selection.id)} />
         ) : selection.type === "region" ? (
-          <RegionDetail id={selection.id} gameData={gameData} />
+          <RegionDetail id={selection.id} gameData={gameData} mode={mode} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} />
         ) : selection.type === "army" ? (
           <ArmyDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "production-center" ? (
