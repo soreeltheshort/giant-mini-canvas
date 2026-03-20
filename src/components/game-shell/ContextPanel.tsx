@@ -7,10 +7,27 @@ import { ProgressBar } from "./ProgressBar";
 import type { SystemData, MapFleet, FacilityType } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
 
+export interface ShipTypeLookup {
+  id: string;
+  name: string;
+  hull_class: string;
+}
+
+export interface FacilityTypeFull {
+  facility_type_id: string;
+  name: string;
+  description: string;
+  icon: string;
+  fighter_capacity: number;
+  gunship_capacity: number;
+}
+
 export interface GameMapData {
   systems: Map<number, SystemData>;
   fleets: MapFleet[];
   facilityTypes: FacilityType[];
+  facilityTypesFull?: FacilityTypeFull[];
+  shipTypes?: ShipTypeLookup[];
 }
 
 interface ContextPanelProps {
@@ -223,7 +240,8 @@ function RegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) 
 
         <ImperialCard title="Defenses">
           <div className="space-y-2">
-            <ProgressBar label="Ground Defense" value={realSys.current_ground_defenses} max={realSys.max_ground_defenses || 1} color="bronze" />
+            <ProgressBar label="Ground Forces" value={realSys.current_ground_defenses} max={realSys.max_ground_defenses || 1} color="bronze" />
+            <StrikecraftDisplay system={realSys} gameData={gameData!} />
           </div>
         </ImperialCard>
       </>
@@ -376,6 +394,73 @@ function NewsDetail({ story }: { story?: NewsStory }) {
     <ImperialCard title={story.headline} subtitle={`Turn ${story.turn} · ${story.category}`}>
       <p className="text-xs text-foreground leading-relaxed">{story.summary}</p>
     </ImperialCard>
+  );
+}
+
+/* ── Strikecraft Display ── */
+function StrikecraftDisplay({ system, gameData }: { system: SystemData; gameData: GameMapData }) {
+  const ftFull = gameData.facilityTypesFull || [];
+  const shipTypes = gameData.shipTypes || [];
+
+  // Calculate capacity from facilities
+  let fighterCap = 0;
+  let gunshipCap = 0;
+  for (const f of system.facilities || []) {
+    const ft = ftFull.find(t => t.facility_type_id === f.facility_type_id);
+    if (ft) {
+      fighterCap += (ft.fighter_capacity || 0) * f.quantity;
+      gunshipCap += (ft.gunship_capacity || 0) * f.quantity;
+    }
+  }
+
+  const getShipName = (id: string) => shipTypes.find(s => s.id === id)?.name || id;
+  const getHullClass = (id: string) => shipTypes.find(s => s.id === id)?.hull_class || "";
+
+  const fighters = (system.stationed_fighters || []);
+  const gunships = (system.stationed_gunships || []);
+
+  // Split fighters into heavy (FH) and light (FL)
+  const heavyFighters = fighters.filter(f => getHullClass(f.ship_type_id) === "FH");
+  const lightFighters = fighters.filter(f => getHullClass(f.ship_type_id) === "FL");
+
+  const totalFighters = fighters.reduce((s, f) => s + f.quantity, 0);
+  const totalGunships = gunships.reduce((s, f) => s + f.quantity, 0);
+
+  if (fighterCap === 0 && gunshipCap === 0 && totalFighters === 0 && totalGunships === 0) {
+    return <p className="text-[10px] text-muted-foreground italic">No strikecraft capacity.</p>;
+  }
+
+  return (
+    <div className="space-y-2 pt-1">
+      {(fighterCap > 0 || totalFighters > 0) && (
+        <>
+          <ProgressBar label="Fighters" value={totalFighters} max={fighterCap || 1} color={totalFighters >= fighterCap ? "bronze" : "crimson"} />
+          {heavyFighters.map(f => (
+            <div key={f.ship_type_id} className="flex justify-between text-[11px] pl-2">
+              <span className="text-muted-foreground">↳ {getShipName(f.ship_type_id)}</span>
+              <span className="font-semibold text-foreground">×{f.quantity}</span>
+            </div>
+          ))}
+          {lightFighters.map(f => (
+            <div key={f.ship_type_id} className="flex justify-between text-[11px] pl-2">
+              <span className="text-muted-foreground">↳ {getShipName(f.ship_type_id)}</span>
+              <span className="font-semibold text-foreground">×{f.quantity}</span>
+            </div>
+          ))}
+        </>
+      )}
+      {(gunshipCap > 0 || totalGunships > 0) && (
+        <>
+          <ProgressBar label="Gunships" value={totalGunships} max={gunshipCap || 1} color={totalGunships >= gunshipCap ? "bronze" : "crimson"} />
+          {gunships.map(f => (
+            <div key={f.ship_type_id} className="flex justify-between text-[11px] pl-2">
+              <span className="text-muted-foreground">↳ {getShipName(f.ship_type_id)}</span>
+              <span className="font-semibold text-foreground">×{f.quantity}</span>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
   );
 }
 

@@ -9,7 +9,7 @@ import type { MapState, SystemData, MapFleet, FacilityType } from "@/lib/mapType
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
 import ContextPanel from "@/components/game-shell/ContextPanel";
-import type { GameMapData } from "@/components/game-shell/ContextPanel";
+import type { GameMapData, FacilityTypeFull, ShipTypeLookup } from "@/components/game-shell/ContextPanel";
 import PlayerMapCanvas from "@/components/game-shell/PlayerMapCanvas";
 import BottomStrip from "@/components/game-shell/BottomStrip";
 import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
@@ -71,6 +71,8 @@ const PlayerGame = () => {
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
   const [mapState, setMapState] = useState<MapState | null>(null);
   const [dbFacilityTypes, setDbFacilityTypes] = useState<FacilityType[]>([]);
+  const [dbFacilityTypesFull, setDbFacilityTypesFull] = useState<FacilityTypeFull[]>([]);
+  const [dbShipTypes, setDbShipTypes] = useState<ShipTypeLookup[]>([]);
   const [loading, setLoading] = useState(true);
   const [initStep, setInitStep] = useState(0);
 
@@ -82,11 +84,12 @@ const PlayerGame = () => {
   const load = useCallback(async () => {
     if (!user || !gameId) return;
 
-    const [{ data: gData }, { data: pData }, { data: prData }, { data: ftData }] = await Promise.all([
+    const [{ data: gData }, { data: pData }, { data: prData }, { data: ftData }, { data: stData }] = await Promise.all([
       (supabase as any).from("games").select("id, name, turn_number, status").eq("id", gameId).single(),
       (supabase as any).from("game_players").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining").eq("game_id", gameId).eq("user_id", user.id).single(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
-      (supabase as any).from("facility_types").select("id, name, description, icon"),
+      (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity"),
+      (supabase as any).from("ship_types").select("id, name, hull_class").in("hull_class", ["FH", "FL", "GS"]),
     ]);
 
     if (!gData || !pData) {
@@ -103,6 +106,19 @@ const PlayerGame = () => {
       name: ft.name,
       description: ft.description || "",
       icon: ft.icon || "🏭",
+    })));
+    setDbFacilityTypesFull((ftData || []).map((ft: any) => ({
+      facility_type_id: ft.id,
+      name: ft.name,
+      description: ft.description || "",
+      icon: ft.icon || "🏭",
+      fighter_capacity: ft.fighter_capacity || 0,
+      gunship_capacity: ft.gunship_capacity || 0,
+    })));
+    setDbShipTypes((stData || []).map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      hull_class: s.hull_class,
     })));
 
     const { data: mapRow } = await (supabase as any)
@@ -224,6 +240,8 @@ const PlayerGame = () => {
               systems: mapState.systems,
               fleets: mapState.fleets,
               facilityTypes: dbFacilityTypes,
+              facilityTypesFull: dbFacilityTypesFull,
+              shipTypes: dbShipTypes,
             } : undefined,
           } : undefined}
         />
@@ -262,6 +280,8 @@ const PlayerGame = () => {
               systems: mapState.systems,
               fleets: mapState.fleets,
               facilityTypes: dbFacilityTypes,
+              facilityTypesFull: dbFacilityTypesFull,
+              shipTypes: dbShipTypes,
             } : undefined}
           />
         )}
