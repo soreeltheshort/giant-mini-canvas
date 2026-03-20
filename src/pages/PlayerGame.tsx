@@ -66,6 +66,7 @@ const PlayerGame = () => {
   const [player, setPlayer] = useState<PlayerInfo | null>(null);
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
   const [mapState, setMapState] = useState<MapState | null>(null);
+  const [dbFacilityTypes, setDbFacilityTypes] = useState<FacilityType[]>([]);
   const [loading, setLoading] = useState(true);
   const [initStep, setInitStep] = useState(0);
 
