@@ -95,6 +95,35 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
           </div>
         </div>
 
+        {/* ── Capability Ratings ── */}
+        <div className="p-3 space-y-1.5 border-b border-border">
+          <h3 className="font-heading text-[10px] font-semibold uppercase tracking-[0.15em] text-bronze-dark mb-2">
+            Capabilities
+          </h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Crown className="w-3 h-3 text-bronze" />
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Admin</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-bold text-senate-dark font-heading">{stats.adminCapability}</span>
+              <span className="text-[9px] text-muted-foreground">·</span>
+              <span className="text-[10px] text-bronze font-semibold">{stats.adminPointsRemaining}pt</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Target className="w-3 h-3 text-bronze" />
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Combat</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-bold text-senate-dark font-heading">{stats.combatCapability}</span>
+              <span className="text-[9px] text-muted-foreground">·</span>
+              <span className="text-[10px] text-bronze font-semibold">{stats.combatPointsRemaining}pt</span>
+            </div>
+          </div>
+        </div>
+
         {/* ── News Feed ── */}
         <div className="p-3 border-b border-border space-y-2">
           <div className="flex items-center justify-between">
