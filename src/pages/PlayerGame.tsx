@@ -34,6 +34,9 @@ interface PlayerInfo {
   player_slot: number;
   initialized: boolean;
   visible_system_ids: number[];
+  treasury: number;
+  last_tribute: number;
+  last_maintenance: number;
 }
 
 interface ProfileInfo {
