@@ -33,6 +33,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   hexes,
   systems,
   visibleSystemIds,
+  fleets = [],
   onSystemClick,
   className = "",
 }) => {
