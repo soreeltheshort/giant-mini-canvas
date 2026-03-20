@@ -7,10 +7,27 @@ import { ProgressBar } from "./ProgressBar";
 import type { SystemData, MapFleet, FacilityType } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
 
+export interface ShipTypeLookup {
+  id: string;
+  name: string;
+  hull_class: string;
+}
+
+export interface FacilityTypeFull {
+  facility_type_id: string;
+  name: string;
+  description: string;
+  icon: string;
+  fighter_capacity: number;
+  gunship_capacity: number;
+}
+
 export interface GameMapData {
   systems: Map<number, SystemData>;
   fleets: MapFleet[];
   facilityTypes: FacilityType[];
+  facilityTypesFull?: FacilityTypeFull[];
+  shipTypes?: ShipTypeLookup[];
 }
 
 interface ContextPanelProps {
