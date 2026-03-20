@@ -196,6 +196,11 @@ const PlayerGame = () => {
             selection,
             news: DUMMY_NEWS,
             onClearSelection: () => setSelection({ type: "none" }),
+            gameData: mapState ? {
+              systems: mapState.systems,
+              fleets: mapState.fleets,
+              facilityTypes: mapState.facilityTypes,
+            } : undefined,
           } : undefined}
         />
 
