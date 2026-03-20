@@ -22,7 +22,7 @@ interface ContextPanelProps {
   gameData?: GameMapData;
 }
 
-export default function ContextPanel({ mode, selection, news, onClose, onClearSelection }: ContextPanelProps) {
+export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData }: ContextPanelProps) {
   return (
     <aside className="w-72 bg-marble border-l-2 border-bronze/40 flex flex-col relative z-20 shrink-0 animate-fade-in">
       {/* Header */}
@@ -41,9 +41,9 @@ export default function ContextPanel({ mode, selection, news, onClose, onClearSe
         {selection.type === "news" ? (
           <NewsDetail story={news.find((n) => n.id === selection.id)} />
         ) : selection.type === "region" ? (
-          <RegionDetail id={selection.id} />
+          <RegionDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "army" ? (
-          <ArmyDetail id={selection.id} />
+          <ArmyDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "production-center" ? (
           <ProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
