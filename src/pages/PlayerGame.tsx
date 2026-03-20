@@ -71,6 +71,8 @@ const PlayerGame = () => {
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
   const [mapState, setMapState] = useState<MapState | null>(null);
   const [dbFacilityTypes, setDbFacilityTypes] = useState<FacilityType[]>([]);
+  const [dbFacilityTypesFull, setDbFacilityTypesFull] = useState<FacilityTypeFull[]>([]);
+  const [dbShipTypes, setDbShipTypes] = useState<ShipTypeLookup[]>([]);
   const [loading, setLoading] = useState(true);
   const [initStep, setInitStep] = useState(0);
 
