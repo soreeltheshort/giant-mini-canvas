@@ -44,6 +44,8 @@ export interface MapMarker {
 export const DUMMY_STATS: GlobalStats = {
   cinders: 18740,
   treasury: 42350,
+  tribute: 1240,
+  maintenance: 680,
   influence: 73,
   production: 156,
   militaryReadiness: 82,
