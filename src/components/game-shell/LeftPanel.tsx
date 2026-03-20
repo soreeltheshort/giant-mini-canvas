@@ -28,7 +28,6 @@ interface LeftPanelProps {
 }
 
 const STAT_ITEMS: { key: keyof GlobalStats; label: string; icon: React.ElementType; format?: (v: number) => string }[] = [
-  { key: "cinders", label: "Cinders", icon: Flame, format: (v) => v.toLocaleString() },
   { key: "treasury", label: "Treasury", icon: Coins, format: (v) => `₡${v.toLocaleString()}` },
   { key: "influence", label: "Influence", icon: Star },
   { key: "production", label: "Production", icon: Factory },
