@@ -206,6 +206,10 @@ const PlayerGame = () => {
             treasury: player?.treasury ?? 0,
             tribute: player?.last_tribute ?? 0,
             maintenance: player?.last_maintenance ?? 0,
+            adminCapability: player?.admin_capability ?? 3,
+            combatCapability: player?.combat_capability ?? 3,
+            adminPointsRemaining: player?.admin_points_remaining ?? 3,
+            combatPointsRemaining: player?.combat_points_remaining ?? 3,
           }}
           news={DUMMY_NEWS}
           activeMode={activeMode}

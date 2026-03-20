@@ -19,6 +19,10 @@ export interface GlobalStats {
   production: number;
   militaryReadiness: number;
   stability: number;
+  adminCapability: number;
+  combatCapability: number;
+  adminPointsRemaining: number;
+  combatPointsRemaining: number;
 }
 
 export interface NewsStory {
