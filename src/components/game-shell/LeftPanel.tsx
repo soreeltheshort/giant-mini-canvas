@@ -1,6 +1,7 @@
 import {
-  Flame, Coins, Star, Factory, Shield, Scale,
+  Coins, Star, Factory, Shield, Scale,
   Scroll, Swords, Landmark, Hammer, ChevronRight,
+  TrendingUp, TrendingDown,
 } from "lucide-react";
 import type { GameMode, GlobalStats, NewsStory, MapSelection } from "./gameShellTypes";
 import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTypes";
