@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import type { MapState, SystemData, MapFleet } from "@/lib/mapTypes";
+import type { MapState, SystemData, MapFleet, FacilityType } from "@/lib/mapTypes";
 
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
@@ -66,6 +66,7 @@ const PlayerGame = () => {
   const [player, setPlayer] = useState<PlayerInfo | null>(null);
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
   const [mapState, setMapState] = useState<MapState | null>(null);
+  const [dbFacilityTypes, setDbFacilityTypes] = useState<FacilityType[]>([]);
   const [loading, setLoading] = useState(true);
   const [initStep, setInitStep] = useState(0);
 
@@ -77,10 +78,11 @@ const PlayerGame = () => {
   const load = useCallback(async () => {
     if (!user || !gameId) return;
 
-    const [{ data: gData }, { data: pData }, { data: prData }] = await Promise.all([
+    const [{ data: gData }, { data: pData }, { data: prData }, { data: ftData }] = await Promise.all([
       (supabase as any).from("games").select("id, name, turn_number, status").eq("id", gameId).single(),
       (supabase as any).from("game_players").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance").eq("game_id", gameId).eq("user_id", user.id).single(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
+      (supabase as any).from("facility_types").select("id, name, description, icon"),
     ]);
 
     if (!gData || !pData) {
@@ -92,6 +94,12 @@ const PlayerGame = () => {
     setGame(gData);
     setPlayer(pData);
     setProfile(prData);
+    setDbFacilityTypes((ftData || []).map((ft: any) => ({
+      facility_type_id: ft.id,
+      name: ft.name,
+      description: ft.description || "",
+      icon: ft.icon || "🏭",
+    })));
 
     const { data: mapRow } = await (supabase as any)
       .from("games")
@@ -207,7 +215,7 @@ const PlayerGame = () => {
             gameData: mapState ? {
               systems: mapState.systems,
               fleets: mapState.fleets,
-              facilityTypes: mapState.facilityTypes,
+              facilityTypes: dbFacilityTypes,
             } : undefined,
           } : undefined}
         />
@@ -245,7 +253,7 @@ const PlayerGame = () => {
             gameData={mapState ? {
               systems: mapState.systems,
               fleets: mapState.fleets,
-              facilityTypes: mapState.facilityTypes,
+              facilityTypes: dbFacilityTypes,
             } : undefined}
           />
         )}
