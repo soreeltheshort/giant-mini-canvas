@@ -158,7 +158,9 @@ function EmptyState({ mode }: { mode: GameMode }) {
 function RegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
   // Try real data first (selection id = "sys-{system_id}")
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
-  const realSys = !isNaN(sysId) && gameData ? gameData.systems.get(sysId) : undefined;
+  const realSys = !isNaN(sysId) && gameData
+    ? Array.from(gameData.systems.values()).find(s => s.system_id === sysId)
+    : undefined;
 
   if (realSys) {
     const facilityNames = (realSys.facilities || []).map(f => {
