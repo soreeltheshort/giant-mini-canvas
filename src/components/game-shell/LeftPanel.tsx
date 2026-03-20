@@ -23,6 +23,7 @@ interface LeftPanelProps {
     selection: MapSelection;
     news: NewsStory[];
     onClearSelection: () => void;
+    gameData?: GameMapData;
   };
 }
 
