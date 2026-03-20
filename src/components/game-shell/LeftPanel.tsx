@@ -1,7 +1,7 @@
 import {
-  Coins, Star, Factory, Shield, Scale,
+  Coins, Star, Crown, Target,
   Scroll, Swords, Landmark, Hammer, ChevronRight,
-  TrendingUp, TrendingDown, Crown, Target,
+  TrendingUp, TrendingDown,
 } from "lucide-react";
 import type { GameMode, GlobalStats, NewsStory, MapSelection } from "./gameShellTypes";
 import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTypes";
@@ -32,10 +32,7 @@ const STAT_ITEMS: { key: keyof GlobalStats; label: string; icon: React.ElementTy
   { key: "treasury", label: "Treasury", icon: Coins, format: (v) => `₡${v.toLocaleString()}` },
   { key: "tribute", label: "Income", icon: TrendingUp, format: (v) => `+₡${v.toLocaleString()}` },
   { key: "maintenance", label: "Costs", icon: TrendingDown, format: (v) => `-₡${v.toLocaleString()}` },
-  { key: "influence", label: "Influence", icon: Star },
-  { key: "production", label: "Production", icon: Factory },
-  { key: "militaryReadiness", label: "Readiness", icon: Shield },
-  { key: "stability", label: "Stability", icon: Scale },
+  { key: "influence", label: "Influence", icon: Star, format: (v) => `${v}` },
 ];
 
 const MODE_ITEMS: { id: GameMode; label: string; icon: React.ElementType }[] = [
@@ -63,32 +60,17 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
           <div className="space-y-1.5">
             {STAT_ITEMS.map(({ key, label, icon: Icon, format }) => {
               const val = stats[key];
-              const isBar = key === "militaryReadiness" || key === "stability" || key === "influence";
               return (
                 <div key={key}>
-                  {isBar ? (
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <Icon className="w-3 h-3 text-bronze" />
-                        <ProgressBar
-                          label={label}
-                          value={val}
-                          max={100}
-                          color={val >= 70 ? "bronze" : val >= 40 ? "bronze" : "crimson"}
-                        />
-                      </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Icon className="w-3 h-3 text-bronze" />
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Icon className="w-3 h-3 text-bronze" />
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
-                      </div>
-                      <span className="text-xs font-semibold text-foreground font-heading">
-                        {format ? format(val) : val}
-                      </span>
-                    </div>
-                  )}
+                    <span className="text-xs font-semibold text-foreground font-heading">
+                      {format ? format(val) : val}
+                    </span>
+                  </div>
                 </div>
               );
             })}
