@@ -248,9 +248,21 @@ const AdminGames = () => {
   const updateStatus = async (status: string) => {
     if (!selectedGame) return;
 
-    // When transitioning to active, process initial player visibility
+    // When transitioning to active, set turn 1 + orders phase + process visibility
     if (status === "active" && selectedGame.status === "setup") {
       await processInitialVisibility(selectedGame.id);
+      await (supabase as any).from("games").update({ status, turn_number: 1, turn_phase: "orders" }).eq("id", selectedGame.id);
+      // Reset orders_locked for all players
+      const { data: gps } = await (supabase as any).from("game_players").select("id").eq("game_id", selectedGame.id);
+      if (gps) {
+        for (const gp of gps) {
+          await (supabase as any).from("game_players").update({ orders_locked: false }).eq("id", gp.id);
+        }
+      }
+      await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase`);
+      setSelectedGame({ ...selectedGame, status, turn_number: 1 });
+      await fetchGames();
+      return;
     }
 
     await (supabase as any).from("games").update({ status }).eq("id", selectedGame.id);
