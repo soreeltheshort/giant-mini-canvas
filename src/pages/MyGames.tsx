@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
-  4: "Dravian", 5: "Marcellan", 6: "Octavan",
+  4: "Dravian", 5: "Marcellan", 6: "Octavian",
 };
 
 interface PlayerGameInfo {
