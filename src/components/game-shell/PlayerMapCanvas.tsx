@@ -14,6 +14,7 @@ interface Props {
   visibleSystemIds: number[];
   fleets?: MapFleet[];
   onSystemClick?: (system: SystemData) => void;
+  onFleetClick?: (fleet: MapFleet) => void;
   className?: string;
 }
 
