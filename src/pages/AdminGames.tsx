@@ -329,6 +329,7 @@ const AdminGames = () => {
       if (gps) {
         for (const gp of gps) {
           const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
+          console.log(`[Game Start] Player slot=${gp.player_slot} treasury=${STARTING_TREASURY} tribute=${econ.tribute} maintenance=${econ.maintenance}`);
           await (supabase as any).from("game_players").update({
             orders_locked: false,
             treasury: STARTING_TREASURY, // STUB: default starting treasury
@@ -340,7 +341,8 @@ const AdminGames = () => {
         }
       }
 
-      await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase. Starting treasury: ${STARTING_TREASURY} (stub default).`);
+      const econSummary = Array.from(playerEcon.entries()).map(([s, e]) => `Slot${s}: +${e.tribute}/-${e.maintenance}`).join(", ");
+      await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase. Starting treasury: ${STARTING_TREASURY} (stub default). Economics: ${econSummary || "none calculated"}`);
       setSelectedGame({ ...selectedGame, status, turn_number: 1 });
       await fetchGames();
       return;
