@@ -367,7 +367,7 @@ const AdminGames = () => {
       await syncVisibilityToPlayers(selectedGame.id, newMapState);
 
       // Update treasury and reset orders for each player
-      const { data: gps } = await (supabase as any).from("game_players").select("id, player_slot, treasury").eq("game_id", selectedGame.id);
+      const { data: gps } = await (supabase as any).from("game_players").select("id, player_slot, treasury, admin_capability, combat_capability").eq("game_id", selectedGame.id);
       if (gps) {
         for (const gp of gps) {
           const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
@@ -377,6 +377,8 @@ const AdminGames = () => {
             treasury: newTreasury,
             last_tribute: econ.tribute,
             last_maintenance: econ.maintenance,
+            admin_points_remaining: gp.admin_capability || 3,
+            combat_points_remaining: gp.combat_capability || 3,
           }).eq("id", gp.id);
         }
       }
