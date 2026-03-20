@@ -37,6 +37,10 @@ interface PlayerInfo {
   treasury: number;
   last_tribute: number;
   last_maintenance: number;
+  admin_capability: number;
+  combat_capability: number;
+  admin_points_remaining: number;
+  combat_points_remaining: number;
 }
 
 interface ProfileInfo {
@@ -80,7 +84,7 @@ const PlayerGame = () => {
 
     const [{ data: gData }, { data: pData }, { data: prData }, { data: ftData }] = await Promise.all([
       (supabase as any).from("games").select("id, name, turn_number, status").eq("id", gameId).single(),
-      (supabase as any).from("game_players").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance").eq("game_id", gameId).eq("user_id", user.id).single(),
+      (supabase as any).from("game_players").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining").eq("game_id", gameId).eq("user_id", user.id).single(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
       (supabase as any).from("facility_types").select("id, name, description, icon"),
     ]);
@@ -202,6 +206,10 @@ const PlayerGame = () => {
             treasury: player?.treasury ?? 0,
             tribute: player?.last_tribute ?? 0,
             maintenance: player?.last_maintenance ?? 0,
+            adminCapability: player?.admin_capability ?? 3,
+            combatCapability: player?.combat_capability ?? 3,
+            adminPointsRemaining: player?.admin_points_remaining ?? 3,
+            combatPointsRemaining: player?.combat_points_remaining ?? 3,
           }}
           news={DUMMY_NEWS}
           activeMode={activeMode}

@@ -421,6 +421,10 @@ export type Database = {
       }
       game_players: {
         Row: {
+          admin_capability: number
+          admin_points_remaining: number
+          combat_capability: number
+          combat_points_remaining: number
           created_at: string
           faction_id: string | null
           game_id: string
@@ -435,6 +439,10 @@ export type Database = {
           visible_system_ids: Json
         }
         Insert: {
+          admin_capability?: number
+          admin_points_remaining?: number
+          combat_capability?: number
+          combat_points_remaining?: number
           created_at?: string
           faction_id?: string | null
           game_id: string
@@ -449,6 +457,10 @@ export type Database = {
           visible_system_ids?: Json
         }
         Update: {
+          admin_capability?: number
+          admin_points_remaining?: number
+          combat_capability?: number
+          combat_points_remaining?: number
           created_at?: string
           faction_id?: string | null
           game_id?: string
