@@ -330,6 +330,9 @@ const AdminGames = () => {
       const serialized = serializeMapState(newMapState);
       await (supabase as any).from("games").update({ map_data_json: serialized, turn_number: nextTurn }).eq("id", selectedGame.id);
 
+      // Refresh player visibility after each turn
+      await syncVisibilityToPlayers(selectedGame.id, newMapState);
+
       // Log the turn
       await addLog(selectedGame.id, "turn_processed", `Turn ${nextTurn} processed. ${eligible.length} systems updated.`, { details: turnLogs });
 
