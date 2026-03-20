@@ -54,6 +54,10 @@ export const DUMMY_STATS: GlobalStats = {
   production: 156,
   militaryReadiness: 82,
   stability: 64,
+  adminCapability: 3,
+  combatCapability: 3,
+  adminPointsRemaining: 3,
+  combatPointsRemaining: 3,
 };
 
 export const DUMMY_NEWS: NewsStory[] = [
