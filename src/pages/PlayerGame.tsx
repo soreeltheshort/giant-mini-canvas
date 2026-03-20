@@ -94,6 +94,12 @@ const PlayerGame = () => {
     setGame(gData);
     setPlayer(pData);
     setProfile(prData);
+    setDbFacilityTypes((ftData || []).map((ft: any) => ({
+      facility_type_id: ft.id,
+      name: ft.name,
+      description: ft.description || "",
+      icon: ft.icon || "🏭",
+    })));
 
     const { data: mapRow } = await (supabase as any)
       .from("games")
