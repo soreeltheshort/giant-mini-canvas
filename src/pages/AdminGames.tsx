@@ -248,9 +248,21 @@ const AdminGames = () => {
   const updateStatus = async (status: string) => {
     if (!selectedGame) return;
 
-    // When transitioning to active, process initial player visibility
+    // When transitioning to active, set turn 1 + orders phase + process visibility
     if (status === "active" && selectedGame.status === "setup") {
       await processInitialVisibility(selectedGame.id);
+      await (supabase as any).from("games").update({ status, turn_number: 1, turn_phase: "orders" }).eq("id", selectedGame.id);
+      // Reset orders_locked for all players
+      const { data: gps } = await (supabase as any).from("game_players").select("id").eq("game_id", selectedGame.id);
+      if (gps) {
+        for (const gp of gps) {
+          await (supabase as any).from("game_players").update({ orders_locked: false }).eq("id", gp.id);
+        }
+      }
+      await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase`);
+      setSelectedGame({ ...selectedGame, status, turn_number: 1 });
+      await fetchGames();
+      return;
     }
 
     await (supabase as any).from("games").update({ status }).eq("id", selectedGame.id);
@@ -302,12 +314,16 @@ const AdminGames = () => {
     toast({ title: "Visibility processed", description: `${count} systems visible to ${players} players` });
   };
 
-  /* ── run turn ── */
+  /* ── run turn (process current turn, then advance to next turn's orders phase) ── */
   const runTurn = async () => {
     if (!selectedGame || !mapState) return;
     setProcessing(true);
     try {
-      const nextTurn = selectedGame.turn_number + 1;
+      // Set phase to processing
+      await (supabase as any).from("games").update({ turn_phase: "processing" }).eq("id", selectedGame.id);
+
+      const currentTurn = selectedGame.turn_number;
+      const nextTurn = currentTurn + 1;
       const systems = Array.from(mapState.systems.values());
       const eligible = systems.filter(s => s.current_population > 0 && s.owner && s.owner !== "" && s.owner.toLowerCase() !== "unowned");
 
@@ -326,20 +342,32 @@ const AdminGames = () => {
       const newMapState: MapState = { ...mapState, systems: updatedSystems };
       setMapState(newMapState);
 
-      // Save updated map and turn number
+      // Save updated map, advance turn number, reset to orders phase
       const serialized = serializeMapState(newMapState);
-      await (supabase as any).from("games").update({ map_data_json: serialized, turn_number: nextTurn }).eq("id", selectedGame.id);
+      await (supabase as any).from("games").update({
+        map_data_json: serialized,
+        turn_number: nextTurn,
+        turn_phase: "orders",
+      }).eq("id", selectedGame.id);
 
       // Refresh player visibility after each turn
       await syncVisibilityToPlayers(selectedGame.id, newMapState);
 
+      // Reset orders_locked for all players for the new turn
+      const { data: gps } = await (supabase as any).from("game_players").select("id").eq("game_id", selectedGame.id);
+      if (gps) {
+        for (const gp of gps) {
+          await (supabase as any).from("game_players").update({ orders_locked: false }).eq("id", gp.id);
+        }
+      }
+
       // Log the turn
-      await addLog(selectedGame.id, "turn_processed", `Turn ${nextTurn} processed. ${eligible.length} systems updated.`, { details: turnLogs });
+      await addLog(selectedGame.id, "turn_processed", `Turn ${currentTurn} processed. ${eligible.length} systems updated. Now accepting orders for Turn ${nextTurn}.`, { details: turnLogs });
 
       setSelectedGame({ ...selectedGame, turn_number: nextTurn });
       await fetchGames();
       await refreshLogs(selectedGame.id);
-      toast({ title: `Turn ${nextTurn} processed`, description: `${eligible.length} systems updated` });
+      toast({ title: `Turn ${currentTurn} processed`, description: `Now accepting orders for Turn ${nextTurn}` });
     } catch (err: any) {
       toast({ title: "Turn failed", description: err.message, variant: "destructive" });
     } finally {

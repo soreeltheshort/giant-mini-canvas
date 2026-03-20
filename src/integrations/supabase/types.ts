@@ -426,6 +426,7 @@ export type Database = {
           game_id: string
           id: string
           initialized: boolean
+          orders_locked: boolean
           player_slot: number
           user_id: string
           visible_system_ids: Json
@@ -436,6 +437,7 @@ export type Database = {
           game_id: string
           id?: string
           initialized?: boolean
+          orders_locked?: boolean
           player_slot: number
           user_id: string
           visible_system_ids?: Json
@@ -446,6 +448,7 @@ export type Database = {
           game_id?: string
           id?: string
           initialized?: boolean
+          orders_locked?: boolean
           player_slot?: number
           user_id?: string
           visible_system_ids?: Json
@@ -511,6 +514,7 @@ export type Database = {
           name: string
           status: Database["public"]["Enums"]["game_status"]
           turn_number: number
+          turn_phase: Database["public"]["Enums"]["turn_phase"]
           updated_at: string
         }
         Insert: {
@@ -521,6 +525,7 @@ export type Database = {
           name: string
           status?: Database["public"]["Enums"]["game_status"]
           turn_number?: number
+          turn_phase?: Database["public"]["Enums"]["turn_phase"]
           updated_at?: string
         }
         Update: {
@@ -531,6 +536,7 @@ export type Database = {
           name?: string
           status?: Database["public"]["Enums"]["game_status"]
           turn_number?: number
+          turn_phase?: Database["public"]["Enums"]["turn_phase"]
           updated_at?: string
         }
         Relationships: []
@@ -624,6 +630,54 @@ export type Database = {
           weight?: number
         }
         Relationships: []
+      }
+      player_orders: {
+        Row: {
+          game_id: string
+          id: string
+          notes: string
+          order_json: Json
+          order_type: Database["public"]["Enums"]["order_type"]
+          player_id: string
+          submitted_at: string
+          turn_number: number
+        }
+        Insert: {
+          game_id: string
+          id?: string
+          notes?: string
+          order_json?: Json
+          order_type?: Database["public"]["Enums"]["order_type"]
+          player_id: string
+          submitted_at?: string
+          turn_number: number
+        }
+        Update: {
+          game_id?: string
+          id?: string
+          notes?: string
+          order_json?: Json
+          order_type?: Database["public"]["Enums"]["order_type"]
+          player_id?: string
+          submitted_at?: string
+          turn_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_orders_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_orders_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1007,6 +1061,14 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user" | "tester"
       game_status: "setup" | "active" | "paused" | "completed"
+      order_type:
+        | "fleet_move"
+        | "build_facility"
+        | "scrap_facility"
+        | "set_standing_order"
+        | "diplomacy"
+        | "other"
+      turn_phase: "orders" | "processing"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1136,6 +1198,15 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user", "tester"],
       game_status: ["setup", "active", "paused", "completed"],
+      order_type: [
+        "fleet_move",
+        "build_facility",
+        "scrap_facility",
+        "set_standing_order",
+        "diplomacy",
+        "other",
+      ],
+      turn_phase: ["orders", "processing"],
     },
   },
 } as const
