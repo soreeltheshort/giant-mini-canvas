@@ -240,6 +240,8 @@ const PlayerGame = () => {
               systems: mapState.systems,
               fleets: mapState.fleets,
               facilityTypes: dbFacilityTypes,
+              facilityTypesFull: dbFacilityTypesFull,
+              shipTypes: dbShipTypes,
             } : undefined,
           } : undefined}
         />
