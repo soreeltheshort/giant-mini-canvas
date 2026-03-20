@@ -178,11 +178,12 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
 }
 
 /* ── Inline Context Content (mirrors ContextPanel content) ── */
-function InlineContextContent({ mode, selection, news, onClearSelection }: {
+function InlineContextContent({ mode, selection, news, onClearSelection, gameData }: {
   mode: GameMode;
   selection: MapSelection;
   news: NewsStory[];
   onClearSelection: () => void;
+  gameData?: GameMapData;
 }) {
   const getModeIcon = () => {
     if (selection.type === "news") return <Scroll className="w-3.5 h-3.5" />;
