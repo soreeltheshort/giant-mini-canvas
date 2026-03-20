@@ -214,9 +214,9 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
         {selection.type === "news" ? (
           <InlineNewsDetail story={news.find((n) => n.id === selection.id)} />
         ) : selection.type === "region" ? (
-          <InlineRegionDetail id={selection.id} />
+          <InlineRegionDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "army" ? (
-          <InlineArmyDetail id={selection.id} />
+          <InlineArmyDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "production-center" ? (
           <InlineProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
