@@ -248,18 +248,59 @@ const AdminGames = () => {
   const updateStatus = async (status: string) => {
     if (!selectedGame) return;
 
-    // When transitioning to active, set turn 1 + orders phase + process visibility
+    // When transitioning to active, set turn 1 + orders phase + process visibility + Turn 1 economics
     if (status === "active" && selectedGame.status === "setup") {
       await processInitialVisibility(selectedGame.id);
       await (supabase as any).from("games").update({ status, turn_number: 1, turn_phase: "orders" }).eq("id", selectedGame.id);
-      // Reset orders_locked for all players
-      const { data: gps } = await (supabase as any).from("game_players").select("id").eq("game_id", selectedGame.id);
-      if (gps) {
-        for (const gp of gps) {
-          await (supabase as any).from("game_players").update({ orders_locked: false }).eq("id", gp.id);
+
+      // Calculate Turn 1 income/expenses so players see initial economic state
+      // STUB: Starting treasury defaults to 300 until final determination
+      const STARTING_TREASURY = 300;
+
+      const nameToSlot = new Map<string, number>();
+      for (const [slot, name] of Object.entries(PROVINCE_NAMES)) {
+        nameToSlot.set(name.toLowerCase(), parseInt(slot, 10));
+      }
+
+      const playerEcon = new Map<number, { tribute: number; maintenance: number }>();
+      if (mapState) {
+        const systems = Array.from(mapState.systems.values());
+        const eligible = systems.filter(s => s.current_population > 0 && s.owner && s.owner !== "" && s.owner.toLowerCase() !== "unowned");
+        for (const sys of eligible) {
+          const result = processNextTurn(sys, facilityTypes, DEFAULT_TURN_CONSTANTS, 0, shipTypes);
+          let slot: number | undefined;
+          const ownerMatch = sys.owner?.match(/PROVINCE_(\d+)/);
+          if (ownerMatch) {
+            slot = parseInt(ownerMatch[1], 10);
+          } else if (sys.owner) {
+            slot = nameToSlot.get(sys.owner.toLowerCase());
+          }
+          if (slot !== undefined) {
+            const existing = playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+            existing.tribute += result.tributeBreakdown.totalTribute;
+            existing.maintenance += result.upkeepBreakdown.totalUpkeep;
+            playerEcon.set(slot, existing);
+          }
         }
       }
-      await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase`);
+
+      // Set starting treasury + Turn 1 income/costs for each player
+      const { data: gps } = await (supabase as any).from("game_players").select("id, player_slot, admin_capability, combat_capability").eq("game_id", selectedGame.id);
+      if (gps) {
+        for (const gp of gps) {
+          const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
+          await (supabase as any).from("game_players").update({
+            orders_locked: false,
+            treasury: STARTING_TREASURY, // STUB: default starting treasury
+            last_tribute: econ.tribute,
+            last_maintenance: econ.maintenance,
+            admin_points_remaining: gp.admin_capability || 3,
+            combat_points_remaining: gp.combat_capability || 3,
+          }).eq("id", gp.id);
+        }
+      }
+
+      await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase. Starting treasury: ${STARTING_TREASURY} (stub default).`);
       setSelectedGame({ ...selectedGame, status, turn_number: 1 });
       await fetchGames();
       return;
