@@ -185,6 +185,23 @@ const PlayerGame = () => {
     setRightPanelOpen(true);
   };
 
+  const handleBuildFacility = async (systemId: number, facilityTypeId: string) => {
+    if (!player || !game) return;
+    try {
+      await (supabase as any).from("player_orders").insert({
+        game_id: game.id,
+        player_id: player.id,
+        turn_number: game.turn_number,
+        order_type: "build_facility",
+        order_json: { system_id: systemId, facility_type_id: facilityTypeId },
+        notes: "",
+      });
+      toast({ title: "Order Submitted", description: "Facility construction order queued." });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-ivory flex items-center justify-center">
