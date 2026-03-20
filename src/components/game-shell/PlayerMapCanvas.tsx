@@ -36,6 +36,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   visibleSystemIds,
   fleets = [],
   onSystemClick,
+  onFleetClick,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -43,8 +44,11 @@ const PlayerMapCanvas: React.FC<Props> = ({
   const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
   const [canvasSize, setCanvasSize] = useState({ w: 800, h: 600 });
   const [hoveredSystem, setHoveredSystem] = useState<SystemData | null>(null);
+  const [hoveredFleet, setHoveredFleet] = useState<MapFleet | null>(null);
+  const [cursorStyle, setCursorStyle] = useState("grab");
   const cameraRef = useRef(camera);
   cameraRef.current = camera;
   const animRef = useRef<number>(0);
