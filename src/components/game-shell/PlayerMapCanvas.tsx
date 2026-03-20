@@ -14,6 +14,7 @@ interface Props {
   visibleSystemIds: number[];
   fleets?: MapFleet[];
   onSystemClick?: (system: SystemData) => void;
+  onFleetClick?: (fleet: MapFleet) => void;
   className?: string;
 }
 
@@ -35,6 +36,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   visibleSystemIds,
   fleets = [],
   onSystemClick,
+  onFleetClick,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -42,8 +44,11 @@ const PlayerMapCanvas: React.FC<Props> = ({
   const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
   const [canvasSize, setCanvasSize] = useState({ w: 800, h: 600 });
   const [hoveredSystem, setHoveredSystem] = useState<SystemData | null>(null);
+  const [hoveredFleet, setHoveredFleet] = useState<MapFleet | null>(null);
+  const [cursorStyle, setCursorStyle] = useState("grab");
   const cameraRef = useRef(camera);
   cameraRef.current = camera;
   const animRef = useRef<number>(0);
@@ -278,8 +283,17 @@ const PlayerMapCanvas: React.FC<Props> = ({
     return map;
   }, [systems, visibleSet]);
 
-  const getHexAtMouse = useCallback(
-    (e: React.MouseEvent) => {
+  // Build hex_key -> fleet lookup for click/hover detection
+  const hexKeyToFleet = React.useMemo(() => {
+    const map = new Map<string, MapFleet>();
+    for (const f of visibleFleets) {
+      map.set(hexKey(f.hex_x, f.hex_y), f);
+    }
+    return map;
+  }, [visibleFleets]);
+
+  const getHexCoordsAtMouse = useCallback(
+    (e: React.MouseEvent): [number, number] | null => {
       const canvas = canvasRef.current;
       if (!canvas) return null;
       const rect = canvas.getBoundingClientRect();
@@ -288,32 +302,35 @@ const PlayerMapCanvas: React.FC<Props> = ({
       const size = HEX_SIZE * camera.zoom;
       const worldX = mx - canvas.width / 2 - camera.x;
       const worldY = my - canvas.height / 2 - camera.y;
-      const [hx, hy] = pixelToHex(worldX, worldY, size);
-      return hexes.get(hexKey(hx, hy)) || null;
+      return pixelToHex(worldX, worldY, size);
     },
-    [camera, hexes]
+    [camera]
   );
+
+  const DRAG_THRESHOLD = 5;
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      if (e.button === 1 || (e.button === 0 && e.altKey)) {
-        setIsDragging(true);
-        setDragStart({ x: e.clientX - camera.x, y: e.clientY - camera.y });
-        return;
-      }
       if (e.button === 0) {
-        const hex = getHexAtMouse(e);
-        if (hex && hex.has_system) {
-          const sys = hexIdToSystem.get(hex.hex_id);
-          if (sys && onSystemClick) onSystemClick(sys);
-        }
+        setMouseDownPos({ x: e.clientX, y: e.clientY });
+        setDragStart({ x: e.clientX - camera.x, y: e.clientY - camera.y });
       }
     },
-    [camera, getHexAtMouse, hexIdToSystem, onSystemClick]
+    [camera]
   );
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
+      // Start dragging if mouse moved enough from mousedown position
+      if (mouseDownPos && !isDragging) {
+        const dx = e.clientX - mouseDownPos.x;
+        const dy = e.clientY - mouseDownPos.y;
+        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+          setIsDragging(true);
+          setCursorStyle("grabbing");
+        }
+      }
+
       if (isDragging) {
         setCamera((c) => ({
           ...c,
@@ -322,19 +339,67 @@ const PlayerMapCanvas: React.FC<Props> = ({
         }));
         return;
       }
-      const hex = getHexAtMouse(e);
-      if (hex && hex.has_system) {
-        const sys = hexIdToSystem.get(hex.hex_id);
-        setHoveredSystem(sys || null);
-      } else {
+
+      // Hover detection
+      const coords = getHexCoordsAtMouse(e);
+      if (!coords) {
         setHoveredSystem(null);
+        setHoveredFleet(null);
+        setCursorStyle("grab");
+        return;
+      }
+      const hk = hexKey(coords[0], coords[1]);
+      const hex = hexes.get(hk);
+
+      const fleet = hexKeyToFleet.get(hk);
+      const sys = hex && hex.has_system ? hexIdToSystem.get(hex.hex_id) ?? null : null;
+
+      setHoveredFleet(fleet || null);
+      setHoveredSystem(sys);
+
+      if (fleet || sys) {
+        setCursorStyle("pointer");
+      } else {
+        setCursorStyle("grab");
       }
     },
-    [isDragging, dragStart, getHexAtMouse, hexIdToSystem]
+    [isDragging, mouseDownPos, dragStart, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet]
   );
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback(
+    (e: React.MouseEvent) => {
+      const wasDragging = isDragging;
+      setIsDragging(false);
+      setMouseDownPos(null);
+      setCursorStyle("grab");
+
+      if (!wasDragging && e.button === 0) {
+        const coords = getHexCoordsAtMouse(e);
+        if (!coords) return;
+        const hk = hexKey(coords[0], coords[1]);
+        const hex = hexes.get(hk);
+
+        // Check fleet first
+        const fleet = hexKeyToFleet.get(hk);
+        if (fleet && onFleetClick) {
+          onFleetClick(fleet);
+          return;
+        }
+
+        // Then system
+        if (hex && hex.has_system) {
+          const sys = hexIdToSystem.get(hex.hex_id);
+          if (sys && onSystemClick) onSystemClick(sys);
+        }
+      }
+    },
+    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, onSystemClick, onFleetClick]
+  );
+
+  const handleMouseLeave = useCallback(() => {
     setIsDragging(false);
+    setMouseDownPos(null);
+    setCursorStyle("grab");
   }, []);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -356,11 +421,11 @@ const PlayerMapCanvas: React.FC<Props> = ({
         ref={canvasRef}
         width={canvasSize.w}
         height={canvasSize.h}
-        className="cursor-crosshair"
+        style={{ cursor: cursorStyle }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
         onWheel={handleWheel}
       />
 
@@ -378,7 +443,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
       </div>
 
       {/* Hovered system tooltip */}
-      {hoveredSystem && (
+      {hoveredSystem && !hoveredFleet && (
         <div className="absolute top-3 left-3 rounded-lg bg-background/90 border border-bronze/30 px-3 py-2 text-xs space-y-0.5 pointer-events-none">
           <div className="font-heading font-semibold text-foreground">{hoveredSystem.system_name}</div>
           <div className="text-muted-foreground">
@@ -386,6 +451,16 @@ const PlayerMapCanvas: React.FC<Props> = ({
           </div>
           <div className="text-muted-foreground">
             Owner: {hoveredSystem.owner} · Resources: {hoveredSystem.resources}
+          </div>
+        </div>
+      )}
+
+      {/* Hovered fleet tooltip */}
+      {hoveredFleet && (
+        <div className="absolute top-3 left-3 rounded-lg bg-background/90 border border-bronze/30 px-3 py-2 text-xs space-y-0.5 pointer-events-none">
+          <div className="font-heading font-semibold text-foreground">⚔ {hoveredFleet.fleet_name}</div>
+          <div className="text-muted-foreground">
+            Owner: {hoveredFleet.owner_classification} · Hex: ({hoveredFleet.hex_x}, {hoveredFleet.hex_y})
           </div>
         </div>
       )}

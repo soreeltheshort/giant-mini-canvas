@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import type { MapState, SystemData } from "@/lib/mapTypes";
+import type { MapState, SystemData, MapFleet } from "@/lib/mapTypes";
 
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
@@ -143,6 +143,11 @@ const PlayerGame = () => {
     setRightPanelOpen(true);
   };
 
+  const handleFleetClick = (fleet: MapFleet) => {
+    setSelection({ type: "army", id: `fleet-${fleet.fleet_id}` });
+    setRightPanelOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-ivory flex items-center justify-center">
@@ -202,6 +207,7 @@ const PlayerGame = () => {
               visibleSystemIds={visibleSystemIds}
               fleets={mapState.fleets}
               onSystemClick={handleSystemClick}
+              onFleetClick={handleFleetClick}
               className="flex-1"
             />
           ) : (
