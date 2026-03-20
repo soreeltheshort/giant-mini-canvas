@@ -260,7 +260,43 @@ function InlineEmptyState({ mode }: { mode: GameMode }) {
   );
 }
 
-function InlineRegionDetail({ id }: { id: string }) {
+function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
+  const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
+  const realSys = !isNaN(sysId) && gameData ? gameData.systems.get(sysId) : undefined;
+
+  if (realSys) {
+    const facilityNames = (realSys.facilities || []).map(f => {
+      const ft = gameData!.facilityTypes.find(t => t.facility_type_id === f.facility_type_id);
+      return { name: ft?.name || f.facility_type_id, icon: ft?.icon || "🏭", qty: f.quantity };
+    });
+    const conditionVariant = realSys.condition >= 70 ? "success" : realSys.condition >= 40 ? "warning" : "danger";
+    const classLabel = CLASSIFICATION_LABELS[realSys.classification as HexClassification] || realSys.classification;
+    return (
+      <>
+        <ImperialCard title={realSys.system_name} subtitle={classLabel}>
+          <div className="space-y-2">
+            <Row label="Population" value={realSys.current_population.toLocaleString()} />
+            <Row label="Condition"><StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge></Row>
+            <Row label="Morale" value={`${realSys.morale}`} />
+            <Row label="Resources" value={`${realSys.resources}`} />
+          </div>
+        </ImperialCard>
+        {facilityNames.length > 0 && (
+          <ImperialCard title="Facilities">
+            <div className="space-y-1.5">
+              {facilityNames.map((f, i) => (
+                <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0">
+                  <span>{f.icon} {f.name}</span>
+                  <span className="font-semibold text-bronze">×{f.qty}</span>
+                </div>
+              ))}
+            </div>
+          </ImperialCard>
+        )}
+      </>
+    );
+  }
+
   const d = REGION_DETAILS[id];
   if (!d) return <p className="text-xs text-muted-foreground">Unknown system.</p>;
   return (
