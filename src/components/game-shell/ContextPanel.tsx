@@ -175,10 +175,10 @@ function RegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) 
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
           <div className="space-y-2">
             <Row label="Population" value={realSys.current_population.toLocaleString()} />
-            <Row label="Condition">
+            <Row label="Condition" figured>
               <StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge>
             </Row>
-            <Row label="Morale" value={`${realSys.morale}`} />
+            <Row label="Morale" value={`${realSys.morale}`} figured />
             <Row label="Owner" value={CLASSIFICATION_LABELS[realSys.owner as HexClassification] || realSys.owner || "Unowned"} />
           </div>
         </ImperialCard>
