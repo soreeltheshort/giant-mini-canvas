@@ -20,6 +20,11 @@ export interface FacilityTypeFull {
   icon: string;
   fighter_capacity: number;
   gunship_capacity: number;
+  cost: number;
+  turns_to_build: number;
+  max_per_system: number;
+  consumed_facility_id: string | null;
+  maintenance: number;
 }
 
 export interface GameMapData {
@@ -37,9 +42,11 @@ interface ContextPanelProps {
   onClose: () => void;
   onClearSelection: () => void;
   gameData?: GameMapData;
+  onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
+  playerTreasury?: number;
 }
 
-export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData }: ContextPanelProps) {
+export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury }: ContextPanelProps) {
   return (
     <aside className="w-72 bg-marble border-l-2 border-bronze/40 flex flex-col relative z-20 shrink-0 animate-fade-in">
       {/* Header */}
@@ -58,7 +65,7 @@ export default function ContextPanel({ mode, selection, news, onClose, onClearSe
         {selection.type === "news" ? (
           <NewsDetail story={news.find((n) => n.id === selection.id)} />
         ) : selection.type === "region" ? (
-          <RegionDetail id={selection.id} gameData={gameData} />
+          <RegionDetail id={selection.id} gameData={gameData} mode={mode} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} />
         ) : selection.type === "army" ? (
           <ArmyDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "production-center" ? (
@@ -172,7 +179,13 @@ function EmptyState({ mode }: { mode: GameMode }) {
 }
 
 /* ── Detail Views ── */
-function RegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
+function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
+  id: string;
+  gameData?: GameMapData;
+  mode?: GameMode;
+  onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
+  playerTreasury?: number;
+}) {
   // Try real data first (selection id = "sys-{system_id}")
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
   const realSys = !isNaN(sysId) && gameData
@@ -186,6 +199,9 @@ function RegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) 
     });
     const conditionVariant = realSys.condition >= 70 ? "success" : realSys.condition >= 40 ? "warning" : "danger";
     const classLabel = CLASSIFICATION_LABELS[realSys.classification as HexClassification] || realSys.classification;
+
+    // Calculate buildable facilities
+    const buildableFacilities = mode === "production" ? getBuildableFacilities(realSys, gameData!) : [];
 
     return (
       <>
@@ -235,6 +251,46 @@ function RegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) 
                 );
               })}
             </div>
+          </ImperialCard>
+        )}
+
+        {mode === "production" && buildableFacilities.length > 0 && (
+          <ImperialCard title="Build New Facility">
+            <div className="space-y-1.5">
+              {buildableFacilities.map((bf) => {
+                const canAfford = (playerTreasury ?? 0) >= bf.cost;
+                return (
+                  <div key={bf.facility_type_id} className="border border-border rounded-sm p-2 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-foreground">{bf.icon} {bf.name}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span>₡{bf.cost} · {bf.turns_to_build}T · ₡{bf.maintenance}/turn</span>
+                    </div>
+                    {bf.consumesName && (
+                      <p className="text-[9px] text-muted-foreground italic">Upgrades {bf.consumesName}</p>
+                    )}
+                    <button
+                      onClick={() => onBuildFacility?.(realSys.system_id, bf.facility_type_id)}
+                      disabled={!canAfford}
+                      className={`w-full mt-1 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
+                        ${canAfford
+                          ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+                          : "bg-muted text-muted-foreground cursor-not-allowed"
+                        }`}
+                    >
+                      {canAfford ? "Commission" : "Insufficient Funds"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </ImperialCard>
+        )}
+
+        {mode === "production" && buildableFacilities.length === 0 && (
+          <ImperialCard title="Build New Facility">
+            <p className="text-[10px] text-muted-foreground italic">No eligible facilities to build at this system.</p>
           </ImperialCard>
         )}
 
@@ -395,6 +451,66 @@ function NewsDetail({ story }: { story?: NewsStory }) {
       <p className="text-xs text-foreground leading-relaxed">{story.summary}</p>
     </ImperialCard>
   );
+}
+
+/* ── Buildable Facilities Logic ── */
+interface BuildableFacility {
+  facility_type_id: string;
+  name: string;
+  icon: string;
+  cost: number;
+  turns_to_build: number;
+  maintenance: number;
+  consumesName?: string;
+}
+
+function getBuildableFacilities(system: SystemData, gameData: GameMapData): BuildableFacility[] {
+  const ftFull = gameData.facilityTypesFull || [];
+  const builtFacilities = system.facilities || [];
+  const inProduction = system.facilities_in_production || [];
+
+  // Map of facility_type_id -> total built quantity
+  const builtMap = new Map<string, number>();
+  for (const f of builtFacilities) {
+    builtMap.set(f.facility_type_id, (builtMap.get(f.facility_type_id) || 0) + f.quantity);
+  }
+
+  // Count in-production by type
+  const prodMap = new Map<string, number>();
+  for (const p of inProduction) {
+    prodMap.set(p.facility_type_id, (prodMap.get(p.facility_type_id) || 0) + 1);
+  }
+
+  const result: BuildableFacility[] = [];
+
+  for (const ft of ftFull) {
+    const builtCount = (builtMap.get(ft.facility_type_id) || 0) + (prodMap.get(ft.facility_type_id) || 0);
+
+    // Check max_per_system (0 = unlimited)
+    if (ft.max_per_system > 0 && builtCount >= ft.max_per_system) continue;
+
+    // Check prerequisite: consumed_facility_id must be built
+    if (ft.consumed_facility_id) {
+      const prereqCount = builtMap.get(ft.consumed_facility_id) || 0;
+      if (prereqCount <= 0) continue;
+    }
+
+    const consumedFt = ft.consumed_facility_id
+      ? ftFull.find(f => f.facility_type_id === ft.consumed_facility_id)
+      : null;
+
+    result.push({
+      facility_type_id: ft.facility_type_id,
+      name: ft.name,
+      icon: ft.icon,
+      cost: ft.cost,
+      turns_to_build: ft.turns_to_build,
+      maintenance: ft.maintenance,
+      consumesName: consumedFt?.name,
+    });
+  }
+
+  return result;
 }
 
 /* ── Strikecraft Display ── */

@@ -88,7 +88,7 @@ const PlayerGame = () => {
       (supabase as any).from("games").select("id, name, turn_number, status").eq("id", gameId).single(),
       (supabase as any).from("game_players").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining").eq("game_id", gameId).eq("user_id", user.id).single(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
-      (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity"),
+      (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity, cost, turns_to_build, max_per_system, consumed_facility_id, maintenance"),
       (supabase as any).from("ship_types").select("id, name, hull_class").in("hull_class", ["FH", "FL", "GS"]),
     ]);
 
@@ -114,6 +114,11 @@ const PlayerGame = () => {
       icon: ft.icon || "🏭",
       fighter_capacity: ft.fighter_capacity || 0,
       gunship_capacity: ft.gunship_capacity || 0,
+      cost: ft.cost || 0,
+      turns_to_build: ft.turns_to_build || 1,
+      max_per_system: ft.max_per_system || 0,
+      consumed_facility_id: ft.consumed_facility_id || null,
+      maintenance: ft.maintenance || 0,
     })));
     setDbShipTypes((stData || []).map((s: any) => ({
       id: s.id,
@@ -178,6 +183,23 @@ const PlayerGame = () => {
   const handleFleetClick = (fleet: MapFleet) => {
     setSelection({ type: "army", id: `fleet-${fleet.fleet_id}` });
     setRightPanelOpen(true);
+  };
+
+  const handleBuildFacility = async (systemId: number, facilityTypeId: string) => {
+    if (!player || !game) return;
+    try {
+      await (supabase as any).from("player_orders").insert({
+        game_id: game.id,
+        player_id: player.id,
+        turn_number: game.turn_number,
+        order_type: "build_facility",
+        order_json: { system_id: systemId, facility_type_id: facilityTypeId },
+        notes: "",
+      });
+      toast({ title: "Order Submitted", description: "Facility construction order queued." });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
   };
 
   if (loading) {
@@ -276,6 +298,8 @@ const PlayerGame = () => {
             news={DUMMY_NEWS}
             onClose={() => setRightPanelOpen(false)}
             onClearSelection={() => setSelection({ type: "none" })}
+            onBuildFacility={handleBuildFacility}
+            playerTreasury={player?.treasury ?? 0}
             gameData={mapState ? {
               systems: mapState.systems,
               fleets: mapState.fleets,
