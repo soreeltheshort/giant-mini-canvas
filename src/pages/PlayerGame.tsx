@@ -78,10 +78,11 @@ const PlayerGame = () => {
   const load = useCallback(async () => {
     if (!user || !gameId) return;
 
-    const [{ data: gData }, { data: pData }, { data: prData }] = await Promise.all([
+    const [{ data: gData }, { data: pData }, { data: prData }, { data: ftData }] = await Promise.all([
       (supabase as any).from("games").select("id, name, turn_number, status").eq("id", gameId).single(),
       (supabase as any).from("game_players").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance").eq("game_id", gameId).eq("user_id", user.id).single(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
+      (supabase as any).from("facility_types").select("id, name, description, icon"),
     ]);
 
     if (!gData || !pData) {
