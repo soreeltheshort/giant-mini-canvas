@@ -386,7 +386,7 @@ function Row({ label, value, children, figured }: { label: string; value?: strin
       <span className="text-muted-foreground">{label}</span>
       {children || (
         <span className={figured
-          ? "font-bold text-foreground font-heading"
+          ? "font-bold text-senate-dark font-heading"
           : "font-semibold text-foreground"
         }>{value}</span>
       )}
