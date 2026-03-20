@@ -189,7 +189,12 @@ const PlayerGame = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Strategic Panel — includes inline context on tablet */}
         <LeftPanel
-          stats={DUMMY_STATS}
+          stats={{
+            ...DUMMY_STATS,
+            treasury: player?.treasury ?? 0,
+            tribute: player?.last_tribute ?? 0,
+            maintenance: player?.last_maintenance ?? 0,
+          }}
           news={DUMMY_NEWS}
           activeMode={activeMode}
           onModeChange={handleModeChange}

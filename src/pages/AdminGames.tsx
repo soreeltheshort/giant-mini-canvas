@@ -330,12 +330,25 @@ const AdminGames = () => {
       let turnLogs: string[] = [];
       const updatedSystems = new Map(mapState.systems);
 
+      // Per-player accumulators: slot → { tribute, maintenance }
+      const playerEcon = new Map<number, { tribute: number; maintenance: number }>();
+
       for (const sys of eligible) {
         const result = processNextTurn(sys, facilityTypes, DEFAULT_TURN_CONSTANTS, 0, shipTypes);
         updatedSystems.set(sys.system_id, result.planet);
         turnLogs.push(`[${sys.system_name}] Tribute: ${result.tributeBreakdown.totalTribute}, Upkeep: ${result.upkeepBreakdown.totalUpkeep}`);
         if (result.completedFacilities.length > 0) {
           turnLogs.push(`  → Completed: ${result.completedFacilities.join(", ")}`);
+        }
+
+        // Accumulate per-player economics based on owner (PROVINCE_N → slot N)
+        const ownerMatch = sys.owner?.match(/PROVINCE_(\d+)/);
+        if (ownerMatch) {
+          const slot = parseInt(ownerMatch[1], 10);
+          const existing = playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+          existing.tribute += result.tributeBreakdown.totalTribute;
+          existing.maintenance += result.upkeepBreakdown.totalUpkeep;
+          playerEcon.set(slot, existing);
         }
       }
 
@@ -353,11 +366,18 @@ const AdminGames = () => {
       // Refresh player visibility after each turn
       await syncVisibilityToPlayers(selectedGame.id, newMapState);
 
-      // Reset orders_locked for all players for the new turn
-      const { data: gps } = await (supabase as any).from("game_players").select("id").eq("game_id", selectedGame.id);
+      // Update treasury and reset orders for each player
+      const { data: gps } = await (supabase as any).from("game_players").select("id, player_slot, treasury").eq("game_id", selectedGame.id);
       if (gps) {
         for (const gp of gps) {
-          await (supabase as any).from("game_players").update({ orders_locked: false }).eq("id", gp.id);
+          const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
+          const newTreasury = (gp.treasury || 0) + econ.tribute - econ.maintenance;
+          await (supabase as any).from("game_players").update({
+            orders_locked: false,
+            treasury: newTreasury,
+            last_tribute: econ.tribute,
+            last_maintenance: econ.maintenance,
+          }).eq("id", gp.id);
         }
       }
 
