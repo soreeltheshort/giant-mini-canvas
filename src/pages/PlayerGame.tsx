@@ -114,6 +114,11 @@ const PlayerGame = () => {
       icon: ft.icon || "🏭",
       fighter_capacity: ft.fighter_capacity || 0,
       gunship_capacity: ft.gunship_capacity || 0,
+      cost: ft.cost || 0,
+      turns_to_build: ft.turns_to_build || 1,
+      max_per_system: ft.max_per_system || 0,
+      consumed_facility_id: ft.consumed_facility_id || null,
+      maintenance: ft.maintenance || 0,
     })));
     setDbShipTypes((stData || []).map((s: any) => ({
       id: s.id,
