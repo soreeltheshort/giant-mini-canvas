@@ -107,6 +107,19 @@ const PlayerGame = () => {
       description: ft.description || "",
       icon: ft.icon || "🏭",
     })));
+    setDbFacilityTypesFull((ftData || []).map((ft: any) => ({
+      facility_type_id: ft.id,
+      name: ft.name,
+      description: ft.description || "",
+      icon: ft.icon || "🏭",
+      fighter_capacity: ft.fighter_capacity || 0,
+      gunship_capacity: ft.gunship_capacity || 0,
+    })));
+    setDbShipTypes((stData || []).map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      hull_class: s.hull_class,
+    })));
 
     const { data: mapRow } = await (supabase as any)
       .from("games")
