@@ -253,7 +253,7 @@ const PlayerGame = () => {
             gameData={mapState ? {
               systems: mapState.systems,
               fleets: mapState.fleets,
-              facilityTypes: mapState.facilityTypes,
+              facilityTypes: dbFacilityTypes,
             } : undefined}
           />
         )}
