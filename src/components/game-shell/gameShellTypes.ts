@@ -13,6 +13,8 @@ export type MapSelection =
 export interface GlobalStats {
   cinders: number;
   treasury: number;
+  tribute: number;
+  maintenance: number;
   influence: number;
   production: number;
   militaryReadiness: number;
@@ -42,6 +44,8 @@ export interface MapMarker {
 export const DUMMY_STATS: GlobalStats = {
   cinders: 18740,
   treasury: 42350,
+  tribute: 1240,
+  maintenance: 680,
   influence: 73,
   production: 156,
   militaryReadiness: 82,

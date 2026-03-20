@@ -426,8 +426,11 @@ export type Database = {
           game_id: string
           id: string
           initialized: boolean
+          last_maintenance: number
+          last_tribute: number
           orders_locked: boolean
           player_slot: number
+          treasury: number
           user_id: string
           visible_system_ids: Json
         }
@@ -437,8 +440,11 @@ export type Database = {
           game_id: string
           id?: string
           initialized?: boolean
+          last_maintenance?: number
+          last_tribute?: number
           orders_locked?: boolean
           player_slot: number
+          treasury?: number
           user_id: string
           visible_system_ids?: Json
         }
@@ -448,8 +454,11 @@ export type Database = {
           game_id?: string
           id?: string
           initialized?: boolean
+          last_maintenance?: number
+          last_tribute?: number
           orders_locked?: boolean
           player_slot?: number
+          treasury?: number
           user_id?: string
           visible_system_ids?: Json
         }
