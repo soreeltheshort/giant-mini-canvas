@@ -143,6 +143,11 @@ const PlayerGame = () => {
     setRightPanelOpen(true);
   };
 
+  const handleFleetClick = (fleet: MapFleet) => {
+    setSelection({ type: "army", id: `fleet-${fleet.fleet_id}` });
+    setRightPanelOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-ivory flex items-center justify-center">
