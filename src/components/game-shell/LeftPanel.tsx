@@ -62,29 +62,15 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
               const val = stats[key];
               return (
                 <div key={key}>
-                  {isBar ? (
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <Icon className="w-3 h-3 text-bronze" />
-                        <ProgressBar
-                          label={label}
-                          value={val}
-                          max={100}
-                          color={val >= 70 ? "bronze" : val >= 40 ? "bronze" : "crimson"}
-                        />
-                      </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Icon className="w-3 h-3 text-bronze" />
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Icon className="w-3 h-3 text-bronze" />
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
-                      </div>
-                      <span className="text-xs font-semibold text-foreground font-heading">
-                        {format ? format(val) : val}
-                      </span>
-                    </div>
-                  )}
+                    <span className="text-xs font-semibold text-foreground font-heading">
+                      {format ? format(val) : val}
+                    </span>
+                  </div>
                 </div>
               );
             })}
