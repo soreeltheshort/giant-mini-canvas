@@ -20,6 +20,11 @@ export interface FacilityTypeFull {
   icon: string;
   fighter_capacity: number;
   gunship_capacity: number;
+  cost: number;
+  turns_to_build: number;
+  max_per_system: number;
+  consumed_facility_id: string | null;
+  maintenance: number;
 }
 
 export interface GameMapData {
