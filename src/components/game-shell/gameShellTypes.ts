@@ -13,6 +13,8 @@ export type MapSelection =
 export interface GlobalStats {
   cinders: number;
   treasury: number;
+  tribute: number;
+  maintenance: number;
   influence: number;
   production: number;
   militaryReadiness: number;
