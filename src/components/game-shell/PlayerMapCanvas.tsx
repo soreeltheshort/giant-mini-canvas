@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useCallback, useState } from "react";
 import {
   HexData,
   SystemData,
+  MapFleet,
   CLASSIFICATION_COLORS,
   hexKey,
 } from "@/lib/mapTypes";
@@ -11,6 +12,7 @@ interface Props {
   hexes: Map<string, HexData>;
   systems: Map<number, SystemData>;
   visibleSystemIds: number[];
+  fleets?: MapFleet[];
   onSystemClick?: (system: SystemData) => void;
   className?: string;
 }
