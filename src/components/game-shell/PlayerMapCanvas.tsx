@@ -158,9 +158,9 @@ const PlayerMapCanvas: React.FC<Props> = ({
       if (h.has_system) hexIdMap.set(h.hex_id, h);
     }
 
-    // Draw visible systems
-    for (const [sysId, sys] of systems) {
-      if (!visibleSet.has(sysId)) continue;
+    // Draw visible systems (Map is keyed by hex_id, visibility is by system_id)
+    for (const [, sys] of systems) {
+      if (!visibleSet.has(sys.system_id)) continue;
       const sysHex = hexIdMap.get(sys.hex_id);
       if (!sysHex) continue;
 
