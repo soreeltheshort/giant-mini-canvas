@@ -186,9 +186,9 @@ function RegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) 
         <ImperialCard title="Economy">
           <div className="space-y-2.5">
             <ProgressBar label="Resources" value={realSys.resources} max={100} color={realSys.resources >= 50 ? "bronze" : "crimson"} />
-            <Row label="Tribute" value={`${realSys.tribute}`} />
-            <Row label="Upkeep" value={`${realSys.upkeep}`} />
-            <Row label="Survey" value={`${realSys.survey}`} />
+            <Row label="Tribute" value={`${realSys.tribute}`} figured />
+            <Row label="Upkeep" value={`${realSys.upkeep}`} figured />
+            <Row label="Survey" value={`${realSys.survey}`} figured />
           </div>
         </ImperialCard>
 
