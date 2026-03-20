@@ -60,7 +60,6 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
           <div className="space-y-1.5">
             {STAT_ITEMS.map(({ key, label, icon: Icon, format }) => {
               const val = stats[key];
-              const isBar = key === "militaryReadiness" || key === "stability" || key === "influence";
               return (
                 <div key={key}>
                   {isBar ? (
