@@ -7,6 +7,9 @@ import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTyp
 import { ProgressBar } from "./ProgressBar";
 import { StatusBadge } from "./StatusBadge";
 import { ImperialCard } from "./ImperialCard";
+import type { GameMapData } from "./ContextPanel";
+import type { HexClassification } from "@/lib/mapTypes";
+import { CLASSIFICATION_LABELS } from "@/lib/mapTypes";
 
 interface LeftPanelProps {
   stats: GlobalStats;
@@ -20,6 +23,7 @@ interface LeftPanelProps {
     selection: MapSelection;
     news: NewsStory[];
     onClearSelection: () => void;
+    gameData?: GameMapData;
   };
 }
 
@@ -174,11 +178,12 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
 }
 
 /* ── Inline Context Content (mirrors ContextPanel content) ── */
-function InlineContextContent({ mode, selection, news, onClearSelection }: {
+function InlineContextContent({ mode, selection, news, onClearSelection, gameData }: {
   mode: GameMode;
   selection: MapSelection;
   news: NewsStory[];
   onClearSelection: () => void;
+  gameData?: GameMapData;
 }) {
   const getModeIcon = () => {
     if (selection.type === "news") return <Scroll className="w-3.5 h-3.5" />;
@@ -209,9 +214,9 @@ function InlineContextContent({ mode, selection, news, onClearSelection }: {
         {selection.type === "news" ? (
           <InlineNewsDetail story={news.find((n) => n.id === selection.id)} />
         ) : selection.type === "region" ? (
-          <InlineRegionDetail id={selection.id} />
+          <InlineRegionDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "army" ? (
-          <InlineArmyDetail id={selection.id} />
+          <InlineArmyDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "production-center" ? (
           <InlineProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
@@ -256,7 +261,43 @@ function InlineEmptyState({ mode }: { mode: GameMode }) {
   );
 }
 
-function InlineRegionDetail({ id }: { id: string }) {
+function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
+  const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
+  const realSys = !isNaN(sysId) && gameData ? gameData.systems.get(sysId) : undefined;
+
+  if (realSys) {
+    const facilityNames = (realSys.facilities || []).map(f => {
+      const ft = gameData!.facilityTypes.find(t => t.facility_type_id === f.facility_type_id);
+      return { name: ft?.name || f.facility_type_id, icon: ft?.icon || "🏭", qty: f.quantity };
+    });
+    const conditionVariant = realSys.condition >= 70 ? "success" : realSys.condition >= 40 ? "warning" : "danger";
+    const classLabel = CLASSIFICATION_LABELS[realSys.classification as HexClassification] || realSys.classification;
+    return (
+      <>
+        <ImperialCard title={realSys.system_name} subtitle={classLabel}>
+          <div className="space-y-2">
+            <Row label="Population" value={realSys.current_population.toLocaleString()} />
+            <Row label="Condition"><StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge></Row>
+            <Row label="Morale" value={`${realSys.morale}`} />
+            <Row label="Resources" value={`${realSys.resources}`} />
+          </div>
+        </ImperialCard>
+        {facilityNames.length > 0 && (
+          <ImperialCard title="Facilities">
+            <div className="space-y-1.5">
+              {facilityNames.map((f, i) => (
+                <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0">
+                  <span>{f.icon} {f.name}</span>
+                  <span className="font-semibold text-bronze">×{f.qty}</span>
+                </div>
+              ))}
+            </div>
+          </ImperialCard>
+        )}
+      </>
+    );
+  }
+
   const d = REGION_DETAILS[id];
   if (!d) return <p className="text-xs text-muted-foreground">Unknown system.</p>;
   return (
@@ -279,7 +320,22 @@ function InlineRegionDetail({ id }: { id: string }) {
   );
 }
 
-function InlineArmyDetail({ id }: { id: string }) {
+function InlineArmyDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
+  const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
+  const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
+
+  if (realFleet) {
+    const ownerLabel = CLASSIFICATION_LABELS[realFleet.owner_classification as HexClassification] || realFleet.owner_classification;
+    return (
+      <ImperialCard title={realFleet.fleet_name} subtitle={`Owner: ${ownerLabel}`}>
+        <div className="space-y-2">
+          <Row label="Position" value={`(${realFleet.hex_x}, ${realFleet.hex_y})`} />
+          <Row label="Status"><StatusBadge variant="info">Deployed</StatusBadge></Row>
+        </div>
+      </ImperialCard>
+    );
+  }
+
   const d = ARMY_DETAILS[id];
   if (!d) return <p className="text-xs text-muted-foreground">Unknown fleet.</p>;
   return (

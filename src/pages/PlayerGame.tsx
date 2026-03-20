@@ -9,6 +9,7 @@ import type { MapState, SystemData, MapFleet } from "@/lib/mapTypes";
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
 import ContextPanel from "@/components/game-shell/ContextPanel";
+import type { GameMapData } from "@/components/game-shell/ContextPanel";
 import PlayerMapCanvas from "@/components/game-shell/PlayerMapCanvas";
 import BottomStrip from "@/components/game-shell/BottomStrip";
 import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
@@ -195,6 +196,11 @@ const PlayerGame = () => {
             selection,
             news: DUMMY_NEWS,
             onClearSelection: () => setSelection({ type: "none" }),
+            gameData: mapState ? {
+              systems: mapState.systems,
+              fleets: mapState.fleets,
+              facilityTypes: mapState.facilityTypes,
+            } : undefined,
           } : undefined}
         />
 
@@ -228,6 +234,11 @@ const PlayerGame = () => {
             news={DUMMY_NEWS}
             onClose={() => setRightPanelOpen(false)}
             onClearSelection={() => setSelection({ type: "none" })}
+            gameData={mapState ? {
+              systems: mapState.systems,
+              fleets: mapState.fleets,
+              facilityTypes: mapState.facilityTypes,
+            } : undefined}
           />
         )}
       </div>
