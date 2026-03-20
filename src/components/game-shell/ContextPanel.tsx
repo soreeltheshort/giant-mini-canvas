@@ -380,11 +380,16 @@ function NewsDetail({ story }: { story?: NewsStory }) {
 }
 
 /* ── Helpers ── */
-function Row({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+function Row({ label, value, children, figured }: { label: string; value?: string; children?: React.ReactNode; figured?: boolean }) {
   return (
     <div className="flex justify-between items-center text-xs">
       <span className="text-muted-foreground">{label}</span>
-      {children || <span className="font-semibold text-foreground">{value}</span>}
+      {children || (
+        <span className={figured
+          ? "font-bold text-foreground font-heading"
+          : "font-semibold text-foreground"
+        }>{value}</span>
+      )}
     </div>
   );
 }
