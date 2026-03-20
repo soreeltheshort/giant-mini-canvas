@@ -57,9 +57,6 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
       <div className="flex-1 overflow-y-auto">
         {/* ── Global Stats ── */}
         <div className="p-3 space-y-2 border-b border-border">
-          <h3 className="font-heading text-[10px] font-semibold uppercase tracking-[0.15em] text-bronze-dark">
-            Provincial Status
-          </h3>
           <div className="space-y-1.5">
             {STAT_ITEMS.map(({ key, label, icon: Icon, format }) => {
               const val = stats[key];
