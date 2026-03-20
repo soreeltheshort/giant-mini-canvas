@@ -319,7 +319,22 @@ function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapDa
   );
 }
 
-function InlineArmyDetail({ id }: { id: string }) {
+function InlineArmyDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
+  const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
+  const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
+
+  if (realFleet) {
+    const ownerLabel = CLASSIFICATION_LABELS[realFleet.owner_classification as HexClassification] || realFleet.owner_classification;
+    return (
+      <ImperialCard title={realFleet.fleet_name} subtitle={`Owner: ${ownerLabel}`}>
+        <div className="space-y-2">
+          <Row label="Position" value={`(${realFleet.hex_x}, ${realFleet.hex_y})`} />
+          <Row label="Status"><StatusBadge variant="info">Deployed</StatusBadge></Row>
+        </div>
+      </ImperialCard>
+    );
+  }
+
   const d = ARMY_DETAILS[id];
   if (!d) return <p className="text-xs text-muted-foreground">Unknown fleet.</p>;
   return (
