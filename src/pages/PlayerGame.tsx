@@ -229,6 +229,11 @@ const PlayerGame = () => {
             news={DUMMY_NEWS}
             onClose={() => setRightPanelOpen(false)}
             onClearSelection={() => setSelection({ type: "none" })}
+            gameData={mapState ? {
+              systems: mapState.systems,
+              fleets: mapState.fleets,
+              facilityTypes: mapState.facilityTypes,
+            } : undefined}
           />
         )}
       </div>

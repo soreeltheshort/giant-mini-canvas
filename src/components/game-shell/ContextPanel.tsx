@@ -155,7 +155,80 @@ function EmptyState({ mode }: { mode: GameMode }) {
 }
 
 /* ── Detail Views ── */
-function RegionDetail({ id }: { id: string }) {
+function RegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
+  // Try real data first (selection id = "sys-{system_id}")
+  const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
+  const realSys = !isNaN(sysId) && gameData ? gameData.systems.get(sysId) : undefined;
+
+  if (realSys) {
+    const facilityNames = (realSys.facilities || []).map(f => {
+      const ft = gameData!.facilityTypes.find(t => t.facility_type_id === f.facility_type_id);
+      return { name: ft?.name || f.facility_type_id, icon: ft?.icon || "🏭", qty: f.quantity };
+    });
+    const conditionVariant = realSys.condition >= 70 ? "success" : realSys.condition >= 40 ? "warning" : "danger";
+    const classLabel = CLASSIFICATION_LABELS[realSys.classification as HexClassification] || realSys.classification;
+
+    return (
+      <>
+        <ImperialCard title={realSys.system_name} subtitle={classLabel}>
+          <div className="space-y-2">
+            <Row label="Population" value={realSys.current_population.toLocaleString()} />
+            <Row label="Condition">
+              <StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge>
+            </Row>
+            <Row label="Morale" value={`${realSys.morale}`} />
+            <Row label="Owner" value={CLASSIFICATION_LABELS[realSys.owner as HexClassification] || realSys.owner || "Unowned"} />
+          </div>
+        </ImperialCard>
+
+        <ImperialCard title="Economy">
+          <div className="space-y-2.5">
+            <ProgressBar label="Resources" value={realSys.resources} max={100} color={realSys.resources >= 50 ? "bronze" : "crimson"} />
+            <Row label="Tribute" value={`${realSys.tribute}`} />
+            <Row label="Upkeep" value={`${realSys.upkeep}`} />
+            <Row label="Survey" value={`${realSys.survey}`} />
+          </div>
+        </ImperialCard>
+
+        {facilityNames.length > 0 && (
+          <ImperialCard title="Facilities">
+            <div className="space-y-1.5">
+              {facilityNames.map((f, i) => (
+                <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0">
+                  <span>{f.icon} {f.name}</span>
+                  <span className="font-semibold text-bronze">×{f.qty}</span>
+                </div>
+              ))}
+            </div>
+          </ImperialCard>
+        )}
+
+        {(realSys.facilities_in_production || []).length > 0 && (
+          <ImperialCard title="Under Construction">
+            <div className="space-y-1.5">
+              {realSys.facilities_in_production.map((p, i) => {
+                const ft = gameData!.facilityTypes.find(t => t.facility_type_id === p.facility_type_id);
+                return (
+                  <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0">
+                    <span>{ft?.icon || "🏭"} {ft?.name || p.facility_type_id}</span>
+                    <span className="text-muted-foreground">{p.turns_remaining}T</span>
+                  </div>
+                );
+              })}
+            </div>
+          </ImperialCard>
+        )}
+
+        <ImperialCard title="Defenses">
+          <div className="space-y-2">
+            <ProgressBar label="Ground Defense" value={realSys.current_ground_defenses} max={realSys.max_ground_defenses || 1} color="bronze" />
+          </div>
+        </ImperialCard>
+      </>
+    );
+  }
+
+  // Fallback to dummy data
   const d = REGION_DETAILS[id];
   if (!d) return <p className="text-xs text-muted-foreground">Unknown system.</p>;
 
@@ -172,7 +245,6 @@ function RegionDetail({ id }: { id: string }) {
           <Row label="Garrison" value={d.garrison} />
         </div>
       </ImperialCard>
-
       <ImperialCard title="Resources">
         <div className="space-y-2.5">
           {d.resources.map((r) => (
@@ -180,7 +252,6 @@ function RegionDetail({ id }: { id: string }) {
           ))}
         </div>
       </ImperialCard>
-
       <ImperialCard title="Facilities">
         <div className="space-y-1.5">
           {d.facilities.map((f) => (
@@ -195,7 +266,28 @@ function RegionDetail({ id }: { id: string }) {
   );
 }
 
-function ArmyDetail({ id }: { id: string }) {
+function ArmyDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
+  // Try real data (selection id = "fleet-{fleet_id}")
+  const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
+  const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
+
+  if (realFleet) {
+    const ownerLabel = CLASSIFICATION_LABELS[realFleet.owner_classification as HexClassification] || realFleet.owner_classification;
+    return (
+      <>
+        <ImperialCard title={realFleet.fleet_name} subtitle={`Owner: ${ownerLabel}`}>
+          <div className="space-y-2">
+            <Row label="Position" value={`(${realFleet.hex_x}, ${realFleet.hex_y})`} />
+            <Row label="Status">
+              <StatusBadge variant="info">Deployed</StatusBadge>
+            </Row>
+          </div>
+        </ImperialCard>
+      </>
+    );
+  }
+
+  // Fallback to dummy
   const d = ARMY_DETAILS[id];
   if (!d) return <p className="text-xs text-muted-foreground">Unknown fleet.</p>;
 
