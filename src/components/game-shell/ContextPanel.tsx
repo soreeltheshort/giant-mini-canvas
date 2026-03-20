@@ -4,6 +4,14 @@ import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTyp
 import { ImperialCard } from "./ImperialCard";
 import { StatusBadge } from "./StatusBadge";
 import { ProgressBar } from "./ProgressBar";
+import type { SystemData, MapFleet, FacilityType } from "@/lib/mapTypes";
+import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
+
+export interface GameMapData {
+  systems: Map<number, SystemData>;
+  fleets: MapFleet[];
+  facilityTypes: FacilityType[];
+}
 
 interface ContextPanelProps {
   mode: GameMode;
@@ -11,6 +19,7 @@ interface ContextPanelProps {
   news: NewsStory[];
   onClose: () => void;
   onClearSelection: () => void;
+  gameData?: GameMapData;
 }
 
 export default function ContextPanel({ mode, selection, news, onClose, onClearSelection }: ContextPanelProps) {
