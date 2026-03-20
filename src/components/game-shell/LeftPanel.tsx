@@ -32,10 +32,7 @@ const STAT_ITEMS: { key: keyof GlobalStats; label: string; icon: React.ElementTy
   { key: "treasury", label: "Treasury", icon: Coins, format: (v) => `₡${v.toLocaleString()}` },
   { key: "tribute", label: "Income", icon: TrendingUp, format: (v) => `+₡${v.toLocaleString()}` },
   { key: "maintenance", label: "Costs", icon: TrendingDown, format: (v) => `-₡${v.toLocaleString()}` },
-  { key: "influence", label: "Influence", icon: Star },
-  { key: "production", label: "Production", icon: Factory },
-  { key: "militaryReadiness", label: "Readiness", icon: Shield },
-  { key: "stability", label: "Stability", icon: Scale },
+  { key: "influence", label: "Influence", icon: Star, format: (v) => `${v}` },
 ];
 
 const MODE_ITEMS: { id: GameMode; label: string; icon: React.ElementType }[] = [
