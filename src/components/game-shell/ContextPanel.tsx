@@ -175,10 +175,10 @@ function RegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) 
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
           <div className="space-y-2">
             <Row label="Population" value={realSys.current_population.toLocaleString()} />
-            <Row label="Condition">
+            <Row label="Condition" figured>
               <StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge>
             </Row>
-            <Row label="Morale" value={`${realSys.morale}`} />
+            <Row label="Morale" value={`${realSys.morale}`} figured />
             <Row label="Owner" value={CLASSIFICATION_LABELS[realSys.owner as HexClassification] || realSys.owner || "Unowned"} />
           </div>
         </ImperialCard>
@@ -186,9 +186,9 @@ function RegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) 
         <ImperialCard title="Economy">
           <div className="space-y-2.5">
             <ProgressBar label="Resources" value={realSys.resources} max={100} color={realSys.resources >= 50 ? "bronze" : "crimson"} />
-            <Row label="Tribute" value={`${realSys.tribute}`} />
-            <Row label="Upkeep" value={`${realSys.upkeep}`} />
-            <Row label="Survey" value={`${realSys.survey}`} />
+            <Row label="Tribute" value={`${realSys.tribute}`} figured />
+            <Row label="Upkeep" value={`${realSys.upkeep}`} figured />
+            <Row label="Survey" value={`${realSys.survey}`} figured />
           </div>
         </ImperialCard>
 
@@ -380,11 +380,16 @@ function NewsDetail({ story }: { story?: NewsStory }) {
 }
 
 /* ── Helpers ── */
-function Row({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+function Row({ label, value, children, figured }: { label: string; value?: string; children?: React.ReactNode; figured?: boolean }) {
   return (
     <div className="flex justify-between items-center text-xs">
       <span className="text-muted-foreground">{label}</span>
-      {children || <span className="font-semibold text-foreground">{value}</span>}
+      {children || (
+        <span className={figured
+          ? "font-bold text-foreground font-heading"
+          : "font-semibold text-foreground"
+        }>{value}</span>
+      )}
     </div>
   );
 }
