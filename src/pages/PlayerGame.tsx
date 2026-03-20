@@ -37,6 +37,10 @@ interface PlayerInfo {
   treasury: number;
   last_tribute: number;
   last_maintenance: number;
+  admin_capability: number;
+  combat_capability: number;
+  admin_points_remaining: number;
+  combat_points_remaining: number;
 }
 
 interface ProfileInfo {
