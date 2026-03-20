@@ -9,7 +9,7 @@ import type { MapState, SystemData, MapFleet, FacilityType } from "@/lib/mapType
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
 import ContextPanel from "@/components/game-shell/ContextPanel";
-import type { GameMapData } from "@/components/game-shell/ContextPanel";
+import type { GameMapData, FacilityTypeFull, ShipTypeLookup } from "@/components/game-shell/ContextPanel";
 import PlayerMapCanvas from "@/components/game-shell/PlayerMapCanvas";
 import BottomStrip from "@/components/game-shell/BottomStrip";
 import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
