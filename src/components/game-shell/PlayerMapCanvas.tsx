@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useCallback, useState } from "react";
 import {
   HexData,
   SystemData,
+  MapFleet,
   CLASSIFICATION_COLORS,
   hexKey,
 } from "@/lib/mapTypes";
@@ -11,6 +12,7 @@ interface Props {
   hexes: Map<string, HexData>;
   systems: Map<number, SystemData>;
   visibleSystemIds: number[];
+  fleets?: MapFleet[];
   onSystemClick?: (system: SystemData) => void;
   className?: string;
 }
@@ -31,6 +33,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   hexes,
   systems,
   visibleSystemIds,
+  fleets = [],
   onSystemClick,
   className = "",
 }) => {
@@ -47,14 +50,22 @@ const PlayerMapCanvas: React.FC<Props> = ({
 
   const visibleSet = React.useMemo(() => new Set(visibleSystemIds), [visibleSystemIds]);
 
-  // Build a set of hex_ids that have visible systems
-  const visibleHexIds = React.useMemo(() => {
-    const set = new Set<number>();
-    for (const [sysId, sys] of systems) {
-      if (visibleSet.has(sysId)) set.add(sys.hex_id);
+  // Build a set of hex keys that are in CORE or PROVINCE classifications (visible to player)
+  const visibleHexKeys = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const [key, hex] of hexes) {
+      const cls = hex.classification;
+      if (cls === "CORE" || cls.startsWith("PROVINCE_")) {
+        set.add(key);
+      }
     }
     return set;
-  }, [systems, visibleSet]);
+  }, [hexes]);
+
+  // Filter fleets to only those in visible hexes
+  const visibleFleets = React.useMemo(() => {
+    return fleets.filter(f => visibleHexKeys.has(hexKey(f.hex_x, f.hex_y)));
+  }, [fleets, visibleHexKeys]);
 
   // Resize
   useEffect(() => {
@@ -200,6 +211,41 @@ const PlayerMapCanvas: React.FC<Props> = ({
       }
     }
 
+    // Draw visible fleets as triangular markers
+    for (const fleet of visibleFleets) {
+      const [fx, fy] = hexToPixel(fleet.hex_x, fleet.hex_y, size);
+      if (fx < left || fx > right || fy < top || fy > bottom) continue;
+
+      const triSize = size * 0.35;
+      const fleetColor = OWNER_COLORS[fleet.owner_classification] || "#c8a96e";
+
+      // Glow
+      ctx.shadowColor = fleetColor;
+      ctx.shadowBlur = size * 0.3;
+
+      ctx.fillStyle = fleetColor;
+      ctx.strokeStyle = "rgba(255,255,255,0.6)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy - triSize);
+      ctx.lineTo(fx + triSize * 0.8, fy + triSize * 0.5);
+      ctx.lineTo(fx - triSize * 0.8, fy + triSize * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+
+      // Fleet name when zoomed in
+      if (zoom > 2.5) {
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.font = `${Math.max(6, size * 0.2)}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText(fleet.fleet_name, fx, fy + triSize + size * 0.35);
+      }
+    }
+
     // Center crosshair
     const [cx, cy] = hexToPixel(0, 0, size);
     ctx.strokeStyle = "rgba(200,169,110,0.3)";
@@ -212,7 +258,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
     ctx.stroke();
 
     ctx.restore();
-  }, [hexes, systems, visibleSet]);
+  }, [hexes, systems, visibleSet, visibleFleets]);
 
   useEffect(() => {
     const loop = () => {

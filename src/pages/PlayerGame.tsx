@@ -200,6 +200,7 @@ const PlayerGame = () => {
               hexes={mapState.hexes}
               systems={mapState.systems}
               visibleSystemIds={visibleSystemIds}
+              fleets={mapState.fleets}
               onSystemClick={handleSystemClick}
               className="flex-1"
             />

@@ -259,20 +259,26 @@ const AdminGames = () => {
     await fetchGames();
   };
 
-  /** When a game starts, all players can see every built system in Core + Provinces */
-  const processInitialVisibility = async (gameId: string) => {
-    if (!mapState) return;
-
-    const builtSystemIds: number[] = [];
-    for (const [, sys] of mapState.systems) {
-      const cls = sys.classification?.toUpperCase() ?? "";
-      const isRelevant = cls === "CORE" || cls.startsWith("PROVINCE_");
-      if (isRelevant && sys.current_population > 0) {
-        builtSystemIds.push(sys.system_id);
+  /** Build the list of system IDs in CORE / PROVINCE hexes */
+  const buildVisibleSystemIds = (ms: MapState): number[] => {
+    // Build hex_id → classification lookup
+    const hexClassById = new Map<number, string>();
+    for (const h of ms.hexes.values()) {
+      hexClassById.set(h.hex_id, h.classification);
+    }
+    const ids: number[] = [];
+    for (const [, sys] of ms.systems) {
+      const cls = hexClassById.get(sys.hex_id)?.toUpperCase() ?? sys.classification?.toUpperCase() ?? "";
+      if (cls === "CORE" || cls.startsWith("PROVINCE_")) {
+        ids.push(sys.system_id);
       }
     }
+    return ids;
+  };
 
-    // Give every player in this game the same initial visibility
+  /** Push visible_system_ids to every player in a game */
+  const syncVisibilityToPlayers = async (gameId: string, ms: MapState) => {
+    const visibleIds = buildVisibleSystemIds(ms);
     const { data: gamePlayers } = await (supabase as any)
       .from("game_players")
       .select("id")
@@ -282,12 +288,18 @@ const AdminGames = () => {
       for (const gp of gamePlayers) {
         await (supabase as any)
           .from("game_players")
-          .update({ visible_system_ids: builtSystemIds })
+          .update({ visible_system_ids: visibleIds })
           .eq("id", gp.id);
       }
     }
+    return { count: visibleIds.length, players: gamePlayers?.length ?? 0 };
+  };
 
-    toast({ title: "Visibility processed", description: `${builtSystemIds.length} systems visible to ${gamePlayers?.length ?? 0} players` });
+  /** When a game starts, all players can see every system in Core + Province hexes */
+  const processInitialVisibility = async (gameId: string) => {
+    if (!mapState) return;
+    const { count, players } = await syncVisibilityToPlayers(gameId, mapState);
+    toast({ title: "Visibility processed", description: `${count} systems visible to ${players} players` });
   };
 
   /* ── run turn ── */
@@ -317,6 +329,9 @@ const AdminGames = () => {
       // Save updated map and turn number
       const serialized = serializeMapState(newMapState);
       await (supabase as any).from("games").update({ map_data_json: serialized, turn_number: nextTurn }).eq("id", selectedGame.id);
+
+      // Refresh player visibility after each turn
+      await syncVisibilityToPlayers(selectedGame.id, newMapState);
 
       // Log the turn
       await addLog(selectedGame.id, "turn_processed", `Turn ${nextTurn} processed. ${eligible.length} systems updated.`, { details: turnLogs });
