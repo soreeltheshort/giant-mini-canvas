@@ -272,8 +272,8 @@ const PlayerMapCanvas: React.FC<Props> = ({
   // Build hex_id -> system lookup for click detection
   const hexIdToSystem = React.useMemo(() => {
     const map = new Map<number, SystemData>();
-    for (const [sysId, sys] of systems) {
-      if (visibleSet.has(sysId)) map.set(sys.hex_id, sys);
+    for (const [, sys] of systems) {
+      if (visibleSet.has(sys.system_id)) map.set(sys.hex_id, sys);
     }
     return map;
   }, [systems, visibleSet]);
