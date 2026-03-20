@@ -266,6 +266,7 @@ const AdminGames = () => {
       if (mapState) {
         const systems = Array.from(mapState.systems.values());
         const eligible = systems.filter(s => s.current_population > 0 && s.owner && s.owner !== "" && s.owner.toLowerCase() !== "unowned");
+        console.log(`[Game Start] mapState loaded, ${systems.length} systems, ${eligible.length} eligible, ${facilityTypes.length} facilityTypes, ${shipTypes.length} shipTypes`);
         for (const sys of eligible) {
           const result = processNextTurn(sys, facilityTypes, DEFAULT_TURN_CONSTANTS, 0, shipTypes);
           let slot: number | undefined;
@@ -280,6 +281,45 @@ const AdminGames = () => {
             existing.tribute += result.tributeBreakdown.totalTribute;
             existing.maintenance += result.upkeepBreakdown.totalUpkeep;
             playerEcon.set(slot, existing);
+            console.log(`[Game Start] System "${sys.system_name}" owner="${sys.owner}" slot=${slot} tribute=${result.tributeBreakdown.totalTribute} upkeep=${result.upkeepBreakdown.totalUpkeep}`);
+          }
+        }
+      } else {
+        console.warn("[Game Start] mapState is null — no economics calculated");
+      }
+
+      // Also calculate fleet maintenance from game_fleets
+      const { data: gameFleets } = await (supabase as any)
+        .from("game_fleets")
+        .select("fleet_id, owner_classification")
+        .eq("game_id", selectedGame.id);
+      if (gameFleets && gameFleets.length > 0) {
+        // Get fleet ship details for maintenance calculation
+        const fleetIds = gameFleets.map((gf: any) => gf.fleet_id);
+        const { data: fleetShips } = await (supabase as any)
+          .from("fleet_ships")
+          .select("fleet_id, ship_type_id, quantity")
+          .in("fleet_id", fleetIds);
+        const { data: allShipTypes } = await (supabase as any)
+          .from("ship_types")
+          .select("id, maintenance");
+
+        if (fleetShips && allShipTypes) {
+          const shipMaintMap = new Map<string, number>();
+          for (const st of allShipTypes) shipMaintMap.set(st.id, Number(st.maintenance));
+
+          for (const gf of gameFleets) {
+            const ownerSlot = nameToSlot.get((gf.owner_classification || "").toLowerCase());
+            if (ownerSlot === undefined) continue;
+            const ships = fleetShips.filter((fs: any) => fs.fleet_id === gf.fleet_id);
+            let fleetMaint = 0;
+            for (const fs of ships) {
+              fleetMaint += (shipMaintMap.get(fs.ship_type_id) || 0) * fs.quantity;
+            }
+            const existing = playerEcon.get(ownerSlot) || { tribute: 0, maintenance: 0 };
+            existing.maintenance += fleetMaint;
+            playerEcon.set(ownerSlot, existing);
+            console.log(`[Game Start] Fleet ${gf.fleet_id} owner="${gf.owner_classification}" slot=${ownerSlot} fleetMaint=${fleetMaint}`);
           }
         }
       }
@@ -289,6 +329,7 @@ const AdminGames = () => {
       if (gps) {
         for (const gp of gps) {
           const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
+          console.log(`[Game Start] Player slot=${gp.player_slot} treasury=${STARTING_TREASURY} tribute=${econ.tribute} maintenance=${econ.maintenance}`);
           await (supabase as any).from("game_players").update({
             orders_locked: false,
             treasury: STARTING_TREASURY, // STUB: default starting treasury
@@ -300,7 +341,8 @@ const AdminGames = () => {
         }
       }
 
-      await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase. Starting treasury: ${STARTING_TREASURY} (stub default).`);
+      const econSummary = Array.from(playerEcon.entries()).map(([s, e]) => `Slot${s}: +${e.tribute}/-${e.maintenance}`).join(", ");
+      await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase. Starting treasury: ${STARTING_TREASURY} (stub default). Economics: ${econSummary || "none calculated"}`);
       setSelectedGame({ ...selectedGame, status, turn_number: 1 });
       await fetchGames();
       return;
