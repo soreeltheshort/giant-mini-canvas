@@ -190,12 +190,13 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
 }
 
 /* ── Inline Context Content (mirrors ContextPanel content) ── */
-function InlineContextContent({ mode, selection, news, onClearSelection, gameData }: {
+function InlineContextContent({ mode, selection, news, onClearSelection, gameData, playerOwnerClassification }: {
   mode: GameMode;
   selection: MapSelection;
   news: NewsStory[];
   onClearSelection: () => void;
   gameData?: GameMapData;
+  playerOwnerClassification?: string;
 }) {
   const getModeIcon = () => {
     if (selection.type === "news") return <Scroll className="w-3.5 h-3.5" />;
@@ -228,7 +229,7 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
         ) : selection.type === "region" ? (
           <InlineRegionDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "army" ? (
-          <InlineArmyDetail id={selection.id} gameData={gameData} />
+          <InlineArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} />
         ) : selection.type === "production-center" ? (
           <InlineProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
