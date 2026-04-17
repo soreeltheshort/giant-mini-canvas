@@ -1,9 +1,16 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Header = () => {
   const location = useLocation();
@@ -86,27 +93,24 @@ const Header = () => {
             >
               Home
             </Link>
-            <Link
-              to="/games"
-              className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/games" ? "text-foreground" : "text-muted-foreground"}`}
-            >
-              Games
-            </Link>
             {user && canAccessGameFeatures && (
-              <>
-                <Link to="/manual" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/manual" ? "text-foreground" : "text-muted-foreground"}`}>
-                  Manual
-                </Link>
-                <Link to="/dashboard" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/fleet-builder") || location.pathname.startsWith("/battle") ? "text-foreground" : "text-muted-foreground"}`}>
-                  Combat Testing
-                </Link>
-                <Link to="/map-testing" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/map-testing") ? "text-foreground" : "text-muted-foreground"}`}>
-                  Map Testing
-                </Link>
-                <Link to="/planet-testing" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/planet-testing") ? "text-foreground" : "text-muted-foreground"}`}>
-                  Planet Testing
-                </Link>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isCombatTestingMode || isMapTestingMode || isPlanetTestingMode ? "text-foreground" : "text-muted-foreground"}`}>
+                  Testing
+                  <ChevronDown className="h-3 w-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-background z-50">
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard">Combat Testing</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/map-testing">Map Testing</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/planet-testing">Planet Testing</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             {user && isAdmin && (isMapTestingMode || isPlanetTestingMode) && (
               <Link to="/map-testing/config" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/map-testing/config" ? "text-foreground" : ""}`}>
@@ -137,6 +141,11 @@ const Header = () => {
             {user && isAdmin && (
               <Link to="/admin/users" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/users" ? "text-foreground" : ""}`}>
                 Users
+              </Link>
+            )}
+            {user && canAccessGameFeatures && (
+              <Link to="/manual" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/manual" ? "text-foreground" : "text-muted-foreground"}`}>
+                Manual
               </Link>
             )}
             <button
