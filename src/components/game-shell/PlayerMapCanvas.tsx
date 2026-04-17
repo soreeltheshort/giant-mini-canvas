@@ -113,6 +113,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
     const bottom = (h / 2 - camY) + margin;
 
     // Draw hexes
+    const hasVisibility = !!debugVisibleHexKeys && debugVisibleHexKeys.size > 0;
     for (const hex of hexes.values()) {
       const [px, py] = hexToPixel(hex.x, hex.y, size);
       if (px < left || px > right || py < top || py > bottom) continue;
@@ -120,7 +121,6 @@ const PlayerMapCanvas: React.FC<Props> = ({
       const corners = hexCorners(px, py, size);
 
       // Determine fill based on classification
-      const isProvince = hex.classification.startsWith("PROVINCE_");
       const isCore = hex.classification === "CORE";
       const isMarches = hex.classification === "MARCHES";
       const isUnexplored = hex.classification === "UNEXPLORED_MARCHES";
@@ -144,6 +144,20 @@ const PlayerMapCanvas: React.FC<Props> = ({
         alpha = 0.25;
       }
 
+      // Visibility tinting: brighten visible hexes, dim the rest
+      const isVisible = hasVisibility
+        ? debugVisibleHexKeys!.has(hexKey(hex.x, hex.y))
+        : true;
+      if (hasVisibility) {
+        if (isVisible) {
+          // Boost: more saturated/opaque
+          alpha = Math.min(1, alpha * 2.4 + 0.15);
+        } else {
+          // Dim: fog of war
+          alpha = alpha * 0.35;
+        }
+      }
+
       ctx.globalAlpha = alpha;
       ctx.beginPath();
       ctx.moveTo(corners[0][0], corners[0][1]);
@@ -152,33 +166,14 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.fillStyle = fillColor;
       ctx.fill();
 
-      // Subtle border
-      ctx.strokeStyle = "rgba(255,255,255,0.06)";
-      ctx.lineWidth = 0.5;
+      // Border — brighter for visible, faint for fogged
+      ctx.strokeStyle = isVisible
+        ? "rgba(255,255,255,0.18)"
+        : "rgba(255,255,255,0.04)";
+      ctx.lineWidth = isVisible ? 0.75 : 0.5;
       ctx.stroke();
 
       ctx.globalAlpha = 1;
-    }
-
-    // DEBUG: draw "V" on every hex the player can see
-    if (debugVisibleHexKeys && debugVisibleHexKeys.size > 0) {
-      ctx.fillStyle = "rgba(255, 220, 90, 0.95)";
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
-      ctx.lineWidth = 2;
-      ctx.font = `bold ${Math.max(7, size * 0.55)}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      for (const key of debugVisibleHexKeys) {
-        const [xs, ys] = key.split(",");
-        const hx = parseInt(xs, 10);
-        const hy = parseInt(ys, 10);
-        if (Number.isNaN(hx) || Number.isNaN(hy)) continue;
-        const [px, py] = hexToPixel(hx, hy, size);
-        if (px < left || px > right || py < top || py > bottom) continue;
-        ctx.strokeText("V", px, py);
-        ctx.fillText("V", px, py);
-      }
-      ctx.textBaseline = "alphabetic";
     }
 
     // Build hexId -> hex lookup
