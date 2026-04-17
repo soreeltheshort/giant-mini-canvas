@@ -346,14 +346,14 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
   );
 }
 
-function ArmyDetail({ id, gameData, playerOwnerClassification }: { id: string; gameData?: GameMapData; playerOwnerClassification?: string }) {
+function ArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext }: { id: string; gameData?: GameMapData; playerOwnerClassification?: string; fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number } }) {
   // Try real data (selection id = "fleet-{fleet_id}")
   const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
   const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
 
   if (realFleet) {
     const canEdit = !!playerOwnerClassification && realFleet.owner_classification === playerOwnerClassification;
-    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} canEdit={canEdit} />;
+    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} canEdit={canEdit} orderContext={fleetOrderContext} />;
   }
 
   // Fallback to dummy
