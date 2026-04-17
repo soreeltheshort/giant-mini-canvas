@@ -122,6 +122,25 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
+            {user && isAdmin && (
+              <DropdownMenu>
+                <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/weapons" || location.pathname === "/admin/ships" || location.pathname === "/admin/battle-config" ? "text-foreground" : ""}`}>
+                  Assets
+                  <ChevronDown className="h-3 w-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-background z-50">
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin/weapons">Weapons</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin/ships">Ships</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin/battle-config">Config</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             {user && isAdmin && (isMapTestingMode || isPlanetTestingMode) && (
               <Link to="/map-testing/config" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/map-testing/config" ? "text-foreground" : ""}`}>
                 Config
