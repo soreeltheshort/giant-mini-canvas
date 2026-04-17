@@ -422,6 +422,7 @@ const PlayerGame = () => {
 
   // Hooks MUST be called before any early returns (Rules of Hooks)
   const visibleSystemIds = useComputedVisibility(player, mapState);
+  const debugVisibleHexKeys = useVisibleHexKeys(player, mapState);
 
   if (loading) {
     return (
