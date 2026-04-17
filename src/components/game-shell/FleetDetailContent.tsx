@@ -37,14 +37,22 @@ interface FleetDetail {
   special2_role: string;
 }
 
+export interface FleetOrderContext {
+  gameId: string;
+  playerId: string;
+  turnNumber: number;
+}
+
 interface Props {
   fleet: MapFleet;
   shipTypes?: ShipTypeLookup[];
   /** Whether this player owns / can edit this fleet */
   canEdit: boolean;
+  /** When provided, readiness/strategy changes are written as player_orders. */
+  orderContext?: FleetOrderContext;
 }
 
-export default function FleetDetailContent({ fleet, shipTypes = [], canEdit }: Props) {
+export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, orderContext }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
   const [ships, setShips] = useState<FleetShipRow[]>([]);
@@ -125,26 +133,44 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit }: P
   // Effective "next turn" readiness — what current orders dictate
   const nextReadiness = detail.next_readiness ?? detail.readiness;
 
+  const upsertOrder = async (orderType: string, payload: any) => {
+    if (!orderContext) return;
+    const { gameId, playerId, turnNumber } = orderContext;
+    // Delete any prior order of this type for this fleet+turn, then insert
+    await (supabase as any).from("player_orders")
+      .delete()
+      .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+      .eq("order_type", orderType)
+      .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
+    await (supabase as any).from("player_orders").insert({
+      game_id: gameId, player_id: playerId, turn_number: turnNumber,
+      order_type: orderType, order_json: { fleet_id: fleet.fleet_id, ...payload },
+    });
+  };
+
   const updateNextReadiness = async (newVal: number) => {
     const clamped = Math.max(1, Math.min(4, newVal));
     setDetail(d => d ? { ...d, next_readiness: clamped } : d);
-    const { error } = await supabase
-      .from("fleets")
-      .update({ next_readiness: clamped } as any)
-      .eq("id", detail.id);
-    if (error) {
-      toast({ title: "Failed to save readiness order", description: error.message, variant: "destructive" });
+    if (orderContext) {
+      await upsertOrder("set_readiness", { next_readiness: clamped });
+    } else {
+      const { error } = await supabase.from("fleets").update({ next_readiness: clamped } as any).eq("id", detail.id);
+      if (error) toast({ title: "Failed to save readiness order", description: error.message, variant: "destructive" });
     }
   };
 
   const cancelOrder = async () => {
     setDetail(d => d ? { ...d, next_readiness: null } : d);
-    const { error } = await supabase
-      .from("fleets")
-      .update({ next_readiness: null } as any)
-      .eq("id", detail.id);
-    if (error) {
-      toast({ title: "Failed to cancel order", description: error.message, variant: "destructive" });
+    if (orderContext) {
+      const { gameId, playerId, turnNumber } = orderContext;
+      await (supabase as any).from("player_orders")
+        .delete()
+        .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+        .eq("order_type", "set_readiness")
+        .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
+    } else {
+      const { error } = await supabase.from("fleets").update({ next_readiness: null } as any).eq("id", detail.id);
+      if (error) toast({ title: "Failed to cancel order", description: error.message, variant: "destructive" });
     }
   };
 
@@ -156,6 +182,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit }: P
 
   const updateRole = async (which: "special1_role" | "special2_role", value: string) => {
     setDetail(d => d ? { ...d, [which]: value } : d);
+    if (orderContext) {
+      const otherKey = which === "special1_role" ? "special2_role" : "special1_role";
+      const otherVal = (detail as any)[otherKey];
+      await upsertOrder("set_strategy", { special1_role: which === "special1_role" ? value : otherVal, special2_role: which === "special2_role" ? value : otherVal });
+    }
+    // Always mirror to fleets table so UI shows the change immediately
     const { error } = await supabase.from("fleets").update({ [which]: value }).eq("id", detail.id);
     if (error) toast({ title: "Failed to save strategy", description: error.message, variant: "destructive" });
   };

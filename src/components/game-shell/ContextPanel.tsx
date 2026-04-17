@@ -47,9 +47,10 @@ interface ContextPanelProps {
   playerTreasury?: number;
   /** Province classification owned by the current player, e.g. "PROVINCE_2" */
   playerOwnerClassification?: string;
+  fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
 }
 
-export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, playerOwnerClassification }: ContextPanelProps) {
+export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, playerOwnerClassification, fleetOrderContext }: ContextPanelProps) {
   return (
     <aside className="w-72 bg-marble border-l-2 border-bronze/40 flex flex-col relative z-20 shrink-0 animate-fade-in">
       {/* Header */}
@@ -70,7 +71,7 @@ export default function ContextPanel({ mode, selection, news, onClose, onClearSe
         ) : selection.type === "region" ? (
           <RegionDetail id={selection.id} gameData={gameData} mode={mode} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} />
         ) : selection.type === "army" ? (
-          <ArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} />
+          <ArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} />
         ) : selection.type === "production-center" ? (
           <ProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
@@ -345,14 +346,14 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
   );
 }
 
-function ArmyDetail({ id, gameData, playerOwnerClassification }: { id: string; gameData?: GameMapData; playerOwnerClassification?: string }) {
+function ArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext }: { id: string; gameData?: GameMapData; playerOwnerClassification?: string; fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number } }) {
   // Try real data (selection id = "fleet-{fleet_id}")
   const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
   const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
 
   if (realFleet) {
     const canEdit = !!playerOwnerClassification && realFleet.owner_classification === playerOwnerClassification;
-    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} canEdit={canEdit} />;
+    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} canEdit={canEdit} orderContext={fleetOrderContext} />;
   }
 
   // Fallback to dummy
