@@ -1,0 +1,312 @@
+import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { ImperialCard } from "./ImperialCard";
+import { StatusBadge } from "./StatusBadge";
+import type { MapFleet } from "@/lib/mapTypes";
+import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
+import type { ShipTypeLookup } from "./ContextPanel";
+
+const READINESS_LEVELS = [
+  { value: 1, label: "Readiness 1 – Combat Ready" },
+  { value: 2, label: "Readiness 2 – Standard" },
+  { value: 3, label: "Readiness 3 – Routine" },
+  { value: 4, label: "Readiness 4 – Drydocked" },
+];
+
+const STRATEGY_OPTIONS = [
+  "Flank", "Outflank", "Skirmish", "Cover Retreat", "Rear", "Attack Planet",
+];
+
+interface FleetShipRow {
+  id: string;
+  ship_type_id: string;
+  quantity: number;
+  tactical_group: string;
+  ship_name: string;
+  hull_class: string;
+}
+
+interface FleetDetail {
+  id: string;
+  name: string;
+  readiness: number;
+  next_readiness: number | null;
+  special1_role: string;
+  special2_role: string;
+}
+
+interface Props {
+  fleet: MapFleet;
+  shipTypes?: ShipTypeLookup[];
+  /** Whether this player owns / can edit this fleet */
+  canEdit: boolean;
+}
+
+export default function FleetDetailContent({ fleet, shipTypes = [], canEdit }: Props) {
+  const { toast } = useToast();
+  const [detail, setDetail] = useState<FleetDetail | null>(null);
+  const [ships, setShips] = useState<FleetShipRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const sourceId = fleet.source_fleet_id;
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      if (!sourceId) {
+        setDetail(null);
+        setShips([]);
+        setLoading(false);
+        return;
+      }
+      const [{ data: f }, { data: fs }] = await Promise.all([
+        supabase
+          .from("fleets")
+          .select("id, name, readiness, next_readiness, special1_role, special2_role")
+          .eq("id", sourceId)
+          .maybeSingle(),
+        supabase
+          .from("fleet_ships")
+          .select("id, ship_type_id, quantity, tactical_group")
+          .eq("fleet_id", sourceId),
+      ]);
+      if (cancelled) return;
+      if (f) {
+        setDetail({
+          id: f.id,
+          name: f.name,
+          readiness: f.readiness ?? 2,
+          next_readiness: (f as any).next_readiness ?? null,
+          special1_role: f.special1_role || "Flank",
+          special2_role: f.special2_role || "Flank",
+        });
+      } else {
+        setDetail(null);
+      }
+      const rows: FleetShipRow[] = (fs || []).map((r: any) => {
+        const st = shipTypes.find(s => s.id === r.ship_type_id);
+        return {
+          id: r.id,
+          ship_type_id: r.ship_type_id,
+          quantity: r.quantity,
+          tactical_group: r.tactical_group,
+          ship_name: st?.name || r.ship_type_id,
+          hull_class: st?.hull_class || "",
+        };
+      });
+      setShips(rows);
+      setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [sourceId, shipTypes]);
+
+  const ownerLabel = CLASSIFICATION_LABELS[fleet.owner_classification as HexClassification] || fleet.owner_classification;
+
+  if (loading) {
+    return (
+      <ImperialCard title={fleet.fleet_name} subtitle={`Owner: ${ownerLabel}`}>
+        <p className="text-[10px] text-muted-foreground italic">Loading fleet detail…</p>
+      </ImperialCard>
+    );
+  }
+
+  if (!detail) {
+    return (
+      <ImperialCard title={fleet.fleet_name} subtitle={`Owner: ${ownerLabel}`}>
+        <p className="text-[10px] text-muted-foreground italic">Fleet record not found.</p>
+      </ImperialCard>
+    );
+  }
+
+  // Effective "next turn" readiness — what current orders dictate
+  const nextReadiness = detail.next_readiness ?? detail.readiness;
+
+  const updateNextReadiness = async (newVal: number) => {
+    const clamped = Math.max(1, Math.min(4, newVal));
+    setDetail(d => d ? { ...d, next_readiness: clamped } : d);
+    const { error } = await supabase
+      .from("fleets")
+      .update({ next_readiness: clamped } as any)
+      .eq("id", detail.id);
+    if (error) {
+      toast({ title: "Failed to save readiness order", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const cancelOrder = async () => {
+    setDetail(d => d ? { ...d, next_readiness: null } : d);
+    const { error } = await supabase
+      .from("fleets")
+      .update({ next_readiness: null } as any)
+      .eq("id", detail.id);
+    if (error) {
+      toast({ title: "Failed to cancel order", description: error.message, variant: "destructive" });
+    }
+  };
+
+  // Increase: only +1 step allowed (lower number = higher readiness, so subtract 1)
+  const canIncrease = nextReadiness > 1 && (detail.next_readiness === null || detail.next_readiness >= detail.readiness - 1 + 1);
+  // Per spec: "increase by 1" means raise readiness by exactly one step relative to current.
+  const proposedIncrease = Math.max(1, detail.readiness - 1);
+  const increaseDisabled = !canEdit || detail.readiness <= 1 || detail.next_readiness === proposedIncrease;
+
+  const updateRole = async (which: "special1_role" | "special2_role", value: string) => {
+    setDetail(d => d ? { ...d, [which]: value } : d);
+    const { error } = await supabase.from("fleets").update({ [which]: value }).eq("id", detail.id);
+    if (error) toast({ title: "Failed to save strategy", description: error.message, variant: "destructive" });
+  };
+
+  const handleQtyChange = async (rowId: string, qty: number) => {
+    const safe = Math.max(0, Math.floor(qty));
+    setShips(prev => prev.map(s => s.id === rowId ? { ...s, quantity: safe } : s));
+    if (safe <= 0) {
+      await supabase.from("fleet_ships").delete().eq("id", rowId);
+      setShips(prev => prev.filter(s => s.id !== rowId));
+    } else {
+      await supabase.from("fleet_ships").update({ quantity: safe }).eq("id", rowId);
+    }
+  };
+
+  const totalShips = ships.reduce((sum, s) => sum + s.quantity, 0);
+
+  return (
+    <>
+      <ImperialCard title={fleet.fleet_name} subtitle={`Owner: ${ownerLabel}`}>
+        <div className="space-y-2">
+          <Row label="Status"><StatusBadge variant="info">Deployed</StatusBadge></Row>
+          <Row label="Total Ships" value={`${totalShips}`} />
+        </div>
+      </ImperialCard>
+
+      <ImperialCard title="Readiness">
+        <div className="space-y-2.5">
+          <Row label="This Turn" value={readinessLabel(detail.readiness)} />
+          <Row label="Next Turn">
+            <span className={`text-xs font-semibold ${nextReadiness !== detail.readiness ? "text-crimson" : "text-foreground"}`}>
+              {readinessLabel(nextReadiness)}
+            </span>
+          </Row>
+
+          {canEdit && (
+            <div className="pt-2 space-y-2 border-t border-border">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => updateNextReadiness(proposedIncrease)}
+                  disabled={increaseDisabled}
+                  className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider bg-crimson text-primary-foreground hover:bg-crimson-light transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
+                  title="Raise readiness by 1 step (limited to +1 per turn)"
+                >
+                  <Plus className="w-3 h-3" /> Increase by 1
+                </button>
+                {detail.next_readiness !== null && (
+                  <button
+                    onClick={cancelOrder}
+                    className="px-2 py-1 rounded-sm text-[10px] font-heading uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:border-bronze/40 transition-colors"
+                  >
+                    Cancel Order
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark block mb-1">
+                  Or Lower Readiness To
+                </label>
+                <select
+                  value={detail.next_readiness ?? detail.readiness}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (v < detail.readiness) updateNextReadiness(v);
+                    else if (v === detail.readiness) cancelOrder();
+                  }}
+                  className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground"
+                >
+                  {READINESS_LEVELS.map(r => (
+                    <option key={r.value} value={r.value} disabled={r.value < detail.readiness}>
+                      {r.label}{r.value < detail.readiness ? " (use Increase)" : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[9px] text-muted-foreground italic">
+                  May lower by any amount; raising is limited to +1 per turn. Applied at end of economics phase.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </ImperialCard>
+
+      <ImperialCard title="Strategy">
+        <div className="space-y-2">
+          <div>
+            <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark block mb-1">Strategy 1</label>
+            <select
+              disabled={!canEdit}
+              value={detail.special1_role}
+              onChange={(e) => updateRole("special1_role", e.target.value)}
+              className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground disabled:opacity-60"
+            >
+              {STRATEGY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark block mb-1">Strategy 2</label>
+            <select
+              disabled={!canEdit}
+              value={detail.special2_role}
+              onChange={(e) => updateRole("special2_role", e.target.value)}
+              className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground disabled:opacity-60"
+            >
+              {STRATEGY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+        </div>
+      </ImperialCard>
+
+      <ImperialCard title="Composition">
+        {ships.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground italic">No ships in this fleet.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {ships.map(s => (
+              <div key={s.id} className="flex items-center justify-between gap-2 text-xs py-1 border-b border-border last:border-0">
+                <div className="flex-1 min-w-0">
+                  <div className="truncate font-semibold text-foreground">{s.ship_name}</div>
+                  <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{s.hull_class} · {s.tactical_group}</div>
+                </div>
+                {canEdit ? (
+                  <input
+                    type="number"
+                    min={0}
+                    value={s.quantity}
+                    onChange={(e) => handleQtyChange(s.id, Number(e.target.value))}
+                    className="w-14 h-7 rounded-sm border border-input bg-background px-1.5 text-xs text-right"
+                  />
+                ) : (
+                  <span className="font-semibold text-bronze">×{s.quantity}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </ImperialCard>
+    </>
+  );
+}
+
+function readinessLabel(level: number): string {
+  return READINESS_LEVELS.find(r => r.value === level)?.label || `Readiness ${level}`;
+}
+
+function Row({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between text-xs">
+      <span className="text-muted-foreground">{label}</span>
+      {children ? children : <span className="font-semibold text-foreground">{value}</span>}
+    </div>
+  );
+}
