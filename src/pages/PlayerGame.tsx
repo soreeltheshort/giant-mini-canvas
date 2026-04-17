@@ -310,7 +310,7 @@ const PlayerGame = () => {
     return <InitScreen step={initStep} factionName={factionName} onContinue={advanceInit} />;
   }
 
-  const visibleSystemIds = (player.visible_system_ids || []) as number[];
+  const visibleSystemIds = useComputedVisibility(player, mapState);
 
   return (
     <div className="h-screen flex flex-col bg-ivory overflow-hidden">
