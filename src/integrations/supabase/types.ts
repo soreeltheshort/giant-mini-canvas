@@ -434,6 +434,7 @@ export type Database = {
           id: string
           log_type: string
           message: string
+          phase: string
           turn_number: number
         }
         Insert: {
@@ -443,6 +444,7 @@ export type Database = {
           id?: string
           log_type?: string
           message?: string
+          phase?: string
           turn_number?: number
         }
         Update: {
@@ -452,6 +454,7 @@ export type Database = {
           id?: string
           log_type?: string
           message?: string
+          phase?: string
           turn_number?: number
         }
         Relationships: [
@@ -1134,6 +1137,9 @@ export type Database = {
         | "set_standing_order"
         | "diplomacy"
         | "other"
+        | "set_readiness"
+        | "set_strategy"
+        | "fleet_composition_change"
       turn_phase: "orders" | "processing"
     }
     CompositeTypes: {
@@ -1271,6 +1277,9 @@ export const Constants = {
         "set_standing_order",
         "diplomacy",
         "other",
+        "set_readiness",
+        "set_strategy",
+        "fleet_composition_change",
       ],
       turn_phase: ["orders", "processing"],
     },
