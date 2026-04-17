@@ -39,6 +39,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   fleets = [],
   onSystemClick,
   onFleetClick,
+  debugVisibleHexKeys,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
