@@ -102,7 +102,7 @@ const Header = () => {
             </Link>
             {user && canAccessGameFeatures && (
               <DropdownMenu>
-                <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isCombatTestingMode || isMapTestingMode || isPlanetTestingMode ? "text-foreground" : "text-muted-foreground"}`}>
+                <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isCombatTestingMode || isMapTestingMode || isPlanetTestingMode || isFleetTestingMode ? "text-foreground" : "text-muted-foreground"}`}>
                   Testing
                   <ChevronDown className="h-3 w-3" />
                 </DropdownMenuTrigger>
@@ -115,6 +115,9 @@ const Header = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/planet-testing">Planet Testing</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/fleet-testing">Fleet Testing</Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
