@@ -61,6 +61,78 @@ function deserializeMapState(json: any): MapState {
   };
 }
 
+/**
+ * Compute effective player visibility for the current turn.
+ * Rules (turn 0 / per-turn baseline):
+ *  - All Core systems are visible.
+ *  - All systems in the player's own province are visible.
+ *  - Any system within sensor radius (1 hex) of an owned fleet is visible.
+ *  - Any system within sensor radius (1 hex) of an owned system is visible (passive scan).
+ *  - Plus anything already persisted in player.visible_system_ids (e.g. scouted last turn).
+ */
+function useComputedVisibility(
+  player: PlayerInfo | null,
+  mapState: MapState | null,
+): number[] {
+  return useMemo(() => {
+    if (!player || !mapState) return (player?.visible_system_ids ?? []) as number[];
+
+    const ownProvince = `PROVINCE_${player.player_slot}`;
+    const SENSOR_RADIUS = 1;
+
+    // hex_id → HexData lookup
+    const hexById = new Map<number, HexData>();
+    for (const h of mapState.hexes.values()) hexById.set(h.hex_id, h);
+
+    const allSystems = Array.from(mapState.systems.values());
+    const visible = new Set<number>(
+      ((player.visible_system_ids ?? []) as number[])
+    );
+
+    // 1. Core + own-province systems
+    for (const sys of allSystems) {
+      const sysHex = hexById.get(sys.hex_id);
+      if (!sysHex) continue;
+      if (sysHex.classification === "CORE" || sysHex.classification === ownProvince) {
+        visible.add(sys.system_id);
+      }
+      if (sys.owner === ownProvince) visible.add(sys.system_id);
+    }
+
+    // 2. Sensor scan: scan centers = owned fleets + owned systems
+    const scanCenters: Array<[number, number]> = [];
+    for (const sys of allSystems) {
+      if (sys.owner === ownProvince) {
+        const sysHex = hexById.get(sys.hex_id);
+        if (sysHex) scanCenters.push([sysHex.x, sysHex.y]);
+      }
+    }
+    for (const f of mapState.fleets ?? []) {
+      if (f.owner_classification === ownProvince) {
+        scanCenters.push([f.hex_x, f.hex_y]);
+      }
+    }
+
+    if (scanCenters.length > 0) {
+      // Pre-compute cube coords of each scan center
+      const centersCube = scanCenters.map(([x, y]) => offsetToCube(x, y));
+      for (const sys of allSystems) {
+        if (visible.has(sys.system_id)) continue;
+        const sysHex = hexById.get(sys.hex_id);
+        if (!sysHex) continue;
+        const [sx, sy, sz] = offsetToCube(sysHex.x, sysHex.y);
+        for (const [cx, cy, cz] of centersCube) {
+          if (cubeDistance(sx, sy, sz, cx, cy, cz) <= SENSOR_RADIUS) {
+            visible.add(sys.system_id);
+            break;
+          }
+        }
+      }
+    }
+
+    return Array.from(visible);
+  }, [player, mapState]);
+
 /* ── DEBUG: Log applied visibility & initialization rules ── */
 function logAppliedRules({
   game,
