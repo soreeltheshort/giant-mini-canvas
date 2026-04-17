@@ -338,6 +338,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          next_readiness: number | null
           owner_user_id: string
           points_budget: number
           readiness: number
@@ -351,6 +352,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          next_readiness?: number | null
           owner_user_id: string
           points_budget?: number
           readiness?: number
@@ -364,6 +366,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          next_readiness?: number | null
           owner_user_id?: string
           points_budget?: number
           readiness?: number

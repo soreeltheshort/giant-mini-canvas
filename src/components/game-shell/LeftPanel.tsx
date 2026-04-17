@@ -26,6 +26,7 @@ interface LeftPanelProps {
     news: NewsStory[];
     onClearSelection: () => void;
     gameData?: GameMapData;
+    playerOwnerClassification?: string;
   };
 }
 
@@ -189,12 +190,13 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
 }
 
 /* ── Inline Context Content (mirrors ContextPanel content) ── */
-function InlineContextContent({ mode, selection, news, onClearSelection, gameData }: {
+function InlineContextContent({ mode, selection, news, onClearSelection, gameData, playerOwnerClassification }: {
   mode: GameMode;
   selection: MapSelection;
   news: NewsStory[];
   onClearSelection: () => void;
   gameData?: GameMapData;
+  playerOwnerClassification?: string;
 }) {
   const getModeIcon = () => {
     if (selection.type === "news") return <Scroll className="w-3.5 h-3.5" />;
@@ -227,7 +229,7 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
         ) : selection.type === "region" ? (
           <InlineRegionDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "army" ? (
-          <InlineArmyDetail id={selection.id} gameData={gameData} />
+          <InlineArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} />
         ) : selection.type === "production-center" ? (
           <InlineProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
@@ -333,12 +335,13 @@ function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapDa
   );
 }
 
-function InlineArmyDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
+function InlineArmyDetail({ id, gameData, playerOwnerClassification }: { id: string; gameData?: GameMapData; playerOwnerClassification?: string }) {
   const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
   const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
 
   if (realFleet) {
-    return <FleetDetailContent fleet={realFleet} />;
+    const canEdit = !!playerOwnerClassification && realFleet.owner_classification === playerOwnerClassification;
+    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} canEdit={canEdit} />;
   }
 
   const d = ARMY_DETAILS[id];

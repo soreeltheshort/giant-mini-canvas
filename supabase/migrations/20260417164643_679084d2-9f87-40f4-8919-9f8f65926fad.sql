@@ -1,0 +1,1 @@
+ALTER TABLE public.fleets ADD COLUMN IF NOT EXISTS next_readiness integer;

@@ -485,6 +485,7 @@ const PlayerGame = () => {
               facilityTypesFull: dbFacilityTypesFull,
               shipTypes: dbShipTypes,
             } : undefined,
+            playerOwnerClassification: `PROVINCE_${player.player_slot}`,
           } : undefined}
         />
 
@@ -521,6 +522,7 @@ const PlayerGame = () => {
             onClearSelection={() => setSelection({ type: "none" })}
             onBuildFacility={handleBuildFacility}
             playerTreasury={player?.treasury ?? 0}
+            playerOwnerClassification={`PROVINCE_${player.player_slot}`}
             gameData={mapState ? {
               systems: mapState.systems,
               fleets: mapState.fleets,
