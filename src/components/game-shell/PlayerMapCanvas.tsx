@@ -15,6 +15,8 @@ interface Props {
   fleets?: MapFleet[];
   onSystemClick?: (system: SystemData) => void;
   onFleetClick?: (fleet: MapFleet) => void;
+  /** DEBUG: hex keys (e.g. "3,-2") on which to draw a "V" marker */
+  debugVisibleHexKeys?: Set<string>;
   className?: string;
 }
 
