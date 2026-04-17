@@ -8,6 +8,7 @@ import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTyp
 import { ProgressBar } from "./ProgressBar";
 import { StatusBadge } from "./StatusBadge";
 import { ImperialCard } from "./ImperialCard";
+import FleetDetailContent from "./FleetDetailContent";
 import type { GameMapData } from "./ContextPanel";
 import type { HexClassification } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS } from "@/lib/mapTypes";
