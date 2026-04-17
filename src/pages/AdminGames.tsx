@@ -669,33 +669,41 @@ const AdminGames = () => {
               )}
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Game Log ({logs.length})</h3>
-              <div className="max-h-64 overflow-y-auto border border-border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-16">Turn</TableHead>
-                      <TableHead className="w-24">Type</TableHead>
-                      <TableHead>Message</TableHead>
-                      <TableHead className="w-32">Time</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {logs.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No logs</TableCell></TableRow>
-                    ) : logs.map(l => (
-                      <TableRow key={l.id}>
-                        <TableCell className="text-xs">{l.turn_number}</TableCell>
-                        <TableCell><Badge variant="outline" className="text-xs">{l.log_type}</Badge></TableCell>
-                        <TableCell className="text-sm">{l.message}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleString()}</TableCell>
+            <Tabs defaultValue="turn-log" className="space-y-2">
+              <TabsList>
+                <TabsTrigger value="turn-log">Turn Log</TabsTrigger>
+                <TabsTrigger value="raw-logs">Raw Logs ({logs.length})</TabsTrigger>
+              </TabsList>
+              <TabsContent value="turn-log">
+                <TurnLogViewer gameId={selectedGame.id} showDetails recentTurnsLimit={10} />
+              </TabsContent>
+              <TabsContent value="raw-logs">
+                <div className="max-h-64 overflow-y-auto border border-border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-16">Turn</TableHead>
+                        <TableHead className="w-24">Type</TableHead>
+                        <TableHead>Message</TableHead>
+                        <TableHead className="w-32">Time</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {logs.length === 0 ? (
+                        <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No logs</TableCell></TableRow>
+                      ) : logs.map(l => (
+                        <TableRow key={l.id}>
+                          <TableCell className="text-xs">{l.turn_number}</TableCell>
+                          <TableCell><Badge variant="outline" className="text-xs">{l.log_type}</Badge></TableCell>
+                          <TableCell className="text-sm">{l.message}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         )}
       </div>
