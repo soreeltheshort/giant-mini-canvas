@@ -160,6 +160,27 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.globalAlpha = 1;
     }
 
+    // DEBUG: draw "V" on every hex the player can see
+    if (debugVisibleHexKeys && debugVisibleHexKeys.size > 0) {
+      ctx.fillStyle = "rgba(255, 220, 90, 0.95)";
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
+      ctx.lineWidth = 2;
+      ctx.font = `bold ${Math.max(7, size * 0.55)}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (const key of debugVisibleHexKeys) {
+        const [xs, ys] = key.split(",");
+        const hx = parseInt(xs, 10);
+        const hy = parseInt(ys, 10);
+        if (Number.isNaN(hx) || Number.isNaN(hy)) continue;
+        const [px, py] = hexToPixel(hx, hy, size);
+        if (px < left || px > right || py < top || py > bottom) continue;
+        ctx.strokeText("V", px, py);
+        ctx.fillText("V", px, py);
+      }
+      ctx.textBaseline = "alphabetic";
+    }
+
     // Build hexId -> hex lookup
     const hexIdMap = new Map<number, HexData>();
     for (const h of hexes.values()) {
