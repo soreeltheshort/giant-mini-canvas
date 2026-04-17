@@ -25,6 +25,7 @@ import UIShowcase from "./pages/UIShowcase";
 import MapTesting from "./pages/MapTesting";
 import MapTestingConfig from "./pages/MapTestingConfig";
 import PlanetTesting from "./pages/PlanetTesting";
+import FleetTesting from "./pages/FleetTesting";
 import RequireRole from "@/components/RequireRole";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/map-testing" element={<RequireRole roles={["admin", "tester"]}><MapTesting /></RequireRole>} />
             <Route path="/map-testing/config" element={<RequireRole roles={["admin", "tester"]}><MapTestingConfig /></RequireRole>} />
             <Route path="/planet-testing" element={<RequireRole roles={["admin", "tester"]}><PlanetTesting /></RequireRole>} />
+            <Route path="/fleet-testing" element={<RequireRole roles={["admin", "tester"]}><FleetTesting /></RequireRole>} />
             <Route path="/admin/battle-debug" element={<AdminBattleDebug />} />
             <Route path="/admin/weapons" element={<AdminWeapons />} />
             <Route path="/admin/battle-config" element={<AdminBattleConfig />} />
