@@ -134,6 +134,65 @@ function useComputedVisibility(
   }, [player, mapState]);
 }
 
+/**
+ * DEBUG: compute the set of hex keys (x,y) the player can "see".
+ * Rules: Core hexes, own-province hexes, plus 1-hex radius around
+ * any owned system or owned fleet (sensor scan).
+ */
+function useVisibleHexKeys(
+  player: PlayerInfo | null,
+  mapState: MapState | null,
+): Set<string> {
+  return useMemo(() => {
+    const result = new Set<string>();
+    if (!player || !mapState) return result;
+
+    const ownProvince = `PROVINCE_${player.player_slot}`;
+    const SENSOR_RADIUS = 1;
+
+    // 1. Core + own-province hexes
+    for (const hex of mapState.hexes.values()) {
+      if (hex.classification === "CORE" || hex.classification === ownProvince) {
+        result.add(hexKey(hex.x, hex.y));
+      }
+    }
+
+    // 2. Sensor centers: owned systems + owned fleets
+    const hexById = new Map<number, HexData>();
+    for (const h of mapState.hexes.values()) hexById.set(h.hex_id, h);
+
+    const scanCenters: Array<[number, number]> = [];
+    for (const sys of mapState.systems.values()) {
+      if (sys.owner === ownProvince) {
+        const sysHex = hexById.get(sys.hex_id);
+        if (sysHex) scanCenters.push([sysHex.x, sysHex.y]);
+      }
+    }
+    for (const f of mapState.fleets ?? []) {
+      if (f.owner_classification === ownProvince) {
+        scanCenters.push([f.hex_x, f.hex_y]);
+      }
+    }
+
+    if (scanCenters.length > 0) {
+      const centersCube = scanCenters.map(([x, y]) => offsetToCube(x, y));
+      for (const hex of mapState.hexes.values()) {
+        const k = hexKey(hex.x, hex.y);
+        if (result.has(k)) continue;
+        const [sx, sy, sz] = offsetToCube(hex.x, hex.y);
+        for (const [cx, cy, cz] of centersCube) {
+          if (cubeDistance(sx, sy, sz, cx, cy, cz) <= SENSOR_RADIUS) {
+            result.add(k);
+            break;
+          }
+        }
+      }
+    }
+
+    return result;
+  }, [player, mapState]);
+}
+
 /* ── DEBUG: Log applied visibility & initialization rules ── */
 function logAppliedRules({
   game,
