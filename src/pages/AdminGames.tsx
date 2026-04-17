@@ -449,6 +449,28 @@ const AdminGames = () => {
       const newMapState: MapState = { ...mapState, systems: updatedSystems };
       setMapState(newMapState);
 
+      // Apply queued fleet readiness orders (end of economics phase)
+      // For each fleet with next_readiness set, set readiness = next_readiness and clear next_readiness.
+      try {
+        const { data: pending } = await (supabase as any)
+          .from("fleets")
+          .select("id, readiness, next_readiness")
+          .not("next_readiness", "is", null);
+        if (pending && pending.length) {
+          let applied = 0;
+          for (const fl of pending) {
+            await (supabase as any)
+              .from("fleets")
+              .update({ readiness: fl.next_readiness, next_readiness: null })
+              .eq("id", fl.id);
+            applied++;
+          }
+          turnLogs.push(`[Fleets] Applied ${applied} queued readiness change(s).`);
+        }
+      } catch (e: any) {
+        console.warn("[runTurn] readiness application failed", e);
+      }
+
       // Save updated map, advance turn number, reset to orders phase
       const serialized = serializeMapState(newMapState);
       await (supabase as any).from("games").update({
