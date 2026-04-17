@@ -26,6 +26,7 @@ interface LeftPanelProps {
     news: NewsStory[];
     onClearSelection: () => void;
     gameData?: GameMapData;
+    playerOwnerClassification?: string;
   };
 }
 
