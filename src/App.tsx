@@ -25,6 +25,7 @@ import UIShowcase from "./pages/UIShowcase";
 import MapTesting from "./pages/MapTesting";
 import MapTestingConfig from "./pages/MapTestingConfig";
 import PlanetTesting from "./pages/PlanetTesting";
+import FleetTesting from "./pages/FleetTesting";
 import RequireRole from "@/components/RequireRole";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
