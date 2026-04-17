@@ -93,12 +93,6 @@ const Header = () => {
             >
               Home
             </Link>
-            <Link
-              to="/games"
-              className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/games" ? "text-foreground" : "text-muted-foreground"}`}
-            >
-              Games
-            </Link>
             {user && canAccessGameFeatures && (
               <DropdownMenu>
                 <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isCombatTestingMode || isMapTestingMode || isPlanetTestingMode ? "text-foreground" : "text-muted-foreground"}`}>
