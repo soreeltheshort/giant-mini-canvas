@@ -4,6 +4,7 @@ import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTyp
 import { ImperialCard } from "./ImperialCard";
 import { StatusBadge } from "./StatusBadge";
 import { ProgressBar } from "./ProgressBar";
+import FleetDetailContent from "./FleetDetailContent";
 import type { SystemData, MapFleet, FacilityType } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
 
@@ -44,9 +45,11 @@ interface ContextPanelProps {
   gameData?: GameMapData;
   onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
   playerTreasury?: number;
+  /** Province classification owned by the current player, e.g. "PROVINCE_2" */
+  playerOwnerClassification?: string;
 }
 
-export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury }: ContextPanelProps) {
+export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, playerOwnerClassification }: ContextPanelProps) {
   return (
     <aside className="w-72 bg-marble border-l-2 border-bronze/40 flex flex-col relative z-20 shrink-0 animate-fade-in">
       {/* Header */}
@@ -67,7 +70,7 @@ export default function ContextPanel({ mode, selection, news, onClose, onClearSe
         ) : selection.type === "region" ? (
           <RegionDetail id={selection.id} gameData={gameData} mode={mode} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} />
         ) : selection.type === "army" ? (
-          <ArmyDetail id={selection.id} gameData={gameData} />
+          <ArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} />
         ) : selection.type === "production-center" ? (
           <ProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
@@ -342,25 +345,14 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
   );
 }
 
-function ArmyDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
+function ArmyDetail({ id, gameData, playerOwnerClassification }: { id: string; gameData?: GameMapData; playerOwnerClassification?: string }) {
   // Try real data (selection id = "fleet-{fleet_id}")
   const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
   const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
 
   if (realFleet) {
-    const ownerLabel = CLASSIFICATION_LABELS[realFleet.owner_classification as HexClassification] || realFleet.owner_classification;
-    return (
-      <>
-        <ImperialCard title={realFleet.fleet_name} subtitle={`Owner: ${ownerLabel}`}>
-          <div className="space-y-2">
-            <Row label="Position" value={`(${realFleet.hex_x}, ${realFleet.hex_y})`} />
-            <Row label="Status">
-              <StatusBadge variant="info">Deployed</StatusBadge>
-            </Row>
-          </div>
-        </ImperialCard>
-      </>
-    );
+    const canEdit = !!playerOwnerClassification && realFleet.owner_classification === playerOwnerClassification;
+    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} canEdit={canEdit} />;
   }
 
   // Fallback to dummy
