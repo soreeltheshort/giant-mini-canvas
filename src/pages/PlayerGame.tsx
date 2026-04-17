@@ -498,6 +498,7 @@ const PlayerGame = () => {
               fleets={mapState.fleets}
               onSystemClick={handleSystemClick}
               onFleetClick={handleFleetClick}
+              debugVisibleHexKeys={debugVisibleHexKeys}
               className="flex-1"
             />
           ) : (
