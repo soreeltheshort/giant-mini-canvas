@@ -132,6 +132,7 @@ function useComputedVisibility(
 
     return Array.from(visible);
   }, [player, mapState]);
+}
 
 /* ── DEBUG: Log applied visibility & initialization rules ── */
 function logAppliedRules({
