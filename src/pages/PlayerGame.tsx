@@ -132,9 +132,11 @@ const PlayerGame = () => {
       .eq("id", gameId)
       .single();
 
+    let loadedMap: MapState | null = null;
     if (mapRow?.map_data_json && Object.keys(mapRow.map_data_json).length > 0) {
       try {
-        setMapState(deserializeMapState(mapRow.map_data_json));
+        loadedMap = deserializeMapState(mapRow.map_data_json);
+        setMapState(loadedMap);
       } catch (e) {
         console.error("Failed to deserialize map:", e);
       }
@@ -143,6 +145,14 @@ const PlayerGame = () => {
     if (!pData.initialized) {
       setInitStep(1);
     }
+
+    // ─── DEBUG: Log applied rules for this player's map view ───
+    logAppliedRules({
+      game: gData,
+      player: pData,
+      profile: prData,
+      mapState: loadedMap,
+    });
 
     setLoading(false);
   }, [user, gameId, navigate, toast]);
