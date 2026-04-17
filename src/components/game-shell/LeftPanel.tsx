@@ -8,6 +8,7 @@ import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTyp
 import { ProgressBar } from "./ProgressBar";
 import { StatusBadge } from "./StatusBadge";
 import { ImperialCard } from "./ImperialCard";
+import FleetDetailContent from "./FleetDetailContent";
 import type { GameMapData } from "./ContextPanel";
 import type { HexClassification } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS } from "@/lib/mapTypes";
@@ -337,15 +338,7 @@ function InlineArmyDetail({ id, gameData }: { id: string; gameData?: GameMapData
   const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
 
   if (realFleet) {
-    const ownerLabel = CLASSIFICATION_LABELS[realFleet.owner_classification as HexClassification] || realFleet.owner_classification;
-    return (
-      <ImperialCard title={realFleet.fleet_name} subtitle={`Owner: ${ownerLabel}`}>
-        <div className="space-y-2">
-          <Row label="Position" value={`(${realFleet.hex_x}, ${realFleet.hex_y})`} />
-          <Row label="Status"><StatusBadge variant="info">Deployed</StatusBadge></Row>
-        </div>
-      </ImperialCard>
-    );
+    return <FleetDetailContent fleet={realFleet} />;
   }
 
   const d = ARMY_DETAILS[id];
