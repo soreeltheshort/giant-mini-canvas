@@ -59,6 +59,80 @@ function deserializeMapState(json: any): MapState {
   };
 }
 
+/* ── DEBUG: Log applied visibility & initialization rules ── */
+function logAppliedRules({
+  game,
+  player,
+  profile,
+  mapState,
+}: {
+  game: any;
+  player: any;
+  profile: any;
+  mapState: MapState | null;
+}) {
+  const factionName = PROVINCE_NAMES[player.player_slot] || `Faction ${player.player_slot}`;
+  const playerName = profile?.display_name || profile?.email || "Unknown";
+  const visibleIds: number[] = (player.visible_system_ids || []) as number[];
+
+  /* eslint-disable no-console */
+  console.groupCollapsed(
+    `%c[Rules Applied] ${playerName} — ${factionName} (slot ${player.player_slot}) — Game "${game.name}" T${game.turn_number}`,
+    "color: #b8860b; font-weight: bold;"
+  );
+
+  // ── Initialization & defaults ──
+  console.groupCollapsed("%cInitialization & Defaults", "color: #8b0000; font-weight: bold;");
+  console.log("Rule: Player slot → Province mapping (1=Valerian, 2=Aurelian, 3=Cassian, 4=Dravian, 5=Marcellan, 6=Octavian)");
+  console.log(`  → player_slot=${player.player_slot} ⇒ faction "${factionName}"`);
+  console.log("Rule: Players begin uninitialized; first login triggers 3-step intro (History / Province / Recent Events)");
+  console.log(`  → initialized=${player.initialized} ⇒ ${player.initialized ? "skip intro" : "show intro"}`);
+  console.log("Rule: Default starting treasury (stub) = 300 ₡ until economy is finalized");
+  console.log(`  → treasury=${player.treasury} ₡`);
+  console.log("Rule: Default Admin & Combat capability = 3 each (generates same # of action points per turn)");
+  console.log(`  → admin_capability=${player.admin_capability}, admin_points_remaining=${player.admin_points_remaining}`);
+  console.log(`  → combat_capability=${player.combat_capability}, combat_points_remaining=${player.combat_points_remaining}`);
+  console.log("Rule: Last-turn economy snapshot stored on player row");
+  console.log(`  → last_tribute=${player.last_tribute} ₡, last_maintenance=${player.last_maintenance} ₡`);
+  console.groupEnd();
+
+  // ── Map visibility ──
+  console.groupCollapsed("%cMap Visibility Rules", "color: #8b0000; font-weight: bold;");
+  console.log("Rule: All hexes are always visible (terrain is public)");
+  console.log("Rule: Systems are visible only if their system_id is in player.visible_system_ids");
+  console.log("Rule: Visibility is set when the game starts (Core + owned Province systems) and re-synced after each turn");
+  console.log("Rule: Fleets are visible only if positioned on a hex containing a visible system (current behaviour)");
+  console.log(`Visible system_ids (${visibleIds.length}):`, visibleIds);
+
+  if (mapState) {
+    const allSystems = Array.from(mapState.systems.values()) as SystemData[];
+    const visible = allSystems.filter((s) => visibleIds.includes(s.system_id));
+    const hidden = allSystems.filter((s) => !visibleIds.includes(s.system_id));
+    console.log(`Total systems on map: ${allSystems.length}  |  visible: ${visible.length}  |  hidden: ${hidden.length}`);
+    console.table(
+      visible.slice(0, 50).map((s) => ({
+        system_id: s.system_id,
+        name: (s as any).name ?? "—",
+        classification: (s as any).owner_classification ?? (s as any).classification ?? "—",
+        hex: `${(s as any).hex_x},${(s as any).hex_y}`,
+        reason: "in visible_system_ids",
+      }))
+    );
+    if (visible.length > 50) console.log(`…(${visible.length - 50} more visible systems not tabled)`);
+
+    const fleets = (mapState.fleets || []) as MapFleet[];
+    const visibleHexKeys = new Set(visible.map((s) => `${(s as any).hex_x},${(s as any).hex_y}`));
+    const visibleFleets = fleets.filter((f: any) => visibleHexKeys.has(`${f.hex_x},${f.hex_y}`));
+    console.log(`Fleets on map: ${fleets.length}  |  visible to player: ${visibleFleets.length}`);
+  } else {
+    console.log("(no map state loaded — nothing to evaluate)");
+  }
+  console.groupEnd();
+
+  console.groupEnd();
+  /* eslint-enable no-console */
+}
+
 const PlayerGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const { user, isAdmin } = useAuth();
