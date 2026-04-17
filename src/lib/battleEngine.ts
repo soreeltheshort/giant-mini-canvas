@@ -151,7 +151,7 @@ export interface FleetSnapshot {
   id: string;
   name: string;
   ships: FleetShipData[];
-  readiness?: number; // Condition 1-4
+  readiness?: number; // Readiness 1-4
 }
 
 interface ShipInstance {

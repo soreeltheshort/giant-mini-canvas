@@ -64,10 +64,10 @@ type StandingOrder = typeof STANDING_ORDERS[number];
 const ORDER_LABELS: Record<StandingOrder, string> = { move: "Move", attack: "Attack", defend: "Defend" };
 
 const READINESS_LEVELS = [
-  { value: 1, label: "Condition 1 – Combat Ready", maintenance: 1.4, effectiveness: 1.2 },
-  { value: 2, label: "Condition 2 – Standard", maintenance: 1.0, effectiveness: 1.0 },
-  { value: 3, label: "Condition 3 – Routine", maintenance: 0.75, effectiveness: 0.6 },
-  { value: 4, label: "Condition 4 – Drydocked", maintenance: 0.25, effectiveness: 0.1 },
+  { value: 1, label: "Readiness 1 – Combat Ready", maintenance: 1.4, effectiveness: 1.2 },
+  { value: 2, label: "Readiness 2 – Standard", maintenance: 1.0, effectiveness: 1.0 },
+  { value: 3, label: "Readiness 3 – Routine", maintenance: 0.75, effectiveness: 0.6 },
+  { value: 4, label: "Readiness 4 – Drydocked", maintenance: 0.25, effectiveness: 0.1 },
 ];
 const HULL_CLASSES = ["T", "BB", "CH", "CM", "CL", "DD", "FH", "FL", "GS"];
 const HULL_LABELS: Record<string, string> = {
