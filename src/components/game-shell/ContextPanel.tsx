@@ -47,9 +47,10 @@ interface ContextPanelProps {
   playerTreasury?: number;
   /** Province classification owned by the current player, e.g. "PROVINCE_2" */
   playerOwnerClassification?: string;
+  fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
 }
 
-export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, playerOwnerClassification }: ContextPanelProps) {
+export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, playerOwnerClassification, fleetOrderContext }: ContextPanelProps) {
   return (
     <aside className="w-72 bg-marble border-l-2 border-bronze/40 flex flex-col relative z-20 shrink-0 animate-fade-in">
       {/* Header */}
