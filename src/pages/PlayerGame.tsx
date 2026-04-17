@@ -361,6 +361,9 @@ const PlayerGame = () => {
     }
   };
 
+  // Hooks MUST be called before any early returns (Rules of Hooks)
+  const visibleSystemIds = useComputedVisibility(player, mapState);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-ivory flex items-center justify-center">
@@ -382,8 +385,6 @@ const PlayerGame = () => {
   if (!player.initialized && initStep > 0) {
     return <InitScreen step={initStep} factionName={factionName} onContinue={advanceInit} />;
   }
-
-  const visibleSystemIds = useComputedVisibility(player, mapState);
 
   return (
     <div className="h-screen flex flex-col bg-ivory overflow-hidden">
