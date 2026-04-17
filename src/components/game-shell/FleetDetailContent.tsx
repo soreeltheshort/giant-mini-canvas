@@ -37,14 +37,22 @@ interface FleetDetail {
   special2_role: string;
 }
 
+export interface FleetOrderContext {
+  gameId: string;
+  playerId: string;
+  turnNumber: number;
+}
+
 interface Props {
   fleet: MapFleet;
   shipTypes?: ShipTypeLookup[];
   /** Whether this player owns / can edit this fleet */
   canEdit: boolean;
+  /** When provided, readiness/strategy changes are written as player_orders. */
+  orderContext?: FleetOrderContext;
 }
 
-export default function FleetDetailContent({ fleet, shipTypes = [], canEdit }: Props) {
+export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, orderContext }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
   const [ships, setShips] = useState<FleetShipRow[]>([]);
