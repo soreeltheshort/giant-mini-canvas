@@ -400,7 +400,7 @@ const AdminGames = () => {
     toast({ title: "Visibility processed", description: `${count} systems visible to ${players} players` });
   };
 
-  /* ── run turn (process current turn, then advance to next turn's orders phase) ── */
+  /* ── run turn (delegates to phase-based turnProcessor) ── */
   const runTurn = async () => {
     if (!selectedGame || !mapState) return;
     setProcessing(true);
@@ -410,71 +410,23 @@ const AdminGames = () => {
 
       const currentTurn = selectedGame.turn_number;
       const nextTurn = currentTurn + 1;
-      const systems = Array.from(mapState.systems.values());
-      const eligible = systems.filter(s => s.current_population > 0 && s.owner && s.owner !== "" && s.owner.toLowerCase() !== "unowned");
 
-      let turnLogs: string[] = [];
-      const updatedSystems = new Map(mapState.systems);
+      // Run the phase-based processor: it loads orders, runs Economy → Movement
+      // → Visibility → Combat, accumulates per-player econ, and bulk-inserts
+      // logs tagged by phase.
+      const result = await runTurnProcessor({
+        supabase: supabase as any,
+        gameId: selectedGame.id,
+        currentTurn,
+        mapState,
+        facilityTypes,
+        shipTypes,
+      });
 
-      // Per-player accumulators: slot → { tribute, maintenance }
-      const playerEcon = new Map<number, { tribute: number; maintenance: number }>();
-
-      // Build reverse lookup: faction name → player slot
-      const nameToSlot = new Map<string, number>();
-      for (const [slot, name] of Object.entries(PROVINCE_NAMES)) {
-        nameToSlot.set(name.toLowerCase(), parseInt(slot, 10));
-      }
-
-      for (const sys of eligible) {
-        const result = processNextTurn(sys, facilityTypes, DEFAULT_TURN_CONSTANTS, 0, shipTypes);
-        updatedSystems.set(sys.system_id, result.planet);
-        turnLogs.push(`[${sys.system_name}] Tribute: ${result.tributeBreakdown.totalTribute}, Upkeep: ${result.upkeepBreakdown.totalUpkeep}`);
-        if (result.completedFacilities.length > 0) {
-          turnLogs.push(`  → Completed: ${result.completedFacilities.join(", ")}`);
-        }
-
-        // Accumulate per-player economics based on owner name or PROVINCE_N pattern
-        let slot: number | undefined;
-        const ownerMatch = sys.owner?.match(/PROVINCE_(\d+)/);
-        if (ownerMatch) {
-          slot = parseInt(ownerMatch[1], 10);
-        } else if (sys.owner) {
-          slot = nameToSlot.get(sys.owner.toLowerCase());
-        }
-        if (slot !== undefined) {
-          const existing = playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
-          existing.tribute += result.tributeBreakdown.totalTribute;
-          existing.maintenance += result.upkeepBreakdown.totalUpkeep;
-          playerEcon.set(slot, existing);
-        }
-      }
-
-      const newMapState: MapState = { ...mapState, systems: updatedSystems };
+      const newMapState = result.mapState;
       setMapState(newMapState);
 
-      // Apply queued fleet readiness orders (end of economics phase)
-      // For each fleet with next_readiness set, set readiness = next_readiness and clear next_readiness.
-      try {
-        const { data: pending } = await (supabase as any)
-          .from("fleets")
-          .select("id, readiness, next_readiness")
-          .not("next_readiness", "is", null);
-        if (pending && pending.length) {
-          let applied = 0;
-          for (const fl of pending) {
-            await (supabase as any)
-              .from("fleets")
-              .update({ readiness: fl.next_readiness, next_readiness: null })
-              .eq("id", fl.id);
-            applied++;
-          }
-          turnLogs.push(`[Fleets] Applied ${applied} queued readiness change(s).`);
-        }
-      } catch (e: any) {
-        console.warn("[runTurn] readiness application failed", e);
-      }
-
-      // Save updated map, advance turn number, reset to orders phase
+      // Persist updated map and advance turn
       const serialized = serializeMapState(newMapState);
       await (supabase as any).from("games").update({
         map_data_json: serialized,
@@ -482,14 +434,14 @@ const AdminGames = () => {
         turn_phase: "orders",
       }).eq("id", selectedGame.id);
 
-      // Refresh player visibility after each turn
-      await syncVisibilityToPlayers(selectedGame.id, newMapState);
-
-      // Update treasury and reset orders for each player
-      const { data: gps } = await (supabase as any).from("game_players").select("id, player_slot, treasury, admin_capability, combat_capability").eq("game_id", selectedGame.id);
+      // Apply per-player econ deltas + reset action points and order locks
+      const { data: gps } = await (supabase as any)
+        .from("game_players")
+        .select("id, player_slot, treasury, admin_capability, combat_capability")
+        .eq("game_id", selectedGame.id);
       if (gps) {
         for (const gp of gps) {
-          const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
+          const econ = result.playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
           const newTreasury = (gp.treasury || 0) + econ.tribute - econ.maintenance;
           await (supabase as any).from("game_players").update({
             orders_locked: false,
@@ -502,8 +454,12 @@ const AdminGames = () => {
         }
       }
 
-      // Log the turn
-      await addLog(selectedGame.id, "turn_processed", `Turn ${currentTurn} processed. ${eligible.length} systems updated. Now accepting orders for Turn ${nextTurn}.`, { details: turnLogs });
+      // Final summary log
+      await addLog(
+        selectedGame.id,
+        "turn_processed",
+        `Turn ${currentTurn} processed (${result.logsInserted} log entries). Now accepting orders for Turn ${nextTurn}.`,
+      );
 
       setSelectedGame({ ...selectedGame, turn_number: nextTurn });
       await fetchGames();
