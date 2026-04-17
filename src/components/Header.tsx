@@ -93,6 +93,12 @@ const Header = () => {
             >
               Home
             </Link>
+            <Link
+              to="/blog"
+              className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/blog") ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              Blog
+            </Link>
             {user && canAccessGameFeatures && (
               <DropdownMenu>
                 <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isCombatTestingMode || isMapTestingMode || isPlanetTestingMode ? "text-foreground" : "text-muted-foreground"}`}>
@@ -141,6 +147,11 @@ const Header = () => {
             {user && isAdmin && (
               <Link to="/admin/users" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/users" ? "text-foreground" : ""}`}>
                 Users
+              </Link>
+            )}
+            {user && isAdmin && (
+              <Link to="/admin/blog" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/blog" ? "text-foreground" : ""}`}>
+                Blog Admin
               </Link>
             )}
             {user && canAccessGameFeatures && (

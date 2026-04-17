@@ -26,6 +26,9 @@ import MapTesting from "./pages/MapTesting";
 import MapTestingConfig from "./pages/MapTestingConfig";
 import PlanetTesting from "./pages/PlanetTesting";
 import RequireRole from "@/components/RequireRole";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import AdminBlog from "./pages/AdminBlog";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +62,9 @@ const App = () => (
             <Route path="/my-games" element={<MyGames />} />
             <Route path="/play/:gameId" element={<PlayerGame />} />
             <Route path="/ui-showcase" element={<UIShowcase />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/admin/blog" element={<RequireRole roles={["admin"]}><AdminBlog /></RequireRole>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
