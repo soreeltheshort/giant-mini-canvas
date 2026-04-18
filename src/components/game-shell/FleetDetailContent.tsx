@@ -169,11 +169,6 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
     }
   };
 
-  // Increase: only +1 step allowed (lower number = higher readiness, so subtract 1)
-  const canIncrease = nextReadiness > 1 && (detail.next_readiness === null || detail.next_readiness >= detail.readiness - 1 + 1);
-  // Per spec: "increase by 1" means raise readiness by exactly one step relative to current.
-  const proposedIncrease = Math.max(1, detail.readiness - 1);
-  const increaseDisabled = !canEdit || detail.readiness <= 1 || detail.next_readiness === proposedIncrease;
 
   const updateRole = async (which: "special1_role" | "special2_role", value: string) => {
     setDetail(d => d ? { ...d, [which]: value } : d);
