@@ -190,7 +190,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
 
           {canEdit && (
             <div className="pt-2 space-y-2 border-t border-border">
-              <label className="text-[10px] font-heading uppercase tracking-wider text-foreground font-bold block">
+              <label className="text-[11px] font-heading uppercase tracking-wider text-foreground font-bold block">
                 Change Readiness Order
               </label>
               <select
@@ -200,7 +200,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
                   if (v === detail.readiness) cancelOrder();
                   else updateNextReadiness(v);
                 }}
-                className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs font-semibold text-foreground"
+                className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs font-bold text-foreground"
               >
                 {READINESS_LEVELS.map(r => {
                   const isRaiseTooMuch = r.value < detail.readiness - 1;
