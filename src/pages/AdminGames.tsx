@@ -112,6 +112,23 @@ const AdminGames = () => {
 
   useEffect(() => { fetchGames(); fetchProfiles(); fetchShipTypes(); }, [fetchGames, fetchProfiles, fetchShipTypes]);
 
+  // Realtime: when a player submits/unsubmits orders, refresh that row in our list.
+  useEffect(() => {
+    if (!selectedGame) return;
+    const channel = (supabase as any)
+      .channel(`admin-game-players-${selectedGame.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "game_players", filter: `game_id=eq.${selectedGame.id}` },
+        (payload: any) => {
+          const updated = payload.new as GamePlayerRow;
+          setPlayers(prev => prev.map(p => (p.id === updated.id ? { ...p, ...updated } : p)));
+        }
+      )
+      .subscribe();
+    return () => { (supabase as any).removeChannel(channel); };
+  }, [selectedGame]);
+
   /* ── load a game ── */
   const loadGame = useCallback(async (game: GameRow) => {
     setSelectedGame(game);
