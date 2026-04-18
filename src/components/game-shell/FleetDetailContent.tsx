@@ -257,31 +257,14 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
       </ImperialCard>
 
       <ImperialCard title="Composition">
-        {ships.length === 0 ? (
-          <p className="text-[10px] text-foreground/80 italic">No ships in this fleet.</p>
-        ) : (
-          <div className="space-y-1.5">
-            {ships.map(s => (
-              <div key={s.id} className="flex items-center justify-between gap-2 text-xs py-1 border-b border-border last:border-0">
-                <div className="flex-1 min-w-0">
-                  <div className="truncate font-bold text-foreground">{s.ship_name}</div>
-                  <div className="text-[10px] text-foreground/85 uppercase tracking-wider font-semibold">{s.hull_class} · {s.tactical_group}</div>
-                </div>
-                {canEdit ? (
-                  <input
-                    type="number"
-                    min={0}
-                    value={s.quantity}
-                    onChange={(e) => handleQtyChange(s.id, Number(e.target.value))}
-                    className="w-14 h-7 rounded-sm border border-input bg-background px-1.5 text-xs text-right"
-                  />
-                ) : (
-                  <span className="font-semibold text-bronze">×{s.quantity}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <FleetCompositionEditor
+          ships={ships}
+          setShips={setShips}
+          shipTypes={shipTypes}
+          canEdit={canEdit}
+          special1Role={detail.special1_role}
+          special2Role={detail.special2_role}
+        />
       </ImperialCard>
     </>
   );
