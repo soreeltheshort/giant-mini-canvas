@@ -348,15 +348,19 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
             <div className="pt-2 space-y-2 border-t border-border">
               <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block mb-1">
                 Change Readiness Order
+                {detail.next_readiness === null && noPointsLeft && (
+                  <span className="text-crimson normal-case"> (no combat points)</span>
+                )}
               </label>
               <select
                 value={detail.next_readiness ?? detail.readiness}
+                disabled={detail.next_readiness === null && noPointsLeft}
                 onChange={(e) => {
                   const v = Number(e.target.value);
                   if (v === detail.readiness) cancelOrder();
                   else updateNextReadiness(v);
                 }}
-                className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground"
+                className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {READINESS_LEVELS.map(r => {
                   const isRaiseTooMuch = r.value < detail.readiness - 1;
@@ -372,7 +376,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
               {detail.next_readiness !== null && (
                 <button
                   onClick={cancelOrder}
-                  className="w-full px-2 py-1 rounded-sm text-[11px] font-heading uppercase tracking-wider border border-border text-[hsl(20_25%_10%)] font-bold hover:border-bronze/60 transition-colors"
+                  className="w-full px-2 py-1 rounded-sm text-[11px] font-heading uppercase tracking-wider border border-crimson/60 bg-background text-crimson font-bold hover:bg-crimson/10 transition-colors"
                 >
                   Cancel Order
                 </button>
