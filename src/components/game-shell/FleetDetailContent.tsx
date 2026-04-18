@@ -201,11 +201,11 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
           <Row label="Current">
             <span className="text-xs font-bold text-foreground">{readinessLabel(detail.readiness)}</span>
           </Row>
-          <Row label="Next Turn">
-            <span className={`text-xs font-bold ${nextReadiness !== detail.readiness ? "text-crimson" : "text-foreground"}`}>
-              {readinessLabel(nextReadiness)}
-            </span>
-          </Row>
+          {nextReadiness !== detail.readiness && (
+            <Row label="Order Pending">
+              <span className="text-xs font-bold text-crimson">→ {readinessLabel(nextReadiness)}</span>
+            </Row>
+          )}
 
           {canEdit && (
             <div className="pt-2 space-y-2 border-t border-border">
