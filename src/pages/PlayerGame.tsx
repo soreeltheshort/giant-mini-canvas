@@ -681,6 +681,8 @@ const PlayerGame = () => {
             playerOwnerClassification={`PROVINCE_${player.player_slot}`}
             fleetOrderContext={{ gameId: game.id, playerId: player.id, turnNumber: game.turn_number }}
             onStartTargeting={setTargeting}
+            combatPointsAvailable={combatPointsAvailable}
+            onOrdersChanged={refreshOrders}
             gameData={mapState ? {
               systems: mapState.systems,
               fleets: mapState.fleets,
