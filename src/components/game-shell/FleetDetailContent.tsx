@@ -175,18 +175,6 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
     if (error) toast({ title: "Failed to save strategy", description: error.message, variant: "destructive" });
   };
 
-  const handleQtyChange = async (rowId: string, qty: number) => {
-    const safe = Math.max(0, Math.floor(qty));
-    setShips(prev => prev.map(s => s.id === rowId ? { ...s, quantity: safe } : s));
-    if (safe <= 0) {
-      await supabase.from("fleet_ships").delete().eq("id", rowId);
-      setShips(prev => prev.filter(s => s.id !== rowId));
-    } else {
-      await supabase.from("fleet_ships").update({ quantity: safe }).eq("id", rowId);
-    }
-  };
-
-
   return (
     <>
       <ImperialCard title="Readiness">
