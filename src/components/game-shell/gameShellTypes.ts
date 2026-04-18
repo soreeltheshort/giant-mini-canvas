@@ -23,6 +23,8 @@ export interface GlobalStats {
   combatCapability: number;
   adminPointsRemaining: number;
   combatPointsRemaining: number;
+  /** Combat points already spent on pending fleet orders this turn (shown as -N indicator). */
+  combatPointsPending?: number;
 }
 
 export interface NewsStory {

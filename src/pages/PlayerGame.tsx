@@ -314,6 +314,9 @@ const PlayerGame = () => {
     | { mode: "fleet"; orderType: "attack"; fleetId: string }
     | null
   >(null);
+  // Number of fleet-related orders the player has issued this turn (each costs 1 combat point)
+  const [pendingFleetOrderCount, setPendingFleetOrderCount] = useState(0);
+  const [orderRefreshTick, setOrderRefreshTick] = useState(0);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
@@ -400,6 +403,31 @@ const PlayerGame = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Count player's fleet move/attack orders for this turn (each costs 1 combat point).
+  useEffect(() => {
+    if (!player || !game) return;
+    let cancelled = false;
+    (async () => {
+      const { data: orders } = await (supabase as any)
+        .from("player_orders")
+        .select("order_type, order_json")
+        .eq("game_id", game.id)
+        .eq("player_id", player.id)
+        .eq("turn_number", game.turn_number)
+        .in("order_type", ["fleet_move", "other"]);
+      if (cancelled) return;
+      const count = ((orders ?? []) as any[]).filter(o =>
+        o.order_type === "fleet_move" ||
+        (o.order_type === "other" && o.order_json?.kind === "fleet_attack")
+      ).length;
+      setPendingFleetOrderCount(count);
+    })();
+    return () => { cancelled = true; };
+  }, [player?.id, game?.id, game?.turn_number, orderRefreshTick]);
+
+  const refreshOrders = useCallback(() => setOrderRefreshTick(t => t + 1), []);
+  const combatPointsAvailable = Math.max(0, (player?.combat_points_remaining ?? 0) - pendingFleetOrderCount);
+
   const advanceInit = async () => {
     if (initStep < 3) {
       setInitStep(initStep + 1);
@@ -455,6 +483,11 @@ const PlayerGame = () => {
 
   const handleHexTargetPicked = async (hex: { x: number; y: number }) => {
     if (!player || !game || !targeting || targeting.mode !== "hex") return;
+    if (combatPointsAvailable <= 0) {
+      toast({ title: "No combat points", description: "Cancel another fleet order first.", variant: "destructive" });
+      setTargeting(null);
+      return;
+    }
     try {
       await (supabase as any).from("player_orders")
         .delete()
@@ -470,6 +503,7 @@ const PlayerGame = () => {
         notes: "",
       });
       toast({ title: "Move Order Set", description: `Destination (${hex.x}, ${hex.y})` });
+      refreshOrders();
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
@@ -481,6 +515,11 @@ const PlayerGame = () => {
     if (!player || !game || !targeting || targeting.mode !== "fleet") return;
     if (target.fleet_id === targeting.fleetId) {
       toast({ title: "Invalid target", description: "Cannot target the same fleet.", variant: "destructive" });
+      return;
+    }
+    if (combatPointsAvailable <= 0) {
+      toast({ title: "No combat points", description: "Cancel another fleet order first.", variant: "destructive" });
+      setTargeting(null);
       return;
     }
     try {
@@ -499,6 +538,7 @@ const PlayerGame = () => {
         notes: "",
       });
       toast({ title: "Attack Order Set", description: `Target: ${target.fleet_name}` });
+      refreshOrders();
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
@@ -573,6 +613,7 @@ const PlayerGame = () => {
             combatCapability: player?.combat_capability ?? 3,
             adminPointsRemaining: player?.admin_points_remaining ?? 3,
             combatPointsRemaining: player?.combat_points_remaining ?? 3,
+            combatPointsPending: pendingFleetOrderCount,
           }}
           news={DUMMY_NEWS}
           activeMode={activeMode}
@@ -593,6 +634,8 @@ const PlayerGame = () => {
             playerOwnerClassification: `PROVINCE_${player.player_slot}`,
             fleetOrderContext: { gameId: game.id, playerId: player.id, turnNumber: game.turn_number },
             onStartTargeting: setTargeting,
+            combatPointsAvailable,
+            onOrdersChanged: refreshOrders,
           } : undefined}
         />
 
@@ -638,6 +681,8 @@ const PlayerGame = () => {
             playerOwnerClassification={`PROVINCE_${player.player_slot}`}
             fleetOrderContext={{ gameId: game.id, playerId: player.id, turnNumber: game.turn_number }}
             onStartTargeting={setTargeting}
+            combatPointsAvailable={combatPointsAvailable}
+            onOrdersChanged={refreshOrders}
             gameData={mapState ? {
               systems: mapState.systems,
               fleets: mapState.fleets,

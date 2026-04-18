@@ -32,6 +32,8 @@ interface LeftPanelProps {
       t: { mode: "hex"; orderType: "fleet_move"; fleetId: string }
         | { mode: "fleet"; orderType: "attack"; fleetId: string }
     ) => void;
+    combatPointsAvailable?: number;
+    onOrdersChanged?: () => void;
   };
 }
 
@@ -109,6 +111,9 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
               <span className="text-xs font-bold text-senate-dark font-heading">{stats.combatCapability}</span>
               <span className="text-[9px] text-muted-foreground">·</span>
               <span className="text-[10px] text-bronze font-semibold">{stats.combatPointsRemaining}pt</span>
+              {(stats.combatPointsPending ?? 0) > 0 && (
+                <span className="text-[10px] text-crimson font-bold">(-{stats.combatPointsPending})</span>
+              )}
             </div>
           </div>
         </div>
@@ -195,7 +200,7 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
 }
 
 /* ── Inline Context Content (mirrors ContextPanel content) ── */
-function InlineContextContent({ mode, selection, news, onClearSelection, gameData, playerOwnerClassification, fleetOrderContext, onStartTargeting }: {
+function InlineContextContent({ mode, selection, news, onClearSelection, gameData, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: {
   mode: GameMode;
   selection: MapSelection;
   news: NewsStory[];
@@ -204,6 +209,8 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
   playerOwnerClassification?: string;
   fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
   onStartTargeting?: (t: { mode: "hex"; orderType: "fleet_move"; fleetId: string } | { mode: "fleet"; orderType: "attack"; fleetId: string }) => void;
+  combatPointsAvailable?: number;
+  onOrdersChanged?: () => void;
 }) {
   const getModeIcon = () => {
     if (selection.type === "news") return <Scroll className="w-3.5 h-3.5" />;
@@ -236,7 +243,7 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
         ) : selection.type === "region" ? (
           <InlineRegionDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "army" ? (
-          <InlineArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} />
+          <InlineArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />
         ) : selection.type === "production-center" ? (
           <InlineProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
@@ -342,13 +349,13 @@ function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapDa
   );
 }
 
-function InlineArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext, onStartTargeting }: { id: string; gameData?: GameMapData; playerOwnerClassification?: string; fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number }; onStartTargeting?: (t: { mode: "hex"; orderType: "fleet_move"; fleetId: string } | { mode: "fleet"; orderType: "attack"; fleetId: string }) => void }) {
+function InlineArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: { id: string; gameData?: GameMapData; playerOwnerClassification?: string; fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number }; onStartTargeting?: (t: { mode: "hex"; orderType: "fleet_move"; fleetId: string } | { mode: "fleet"; orderType: "attack"; fleetId: string }) => void; combatPointsAvailable?: number; onOrdersChanged?: () => void }) {
   const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
   const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
 
   if (realFleet) {
     const canEdit = !!playerOwnerClassification && realFleet.owner_classification === playerOwnerClassification;
-    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} canEdit={canEdit} orderContext={fleetOrderContext} onStartTargeting={onStartTargeting} />;
+    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} canEdit={canEdit} orderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />;
   }
 
   const d = ARMY_DETAILS[id];
