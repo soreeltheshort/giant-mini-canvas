@@ -221,9 +221,6 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
                   Cancel Order
                 </button>
               )}
-              <p className="text-xs text-[hsl(20_25%_15%)] font-semibold leading-snug">
-                May lower by any amount; raising is limited to +1 per turn. Applied at end of economics phase.
-              </p>
             </div>
           )}
         </div>
