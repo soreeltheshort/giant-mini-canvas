@@ -7,11 +7,15 @@ import type { MapFleet } from "@/lib/mapTypes";
 import type { ShipTypeLookup } from "./ContextPanel";
 
 const READINESS_LEVELS = [
-  { value: 1, label: "Readiness 1 – Combat Ready" },
-  { value: 2, label: "Readiness 2 – Standard" },
-  { value: 3, label: "Readiness 3 – Routine" },
-  { value: 4, label: "Readiness 4 – Drydocked" },
+  { value: 1, label: "Readiness 1 – Combat Ready", maintenance: 1.4 },
+  { value: 2, label: "Readiness 2 – Standard", maintenance: 1.0 },
+  { value: 3, label: "Readiness 3 – Routine", maintenance: 0.75 },
+  { value: 4, label: "Readiness 4 – Drydocked", maintenance: 0.25 },
 ];
+
+function readinessMaintMult(level: number): number {
+  return READINESS_LEVELS.find(r => r.value === level)?.maintenance ?? 1;
+}
 
 const STRATEGY_OPTIONS = [
   "Flank", "Outflank", "Skirmish", "Cover Retreat", "Rear", "Attack Planet",
@@ -164,16 +168,29 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
 
   const updateNextReadiness = async (newVal: number) => {
     const clamped = Math.max(1, Math.min(4, newVal));
+    // Issuing a *new* readiness order costs 1 combat point. Changing an existing pending
+    // order does not cost extra (we already debited it the first time).
+    const hasExistingOrder = (detail?.next_readiness ?? null) !== null;
+    if (!hasExistingOrder && (combatPointsAvailable ?? Infinity) <= 0) {
+      toast({
+        title: "No combat points",
+        description: "Cancel another fleet order first.",
+        variant: "destructive",
+      });
+      return;
+    }
     setDetail(d => d ? { ...d, next_readiness: clamped } : d);
     if (orderContext) {
       await upsertOrder("set_readiness", { next_readiness: clamped });
+      if (!hasExistingOrder) onOrdersChanged?.();
     } else {
-      const { error } = await supabase.from("fleets").update({ next_readiness: clamped } as any).eq("id", detail.id);
+      const { error } = await supabase.from("fleets").update({ next_readiness: clamped } as any).eq("id", detail!.id);
       if (error) toast({ title: "Failed to save readiness order", description: error.message, variant: "destructive" });
     }
   };
 
   const cancelOrder = async () => {
+    const hadOrder = (detail?.next_readiness ?? null) !== null;
     setDetail(d => d ? { ...d, next_readiness: null } : d);
     if (orderContext) {
       const { gameId, playerId, turnNumber } = orderContext;
@@ -182,8 +199,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
         .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
         .eq("order_type", "set_readiness")
         .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
+      if (hadOrder) onOrdersChanged?.();
     } else {
-      const { error } = await supabase.from("fleets").update({ next_readiness: null } as any).eq("id", detail.id);
+      const { error } = await supabase.from("fleets").update({ next_readiness: null } as any).eq("id", detail!.id);
       if (error) toast({ title: "Failed to cancel order", description: error.message, variant: "destructive" });
     }
   };
@@ -202,20 +220,25 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
   };
 
   // ── Aggregate stats ──
+  // Maintenance scales with readiness. We show the *current* readiness cost by default
+  // and italicize the value when a readiness order would change it next turn.
   const totalShips = ships.reduce((sum, s) => sum + (s.quantity || 0), 0);
-  let totalMaintenance = 0;
+  let baseMaintenance = 0;
   let totalRepair = 0;
   let totalSupply = 0;
   let minMapSpeed = Infinity;
   for (const s of ships) {
     const st = shipTypes.find(t => t.id === s.ship_type_id);
     if (!st) continue;
-    totalMaintenance += (st.maintenance ?? 0) * s.quantity;
+    baseMaintenance += (st.maintenance ?? 0) * s.quantity;
     totalRepair += (st.repair_pod ?? 0) * s.quantity;
     totalSupply += (st.supply_pod ?? 0) * s.quantity;
     if ((st.map_speed ?? 0) > 0 && st.map_speed! < minMapSpeed) minMapSpeed = st.map_speed!;
   }
   const mapSpeedDisplay = minMapSpeed === Infinity ? 0 : minMapSpeed;
+  const previewReadiness = detail.next_readiness ?? detail.readiness;
+  const readinessChanged = detail.next_readiness !== null && detail.next_readiness !== detail.readiness;
+  const previewMaintenance = Math.round(baseMaintenance * readinessMaintMult(previewReadiness) * 100) / 100;
 
   // ── Pending move/attack orders ──
   const moveOrder = pendingOrders.find(o => o.order_type === "fleet_move");
@@ -246,7 +269,11 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
     <>
       <ImperialCard title={fleet.fleet_name}>
         <div className="space-y-2">
-          <Row label="Maintenance" value={`₡${totalMaintenance}`} />
+          <Row
+            label="Maintenance"
+            value={`₡${previewMaintenance}`}
+            valueClassName={readinessChanged ? "italic text-crimson" : undefined}
+          />
           <Row label="Repair" value={`${totalRepair}`} />
           <Row label="Supply" value={`${totalSupply}`} />
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
@@ -321,15 +348,19 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
             <div className="pt-2 space-y-2 border-t border-border">
               <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block mb-1">
                 Change Readiness Order
+                {detail.next_readiness === null && noPointsLeft && (
+                  <span className="text-crimson normal-case"> (no combat points)</span>
+                )}
               </label>
               <select
                 value={detail.next_readiness ?? detail.readiness}
+                disabled={detail.next_readiness === null && noPointsLeft}
                 onChange={(e) => {
                   const v = Number(e.target.value);
                   if (v === detail.readiness) cancelOrder();
                   else updateNextReadiness(v);
                 }}
-                className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground"
+                className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {READINESS_LEVELS.map(r => {
                   const isRaiseTooMuch = r.value < detail.readiness - 1;
@@ -345,7 +376,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
               {detail.next_readiness !== null && (
                 <button
                   onClick={cancelOrder}
-                  className="w-full px-2 py-1 rounded-sm text-[11px] font-heading uppercase tracking-wider border border-border text-[hsl(20_25%_10%)] font-bold hover:border-bronze/60 transition-colors"
+                  className="w-full px-2 py-1 rounded-sm text-[11px] font-heading uppercase tracking-wider border border-crimson/60 bg-background text-crimson font-bold hover:bg-crimson/10 transition-colors"
                 >
                   Cancel Order
                 </button>
@@ -400,11 +431,13 @@ function readinessLabel(level: number): string {
   return READINESS_LEVELS.find(r => r.value === level)?.label || `Readiness ${level}`;
 }
 
-function Row({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+function Row({ label, value, children, valueClassName }: { label: string; value?: string; children?: React.ReactNode; valueClassName?: string }) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-[hsl(20_25%_10%)] font-bold">{label}</span>
-      {children ? children : <span className="font-bold text-[hsl(20_25%_10%)]">{value}</span>}
+      {children
+        ? children
+        : <span className={`font-bold text-[hsl(20_25%_10%)] ${valueClassName ?? ""}`}>{value}</span>}
     </div>
   );
 }
