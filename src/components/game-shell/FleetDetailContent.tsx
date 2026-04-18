@@ -269,7 +269,11 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
     <>
       <ImperialCard title={fleet.fleet_name}>
         <div className="space-y-2">
-          <Row label="Maintenance" value={`₡${totalMaintenance}`} />
+          <Row
+            label="Maintenance"
+            value={`₡${previewMaintenance}`}
+            valueClassName={readinessChanged ? "italic text-crimson" : undefined}
+          />
           <Row label="Repair" value={`${totalRepair}`} />
           <Row label="Supply" value={`${totalSupply}`} />
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
