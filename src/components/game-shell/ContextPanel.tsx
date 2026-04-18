@@ -15,6 +15,10 @@ export interface ShipTypeLookup {
   ship_id?: string | null;
   class?: string;
   point_cost?: number;
+  maintenance?: number;
+  map_speed?: number;
+  repair_pod?: number;
+  supply_pod?: number;
 }
 
 export interface FacilityTypeFull {
