@@ -32,6 +32,8 @@ interface LeftPanelProps {
       t: { mode: "hex"; orderType: "fleet_move"; fleetId: string }
         | { mode: "fleet"; orderType: "attack"; fleetId: string }
     ) => void;
+    combatPointsAvailable?: number;
+    onOrdersChanged?: () => void;
   };
 }
 
