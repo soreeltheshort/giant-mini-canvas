@@ -271,11 +271,13 @@ const PlayerMapCanvas: React.FC<Props> = ({
 
       // System name when zoomed in enough
       if (zoom > 2.5) {
-        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.fillStyle = isLiveSystem ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.5)";
         ctx.font = `${Math.max(6, size * 0.22)}px sans-serif`;
         ctx.textAlign = "center";
         ctx.fillText(sys.system_name, px, py + dotSize + size * 0.35);
       }
+
+      ctx.globalAlpha = 1;
     }
 
     // Draw visible fleets as triangular markers
@@ -325,7 +327,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
     ctx.stroke();
 
     ctx.restore();
-  }, [hexes, systems, visibleSet, visibleFleets, debugVisibleHexKeys]);
+  }, [hexes, systems, visibleSet, everSeenSet, visibleFleets, debugVisibleHexKeys, everSeenHexKeys]);
 
   useEffect(() => {
     const loop = () => {
