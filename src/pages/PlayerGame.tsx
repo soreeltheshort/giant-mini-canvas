@@ -554,6 +554,7 @@ const PlayerGame = () => {
             } : undefined,
             playerOwnerClassification: `PROVINCE_${player.player_slot}`,
             fleetOrderContext: { gameId: game.id, playerId: player.id, turnNumber: game.turn_number },
+            onStartTargeting: setTargeting,
           } : undefined}
         />
 
