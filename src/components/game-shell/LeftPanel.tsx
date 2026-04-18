@@ -111,6 +111,9 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
               <span className="text-xs font-bold text-senate-dark font-heading">{stats.combatCapability}</span>
               <span className="text-[9px] text-muted-foreground">·</span>
               <span className="text-[10px] text-bronze font-semibold">{stats.combatPointsRemaining}pt</span>
+              {(stats.combatPointsPending ?? 0) > 0 && (
+                <span className="text-[10px] text-crimson font-bold">(-{stats.combatPointsPending})</span>
+              )}
             </div>
           </div>
         </div>
