@@ -454,7 +454,26 @@ const PlayerGame = () => {
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number, orderRefreshTick]);
 
-  const refreshOrders = useCallback(() => setOrderRefreshTick(t => t + 1), []);
+  // Any change to a player's orders auto-clears the "Submitted" flag — the player
+  // can keep editing freely after submitting; the admin sees "Not Submitted" again
+  // until they click Submit Orders.
+  const refreshOrders = useCallback(() => {
+    setOrderRefreshTick(t => t + 1);
+    if (player?.orders_locked && player?.id) {
+      (supabase as any).from("game_players").update({ orders_locked: false }).eq("id", player.id);
+      setPlayer(p => (p ? { ...p, orders_locked: false } : p));
+    }
+  }, [player?.id, player?.orders_locked]);
+
+  const submitOrders = useCallback(async () => {
+    if (!player) return;
+    const next = !player.orders_locked;
+    const { error } = await (supabase as any).from("game_players").update({ orders_locked: next }).eq("id", player.id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    setPlayer(p => (p ? { ...p, orders_locked: next } : p));
+    toast({ title: next ? "Orders Submitted" : "Orders Withdrawn", description: next ? "Your orders are marked submitted." : "Your orders are no longer marked submitted." });
+  }, [player, toast]);
+
   const combatPointsAvailable = Math.max(0, (player?.combat_points_remaining ?? 0) - pendingFleetOrderCount);
 
   const advanceInit = async () => {
