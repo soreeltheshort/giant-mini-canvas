@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ImperialCard } from "./ImperialCard";
+import FleetCompositionEditor, { type FleetShipRow } from "./FleetCompositionEditor";
 import type { MapFleet } from "@/lib/mapTypes";
 import type { ShipTypeLookup } from "./ContextPanel";
 
@@ -15,15 +16,6 @@ const READINESS_LEVELS = [
 const STRATEGY_OPTIONS = [
   "Flank", "Outflank", "Skirmish", "Cover Retreat", "Rear", "Attack Planet",
 ];
-
-interface FleetShipRow {
-  id: string;
-  ship_type_id: string;
-  quantity: number;
-  tactical_group: string;
-  ship_name: string;
-  hull_class: string;
-}
 
 interface FleetDetail {
   id: string;
@@ -99,6 +91,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
           quantity: r.quantity,
           tactical_group: r.tactical_group,
           ship_name: st?.name || r.ship_type_id,
+          ship_display_id: st?.ship_id || "",
           hull_class: st?.hull_class || "",
         };
       });
@@ -182,18 +175,6 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
     if (error) toast({ title: "Failed to save strategy", description: error.message, variant: "destructive" });
   };
 
-  const handleQtyChange = async (rowId: string, qty: number) => {
-    const safe = Math.max(0, Math.floor(qty));
-    setShips(prev => prev.map(s => s.id === rowId ? { ...s, quantity: safe } : s));
-    if (safe <= 0) {
-      await supabase.from("fleet_ships").delete().eq("id", rowId);
-      setShips(prev => prev.filter(s => s.id !== rowId));
-    } else {
-      await supabase.from("fleet_ships").update({ quantity: safe }).eq("id", rowId);
-    }
-  };
-
-
   return (
     <>
       <ImperialCard title="Readiness">
@@ -276,31 +257,14 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
       </ImperialCard>
 
       <ImperialCard title="Composition">
-        {ships.length === 0 ? (
-          <p className="text-[10px] text-foreground/80 italic">No ships in this fleet.</p>
-        ) : (
-          <div className="space-y-1.5">
-            {ships.map(s => (
-              <div key={s.id} className="flex items-center justify-between gap-2 text-xs py-1 border-b border-border last:border-0">
-                <div className="flex-1 min-w-0">
-                  <div className="truncate font-bold text-foreground">{s.ship_name}</div>
-                  <div className="text-[10px] text-foreground/85 uppercase tracking-wider font-semibold">{s.hull_class} · {s.tactical_group}</div>
-                </div>
-                {canEdit ? (
-                  <input
-                    type="number"
-                    min={0}
-                    value={s.quantity}
-                    onChange={(e) => handleQtyChange(s.id, Number(e.target.value))}
-                    className="w-14 h-7 rounded-sm border border-input bg-background px-1.5 text-xs text-right"
-                  />
-                ) : (
-                  <span className="font-semibold text-bronze">×{s.quantity}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <FleetCompositionEditor
+          ships={ships}
+          setShips={setShips}
+          shipTypes={shipTypes}
+          canEdit={canEdit}
+          special1Role={detail.special1_role}
+          special2Role={detail.special2_role}
+        />
       </ImperialCard>
     </>
   );

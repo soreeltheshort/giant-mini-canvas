@@ -12,6 +12,9 @@ export interface ShipTypeLookup {
   id: string;
   name: string;
   hull_class: string;
+  ship_id?: string | null;
+  class?: string;
+  point_cost?: number;
 }
 
 export interface FacilityTypeFull {
