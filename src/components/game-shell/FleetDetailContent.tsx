@@ -197,8 +197,114 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
     if (error) toast({ title: "Failed to save strategy", description: error.message, variant: "destructive" });
   };
 
+  // ── Aggregate stats ──
+  const totalShips = ships.reduce((sum, s) => sum + (s.quantity || 0), 0);
+  let totalMaintenance = 0;
+  let totalRepair = 0;
+  let totalSupply = 0;
+  let minMapSpeed = Infinity;
+  for (const s of ships) {
+    const st = shipTypes.find(t => t.id === s.ship_type_id);
+    if (!st) continue;
+    totalMaintenance += (st.maintenance ?? 0) * s.quantity;
+    totalRepair += (st.repair_pod ?? 0) * s.quantity;
+    totalSupply += (st.supply_pod ?? 0) * s.quantity;
+    if ((st.map_speed ?? 0) > 0 && st.map_speed! < minMapSpeed) minMapSpeed = st.map_speed!;
+  }
+  const mapSpeedDisplay = minMapSpeed === Infinity ? 0 : minMapSpeed;
+
+  // ── Pending move/attack orders ──
+  const moveOrder = pendingOrders.find(o => o.order_type === "fleet_move");
+  const attackOrder = pendingOrders.find(o => o.order_type === "other" && o.order_json?.kind === "fleet_attack");
+
+  const cancelMoveOrder = async () => {
+    if (!moveOrder) return;
+    await (supabase as any).from("player_orders").delete().eq("id", moveOrder.id);
+    setPendingOrders(prev => prev.filter(o => o.id !== moveOrder.id));
+  };
+  const cancelAttackOrder = async () => {
+    if (!attackOrder) return;
+    await (supabase as any).from("player_orders").delete().eq("id", attackOrder.id);
+    setPendingOrders(prev => prev.filter(o => o.id !== attackOrder.id));
+  };
+
+  const targetFleetName = attackOrder
+    ? attackOrder.order_json?.target_fleet_id ?? "Unknown"
+    : null;
+
   return (
     <>
+      <ImperialCard title={fleet.fleet_name}>
+        <div className="space-y-2">
+          <Row label="Maintenance" value={`₡${totalMaintenance}`} />
+          <Row label="Repair" value={`${totalRepair}`} />
+          <Row label="Supply" value={`${totalSupply}`} />
+          <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
+          <Row label="Ships" value={`${totalShips}`} />
+          <Row label="Position" value={`(${fleet.hex_x}, ${fleet.hex_y})`} />
+        </div>
+      </ImperialCard>
+
+      <ImperialCard title="Orders">
+        <div className="space-y-2.5">
+          {!moveOrder && !attackOrder && (
+            <p className="text-xs text-bronze-dark font-semibold">No active order.</p>
+          )}
+          {moveOrder && (
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-bronze-dark font-bold">
+                Move → ({moveOrder.order_json?.dest_x}, {moveOrder.order_json?.dest_y})
+              </span>
+              {canEdit && (
+                <button
+                  onClick={cancelMoveOrder}
+                  className="px-2 py-0.5 rounded-sm text-[10px] font-heading uppercase tracking-wider border border-border text-bronze-dark font-bold hover:border-bronze/60"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          )}
+          {attackOrder && (
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-bronze-dark font-bold">
+                Attack → {targetFleetName}
+              </span>
+              {canEdit && (
+                <button
+                  onClick={cancelAttackOrder}
+                  className="px-2 py-0.5 rounded-sm text-[10px] font-heading uppercase tracking-wider border border-border text-bronze-dark font-bold hover:border-bronze/60"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          )}
+
+          {canEdit && onStartTargeting && (
+            <div className="pt-2 border-t border-border space-y-1.5">
+              <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
+                Issue Order
+              </label>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => onStartTargeting({ mode: "hex", orderType: "fleet_move", fleetId: fleet.fleet_id })}
+                  className="flex-1 h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60"
+                >
+                  Move
+                </button>
+                <button
+                  onClick={() => onStartTargeting({ mode: "fleet", orderType: "attack", fleetId: fleet.fleet_id })}
+                  className="flex-1 h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60"
+                >
+                  Attack
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </ImperialCard>
+
       <ImperialCard title="Readiness">
         <div className="space-y-2.5">
           <div className="text-xs font-bold text-bronze-dark">{readinessLabel(detail.readiness)}</div>
