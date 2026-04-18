@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ImperialCard } from "./ImperialCard";
-import { StatusBadge } from "./StatusBadge";
 import type { MapFleet } from "@/lib/mapTypes";
-import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
 import type { ShipTypeLookup } from "./ContextPanel";
 
 const READINESS_LEVELS = [
