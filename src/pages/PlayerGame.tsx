@@ -609,6 +609,25 @@ const PlayerGame = () => {
   const factionName = PROVINCE_NAMES[player.player_slot] || `Faction ${player.player_slot}`;
   const playerName = profile?.display_name || profile?.email || "Unknown";
 
+  // Derive an arrow for the currently selected fleet if it has a pending move/attack order.
+  const orderArrow = (() => {
+    if (selection.type !== "army" || !mapState) return null;
+    const fleetId = selection.id.startsWith("fleet-") ? selection.id.slice("fleet-".length) : selection.id;
+    const fleet = mapState.fleets.find(f => f.fleet_id === fleetId);
+    if (!fleet) return null;
+    const order = pendingFleetOrders.get(fleetId);
+    if (!order) return null;
+    if (order.kind === "move" && typeof order.destX === "number" && typeof order.destY === "number") {
+      return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: order.destX, toY: order.destY, kind: "move" as const };
+    }
+    if (order.kind === "attack" && order.targetFleetId) {
+      const target = mapState.fleets.find(f => f.fleet_id === order.targetFleetId);
+      if (!target) return null;
+      return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: target.hex_x, toY: target.hex_y, kind: "attack" as const };
+    }
+    return null;
+  })();
+
   if (!player.initialized && initStep > 0) {
     return <InitScreen step={initStep} factionName={factionName} onContinue={advanceInit} />;
   }
