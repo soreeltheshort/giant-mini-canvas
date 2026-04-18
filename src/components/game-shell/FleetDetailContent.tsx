@@ -7,11 +7,15 @@ import type { MapFleet } from "@/lib/mapTypes";
 import type { ShipTypeLookup } from "./ContextPanel";
 
 const READINESS_LEVELS = [
-  { value: 1, label: "Readiness 1 – Combat Ready" },
-  { value: 2, label: "Readiness 2 – Standard" },
-  { value: 3, label: "Readiness 3 – Routine" },
-  { value: 4, label: "Readiness 4 – Drydocked" },
+  { value: 1, label: "Readiness 1 – Combat Ready", maintenance: 1.4 },
+  { value: 2, label: "Readiness 2 – Standard", maintenance: 1.0 },
+  { value: 3, label: "Readiness 3 – Routine", maintenance: 0.75 },
+  { value: 4, label: "Readiness 4 – Drydocked", maintenance: 0.25 },
 ];
+
+function readinessMaintMult(level: number): number {
+  return READINESS_LEVELS.find(r => r.value === level)?.maintenance ?? 1;
+}
 
 const STRATEGY_OPTIONS = [
   "Flank", "Outflank", "Skirmish", "Cover Retreat", "Rear", "Attack Planet",
