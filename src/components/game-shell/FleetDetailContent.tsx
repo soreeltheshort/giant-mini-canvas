@@ -180,7 +180,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
       <ImperialCard title="Readiness">
         <div className="space-y-2.5">
           <Row label="Current">
-            <span className="text-sm font-bold text-[hsl(20_25%_10%)]">{readinessLabel(detail.readiness)}</span>
+            <span className="text-xs font-bold text-bronze-dark">{readinessLabel(detail.readiness)}</span>
           </Row>
           {nextReadiness !== detail.readiness && (
             <Row label="Order Pending">
@@ -229,7 +229,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
       <ImperialCard title="Strategy">
         <div className="space-y-2">
           <div>
-            <label className="text-[10px] font-heading uppercase tracking-wider text-foreground font-bold block mb-1">Strategy 1</label>
+            <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block mb-1">Strategy 1</label>
             <select
               disabled={!canEdit}
               value={detail.special1_role}
@@ -240,7 +240,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
             </select>
           </div>
           <div>
-            <label className="text-[10px] font-heading uppercase tracking-wider text-foreground font-bold block mb-1">Strategy 2</label>
+            <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block mb-1">Strategy 2</label>
             <select
               disabled={!canEdit}
               value={detail.special2_role}
