@@ -64,6 +64,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   onCancelTargeting,
   debugVisibleHexKeys,
   everSeenHexKeys,
+  orderArrow = null,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
