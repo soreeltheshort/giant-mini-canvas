@@ -313,7 +313,7 @@ function readinessLabel(level: number): string {
 function Row({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between text-xs">
-      <span className="text-foreground/80 font-medium">{label}</span>
+      <span className="text-foreground font-semibold">{label}</span>
       {children ? children : <span className="font-bold text-foreground">{value}</span>}
     </div>
   );
