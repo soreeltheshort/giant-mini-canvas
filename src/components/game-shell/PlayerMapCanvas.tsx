@@ -35,6 +35,8 @@ interface Props {
     toY: number;
     kind: "move" | "attack";
   } | null;
+  /** The viewing player's owner classification (e.g. "PROVINCE_3"). Own fleets are always shown. */
+  ownClassification?: string;
   className?: string;
 }
 
