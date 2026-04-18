@@ -42,6 +42,7 @@ interface GamePlayerRow {
   user_id: string;
   faction_id: string | null;
   player_slot: number;
+  orders_locked?: boolean;
 }
 
 interface ProfileRow {
@@ -110,6 +111,23 @@ const AdminGames = () => {
   }, []);
 
   useEffect(() => { fetchGames(); fetchProfiles(); fetchShipTypes(); }, [fetchGames, fetchProfiles, fetchShipTypes]);
+
+  // Realtime: when a player submits/unsubmits orders, refresh that row in our list.
+  useEffect(() => {
+    if (!selectedGame) return;
+    const channel = (supabase as any)
+      .channel(`admin-game-players-${selectedGame.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "game_players", filter: `game_id=eq.${selectedGame.id}` },
+        (payload: any) => {
+          const updated = payload.new as GamePlayerRow;
+          setPlayers(prev => prev.map(p => (p.id === updated.id ? { ...p, ...updated } : p)));
+        }
+      )
+      .subscribe();
+    return () => { (supabase as any).removeChannel(channel); };
+  }, [selectedGame]);
 
   /* ── load a game ── */
   const loadGame = useCallback(async (game: GameRow) => {
@@ -593,6 +611,7 @@ const AdminGames = () => {
                   <TableRow>
                     <TableHead>Province / Faction</TableHead>
                     <TableHead>Player</TableHead>
+                    <TableHead>Orders</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -601,6 +620,13 @@ const AdminGames = () => {
                     <TableRow key={p.id}>
                       <TableCell>{PROVINCE_NAMES[p.player_slot] || `Slot ${p.player_slot}`}</TableCell>
                       <TableCell>{getProfileLabel(p.user_id)}</TableCell>
+                      <TableCell>
+                        {p.orders_locked ? (
+                          <Badge variant="default">Submitted</Badge>
+                        ) : (
+                          <Badge variant="outline">Not Submitted</Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button size="sm" variant="secondary" onClick={() => loginAsPlayer(p)}>Log in as</Button>
                         <Button size="sm" variant="destructive" onClick={() => removePlayer(p.id)}>Remove</Button>

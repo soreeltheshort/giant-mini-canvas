@@ -43,6 +43,7 @@ interface PlayerInfo {
   combat_capability: number;
   admin_points_remaining: number;
   combat_points_remaining: number;
+  orders_locked: boolean;
 }
 
 interface ProfileInfo {
@@ -327,7 +328,7 @@ const PlayerGame = () => {
 
     const [{ data: gData }, { data: pData }, { data: prData }, { data: ftData }, { data: stData }] = await Promise.all([
       (supabase as any).from("games").select("id, name, turn_number, status").eq("id", gameId).single(),
-      (supabase as any).from("game_players").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining").eq("game_id", gameId).eq("user_id", user.id).single(),
+      (supabase as any).from("game_players").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, orders_locked").eq("game_id", gameId).eq("user_id", user.id).single(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
       (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity, cost, turns_to_build, max_per_system, consumed_facility_id, maintenance"),
       (supabase as any).from("ship_types").select("id, name, hull_class, ship_id, class, point_cost, maintenance, map_speed, repair_pod, supply_pod"),
@@ -453,7 +454,26 @@ const PlayerGame = () => {
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number, orderRefreshTick]);
 
-  const refreshOrders = useCallback(() => setOrderRefreshTick(t => t + 1), []);
+  // Any change to a player's orders auto-clears the "Submitted" flag — the player
+  // can keep editing freely after submitting; the admin sees "Not Submitted" again
+  // until they click Submit Orders.
+  const refreshOrders = useCallback(() => {
+    setOrderRefreshTick(t => t + 1);
+    if (player?.orders_locked && player?.id) {
+      (supabase as any).from("game_players").update({ orders_locked: false }).eq("id", player.id);
+      setPlayer(p => (p ? { ...p, orders_locked: false } : p));
+    }
+  }, [player?.id, player?.orders_locked]);
+
+  const submitOrders = useCallback(async () => {
+    if (!player) return;
+    const next = !player.orders_locked;
+    const { error } = await (supabase as any).from("game_players").update({ orders_locked: next }).eq("id", player.id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    setPlayer(p => (p ? { ...p, orders_locked: next } : p));
+    toast({ title: next ? "Orders Submitted" : "Orders Withdrawn", description: next ? "Your orders are marked submitted." : "Your orders are no longer marked submitted." });
+  }, [player, toast]);
+
   const combatPointsAvailable = Math.max(0, (player?.combat_points_remaining ?? 0) - pendingFleetOrderCount);
 
   const advanceInit = async () => {
@@ -504,6 +524,7 @@ const PlayerGame = () => {
         notes: "",
       });
       toast({ title: "Order Submitted", description: "Facility construction order queued." });
+      refreshOrders();
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
@@ -666,6 +687,8 @@ const PlayerGame = () => {
           activeMode={activeMode}
           onModeChange={handleModeChange}
           onViewNews={handleViewNews}
+          ordersSubmitted={!!player?.orders_locked}
+          onSubmitOrders={submitOrders}
           inlineContext={isTablet ? {
             mode: activeMode,
             selection,
