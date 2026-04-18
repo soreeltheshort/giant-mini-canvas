@@ -38,19 +38,32 @@ const FleetsPanel: React.FC<Props> = ({
   onSelectHex,
 }) => {
   const [savedFleets, setSavedFleets] = useState<SavedFleet[]>([]);
+  const [fleetActualPoints, setFleetActualPoints] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [selectedSourceFleet, setSelectedSourceFleet] = useState("");
   const [fleetName, setFleetName] = useState("");
   const [ownerClassification, setOwnerClassification] = useState("PROVINCE_1");
 
-  // Load saved fleets from combat testing
+  // Load saved fleets from combat testing along with actual point totals
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("fleets")
-        .select("id, name, owner_user_id, points_budget, readiness, standing_order")
-        .order("name", { ascending: true });
-      setSavedFleets(data || []);
+      const [{ data: fleetData }, { data: shipRows }, { data: shipTypes }] = await Promise.all([
+        supabase
+          .from("fleets")
+          .select("id, name, owner_user_id, points_budget, readiness, standing_order")
+          .order("name", { ascending: true }),
+        supabase.from("fleet_ships").select("fleet_id, ship_type_id, quantity"),
+        supabase.from("ship_types").select("id, point_cost"),
+      ]);
+      const costById = new Map<string, number>();
+      for (const st of shipTypes || []) costById.set(st.id, st.point_cost || 0);
+      const totals = new Map<string, number>();
+      for (const r of shipRows || []) {
+        const cost = (costById.get(r.ship_type_id) || 0) * (r.quantity || 0);
+        totals.set(r.fleet_id, (totals.get(r.fleet_id) || 0) + cost);
+      }
+      setFleetActualPoints(totals);
+      setSavedFleets(fleetData || []);
       setLoading(false);
     })();
   }, []);
@@ -110,7 +123,7 @@ const FleetsPanel: React.FC<Props> = ({
               ) : (
                 savedFleets.map(f => (
                   <option key={f.id} value={f.id}>
-                    {f.name} ({f.points_budget}pts)
+                    {f.name} ({fleetActualPoints.get(f.id) ?? 0}pts)
                   </option>
                 ))
               )}
