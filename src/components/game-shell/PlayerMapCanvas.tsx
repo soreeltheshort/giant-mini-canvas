@@ -395,7 +395,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
     ctx.stroke();
 
     ctx.restore();
-  }, [hexes, systems, visibleSet, everSeenSet, visibleFleets, debugVisibleHexKeys, everSeenHexKeys]);
+  }, [hexes, systems, visibleSet, everSeenSet, visibleFleets, debugVisibleHexKeys, everSeenHexKeys, orderArrow]);
 
   useEffect(() => {
     const loop = () => {
