@@ -11,7 +11,10 @@ import { hexToPixel, pixelToHex, hexCorners } from "@/lib/hexUtils";
 interface Props {
   hexes: Map<string, HexData>;
   systems: Map<number, SystemData>;
+  /** Systems currently in sensor view (rendered bright). */
   visibleSystemIds: number[];
+  /** Systems the player has ever observed (rendered faded if not in visibleSystemIds). */
+  everSeenSystemIds?: number[];
   fleets?: MapFleet[];
   onSystemClick?: (system: SystemData) => void;
   onFleetClick?: (fleet: MapFleet) => void;
@@ -20,8 +23,10 @@ interface Props {
   onHexTargetPicked?: (hex: { x: number; y: number }) => void;
   onFleetTargetPicked?: (fleet: MapFleet) => void;
   onCancelTargeting?: () => void;
-  /** DEBUG: hex keys (e.g. "3,-2") on which to draw a "V" marker */
+  /** Hex keys (e.g. "3,-2") currently in live sensor view (bright). */
   debugVisibleHexKeys?: Set<string>;
+  /** Hex keys ever observed (faded if not in debugVisibleHexKeys). */
+  everSeenHexKeys?: Set<string>;
   className?: string;
 }
 
@@ -41,6 +46,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   hexes,
   systems,
   visibleSystemIds,
+  everSeenSystemIds,
   fleets = [],
   onSystemClick,
   onFleetClick,
@@ -49,6 +55,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   onFleetTargetPicked,
   onCancelTargeting,
   debugVisibleHexKeys,
+  everSeenHexKeys,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -66,6 +73,10 @@ const PlayerMapCanvas: React.FC<Props> = ({
   const animRef = useRef<number>(0);
 
   const visibleSet = React.useMemo(() => new Set(visibleSystemIds), [visibleSystemIds]);
+  const everSeenSet = React.useMemo(
+    () => new Set(everSeenSystemIds && everSeenSystemIds.length > 0 ? everSeenSystemIds : visibleSystemIds),
+    [everSeenSystemIds, visibleSystemIds]
+  );
 
   // Build a set of hex keys that are in CORE or PROVINCE classifications (visible to player)
   const visibleHexKeys = React.useMemo(() => {
@@ -122,10 +133,20 @@ const PlayerMapCanvas: React.FC<Props> = ({
     const bottom = (h / 2 - camY) + margin;
 
     // Draw hexes
-    const hasVisibility = !!debugVisibleHexKeys && debugVisibleHexKeys.size > 0;
+    // A hex is rendered if it's "ever seen" (live now or remembered).
+    // Live hexes get full brightness; remembered-only hexes are faded.
+    const liveHexSet = debugVisibleHexKeys;
+    const memoryHexSet = everSeenHexKeys;
+    const hasLive = !!liveHexSet && liveHexSet.size > 0;
+    const hasMemory = !!memoryHexSet && memoryHexSet.size > 0;
+
     for (const hex of hexes.values()) {
       const [px, py] = hexToPixel(hex.x, hex.y, size);
       if (px < left || px > right || py < top || py > bottom) continue;
+
+      const hk = hexKey(hex.x, hex.y);
+      const isLive = hasLive ? liveHexSet!.has(hk) : true;
+      const isRemembered = hasMemory ? memoryHexSet!.has(hk) : isLive;
 
       const corners = hexCorners(px, py, size);
 
@@ -153,17 +174,17 @@ const PlayerMapCanvas: React.FC<Props> = ({
         alpha = 0.25;
       }
 
-      // Visibility tinting: brighten visible hexes, dim the rest
-      const isVisible = hasVisibility
-        ? debugVisibleHexKeys!.has(hexKey(hex.x, hex.y))
-        : true;
-      if (hasVisibility) {
-        if (isVisible) {
-          // Boost: more saturated/opaque
+      // Visibility tinting:
+      //   live      → bright
+      //   remembered (not live) → faded ghost
+      //   never seen → very dim fog
+      if (hasLive || hasMemory) {
+        if (isLive) {
           alpha = Math.min(1, alpha * 2.4 + 0.15);
+        } else if (isRemembered) {
+          alpha = alpha * 0.6;
         } else {
-          // Dim: fog of war
-          alpha = alpha * 0.35;
+          alpha = alpha * 0.2;
         }
       }
 
@@ -175,11 +196,17 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.fillStyle = fillColor;
       ctx.fill();
 
-      // Border — brighter for visible, faint for fogged
-      ctx.strokeStyle = isVisible
-        ? "rgba(255,255,255,0.18)"
-        : "rgba(255,255,255,0.04)";
-      ctx.lineWidth = isVisible ? 0.75 : 0.5;
+      // Border — brightest for live, faint for memory, almost none for fog
+      if (isLive) {
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = 0.75;
+      } else if (isRemembered) {
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        ctx.lineWidth = 0.5;
+      } else {
+        ctx.strokeStyle = "rgba(255,255,255,0.04)";
+        ctx.lineWidth = 0.5;
+      }
       ctx.stroke();
 
       ctx.globalAlpha = 1;
@@ -191,28 +218,35 @@ const PlayerMapCanvas: React.FC<Props> = ({
       if (h.has_system) hexIdMap.set(h.hex_id, h);
     }
 
-    // Draw visible systems (Map is keyed by hex_id, visibility is by system_id)
+    // Draw systems the player has ever observed (live = bright, memory = faded).
     for (const [, sys] of systems) {
-      if (!visibleSet.has(sys.system_id)) continue;
+      if (!everSeenSet.has(sys.system_id)) continue;
       const sysHex = hexIdMap.get(sys.hex_id);
       if (!sysHex) continue;
 
       const [px, py] = hexToPixel(sysHex.x, sysHex.y, size);
       if (px < left || px > right || py < top || py > bottom) continue;
 
+      const isLiveSystem = visibleSet.has(sys.system_id);
+      ctx.globalAlpha = isLiveSystem ? 1 : 0.45;
+
       // System dot
       const isStation = sys.system_type === "station";
       const dotSize = isStation ? size * 0.25 : size * 0.35;
 
-      // Glow
+      // Glow (suppressed for memory-only systems to read as "ghost")
       const ownerColor = OWNER_COLORS[sys.owner] || "#c8a96e";
-      ctx.shadowColor = ownerColor;
-      ctx.shadowBlur = size * 0.4;
+      if (isLiveSystem) {
+        ctx.shadowColor = ownerColor;
+        ctx.shadowBlur = size * 0.4;
+      } else {
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "transparent";
+      }
 
       ctx.fillStyle = ownerColor;
       ctx.beginPath();
       if (isStation) {
-        // Diamond shape for stations
         ctx.moveTo(px, py - dotSize);
         ctx.lineTo(px + dotSize, py);
         ctx.lineTo(px, py + dotSize);
@@ -227,7 +261,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.shadowColor = "transparent";
 
       // Border ring
-      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.strokeStyle = isLiveSystem ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.25)";
       ctx.lineWidth = 1;
       if (!isStation) {
         ctx.beginPath();
@@ -237,11 +271,13 @@ const PlayerMapCanvas: React.FC<Props> = ({
 
       // System name when zoomed in enough
       if (zoom > 2.5) {
-        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.fillStyle = isLiveSystem ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.5)";
         ctx.font = `${Math.max(6, size * 0.22)}px sans-serif`;
         ctx.textAlign = "center";
         ctx.fillText(sys.system_name, px, py + dotSize + size * 0.35);
       }
+
+      ctx.globalAlpha = 1;
     }
 
     // Draw visible fleets as triangular markers
@@ -291,7 +327,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
     ctx.stroke();
 
     ctx.restore();
-  }, [hexes, systems, visibleSet, visibleFleets, debugVisibleHexKeys]);
+  }, [hexes, systems, visibleSet, everSeenSet, visibleFleets, debugVisibleHexKeys, everSeenHexKeys]);
 
   useEffect(() => {
     const loop = () => {

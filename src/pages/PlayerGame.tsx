@@ -63,19 +63,27 @@ function deserializeMapState(json: any): MapState {
 
 /**
  * Compute effective player visibility for the current turn.
- * Rules (turn 0 / per-turn baseline):
- *  - All Core systems are visible.
- *  - All systems in the player's own province are visible.
- *  - Any system within sensor radius (1 hex) of an owned fleet is visible.
- *  - Any system within sensor radius (1 hex) of an owned system is visible (passive scan).
- *  - Plus anything already persisted in player.visible_system_ids (e.g. scouted last turn).
+ *
+ * Returns TWO sets:
+ *  - live:     systems currently in sensor view (bright on the map).
+ *              = Core + own-province systems + 1-hex sensor radius around any
+ *                owned system or owned fleet.
+ *  - everSeen: systems the player has ever observed (rendered faded if not in
+ *              live). = persisted player.visible_system_ids ∪ live.
+ *
+ * The visibility phase seeds visible_system_ids at game start with Core + ALL
+ * province systems (every faction), so every player remembers Core + Province
+ * planet locations from turn 1.
  */
 function useComputedVisibility(
   player: PlayerInfo | null,
   mapState: MapState | null,
-): number[] {
+): { live: number[]; everSeen: number[] } {
   return useMemo(() => {
-    if (!player || !mapState) return (player?.visible_system_ids ?? []) as number[];
+    const persisted = ((player?.visible_system_ids ?? []) as number[]);
+    if (!player || !mapState) {
+      return { live: [], everSeen: persisted };
+    }
 
     const ownProvince = `PROVINCE_${player.player_slot}`;
     const SENSOR_RADIUS = 1;
@@ -85,18 +93,16 @@ function useComputedVisibility(
     for (const h of mapState.hexes.values()) hexById.set(h.hex_id, h);
 
     const allSystems = Array.from(mapState.systems.values());
-    const visible = new Set<number>(
-      ((player.visible_system_ids ?? []) as number[])
-    );
+    const live = new Set<number>();
 
-    // 1. Core + own-province systems
+    // 1. Core + own-province systems are always live
     for (const sys of allSystems) {
       const sysHex = hexById.get(sys.hex_id);
       if (!sysHex) continue;
       if (sysHex.classification === "CORE" || sysHex.classification === ownProvince) {
-        visible.add(sys.system_id);
+        live.add(sys.system_id);
       }
-      if (sys.owner === ownProvince) visible.add(sys.system_id);
+      if (sys.owner === ownProvince) live.add(sys.system_id);
     }
 
     // 2. Sensor scan: scan centers = owned fleets + owned systems
@@ -114,46 +120,51 @@ function useComputedVisibility(
     }
 
     if (scanCenters.length > 0) {
-      // Pre-compute cube coords of each scan center
       const centersCube = scanCenters.map(([x, y]) => offsetToCube(x, y));
       for (const sys of allSystems) {
-        if (visible.has(sys.system_id)) continue;
+        if (live.has(sys.system_id)) continue;
         const sysHex = hexById.get(sys.hex_id);
         if (!sysHex) continue;
         const [sx, sy, sz] = offsetToCube(sysHex.x, sysHex.y);
         for (const [cx, cy, cz] of centersCube) {
           if (cubeDistance(sx, sy, sz, cx, cy, cz) <= SENSOR_RADIUS) {
-            visible.add(sys.system_id);
+            live.add(sys.system_id);
             break;
           }
         }
       }
     }
 
-    return Array.from(visible);
+    // everSeen = persisted ∪ live (once seen, always remembered)
+    const everSeen = new Set<number>(persisted);
+    for (const id of live) everSeen.add(id);
+
+    return { live: Array.from(live), everSeen: Array.from(everSeen) };
   }, [player, mapState]);
 }
 
 /**
- * DEBUG: compute the set of hex keys (x,y) the player can "see".
- * Rules: Core hexes, own-province hexes, plus 1-hex radius around
- * any owned system or owned fleet (sensor scan).
+ * Compute the set of hex keys the player can "see" — split into live (currently
+ * in sensor view, bright) and everSeen (live ∪ hexes containing any ever-seen
+ * system, faded if not live).
  */
 function useVisibleHexKeys(
   player: PlayerInfo | null,
   mapState: MapState | null,
-): Set<string> {
+  everSeenSystemIds: number[],
+): { live: Set<string>; everSeen: Set<string> } {
   return useMemo(() => {
-    const result = new Set<string>();
-    if (!player || !mapState) return result;
+    const live = new Set<string>();
+    const everSeen = new Set<string>();
+    if (!player || !mapState) return { live, everSeen };
 
     const ownProvince = `PROVINCE_${player.player_slot}`;
     const SENSOR_RADIUS = 1;
 
-    // 1. Core + own-province hexes
+    // 1. Core + own-province hexes are always live
     for (const hex of mapState.hexes.values()) {
       if (hex.classification === "CORE" || hex.classification === ownProvince) {
-        result.add(hexKey(hex.x, hex.y));
+        live.add(hexKey(hex.x, hex.y));
       }
     }
 
@@ -178,19 +189,28 @@ function useVisibleHexKeys(
       const centersCube = scanCenters.map(([x, y]) => offsetToCube(x, y));
       for (const hex of mapState.hexes.values()) {
         const k = hexKey(hex.x, hex.y);
-        if (result.has(k)) continue;
+        if (live.has(k)) continue;
         const [sx, sy, sz] = offsetToCube(hex.x, hex.y);
         for (const [cx, cy, cz] of centersCube) {
           if (cubeDistance(sx, sy, sz, cx, cy, cz) <= SENSOR_RADIUS) {
-            result.add(k);
+            live.add(k);
             break;
           }
         }
       }
     }
 
-    return result;
-  }, [player, mapState]);
+    // everSeen starts with live, then adds hexes of any ever-seen system
+    for (const k of live) everSeen.add(k);
+    const everSeenSet = new Set(everSeenSystemIds);
+    for (const sys of mapState.systems.values()) {
+      if (!everSeenSet.has(sys.system_id)) continue;
+      const sysHex = hexById.get(sys.hex_id);
+      if (sysHex) everSeen.add(hexKey(sysHex.x, sysHex.y));
+    }
+
+    return { live, everSeen };
+  }, [player, mapState, everSeenSystemIds]);
 }
 
 /* ── DEBUG: Log applied visibility & initialization rules ── */
@@ -488,8 +508,26 @@ const PlayerGame = () => {
 
 
   // Hooks MUST be called before any early returns (Rules of Hooks)
-  const visibleSystemIds = useComputedVisibility(player, mapState);
-  const debugVisibleHexKeys = useVisibleHexKeys(player, mapState);
+  const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
+  const { live: liveHexKeys, everSeen: everSeenHexKeys } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+
+  // Persist newly-discovered systems back to player.visible_system_ids so the
+  // "ever seen" memory survives reloads and turn rollover.
+  useEffect(() => {
+    if (!player || !mapState) return;
+    const persisted = new Set((player.visible_system_ids ?? []) as number[]);
+    const newlySeen = liveVisibleIds.filter(id => !persisted.has(id));
+    if (newlySeen.length === 0) return;
+    const merged = Array.from(new Set([...persisted, ...newlySeen]));
+    (supabase as any)
+      .from("game_players")
+      .update({ visible_system_ids: merged })
+      .eq("id", player.id)
+      .then(() => {
+        setPlayer(p => p ? { ...p, visible_system_ids: merged } : p);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveVisibleIds.join(","), player?.id]);
 
   if (loading) {
     return (
@@ -564,7 +602,8 @@ const PlayerGame = () => {
             <PlayerMapCanvas
               hexes={mapState.hexes}
               systems={mapState.systems}
-              visibleSystemIds={visibleSystemIds}
+              visibleSystemIds={liveVisibleIds}
+              everSeenSystemIds={everSeenSystemIds}
               fleets={mapState.fleets}
               onSystemClick={handleSystemClick}
               onFleetClick={handleFleetClick}
@@ -572,7 +611,8 @@ const PlayerGame = () => {
               onHexTargetPicked={handleHexTargetPicked}
               onFleetTargetPicked={handleFleetTargetPicked}
               onCancelTargeting={() => setTargeting(null)}
-              debugVisibleHexKeys={debugVisibleHexKeys}
+              debugVisibleHexKeys={liveHexKeys}
+              everSeenHexKeys={everSeenHexKeys}
               className="flex-1"
             />
           ) : (
