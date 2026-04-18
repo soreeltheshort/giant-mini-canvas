@@ -288,6 +288,12 @@ const PlayerGame = () => {
   const [activeMode, setActiveMode] = useState<GameMode>("military");
   const [selection, setSelection] = useState<MapSelection>({ type: "none" });
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  // Targeting: when active, the next map click is captured as a fleet order target
+  const [targeting, setTargeting] = useState<
+    | { mode: "hex"; orderType: "fleet_move"; fleetId: string }
+    | { mode: "fleet"; orderType: "attack"; fleetId: string }
+    | null
+  >(null);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
@@ -297,7 +303,7 @@ const PlayerGame = () => {
       (supabase as any).from("game_players").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining").eq("game_id", gameId).eq("user_id", user.id).single(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
       (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity, cost, turns_to_build, max_per_system, consumed_facility_id, maintenance"),
-      (supabase as any).from("ship_types").select("id, name, hull_class, ship_id, class, point_cost"),
+      (supabase as any).from("ship_types").select("id, name, hull_class, ship_id, class, point_cost, maintenance, map_speed, repair_pod, supply_pod"),
     ]);
 
     if (!gData || !pData) {
@@ -335,6 +341,10 @@ const PlayerGame = () => {
       ship_id: s.ship_id,
       class: s.class,
       point_cost: s.point_cost,
+      maintenance: Number(s.maintenance) || 0,
+      map_speed: Number(s.map_speed) || 0,
+      repair_pod: Number(s.repair_pod) || 0,
+      supply_pod: Number(s.supply_pod) || 0,
     })));
 
     const { data: mapRow } = await (supabase as any)
@@ -423,6 +433,60 @@ const PlayerGame = () => {
     }
   };
 
+  const handleHexTargetPicked = async (hex: { x: number; y: number }) => {
+    if (!player || !game || !targeting || targeting.mode !== "hex") return;
+    try {
+      await (supabase as any).from("player_orders")
+        .delete()
+        .eq("game_id", game.id).eq("player_id", player.id).eq("turn_number", game.turn_number)
+        .eq("order_type", "fleet_move")
+        .filter("order_json->>fleet_id", "eq", targeting.fleetId);
+      await (supabase as any).from("player_orders").insert({
+        game_id: game.id,
+        player_id: player.id,
+        turn_number: game.turn_number,
+        order_type: "fleet_move",
+        order_json: { fleet_id: targeting.fleetId, dest_x: hex.x, dest_y: hex.y },
+        notes: "",
+      });
+      toast({ title: "Move Order Set", description: `Destination (${hex.x}, ${hex.y})` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setTargeting(null);
+    }
+  };
+
+  const handleFleetTargetPicked = async (target: MapFleet) => {
+    if (!player || !game || !targeting || targeting.mode !== "fleet") return;
+    if (target.fleet_id === targeting.fleetId) {
+      toast({ title: "Invalid target", description: "Cannot target the same fleet.", variant: "destructive" });
+      return;
+    }
+    try {
+      await (supabase as any).from("player_orders")
+        .delete()
+        .eq("game_id", game.id).eq("player_id", player.id).eq("turn_number", game.turn_number)
+        .eq("order_type", "other")
+        .filter("order_json->>fleet_id", "eq", targeting.fleetId)
+        .filter("order_json->>kind", "eq", "fleet_attack");
+      await (supabase as any).from("player_orders").insert({
+        game_id: game.id,
+        player_id: player.id,
+        turn_number: game.turn_number,
+        order_type: "other",
+        order_json: { kind: "fleet_attack", fleet_id: targeting.fleetId, target_fleet_id: target.fleet_id },
+        notes: "",
+      });
+      toast({ title: "Attack Order Set", description: `Target: ${target.fleet_name}` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setTargeting(null);
+    }
+  };
+
+
   // Hooks MUST be called before any early returns (Rules of Hooks)
   const visibleSystemIds = useComputedVisibility(player, mapState);
   const debugVisibleHexKeys = useVisibleHexKeys(player, mapState);
@@ -490,6 +554,7 @@ const PlayerGame = () => {
             } : undefined,
             playerOwnerClassification: `PROVINCE_${player.player_slot}`,
             fleetOrderContext: { gameId: game.id, playerId: player.id, turnNumber: game.turn_number },
+            onStartTargeting: setTargeting,
           } : undefined}
         />
 
@@ -503,6 +568,10 @@ const PlayerGame = () => {
               fleets={mapState.fleets}
               onSystemClick={handleSystemClick}
               onFleetClick={handleFleetClick}
+              targetingMode={targeting?.mode ?? null}
+              onHexTargetPicked={handleHexTargetPicked}
+              onFleetTargetPicked={handleFleetTargetPicked}
+              onCancelTargeting={() => setTargeting(null)}
               debugVisibleHexKeys={debugVisibleHexKeys}
               className="flex-1"
             />
@@ -527,6 +596,8 @@ const PlayerGame = () => {
             onBuildFacility={handleBuildFacility}
             playerTreasury={player?.treasury ?? 0}
             playerOwnerClassification={`PROVINCE_${player.player_slot}`}
+            fleetOrderContext={{ gameId: game.id, playerId: player.id, turnNumber: game.turn_number }}
+            onStartTargeting={setTargeting}
             gameData={mapState ? {
               systems: mapState.systems,
               fleets: mapState.fleets,
