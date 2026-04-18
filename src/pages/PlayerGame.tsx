@@ -687,6 +687,8 @@ const PlayerGame = () => {
           activeMode={activeMode}
           onModeChange={handleModeChange}
           onViewNews={handleViewNews}
+          ordersSubmitted={!!player?.orders_locked}
+          onSubmitOrders={submitOrders}
           inlineContext={isTablet ? {
             mode: activeMode,
             selection,
