@@ -59,6 +59,8 @@ interface ContextPanelProps {
     t: { mode: "hex"; orderType: "fleet_move"; fleetId: string }
       | { mode: "fleet"; orderType: "attack"; fleetId: string }
   ) => void;
+  combatPointsAvailable?: number;
+  onOrdersChanged?: () => void;
 }
 
 export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, playerOwnerClassification, fleetOrderContext, onStartTargeting }: ContextPanelProps) {
