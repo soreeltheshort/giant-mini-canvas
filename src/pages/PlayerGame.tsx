@@ -408,6 +408,8 @@ const PlayerGame = () => {
   useEffect(() => { load(); }, [load]);
 
   // Count player's fleet move/attack orders for this turn (each costs 1 combat point).
+  // Load player's fleet move/attack orders for this turn (each costs 1 combat point)
+  // and stash them so we can both count points and draw arrows for the selected fleet.
   useEffect(() => {
     if (!player || !game) return;
     let cancelled = false;
@@ -420,11 +422,27 @@ const PlayerGame = () => {
         .eq("turn_number", game.turn_number)
         .in("order_type", ["fleet_move", "other"]);
       if (cancelled) return;
-      const count = ((orders ?? []) as any[]).filter(o =>
-        o.order_type === "fleet_move" ||
-        (o.order_type === "other" && o.order_json?.kind === "fleet_attack")
-      ).length;
-      setPendingFleetOrderCount(count);
+      const map = new Map<string, { kind: "move" | "attack"; targetFleetId?: string; destX?: number; destY?: number }>();
+      for (const o of (orders ?? []) as any[]) {
+        if (o.order_type === "fleet_move" && o.order_json?.fleet_id) {
+          map.set(o.order_json.fleet_id, {
+            kind: "move",
+            destX: o.order_json.dest_x,
+            destY: o.order_json.dest_y,
+          });
+        } else if (
+          o.order_type === "other" &&
+          o.order_json?.kind === "fleet_attack" &&
+          o.order_json?.fleet_id
+        ) {
+          map.set(o.order_json.fleet_id, {
+            kind: "attack",
+            targetFleetId: o.order_json.target_fleet_id,
+          });
+        }
+      }
+      setPendingFleetOrders(map);
+      setPendingFleetOrderCount(map.size);
     })();
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number, orderRefreshTick]);
