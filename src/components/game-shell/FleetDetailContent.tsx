@@ -276,9 +276,9 @@ function readinessLabel(level: number): string {
 
 function Row({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between text-xs">
-      <span className="text-foreground font-semibold">{label}</span>
-      {children ? children : <span className="font-bold text-foreground">{value}</span>}
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-[hsl(20_25%_10%)] font-bold">{label}</span>
+      {children ? children : <span className="font-bold text-[hsl(20_25%_10%)]">{value}</span>}
     </div>
   );
 }
