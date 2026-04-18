@@ -179,9 +179,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
     <>
       <ImperialCard title="Readiness">
         <div className="space-y-2.5">
-          <Row label="Current">
-            <span className="text-xs font-bold text-bronze-dark">{readinessLabel(detail.readiness)}</span>
-          </Row>
+          <div className="text-xs font-bold text-bronze-dark">{readinessLabel(detail.readiness)}</div>
           {nextReadiness !== detail.readiness && (
             <Row label="Order Pending">
               <span className="text-sm font-bold text-crimson">→ {readinessLabel(nextReadiness)}</span>
