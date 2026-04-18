@@ -288,6 +288,12 @@ const PlayerGame = () => {
   const [activeMode, setActiveMode] = useState<GameMode>("military");
   const [selection, setSelection] = useState<MapSelection>({ type: "none" });
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  // Targeting: when active, the next map click is captured as a fleet order target
+  const [targeting, setTargeting] = useState<
+    | { mode: "hex"; orderType: "fleet_move"; fleetId: string }
+    | { mode: "fleet"; orderType: "attack"; fleetId: string }
+    | null
+  >(null);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
