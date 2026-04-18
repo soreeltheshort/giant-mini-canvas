@@ -289,8 +289,8 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
             {ships.map(s => (
               <div key={s.id} className="flex items-center justify-between gap-2 text-xs py-1 border-b border-border last:border-0">
                 <div className="flex-1 min-w-0">
-                  <div className="truncate font-semibold text-foreground">{s.ship_name}</div>
-                  <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{s.hull_class} · {s.tactical_group}</div>
+                  <div className="truncate font-bold text-foreground">{s.ship_name}</div>
+                  <div className="text-[10px] text-foreground/70 uppercase tracking-wider font-medium">{s.hull_class} · {s.tactical_group}</div>
                 </div>
                 {canEdit ? (
                   <input
