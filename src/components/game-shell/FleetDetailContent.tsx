@@ -43,6 +43,10 @@ interface Props {
     t: { mode: "hex"; orderType: "fleet_move"; fleetId: string }
       | { mode: "fleet"; orderType: "attack"; fleetId: string }
   ) => void;
+  /** Combat points the player can still spend on new fleet orders. */
+  combatPointsAvailable?: number;
+  /** Notify parent when orders change so it can recompute remaining combat points. */
+  onOrdersChanged?: () => void;
 }
 
 interface PendingOrder {
@@ -51,7 +55,7 @@ interface PendingOrder {
   order_json: any;
 }
 
-export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, orderContext, onStartTargeting }: Props) {
+export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
   const [ships, setShips] = useState<FleetShipRow[]>([]);
