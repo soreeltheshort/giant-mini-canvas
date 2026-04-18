@@ -67,10 +67,19 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
       if (!sourceId) {
         setDetail(null);
         setShips([]);
+        setPendingOrders([]);
         setLoading(false);
         return;
       }
-      const [{ data: f }, { data: fs }] = await Promise.all([
+      const ordersPromise = orderContext
+        ? (supabase as any).from("player_orders")
+            .select("id, order_type, order_json")
+            .eq("game_id", orderContext.gameId)
+            .eq("player_id", orderContext.playerId)
+            .eq("turn_number", orderContext.turnNumber)
+            .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
+        : Promise.resolve({ data: [] as any[] });
+      const [{ data: f }, { data: fs }, { data: po }] = await Promise.all([
         supabase
           .from("fleets")
           .select("id, name, readiness, next_readiness, special1_role, special2_role")
@@ -80,6 +89,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
           .from("fleet_ships")
           .select("id, ship_type_id, quantity, tactical_group")
           .eq("fleet_id", sourceId),
+        ordersPromise,
       ]);
       if (cancelled) return;
       if (f) {
@@ -107,11 +117,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
         };
       });
       setShips(rows);
+      setPendingOrders(((po as any[]) || []) as PendingOrder[]);
       setLoading(false);
     }
     load();
     return () => { cancelled = true; };
-  }, [sourceId, shipTypes]);
+  }, [sourceId, shipTypes, orderContext, fleet.fleet_id]);
 
   if (loading) {
     return (
