@@ -277,7 +277,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
 
       <ImperialCard title="Composition">
         {ships.length === 0 ? (
-          <p className="text-[10px] text-muted-foreground italic">No ships in this fleet.</p>
+          <p className="text-[10px] text-foreground/80 italic">No ships in this fleet.</p>
         ) : (
           <div className="space-y-1.5">
             {ships.map(s => (
