@@ -19,6 +19,10 @@ interface LeftPanelProps {
   activeMode: GameMode;
   onModeChange: (mode: GameMode) => void;
   onViewNews: () => void;
+  /** Whether the player has marked their orders as submitted this turn. */
+  ordersSubmitted?: boolean;
+  /** Toggle order submission. */
+  onSubmitOrders?: () => void;
   /** Inline context (used on tablet where right panel is hidden) */
   inlineContext?: {
     mode: GameMode;
@@ -57,7 +61,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   event: "warning",
 };
 
-export default function LeftPanel({ stats, news, activeMode, onModeChange, onViewNews, inlineContext }: LeftPanelProps) {
+export default function LeftPanel({ stats, news, activeMode, onModeChange, onViewNews, inlineContext, ordersSubmitted = false, onSubmitOrders }: LeftPanelProps) {
   const unreadCount = news.filter((n) => !n.read).length;
   const latestUnread = news.find((n) => !n.read);
 
@@ -189,11 +193,22 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
         )}
       </div>
 
-      {/* ── Bottom: Turn indicator ── */}
-      <div className="p-3 border-t border-border shrink-0">
-        <button className="w-full py-2 bg-crimson text-primary-foreground rounded-sm font-heading text-xs font-semibold uppercase tracking-wider hover:bg-crimson-light transition-colors bronze-glow-hover">
-          Submit Orders
+      {/* ── Bottom: Submit Orders ── */}
+      <div className="p-3 border-t border-border shrink-0 space-y-1.5">
+        <button
+          onClick={onSubmitOrders}
+          disabled={!onSubmitOrders}
+          className={`w-full py-2 rounded-sm font-heading text-xs font-semibold uppercase tracking-wider transition-colors bronze-glow-hover ${
+            ordersSubmitted
+              ? "bg-ivory border border-bronze/60 text-bronze-dark hover:bg-ivory-dark"
+              : "bg-crimson text-primary-foreground hover:bg-crimson-light"
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          {ordersSubmitted ? "Withdraw Orders" : "Submit Orders"}
         </button>
+        <p className={`text-[9px] font-heading uppercase tracking-widest text-center ${ordersSubmitted ? "text-bronze-dark" : "text-muted-foreground"}`}>
+          {ordersSubmitted ? "✓ Submitted — you may keep editing" : "Not Submitted"}
+        </p>
       </div>
     </aside>
   );

@@ -524,6 +524,7 @@ const PlayerGame = () => {
         notes: "",
       });
       toast({ title: "Order Submitted", description: "Facility construction order queued." });
+      refreshOrders();
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
