@@ -613,6 +613,7 @@ const PlayerGame = () => {
             combatCapability: player?.combat_capability ?? 3,
             adminPointsRemaining: player?.admin_points_remaining ?? 3,
             combatPointsRemaining: player?.combat_points_remaining ?? 3,
+            combatPointsPending: pendingFleetOrderCount,
           }}
           news={DUMMY_NEWS}
           activeMode={activeMode}
@@ -633,6 +634,8 @@ const PlayerGame = () => {
             playerOwnerClassification: `PROVINCE_${player.player_slot}`,
             fleetOrderContext: { gameId: game.id, playerId: player.id, turnNumber: game.turn_number },
             onStartTargeting: setTargeting,
+            combatPointsAvailable,
+            onOrdersChanged: refreshOrders,
           } : undefined}
         />
 
