@@ -73,6 +73,10 @@ const PlayerMapCanvas: React.FC<Props> = ({
   const animRef = useRef<number>(0);
 
   const visibleSet = React.useMemo(() => new Set(visibleSystemIds), [visibleSystemIds]);
+  const everSeenSet = React.useMemo(
+    () => new Set(everSeenSystemIds && everSeenSystemIds.length > 0 ? everSeenSystemIds : visibleSystemIds),
+    [everSeenSystemIds, visibleSystemIds]
+  );
 
   // Build a set of hex keys that are in CORE or PROVINCE classifications (visible to player)
   const visibleHexKeys = React.useMemo(() => {
@@ -129,10 +133,20 @@ const PlayerMapCanvas: React.FC<Props> = ({
     const bottom = (h / 2 - camY) + margin;
 
     // Draw hexes
-    const hasVisibility = !!debugVisibleHexKeys && debugVisibleHexKeys.size > 0;
+    // A hex is rendered if it's "ever seen" (live now or remembered).
+    // Live hexes get full brightness; remembered-only hexes are faded.
+    const liveHexSet = debugVisibleHexKeys;
+    const memoryHexSet = everSeenHexKeys;
+    const hasLive = !!liveHexSet && liveHexSet.size > 0;
+    const hasMemory = !!memoryHexSet && memoryHexSet.size > 0;
+
     for (const hex of hexes.values()) {
       const [px, py] = hexToPixel(hex.x, hex.y, size);
       if (px < left || px > right || py < top || py > bottom) continue;
+
+      const hk = hexKey(hex.x, hex.y);
+      const isLive = hasLive ? liveHexSet!.has(hk) : true;
+      const isRemembered = hasMemory ? memoryHexSet!.has(hk) : isLive;
 
       const corners = hexCorners(px, py, size);
 
@@ -160,17 +174,17 @@ const PlayerMapCanvas: React.FC<Props> = ({
         alpha = 0.25;
       }
 
-      // Visibility tinting: brighten visible hexes, dim the rest
-      const isVisible = hasVisibility
-        ? debugVisibleHexKeys!.has(hexKey(hex.x, hex.y))
-        : true;
-      if (hasVisibility) {
-        if (isVisible) {
-          // Boost: more saturated/opaque
+      // Visibility tinting:
+      //   live      → bright
+      //   remembered (not live) → faded ghost
+      //   never seen → very dim fog
+      if (hasLive || hasMemory) {
+        if (isLive) {
           alpha = Math.min(1, alpha * 2.4 + 0.15);
+        } else if (isRemembered) {
+          alpha = alpha * 0.6;
         } else {
-          // Dim: fog of war
-          alpha = alpha * 0.35;
+          alpha = alpha * 0.2;
         }
       }
 
@@ -182,11 +196,17 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.fillStyle = fillColor;
       ctx.fill();
 
-      // Border — brighter for visible, faint for fogged
-      ctx.strokeStyle = isVisible
-        ? "rgba(255,255,255,0.18)"
-        : "rgba(255,255,255,0.04)";
-      ctx.lineWidth = isVisible ? 0.75 : 0.5;
+      // Border — brightest for live, faint for memory, almost none for fog
+      if (isLive) {
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = 0.75;
+      } else if (isRemembered) {
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        ctx.lineWidth = 0.5;
+      } else {
+        ctx.strokeStyle = "rgba(255,255,255,0.04)";
+        ctx.lineWidth = 0.5;
+      }
       ctx.stroke();
 
       ctx.globalAlpha = 1;
