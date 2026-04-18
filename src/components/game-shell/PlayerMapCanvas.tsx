@@ -15,6 +15,11 @@ interface Props {
   fleets?: MapFleet[];
   onSystemClick?: (system: SystemData) => void;
   onFleetClick?: (fleet: MapFleet) => void;
+  /** When set, the next click is captured for targeting instead of selection. */
+  targetingMode?: "hex" | "fleet" | null;
+  onHexTargetPicked?: (hex: { x: number; y: number }) => void;
+  onFleetTargetPicked?: (fleet: MapFleet) => void;
+  onCancelTargeting?: () => void;
   /** DEBUG: hex keys (e.g. "3,-2") on which to draw a "V" marker */
   debugVisibleHexKeys?: Set<string>;
   className?: string;
@@ -39,6 +44,10 @@ const PlayerMapCanvas: React.FC<Props> = ({
   fleets = [],
   onSystemClick,
   onFleetClick,
+  targetingMode = null,
+  onHexTargetPicked,
+  onFleetTargetPicked,
+  onCancelTargeting,
   debugVisibleHexKeys,
   className = "",
 }) => {
@@ -398,6 +407,17 @@ const PlayerMapCanvas: React.FC<Props> = ({
         const hk = hexKey(coords[0], coords[1]);
         const hex = hexes.get(hk);
 
+        // Targeting mode: capture click as hex or enemy fleet target
+        if (targetingMode === "hex") {
+          if (hex) onHexTargetPicked?.({ x: coords[0], y: coords[1] });
+          return;
+        }
+        if (targetingMode === "fleet") {
+          const fleet = hexKeyToFleet.get(hk);
+          if (fleet) onFleetTargetPicked?.(fleet);
+          return;
+        }
+
         // Check fleet first
         const fleet = hexKeyToFleet.get(hk);
         if (fleet && onFleetClick) {
@@ -412,7 +432,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
         }
       }
     },
-    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, onSystemClick, onFleetClick]
+    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, onSystemClick, onFleetClick, targetingMode, onHexTargetPicked, onFleetTargetPicked]
   );
 
   const handleMouseLeave = useCallback(() => {
