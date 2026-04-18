@@ -420,9 +420,10 @@ const PlayerGame = () => {
         .eq("game_id", game.id)
         .eq("player_id", player.id)
         .eq("turn_number", game.turn_number)
-        .in("order_type", ["fleet_move", "other"]);
+        .in("order_type", ["fleet_move", "other", "set_readiness"]);
       if (cancelled) return;
       const map = new Map<string, { kind: "move" | "attack"; targetFleetId?: string; destX?: number; destY?: number }>();
+      let pointsSpent = 0;
       for (const o of (orders ?? []) as any[]) {
         if (o.order_type === "fleet_move" && o.order_json?.fleet_id) {
           map.set(o.order_json.fleet_id, {
@@ -430,6 +431,7 @@ const PlayerGame = () => {
             destX: o.order_json.dest_x,
             destY: o.order_json.dest_y,
           });
+          pointsSpent += 1;
         } else if (
           o.order_type === "other" &&
           o.order_json?.kind === "fleet_attack" &&
@@ -439,10 +441,14 @@ const PlayerGame = () => {
             kind: "attack",
             targetFleetId: o.order_json.target_fleet_id,
           });
+          pointsSpent += 1;
+        } else if (o.order_type === "set_readiness") {
+          // Readiness changes also cost 1 combat point per fleet
+          pointsSpent += 1;
         }
       }
       setPendingFleetOrders(map);
-      setPendingFleetOrderCount(map.size);
+      setPendingFleetOrderCount(pointsSpent);
     })();
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number, orderRefreshTick]);
