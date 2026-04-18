@@ -91,6 +91,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
           quantity: r.quantity,
           tactical_group: r.tactical_group,
           ship_name: st?.name || r.ship_type_id,
+          ship_display_id: st?.ship_id || "",
           hull_class: st?.hull_class || "",
         };
       });
