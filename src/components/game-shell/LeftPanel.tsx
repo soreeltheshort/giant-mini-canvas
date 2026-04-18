@@ -243,7 +243,7 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
         ) : selection.type === "region" ? (
           <InlineRegionDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "army" ? (
-          <InlineArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} />
+          <InlineArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />
         ) : selection.type === "production-center" ? (
           <InlineProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
