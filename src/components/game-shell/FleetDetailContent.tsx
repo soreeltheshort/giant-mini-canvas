@@ -180,17 +180,17 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
       <ImperialCard title="Readiness">
         <div className="space-y-2.5">
           <Row label="Current">
-            <span className="text-xs font-bold text-foreground">{readinessLabel(detail.readiness)}</span>
+            <span className="text-sm font-bold text-[hsl(20_25%_10%)]">{readinessLabel(detail.readiness)}</span>
           </Row>
           {nextReadiness !== detail.readiness && (
             <Row label="Order Pending">
-              <span className="text-xs font-bold text-crimson">→ {readinessLabel(nextReadiness)}</span>
+              <span className="text-sm font-bold text-crimson">→ {readinessLabel(nextReadiness)}</span>
             </Row>
           )}
 
           {canEdit && (
             <div className="pt-2 space-y-2 border-t border-border">
-              <label className="text-[11px] font-heading uppercase tracking-wider text-foreground font-bold block">
+              <label className="text-[11px] font-heading uppercase tracking-wider text-[hsl(20_25%_10%)] font-bold block">
                 Change Readiness Order
               </label>
               <select
@@ -200,7 +200,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
                   if (v === detail.readiness) cancelOrder();
                   else updateNextReadiness(v);
                 }}
-                className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs font-bold text-foreground"
+                className="h-8 w-full rounded-sm border border-input bg-background px-2 text-sm font-bold text-[hsl(20_25%_10%)]"
               >
                 {READINESS_LEVELS.map(r => {
                   const isRaiseTooMuch = r.value < detail.readiness - 1;
@@ -216,12 +216,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
               {detail.next_readiness !== null && (
                 <button
                   onClick={cancelOrder}
-                  className="w-full px-2 py-1 rounded-sm text-[10px] font-heading uppercase tracking-wider border border-border text-foreground hover:border-bronze/60 transition-colors"
+                  className="w-full px-2 py-1 rounded-sm text-[11px] font-heading uppercase tracking-wider border border-border text-[hsl(20_25%_10%)] font-bold hover:border-bronze/60 transition-colors"
                 >
                   Cancel Order
                 </button>
               )}
-              <p className="text-[11px] text-foreground font-medium leading-snug">
+              <p className="text-xs text-[hsl(20_25%_15%)] font-semibold leading-snug">
                 May lower by any amount; raising is limited to +1 per turn. Applied at end of economics phase.
               </p>
             </div>
@@ -276,9 +276,9 @@ function readinessLabel(level: number): string {
 
 function Row({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between text-xs">
-      <span className="text-foreground font-semibold">{label}</span>
-      {children ? children : <span className="font-bold text-foreground">{value}</span>}
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-[hsl(20_25%_10%)] font-bold">{label}</span>
+      {children ? children : <span className="font-bold text-[hsl(20_25%_10%)]">{value}</span>}
     </div>
   );
 }
