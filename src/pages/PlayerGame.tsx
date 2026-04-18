@@ -316,6 +316,10 @@ const PlayerGame = () => {
   >(null);
   // Number of fleet-related orders the player has issued this turn (each costs 1 combat point)
   const [pendingFleetOrderCount, setPendingFleetOrderCount] = useState(0);
+  // Active fleet orders this turn, keyed by fleet_id, used to render arrows on the map
+  const [pendingFleetOrders, setPendingFleetOrders] = useState<
+    Map<string, { kind: "move" | "attack"; targetFleetId?: string; destX?: number; destY?: number }>
+  >(new Map());
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
 
   const load = useCallback(async () => {
@@ -404,6 +408,8 @@ const PlayerGame = () => {
   useEffect(() => { load(); }, [load]);
 
   // Count player's fleet move/attack orders for this turn (each costs 1 combat point).
+  // Load player's fleet move/attack orders for this turn (each costs 1 combat point)
+  // and stash them so we can both count points and draw arrows for the selected fleet.
   useEffect(() => {
     if (!player || !game) return;
     let cancelled = false;
@@ -416,11 +422,27 @@ const PlayerGame = () => {
         .eq("turn_number", game.turn_number)
         .in("order_type", ["fleet_move", "other"]);
       if (cancelled) return;
-      const count = ((orders ?? []) as any[]).filter(o =>
-        o.order_type === "fleet_move" ||
-        (o.order_type === "other" && o.order_json?.kind === "fleet_attack")
-      ).length;
-      setPendingFleetOrderCount(count);
+      const map = new Map<string, { kind: "move" | "attack"; targetFleetId?: string; destX?: number; destY?: number }>();
+      for (const o of (orders ?? []) as any[]) {
+        if (o.order_type === "fleet_move" && o.order_json?.fleet_id) {
+          map.set(o.order_json.fleet_id, {
+            kind: "move",
+            destX: o.order_json.dest_x,
+            destY: o.order_json.dest_y,
+          });
+        } else if (
+          o.order_type === "other" &&
+          o.order_json?.kind === "fleet_attack" &&
+          o.order_json?.fleet_id
+        ) {
+          map.set(o.order_json.fleet_id, {
+            kind: "attack",
+            targetFleetId: o.order_json.target_fleet_id,
+          });
+        }
+      }
+      setPendingFleetOrders(map);
+      setPendingFleetOrderCount(map.size);
     })();
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number, orderRefreshTick]);
@@ -587,6 +609,25 @@ const PlayerGame = () => {
   const factionName = PROVINCE_NAMES[player.player_slot] || `Faction ${player.player_slot}`;
   const playerName = profile?.display_name || profile?.email || "Unknown";
 
+  // Derive an arrow for the currently selected fleet if it has a pending move/attack order.
+  const orderArrow = (() => {
+    if (selection.type !== "army" || !mapState) return null;
+    const fleetId = selection.id.startsWith("fleet-") ? selection.id.slice("fleet-".length) : selection.id;
+    const fleet = mapState.fleets.find(f => f.fleet_id === fleetId);
+    if (!fleet) return null;
+    const order = pendingFleetOrders.get(fleetId);
+    if (!order) return null;
+    if (order.kind === "move" && typeof order.destX === "number" && typeof order.destY === "number") {
+      return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: order.destX, toY: order.destY, kind: "move" as const };
+    }
+    if (order.kind === "attack" && order.targetFleetId) {
+      const target = mapState.fleets.find(f => f.fleet_id === order.targetFleetId);
+      if (!target) return null;
+      return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: target.hex_x, toY: target.hex_y, kind: "attack" as const };
+    }
+    return null;
+  })();
+
   if (!player.initialized && initStep > 0) {
     return <InitScreen step={initStep} factionName={factionName} onContinue={advanceInit} />;
   }
@@ -656,6 +697,7 @@ const PlayerGame = () => {
               onCancelTargeting={() => setTargeting(null)}
               debugVisibleHexKeys={liveHexKeys}
               everSeenHexKeys={everSeenHexKeys}
+              orderArrow={orderArrow}
               className="flex-1"
             />
           ) : (
