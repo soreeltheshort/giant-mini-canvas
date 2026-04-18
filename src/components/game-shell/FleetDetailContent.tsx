@@ -39,13 +39,24 @@ interface Props {
   canEdit: boolean;
   /** When provided, readiness/strategy changes are written as player_orders. */
   orderContext?: FleetOrderContext;
+  onStartTargeting?: (
+    t: { mode: "hex"; orderType: "fleet_move"; fleetId: string }
+      | { mode: "fleet"; orderType: "attack"; fleetId: string }
+  ) => void;
 }
 
-export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, orderContext }: Props) {
+interface PendingOrder {
+  id: string;
+  order_type: string;
+  order_json: any;
+}
+
+export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, orderContext, onStartTargeting }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
   const [ships, setShips] = useState<FleetShipRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
 
   const sourceId = fleet.source_fleet_id;
 
