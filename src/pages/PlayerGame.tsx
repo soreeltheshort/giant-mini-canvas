@@ -697,6 +697,7 @@ const PlayerGame = () => {
               onCancelTargeting={() => setTargeting(null)}
               debugVisibleHexKeys={liveHexKeys}
               everSeenHexKeys={everSeenHexKeys}
+              orderArrow={orderArrow}
               className="flex-1"
             />
           ) : (
