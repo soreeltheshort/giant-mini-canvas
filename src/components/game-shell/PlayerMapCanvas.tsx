@@ -11,7 +11,10 @@ import { hexToPixel, pixelToHex, hexCorners } from "@/lib/hexUtils";
 interface Props {
   hexes: Map<string, HexData>;
   systems: Map<number, SystemData>;
+  /** Systems currently in sensor view (rendered bright). */
   visibleSystemIds: number[];
+  /** Systems the player has ever observed (rendered faded if not in visibleSystemIds). */
+  everSeenSystemIds?: number[];
   fleets?: MapFleet[];
   onSystemClick?: (system: SystemData) => void;
   onFleetClick?: (fleet: MapFleet) => void;
@@ -20,8 +23,10 @@ interface Props {
   onHexTargetPicked?: (hex: { x: number; y: number }) => void;
   onFleetTargetPicked?: (fleet: MapFleet) => void;
   onCancelTargeting?: () => void;
-  /** DEBUG: hex keys (e.g. "3,-2") on which to draw a "V" marker */
+  /** Hex keys (e.g. "3,-2") currently in live sensor view (bright). */
   debugVisibleHexKeys?: Set<string>;
+  /** Hex keys ever observed (faded if not in debugVisibleHexKeys). */
+  everSeenHexKeys?: Set<string>;
   className?: string;
 }
 
@@ -41,6 +46,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   hexes,
   systems,
   visibleSystemIds,
+  everSeenSystemIds,
   fleets = [],
   onSystemClick,
   onFleetClick,
@@ -49,6 +55,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   onFleetTargetPicked,
   onCancelTargeting,
   debugVisibleHexKeys,
+  everSeenHexKeys,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
