@@ -133,7 +133,7 @@ export default function FleetCompositionEditor({
             }`}
           >
             <div className="flex items-center justify-between mb-1">
-              <h4 className="text-[10px] font-heading uppercase tracking-wider text-foreground font-bold">
+              <h4 className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold">
                 {group}
                 {totalQty > 0 && (
                   <span className="ml-1.5 text-foreground/70 normal-case font-semibold">
