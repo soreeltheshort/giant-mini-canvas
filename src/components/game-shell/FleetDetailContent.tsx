@@ -225,16 +225,22 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
     if (!moveOrder) return;
     await (supabase as any).from("player_orders").delete().eq("id", moveOrder.id);
     setPendingOrders(prev => prev.filter(o => o.id !== moveOrder.id));
+    onOrdersChanged?.();
   };
   const cancelAttackOrder = async () => {
     if (!attackOrder) return;
     await (supabase as any).from("player_orders").delete().eq("id", attackOrder.id);
     setPendingOrders(prev => prev.filter(o => o.id !== attackOrder.id));
+    onOrdersChanged?.();
   };
 
   const targetFleetName = attackOrder
     ? attackOrder.order_json?.target_fleet_id ?? "Unknown"
     : null;
+
+  // Only one active order per fleet
+  const activeOrder: "move" | "attack" | null = moveOrder ? "move" : attackOrder ? "attack" : null;
+  const noPointsLeft = (combatPointsAvailable ?? Infinity) <= 0;
 
   return (
     <>
@@ -251,59 +257,52 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
 
       <ImperialCard title="Orders">
         <div className="space-y-2.5">
-          {!moveOrder && !attackOrder && (
+          {!activeOrder && (
             <p className="text-xs text-bronze-dark font-semibold">No active order.</p>
           )}
           {moveOrder && (
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-bronze-dark font-bold">
-                Move → ({moveOrder.order_json?.dest_x}, {moveOrder.order_json?.dest_y})
-              </span>
-              {canEdit && (
-                <button
-                  onClick={cancelMoveOrder}
-                  className="px-2 py-0.5 rounded-sm text-[10px] font-heading uppercase tracking-wider border border-border text-bronze-dark font-bold hover:border-bronze/60"
-                >
-                  Cancel
-                </button>
-              )}
+            <div className="text-xs text-bronze-dark font-bold">
+              Move → ({moveOrder.order_json?.dest_x}, {moveOrder.order_json?.dest_y})
             </div>
           )}
           {attackOrder && (
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-bronze-dark font-bold">
-                Attack → {targetFleetName}
-              </span>
-              {canEdit && (
-                <button
-                  onClick={cancelAttackOrder}
-                  className="px-2 py-0.5 rounded-sm text-[10px] font-heading uppercase tracking-wider border border-border text-bronze-dark font-bold hover:border-bronze/60"
-                >
-                  Cancel
-                </button>
-              )}
+            <div className="text-xs text-bronze-dark font-bold">
+              Attack → {targetFleetName}
             </div>
           )}
 
           {canEdit && onStartTargeting && (
             <div className="pt-2 border-t border-border space-y-1.5">
-              <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
-                Issue Order
-              </label>
-              <div className="flex gap-1.5">
+              {activeOrder ? (
                 <button
-                  onClick={() => onStartTargeting({ mode: "hex", orderType: "fleet_move", fleetId: fleet.fleet_id })}
-                  className="flex-1 h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60"
+                  onClick={activeOrder === "move" ? cancelMoveOrder : cancelAttackOrder}
+                  className="w-full h-8 rounded-sm border border-crimson/60 bg-background px-2 text-xs text-crimson font-heading font-bold uppercase tracking-wider hover:bg-crimson/10"
                 >
-                  Move
+                  Cancel Order
                 </button>
-                <button
-                  onClick={() => onStartTargeting({ mode: "fleet", orderType: "attack", fleetId: fleet.fleet_id })}
-                  className="flex-1 h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60"
-                >
-                  Attack
-                </button>
-              </div>
+              ) : (
+                <>
+                  <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
+                    Issue Order {noPointsLeft && <span className="text-crimson">(no combat points)</span>}
+                  </label>
+                  <div className="flex gap-1.5">
+                    <button
+                      disabled={noPointsLeft}
+                      onClick={() => onStartTargeting({ mode: "hex", orderType: "fleet_move", fleetId: fleet.fleet_id })}
+                      className="flex-1 h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-input"
+                    >
+                      Move
+                    </button>
+                    <button
+                      disabled={noPointsLeft}
+                      onClick={() => onStartTargeting({ mode: "fleet", orderType: "attack", fleetId: fleet.fleet_id })}
+                      className="flex-1 h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-input"
+                    >
+                      Attack
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
