@@ -27,6 +27,14 @@ interface Props {
   debugVisibleHexKeys?: Set<string>;
   /** Hex keys ever observed (faded if not in debugVisibleHexKeys). */
   everSeenHexKeys?: Set<string>;
+  /** Optional arrow drawn from a fleet to its order target (move dest or attack target). */
+  orderArrow?: {
+    fromX: number;
+    fromY: number;
+    toX: number;
+    toY: number;
+    kind: "move" | "attack";
+  } | null;
   className?: string;
 }
 
