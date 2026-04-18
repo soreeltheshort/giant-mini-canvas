@@ -84,7 +84,7 @@ export default function ContextPanel({ mode, selection, news, onClose, onClearSe
         ) : selection.type === "region" ? (
           <RegionDetail id={selection.id} gameData={gameData} mode={mode} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} />
         ) : selection.type === "army" ? (
-          <ArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} />
+          <ArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />
         ) : selection.type === "production-center" ? (
           <ProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
