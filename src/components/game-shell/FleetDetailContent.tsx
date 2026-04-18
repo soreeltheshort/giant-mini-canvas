@@ -168,16 +168,29 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
 
   const updateNextReadiness = async (newVal: number) => {
     const clamped = Math.max(1, Math.min(4, newVal));
+    // Issuing a *new* readiness order costs 1 combat point. Changing an existing pending
+    // order does not cost extra (we already debited it the first time).
+    const hasExistingOrder = (detail?.next_readiness ?? null) !== null;
+    if (!hasExistingOrder && (combatPointsAvailable ?? Infinity) <= 0) {
+      toast({
+        title: "No combat points",
+        description: "Cancel another fleet order first.",
+        variant: "destructive",
+      });
+      return;
+    }
     setDetail(d => d ? { ...d, next_readiness: clamped } : d);
     if (orderContext) {
       await upsertOrder("set_readiness", { next_readiness: clamped });
+      if (!hasExistingOrder) onOrdersChanged?.();
     } else {
-      const { error } = await supabase.from("fleets").update({ next_readiness: clamped } as any).eq("id", detail.id);
+      const { error } = await supabase.from("fleets").update({ next_readiness: clamped } as any).eq("id", detail!.id);
       if (error) toast({ title: "Failed to save readiness order", description: error.message, variant: "destructive" });
     }
   };
 
   const cancelOrder = async () => {
+    const hadOrder = (detail?.next_readiness ?? null) !== null;
     setDetail(d => d ? { ...d, next_readiness: null } : d);
     if (orderContext) {
       const { gameId, playerId, turnNumber } = orderContext;
@@ -186,8 +199,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
         .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
         .eq("order_type", "set_readiness")
         .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
+      if (hadOrder) onOrdersChanged?.();
     } else {
-      const { error } = await supabase.from("fleets").update({ next_readiness: null } as any).eq("id", detail.id);
+      const { error } = await supabase.from("fleets").update({ next_readiness: null } as any).eq("id", detail!.id);
       if (error) toast({ title: "Failed to cancel order", description: error.message, variant: "destructive" });
     }
   };
