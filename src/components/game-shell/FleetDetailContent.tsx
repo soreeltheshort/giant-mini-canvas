@@ -193,7 +193,6 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
     }
   };
 
-  const totalShips = ships.reduce((sum, s) => sum + s.quantity, 0);
 
   return (
     <>
