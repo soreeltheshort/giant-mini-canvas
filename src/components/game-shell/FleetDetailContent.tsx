@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ImperialCard } from "./ImperialCard";
+import FleetCompositionEditor, { type FleetShipRow } from "./FleetCompositionEditor";
 import type { MapFleet } from "@/lib/mapTypes";
 import type { ShipTypeLookup } from "./ContextPanel";
 
@@ -15,15 +16,6 @@ const READINESS_LEVELS = [
 const STRATEGY_OPTIONS = [
   "Flank", "Outflank", "Skirmish", "Cover Retreat", "Rear", "Attack Planet",
 ];
-
-interface FleetShipRow {
-  id: string;
-  ship_type_id: string;
-  quantity: number;
-  tactical_group: string;
-  ship_name: string;
-  hull_class: string;
-}
 
 interface FleetDetail {
   id: string;
