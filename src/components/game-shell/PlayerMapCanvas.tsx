@@ -67,6 +67,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   debugVisibleHexKeys,
   everSeenHexKeys,
   orderArrow = null,
+  ownClassification,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -89,8 +90,11 @@ const PlayerMapCanvas: React.FC<Props> = ({
     [everSeenSystemIds, visibleSystemIds]
   );
 
-  // Build a set of hex keys that are in CORE or PROVINCE classifications (visible to player)
+  // Hex keys currently in live sensor view. Prefer the prop computed by the
+  // page (which does the proper sensor-radius scan); fall back to static
+  // CORE/PROVINCE classification when not provided.
   const visibleHexKeys = React.useMemo(() => {
+    if (debugVisibleHexKeys && debugVisibleHexKeys.size > 0) return debugVisibleHexKeys;
     const set = new Set<string>();
     for (const [key, hex] of hexes) {
       const cls = hex.classification;
@@ -99,12 +103,17 @@ const PlayerMapCanvas: React.FC<Props> = ({
       }
     }
     return set;
-  }, [hexes]);
+  }, [hexes, debugVisibleHexKeys]);
 
-  // Filter fleets to only those in visible hexes
+  // Fleets visible on the map:
+  //  - The player's own fleets are ALWAYS visible (regardless of sensor view).
+  //  - Other fleets are visible only when they sit in a hex inside live sensor view.
   const visibleFleets = React.useMemo(() => {
-    return fleets.filter(f => visibleHexKeys.has(hexKey(f.hex_x, f.hex_y)));
-  }, [fleets, visibleHexKeys]);
+    return fleets.filter(f => {
+      if (ownClassification && f.owner_classification === ownClassification) return true;
+      return visibleHexKeys.has(hexKey(f.hex_x, f.hex_y));
+    });
+  }, [fleets, visibleHexKeys, ownClassification]);
 
   // Resize
   useEffect(() => {
