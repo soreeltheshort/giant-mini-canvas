@@ -314,6 +314,9 @@ const PlayerGame = () => {
     | { mode: "fleet"; orderType: "attack"; fleetId: string }
     | null
   >(null);
+  // Number of fleet-related orders the player has issued this turn (each costs 1 combat point)
+  const [pendingFleetOrderCount, setPendingFleetOrderCount] = useState(0);
+  const [orderRefreshTick, setOrderRefreshTick] = useState(0);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
