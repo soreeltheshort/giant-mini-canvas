@@ -207,66 +207,53 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
 
   return (
     <>
-      <ImperialCard title={fleet.fleet_name} subtitle={`Owner: ${ownerLabel}`}>
-        <div className="space-y-2">
-          <Row label="Status"><StatusBadge variant="info">Deployed</StatusBadge></Row>
-          <Row label="Total Ships" value={`${totalShips}`} />
-        </div>
-      </ImperialCard>
-
       <ImperialCard title="Readiness">
         <div className="space-y-2.5">
-          <Row label="This Turn" value={readinessLabel(detail.readiness)} />
+          <Row label="Current">
+            <span className="text-xs font-bold text-foreground">{readinessLabel(detail.readiness)}</span>
+          </Row>
           <Row label="Next Turn">
-            <span className={`text-xs font-semibold ${nextReadiness !== detail.readiness ? "text-crimson" : "text-foreground"}`}>
+            <span className={`text-xs font-bold ${nextReadiness !== detail.readiness ? "text-crimson" : "text-foreground"}`}>
               {readinessLabel(nextReadiness)}
             </span>
           </Row>
 
           {canEdit && (
             <div className="pt-2 space-y-2 border-t border-border">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => updateNextReadiness(proposedIncrease)}
-                  disabled={increaseDisabled}
-                  className="flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider bg-crimson text-primary-foreground hover:bg-crimson-light transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
-                  title="Raise readiness by 1 step (limited to +1 per turn)"
-                >
-                  <Plus className="w-3 h-3" /> Increase by 1
-                </button>
-                {detail.next_readiness !== null && (
-                  <button
-                    onClick={cancelOrder}
-                    className="px-2 py-1 rounded-sm text-[10px] font-heading uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:border-bronze/40 transition-colors"
-                  >
-                    Cancel Order
-                  </button>
-                )}
-              </div>
-
-              <div>
-                <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark block mb-1">
-                  Or Lower Readiness To
-                </label>
-                <select
-                  value={detail.next_readiness ?? detail.readiness}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (v < detail.readiness) updateNextReadiness(v);
-                    else if (v === detail.readiness) cancelOrder();
-                  }}
-                  className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground"
-                >
-                  {READINESS_LEVELS.map(r => (
-                    <option key={r.value} value={r.value} disabled={r.value < detail.readiness}>
-                      {r.label}{r.value < detail.readiness ? " (use Increase)" : ""}
+              <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark block">
+                Change Readiness Order
+              </label>
+              <select
+                value={detail.next_readiness ?? detail.readiness}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v === detail.readiness) cancelOrder();
+                  else updateNextReadiness(v);
+                }}
+                className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs font-semibold text-foreground"
+              >
+                {READINESS_LEVELS.map(r => {
+                  const isRaiseTooMuch = r.value < detail.readiness - 1;
+                  return (
+                    <option key={r.value} value={r.value} disabled={isRaiseTooMuch}>
+                      {r.label}
+                      {r.value === detail.readiness ? " (no change)" : ""}
+                      {isRaiseTooMuch ? " (max +1 per turn)" : ""}
                     </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-[9px] text-muted-foreground italic">
-                  May lower by any amount; raising is limited to +1 per turn. Applied at end of economics phase.
-                </p>
-              </div>
+                  );
+                })}
+              </select>
+              {detail.next_readiness !== null && (
+                <button
+                  onClick={cancelOrder}
+                  className="w-full px-2 py-1 rounded-sm text-[10px] font-heading uppercase tracking-wider border border-border text-foreground hover:border-bronze/60 transition-colors"
+                >
+                  Cancel Order
+                </button>
+              )}
+              <p className="text-[9px] text-muted-foreground italic">
+                May lower by any amount; raising is limited to +1 per turn. Applied at end of economics phase.
+              </p>
             </div>
           )}
         </div>
