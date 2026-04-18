@@ -201,15 +201,15 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
           <Row label="Current">
             <span className="text-xs font-bold text-foreground">{readinessLabel(detail.readiness)}</span>
           </Row>
-          <Row label="Next Turn">
-            <span className={`text-xs font-bold ${nextReadiness !== detail.readiness ? "text-crimson" : "text-foreground"}`}>
-              {readinessLabel(nextReadiness)}
-            </span>
-          </Row>
+          {nextReadiness !== detail.readiness && (
+            <Row label="Order Pending">
+              <span className="text-xs font-bold text-crimson">→ {readinessLabel(nextReadiness)}</span>
+            </Row>
+          )}
 
           {canEdit && (
             <div className="pt-2 space-y-2 border-t border-border">
-              <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark block">
+              <label className="text-[10px] font-heading uppercase tracking-wider text-foreground font-bold block">
                 Change Readiness Order
               </label>
               <select
@@ -240,7 +240,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
                   Cancel Order
                 </button>
               )}
-              <p className="text-[9px] text-muted-foreground italic">
+              <p className="text-[10px] text-foreground/80 italic">
                 May lower by any amount; raising is limited to +1 per turn. Applied at end of economics phase.
               </p>
             </div>
@@ -251,7 +251,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
       <ImperialCard title="Strategy">
         <div className="space-y-2">
           <div>
-            <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark block mb-1">Strategy 1</label>
+            <label className="text-[10px] font-heading uppercase tracking-wider text-foreground font-bold block mb-1">Strategy 1</label>
             <select
               disabled={!canEdit}
               value={detail.special1_role}
@@ -262,7 +262,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
             </select>
           </div>
           <div>
-            <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark block mb-1">Strategy 2</label>
+            <label className="text-[10px] font-heading uppercase tracking-wider text-foreground font-bold block mb-1">Strategy 2</label>
             <select
               disabled={!canEdit}
               value={detail.special2_role}
@@ -277,14 +277,14 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
 
       <ImperialCard title="Composition">
         {ships.length === 0 ? (
-          <p className="text-[10px] text-muted-foreground italic">No ships in this fleet.</p>
+          <p className="text-[10px] text-foreground/80 italic">No ships in this fleet.</p>
         ) : (
           <div className="space-y-1.5">
             {ships.map(s => (
               <div key={s.id} className="flex items-center justify-between gap-2 text-xs py-1 border-b border-border last:border-0">
                 <div className="flex-1 min-w-0">
                   <div className="truncate font-bold text-foreground">{s.ship_name}</div>
-                  <div className="text-[10px] text-foreground/70 uppercase tracking-wider font-medium">{s.hull_class} · {s.tactical_group}</div>
+                  <div className="text-[10px] text-foreground/85 uppercase tracking-wider font-semibold">{s.hull_class} · {s.tactical_group}</div>
                 </div>
                 {canEdit ? (
                   <input
@@ -313,7 +313,7 @@ function readinessLabel(level: number): string {
 function Row({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between text-xs">
-      <span className="text-foreground/80 font-medium">{label}</span>
+      <span className="text-foreground font-semibold">{label}</span>
       {children ? children : <span className="font-bold text-foreground">{value}</span>}
     </div>
   );
