@@ -332,6 +332,9 @@ const PlayerGame = () => {
       id: s.id,
       name: s.name,
       hull_class: s.hull_class,
+      ship_id: s.ship_id,
+      class: s.class,
+      point_cost: s.point_cost,
     })));
 
     const { data: mapRow } = await (supabase as any)
