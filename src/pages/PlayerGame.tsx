@@ -568,6 +568,10 @@ const PlayerGame = () => {
               fleets={mapState.fleets}
               onSystemClick={handleSystemClick}
               onFleetClick={handleFleetClick}
+              targetingMode={targeting?.mode ?? null}
+              onHexTargetPicked={handleHexTargetPicked}
+              onFleetTargetPicked={handleFleetTargetPicked}
+              onCancelTargeting={() => setTargeting(null)}
               debugVisibleHexKeys={debugVisibleHexKeys}
               className="flex-1"
             />
@@ -592,6 +596,8 @@ const PlayerGame = () => {
             onBuildFacility={handleBuildFacility}
             playerTreasury={player?.treasury ?? 0}
             playerOwnerClassification={`PROVINCE_${player.player_slot}`}
+            fleetOrderContext={{ gameId: game.id, playerId: player.id, turnNumber: game.turn_number }}
+            onStartTargeting={setTargeting}
             gameData={mapState ? {
               systems: mapState.systems,
               fleets: mapState.fleets,
