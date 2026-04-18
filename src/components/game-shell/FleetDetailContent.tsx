@@ -251,7 +251,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
       <ImperialCard title="Strategy">
         <div className="space-y-2">
           <div>
-            <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark block mb-1">Strategy 1</label>
+            <label className="text-[10px] font-heading uppercase tracking-wider text-foreground font-bold block mb-1">Strategy 1</label>
             <select
               disabled={!canEdit}
               value={detail.special1_role}
