@@ -483,6 +483,11 @@ const PlayerGame = () => {
 
   const handleHexTargetPicked = async (hex: { x: number; y: number }) => {
     if (!player || !game || !targeting || targeting.mode !== "hex") return;
+    if (combatPointsAvailable <= 0) {
+      toast({ title: "No combat points", description: "Cancel another fleet order first.", variant: "destructive" });
+      setTargeting(null);
+      return;
+    }
     try {
       await (supabase as any).from("player_orders")
         .delete()
@@ -498,6 +503,7 @@ const PlayerGame = () => {
         notes: "",
       });
       toast({ title: "Move Order Set", description: `Destination (${hex.x}, ${hex.y})` });
+      refreshOrders();
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
@@ -509,6 +515,11 @@ const PlayerGame = () => {
     if (!player || !game || !targeting || targeting.mode !== "fleet") return;
     if (target.fleet_id === targeting.fleetId) {
       toast({ title: "Invalid target", description: "Cannot target the same fleet.", variant: "destructive" });
+      return;
+    }
+    if (combatPointsAvailable <= 0) {
+      toast({ title: "No combat points", description: "Cancel another fleet order first.", variant: "destructive" });
+      setTargeting(null);
       return;
     }
     try {
@@ -527,6 +538,7 @@ const PlayerGame = () => {
         notes: "",
       });
       toast({ title: "Attack Order Set", description: `Target: ${target.fleet_name}` });
+      refreshOrders();
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
