@@ -433,6 +433,60 @@ const PlayerGame = () => {
     }
   };
 
+  const handleHexTargetPicked = async (hex: { x: number; y: number }) => {
+    if (!player || !game || !targeting || targeting.mode !== "hex") return;
+    try {
+      await (supabase as any).from("player_orders")
+        .delete()
+        .eq("game_id", game.id).eq("player_id", player.id).eq("turn_number", game.turn_number)
+        .eq("order_type", "fleet_move")
+        .filter("order_json->>fleet_id", "eq", targeting.fleetId);
+      await (supabase as any).from("player_orders").insert({
+        game_id: game.id,
+        player_id: player.id,
+        turn_number: game.turn_number,
+        order_type: "fleet_move",
+        order_json: { fleet_id: targeting.fleetId, dest_x: hex.x, dest_y: hex.y },
+        notes: "",
+      });
+      toast({ title: "Move Order Set", description: `Destination (${hex.x}, ${hex.y})` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setTargeting(null);
+    }
+  };
+
+  const handleFleetTargetPicked = async (target: MapFleet) => {
+    if (!player || !game || !targeting || targeting.mode !== "fleet") return;
+    if (target.fleet_id === targeting.fleetId) {
+      toast({ title: "Invalid target", description: "Cannot target the same fleet.", variant: "destructive" });
+      return;
+    }
+    try {
+      await (supabase as any).from("player_orders")
+        .delete()
+        .eq("game_id", game.id).eq("player_id", player.id).eq("turn_number", game.turn_number)
+        .eq("order_type", "other")
+        .filter("order_json->>fleet_id", "eq", targeting.fleetId)
+        .filter("order_json->>kind", "eq", "fleet_attack");
+      await (supabase as any).from("player_orders").insert({
+        game_id: game.id,
+        player_id: player.id,
+        turn_number: game.turn_number,
+        order_type: "other",
+        order_json: { kind: "fleet_attack", fleet_id: targeting.fleetId, target_fleet_id: target.fleet_id },
+        notes: "",
+      });
+      toast({ title: "Attack Order Set", description: `Target: ${target.fleet_name}` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setTargeting(null);
+    }
+  };
+
+
   // Hooks MUST be called before any early returns (Rules of Hooks)
   const visibleSystemIds = useComputedVisibility(player, mapState);
   const debugVisibleHexKeys = useVisibleHexKeys(player, mapState);
