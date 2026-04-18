@@ -262,7 +262,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
             </select>
           </div>
           <div>
-            <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark block mb-1">Strategy 2</label>
+            <label className="text-[10px] font-heading uppercase tracking-wider text-foreground font-bold block mb-1">Strategy 2</label>
             <select
               disabled={!canEdit}
               value={detail.special2_role}
