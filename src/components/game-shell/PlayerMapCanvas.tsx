@@ -218,28 +218,35 @@ const PlayerMapCanvas: React.FC<Props> = ({
       if (h.has_system) hexIdMap.set(h.hex_id, h);
     }
 
-    // Draw visible systems (Map is keyed by hex_id, visibility is by system_id)
+    // Draw systems the player has ever observed (live = bright, memory = faded).
     for (const [, sys] of systems) {
-      if (!visibleSet.has(sys.system_id)) continue;
+      if (!everSeenSet.has(sys.system_id)) continue;
       const sysHex = hexIdMap.get(sys.hex_id);
       if (!sysHex) continue;
 
       const [px, py] = hexToPixel(sysHex.x, sysHex.y, size);
       if (px < left || px > right || py < top || py > bottom) continue;
 
+      const isLiveSystem = visibleSet.has(sys.system_id);
+      ctx.globalAlpha = isLiveSystem ? 1 : 0.45;
+
       // System dot
       const isStation = sys.system_type === "station";
       const dotSize = isStation ? size * 0.25 : size * 0.35;
 
-      // Glow
+      // Glow (suppressed for memory-only systems to read as "ghost")
       const ownerColor = OWNER_COLORS[sys.owner] || "#c8a96e";
-      ctx.shadowColor = ownerColor;
-      ctx.shadowBlur = size * 0.4;
+      if (isLiveSystem) {
+        ctx.shadowColor = ownerColor;
+        ctx.shadowBlur = size * 0.4;
+      } else {
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "transparent";
+      }
 
       ctx.fillStyle = ownerColor;
       ctx.beginPath();
       if (isStation) {
-        // Diamond shape for stations
         ctx.moveTo(px, py - dotSize);
         ctx.lineTo(px + dotSize, py);
         ctx.lineTo(px, py + dotSize);
@@ -254,7 +261,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.shadowColor = "transparent";
 
       // Border ring
-      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.strokeStyle = isLiveSystem ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.25)";
       ctx.lineWidth = 1;
       if (!isStation) {
         ctx.beginPath();
