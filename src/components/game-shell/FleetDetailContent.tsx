@@ -209,7 +209,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
 
           {canEdit && (
             <div className="pt-2 space-y-2 border-t border-border">
-              <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark block">
+              <label className="text-[10px] font-heading uppercase tracking-wider text-foreground font-bold block">
                 Change Readiness Order
               </label>
               <select
