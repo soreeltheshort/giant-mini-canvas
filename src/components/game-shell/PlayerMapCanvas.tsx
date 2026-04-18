@@ -324,6 +324,65 @@ const PlayerMapCanvas: React.FC<Props> = ({
       }
     }
 
+    // Order arrow (move/attack target for the currently selected fleet)
+    if (orderArrow) {
+      const [ax, ay] = hexToPixel(orderArrow.fromX, orderArrow.fromY, size);
+      const [bx, by] = hexToPixel(orderArrow.toX, orderArrow.toY, size);
+      const isAttack = orderArrow.kind === "attack";
+      // Crimson for attack, bronze-gold for move
+      const arrowColor = isAttack ? "#dc2626" : "#c8a96e";
+
+      ctx.save();
+      ctx.shadowColor = arrowColor;
+      ctx.shadowBlur = size * 0.35;
+      ctx.strokeStyle = arrowColor;
+      ctx.fillStyle = arrowColor;
+      ctx.lineWidth = Math.max(1.25, size * 0.12);
+      ctx.lineCap = "round";
+
+      if (isAttack) {
+        // Dashed line for attack
+        ctx.setLineDash([size * 0.45, size * 0.3]);
+      }
+
+      // Shorten line so it ends just before the target marker
+      const dx = bx - ax;
+      const dy = by - ay;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
+      const pad = size * 0.5; // pull endpoint back from the target hex center
+      const ex = bx - ux * pad;
+      const ey = by - uy * pad;
+      // Pull start point away from origin marker too
+      const sx = ax + ux * pad * 0.8;
+      const sy = ay + uy * pad * 0.8;
+
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      // Arrowhead
+      ctx.setLineDash([]);
+      const headLen = size * 0.7;
+      const headW = size * 0.4;
+      const leftX = ex - ux * headLen + uy * headW;
+      const leftY = ey - uy * headLen - ux * headW;
+      const rightX = ex - ux * headLen - uy * headW;
+      const rightY = ey - uy * headLen + ux * headW;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(leftX, leftY);
+      ctx.lineTo(rightX, rightY);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+      ctx.restore();
+    }
+
     // Center crosshair
     const [cx, cy] = hexToPixel(0, 0, size);
     ctx.strokeStyle = "rgba(200,169,110,0.3)";
