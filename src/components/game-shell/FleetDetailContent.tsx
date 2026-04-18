@@ -109,11 +109,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
     return () => { cancelled = true; };
   }, [sourceId, shipTypes]);
 
-  const ownerLabel = CLASSIFICATION_LABELS[fleet.owner_classification as HexClassification] || fleet.owner_classification;
-
   if (loading) {
     return (
-      <ImperialCard title={fleet.fleet_name} subtitle={`Owner: ${ownerLabel}`}>
+      <ImperialCard title={fleet.fleet_name}>
         <p className="text-[10px] text-muted-foreground italic">Loading fleet detail…</p>
       </ImperialCard>
     );
@@ -121,7 +119,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
 
   if (!detail) {
     return (
-      <ImperialCard title={fleet.fleet_name} subtitle={`Owner: ${ownerLabel}`}>
+      <ImperialCard title={fleet.fleet_name}>
         <p className="text-[10px] text-muted-foreground italic">Fleet record not found.</p>
       </ImperialCard>
     );
