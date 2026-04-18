@@ -427,11 +427,13 @@ function readinessLabel(level: number): string {
   return READINESS_LEVELS.find(r => r.value === level)?.label || `Readiness ${level}`;
 }
 
-function Row({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+function Row({ label, value, children, valueClassName }: { label: string; value?: string; children?: React.ReactNode; valueClassName?: string }) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-[hsl(20_25%_10%)] font-bold">{label}</span>
-      {children ? children : <span className="font-bold text-[hsl(20_25%_10%)]">{value}</span>}
+      {children
+        ? children
+        : <span className={`font-bold text-[hsl(20_25%_10%)] ${valueClassName ?? ""}`}>{value}</span>}
     </div>
   );
 }
