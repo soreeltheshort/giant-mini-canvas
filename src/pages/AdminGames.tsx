@@ -42,6 +42,7 @@ interface GamePlayerRow {
   user_id: string;
   faction_id: string | null;
   player_slot: number;
+  orders_locked?: boolean;
 }
 
 interface ProfileRow {
@@ -593,6 +594,7 @@ const AdminGames = () => {
                   <TableRow>
                     <TableHead>Province / Faction</TableHead>
                     <TableHead>Player</TableHead>
+                    <TableHead>Orders</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -601,6 +603,13 @@ const AdminGames = () => {
                     <TableRow key={p.id}>
                       <TableCell>{PROVINCE_NAMES[p.player_slot] || `Slot ${p.player_slot}`}</TableCell>
                       <TableCell>{getProfileLabel(p.user_id)}</TableCell>
+                      <TableCell>
+                        {p.orders_locked ? (
+                          <Badge variant="default">Submitted</Badge>
+                        ) : (
+                          <Badge variant="outline">Not Submitted</Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button size="sm" variant="secondary" onClick={() => loginAsPlayer(p)}>Log in as</Button>
                         <Button size="sm" variant="destructive" onClick={() => removePlayer(p.id)}>Remove</Button>
