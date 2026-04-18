@@ -403,6 +403,31 @@ const PlayerGame = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Count player's fleet move/attack orders for this turn (each costs 1 combat point).
+  useEffect(() => {
+    if (!player || !game) return;
+    let cancelled = false;
+    (async () => {
+      const { data: orders } = await (supabase as any)
+        .from("player_orders")
+        .select("order_type, order_json")
+        .eq("game_id", game.id)
+        .eq("player_id", player.id)
+        .eq("turn_number", game.turn_number)
+        .in("order_type", ["fleet_move", "other"]);
+      if (cancelled) return;
+      const count = ((orders ?? []) as any[]).filter(o =>
+        o.order_type === "fleet_move" ||
+        (o.order_type === "other" && o.order_json?.kind === "fleet_attack")
+      ).length;
+      setPendingFleetOrderCount(count);
+    })();
+    return () => { cancelled = true; };
+  }, [player?.id, game?.id, game?.turn_number, orderRefreshTick]);
+
+  const refreshOrders = useCallback(() => setOrderRefreshTick(t => t + 1), []);
+  const combatPointsAvailable = Math.max(0, (player?.combat_points_remaining ?? 0) - pendingFleetOrderCount);
+
   const advanceInit = async () => {
     if (initStep < 3) {
       setInitStep(initStep + 1);
