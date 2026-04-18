@@ -704,6 +704,7 @@ const PlayerGame = () => {
               debugVisibleHexKeys={liveHexKeys}
               everSeenHexKeys={everSeenHexKeys}
               orderArrow={orderArrow}
+              ownClassification={`PROVINCE_${player.player_slot}`}
               className="flex-1"
             />
           ) : (
