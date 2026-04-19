@@ -18,6 +18,7 @@ import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
 import type { GameMode, MapSelection } from "@/components/game-shell/gameShellTypes";
 import { DUMMY_STATS, DUMMY_NEWS } from "@/components/game-shell/gameShellTypes";
 import { useIsTablet } from "@/hooks/useIsTablet";
+import { playOrderPlaced, playOrdersSubmitted } from "@/lib/uiSounds";
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
@@ -471,6 +472,7 @@ const PlayerGame = () => {
     const { error } = await (supabase as any).from("game_players").update({ orders_locked: next }).eq("id", player.id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setPlayer(p => (p ? { ...p, orders_locked: next } : p));
+    if (next) playOrdersSubmitted();
     toast({ title: next ? "Orders Submitted" : "Orders Withdrawn", description: next ? "Your orders are marked submitted." : "Your orders are no longer marked submitted." });
   }, [player, toast]);
 
@@ -523,6 +525,7 @@ const PlayerGame = () => {
         order_json: { system_id: systemId, facility_type_id: facilityTypeId },
         notes: "",
       });
+      playOrderPlaced();
       toast({ title: "Order Submitted", description: "Facility construction order queued." });
       refreshOrders();
     } catch (e: any) {
@@ -551,6 +554,7 @@ const PlayerGame = () => {
         order_json: { fleet_id: targeting.fleetId, dest_x: hex.x, dest_y: hex.y },
         notes: "",
       });
+      playOrderPlaced();
       toast({ title: "Move Order Set", description: `Destination (${hex.x}, ${hex.y})` });
       refreshOrders();
     } catch (e: any) {
@@ -586,6 +590,7 @@ const PlayerGame = () => {
         order_json: { kind: "fleet_attack", fleet_id: targeting.fleetId, target_fleet_id: target.fleet_id },
         notes: "",
       });
+      playOrderPlaced();
       toast({ title: "Attack Order Set", description: `Target: ${target.fleet_name}` });
       refreshOrders();
     } catch (e: any) {
