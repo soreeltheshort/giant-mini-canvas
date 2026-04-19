@@ -18,6 +18,7 @@ import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
 import type { GameMode, MapSelection } from "@/components/game-shell/gameShellTypes";
 import { DUMMY_STATS, DUMMY_NEWS } from "@/components/game-shell/gameShellTypes";
 import { useIsTablet } from "@/hooks/useIsTablet";
+import { useGameMusic } from "@/hooks/useGameMusic";
 import { playOrderPlaced, playOrdersSubmitted } from "@/lib/uiSounds";
 
 const PROVINCE_NAMES: Record<number, string> = {
@@ -604,6 +605,9 @@ const PlayerGame = () => {
   // Hooks MUST be called before any early returns (Rules of Hooks)
   const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
   const { live: liveHexKeys, everSeen: everSeenHexKeys } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+
+  // Ambient game music — loops quietly while in this view
+  useGameMusic(true, 0.15);
 
   // Persist newly-discovered systems back to player.visible_system_ids so the
   // "ever seen" memory survives reloads and turn rollover.
