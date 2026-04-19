@@ -87,6 +87,7 @@ const AdminGames = () => {
   const [mapState, setMapState] = useState<MapState | null>(null);
   const [shipTypes, setShipTypes] = useState<ShipTypeForUpkeep[]>([]);
   const [snapshots, setSnapshots] = useState<GameSnapshotRow[]>([]);
+  const [logRefreshKey, setLogRefreshKey] = useState(0);
 
   // new game form
   const [newGameName, setNewGameName] = useState("");
@@ -514,6 +515,7 @@ const AdminGames = () => {
   const refreshLogs = async (gameId: string) => {
     const { data } = await (supabase as any).from("game_logs").select("id, turn_number, log_type, message, created_at").eq("game_id", gameId).order("created_at", { ascending: false }).limit(100);
     setLogs(data || []);
+    setLogRefreshKey(k => k + 1);
   };
 
   const getProfileLabel = (userId: string) => {
@@ -710,7 +712,7 @@ const AdminGames = () => {
                 <TabsTrigger value="raw-logs">Raw Logs ({logs.length})</TabsTrigger>
               </TabsList>
               <TabsContent value="turn-log">
-                <TurnLogViewer gameId={selectedGame.id} showDetails recentTurnsLimit={10} />
+                <TurnLogViewer gameId={selectedGame.id} showDetails recentTurnsLimit={10} refreshKey={logRefreshKey} />
               </TabsContent>
               <TabsContent value="raw-logs">
                 <div className="max-h-64 overflow-y-auto border border-border rounded-md">
