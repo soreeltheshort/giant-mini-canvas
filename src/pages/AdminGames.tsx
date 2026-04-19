@@ -395,7 +395,7 @@ const AdminGames = () => {
     const ids: number[] = [];
     for (const [, sys] of ms.systems) {
       const cls = hexClassById.get(sys.hex_id)?.toUpperCase() ?? sys.classification?.toUpperCase() ?? "";
-      if (cls === "CORE" || cls.startsWith("PROVINCE_")) {
+      if (cls === "CORE" || cls === "MARCHES" || cls.startsWith("PROVINCE_")) {
         ids.push(sys.system_id);
       }
     }
