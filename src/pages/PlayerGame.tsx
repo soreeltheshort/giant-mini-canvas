@@ -98,7 +98,10 @@ function useComputedVisibility(
     const allSystems = Array.from(mapState.systems.values());
     const live = new Set<number>();
 
-    // 1. Core + own-province systems are always live
+    // 1. Core + own-province hexes are always live (full sensor coverage of home).
+    //    Other-province systems are NOT marked live here — they come in through
+    //    `persisted` (seeded at game setup with every Core + Province system) and
+    //    therefore render as "ever seen" memory: location known, faded ghost.
     for (const sys of allSystems) {
       const sysHex = hexById.get(sys.hex_id);
       if (!sysHex) continue;
