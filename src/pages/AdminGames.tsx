@@ -712,7 +712,7 @@ const AdminGames = () => {
                 <TabsTrigger value="raw-logs">Raw Logs ({logs.length})</TabsTrigger>
               </TabsList>
               <TabsContent value="turn-log">
-                <TurnLogViewer gameId={selectedGame.id} showDetails recentTurnsLimit={10} />
+                <TurnLogViewer gameId={selectedGame.id} showDetails recentTurnsLimit={10} refreshKey={logRefreshKey} />
               </TabsContent>
               <TabsContent value="raw-logs">
                 <div className="max-h-64 overflow-y-auto border border-border rounded-md">
