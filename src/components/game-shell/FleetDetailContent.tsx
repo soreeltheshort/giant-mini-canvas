@@ -6,6 +6,23 @@ import FleetCompositionEditor, { type FleetShipRow } from "./FleetCompositionEdi
 import type { MapFleet } from "@/lib/mapTypes";
 import type { ShipTypeLookup } from "./ContextPanel";
 
+const PROVINCE_FACTION_NAMES: Record<string, string> = {
+  PROVINCE_1: "Valerian",
+  PROVINCE_2: "Aurelian",
+  PROVINCE_3: "Cassian",
+  PROVINCE_4: "Dravian",
+  PROVINCE_5: "Marcellan",
+  PROVINCE_6: "Octavian",
+};
+const PROVINCE_FACTION_COLORS: Record<string, string> = {
+  PROVINCE_1: "#f97316",
+  PROVINCE_2: "#06b6d4",
+  PROVINCE_3: "#eab308",
+  PROVINCE_4: "#a855f7",
+  PROVINCE_5: "#f472b6",
+  PROVINCE_6: "#14b8a6",
+};
+
 const READINESS_LEVELS = [
   { value: 1, label: "Readiness 1 – Combat Ready", maintenance: 1.4 },
   { value: 2, label: "Readiness 2 – Standard", maintenance: 1.0 },
