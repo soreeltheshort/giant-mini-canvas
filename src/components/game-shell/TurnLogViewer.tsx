@@ -45,7 +45,7 @@ const PHASE_LABELS: Record<string, string> = {
 
 const PHASE_ORDER = ["summary", "economy", "movement", "visibility", "combat", ""];
 
-export default function TurnLogViewer({ gameId, showDetails = false, recentTurnsLimit = 5 }: Props) {
+export default function TurnLogViewer({ gameId, showDetails = false, recentTurnsLimit = 5, refreshKey = 0 }: Props) {
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [openTurns, setOpenTurns] = useState<Set<number>>(new Set());
@@ -72,7 +72,7 @@ export default function TurnLogViewer({ gameId, showDetails = false, recentTurns
     }
     load();
     return () => { cancelled = true; };
-  }, [gameId]);
+  }, [gameId, refreshKey]);
 
   const grouped = useMemo(() => {
     const byTurn = new Map<number, Map<string, LogRow[]>>();
