@@ -23,6 +23,8 @@ interface LeftPanelProps {
   ordersSubmitted?: boolean;
   /** Toggle order submission. */
   onSubmitOrders?: () => void;
+  /** When true, render full-width (mobile stacked layout) instead of fixed 14rem rail. */
+  fullWidth?: boolean;
   /** Inline context (used on tablet where right panel is hidden) */
   inlineContext?: {
     mode: GameMode;
@@ -61,12 +63,12 @@ const CATEGORY_COLORS: Record<string, string> = {
   event: "warning",
 };
 
-export default function LeftPanel({ stats, news, activeMode, onModeChange, onViewNews, inlineContext, ordersSubmitted = false, onSubmitOrders }: LeftPanelProps) {
+export default function LeftPanel({ stats, news, activeMode, onModeChange, onViewNews, inlineContext, ordersSubmitted = false, onSubmitOrders, fullWidth = false }: LeftPanelProps) {
   const unreadCount = news.filter((n) => !n.read).length;
   const latestUnread = news.find((n) => !n.read);
 
   return (
-    <aside className="w-56 bg-marble flex flex-col border-r-2 border-bronze/40 relative z-20 shrink-0 overflow-hidden">
+    <aside className={`${fullWidth ? "w-full border-b-2 border-r-0" : "w-56 border-r-2"} bg-marble flex flex-col border-bronze/40 relative z-20 shrink-0 overflow-hidden`}>
       <div className="flex-1 overflow-y-auto">
         {/* ── Global Stats ── */}
         <div className="p-3 space-y-2 border-b border-border">

@@ -18,6 +18,7 @@ import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
 import type { GameMode, MapSelection } from "@/components/game-shell/gameShellTypes";
 import { DUMMY_STATS, DUMMY_NEWS } from "@/components/game-shell/gameShellTypes";
 import { useIsTablet } from "@/hooks/useIsTablet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useGameMusic } from "@/hooks/useGameMusic";
 import { playOrderPlaced, playOrdersSubmitted } from "@/lib/uiSounds";
 
@@ -300,6 +301,7 @@ const PlayerGame = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const isTablet = useIsTablet();
+  const isMobile = useIsMobile();
 
   const [game, setGame] = useState<GameInfo | null>(null);
   const [player, setPlayer] = useState<PlayerInfo | null>(null);
@@ -682,7 +684,7 @@ const PlayerGame = () => {
         backTo={isAdmin ? "/admin/games" : "/my-games"}
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className={`flex-1 flex overflow-hidden ${isMobile ? "flex-col" : ""}`}>
         {/* Left Strategic Panel — includes inline context on tablet */}
         <LeftPanel
           stats={{
@@ -720,6 +722,7 @@ const PlayerGame = () => {
             combatPointsAvailable,
             onOrdersChanged: refreshOrders,
           } : undefined}
+          fullWidth={isMobile}
         />
 
         {/* Center Map + Overlay Demo */}
