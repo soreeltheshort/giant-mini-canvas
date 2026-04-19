@@ -274,6 +274,15 @@ const AdminGames = () => {
       await processInitialVisibility(selectedGame.id);
       await (supabase as any).from("games").update({ status, turn_number: 1, turn_phase: "orders" }).eq("id", selectedGame.id);
 
+      // Roll any setup-phase orders (turn_number = 0) forward to turn 1 so they
+      // are picked up by the first turn processor pass. Without this, orders
+      // queued before the game went active are silently orphaned.
+      await (supabase as any)
+        .from("player_orders")
+        .update({ turn_number: 1 })
+        .eq("game_id", selectedGame.id)
+        .eq("turn_number", 0);
+
       // Calculate Turn 1 income/expenses so players see initial economic state
       // STUB: Starting treasury defaults to 300 until final determination
       const STARTING_TREASURY = 300;
