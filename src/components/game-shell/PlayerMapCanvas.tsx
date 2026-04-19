@@ -216,15 +216,19 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.fillStyle = fillColor;
       ctx.fill();
 
-      // Border — brightest for live, faint for memory, almost none for fog
+      // Border — brightest for live, faint for memory; never-seen hexes still get
+      // a visible outline so the player can click them to issue move orders.
+      // Borders are drawn at full opacity (independent of fill alpha) so the
+      // grid remains legible through the fog.
+      ctx.globalAlpha = 1;
       if (isLive) {
-        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.strokeStyle = "rgba(255,255,255,0.22)";
         ctx.lineWidth = 0.75;
       } else if (isRemembered) {
-        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
         ctx.lineWidth = 0.5;
       } else {
-        ctx.strokeStyle = "rgba(255,255,255,0.04)";
+        ctx.strokeStyle = "rgba(200,169,110,0.18)";
         ctx.lineWidth = 0.5;
       }
       ctx.stroke();
