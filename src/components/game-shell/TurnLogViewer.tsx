@@ -30,6 +30,8 @@ interface Props {
   showDetails?: boolean;
   /** Limit number of recent turns shown. */
   recentTurnsLimit?: number;
+  /** Bump this value to force a reload (e.g. after running a turn). */
+  refreshKey?: number;
 }
 
 const PHASE_LABELS: Record<string, string> = {
