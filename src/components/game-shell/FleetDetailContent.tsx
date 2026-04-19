@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { playOrderPlaced } from "@/lib/uiSounds";
 import { ImperialCard } from "./ImperialCard";
 import FleetCompositionEditor, { type FleetShipRow } from "./FleetCompositionEditor";
 import type { MapFleet } from "@/lib/mapTypes";
@@ -192,10 +193,11 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
       .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
       .eq("order_type", orderType)
       .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
-    await (supabase as any).from("player_orders").insert({
+    const { error } = await (supabase as any).from("player_orders").insert({
       game_id: gameId, player_id: playerId, turn_number: turnNumber,
       order_type: orderType, order_json: { fleet_id: fleet.fleet_id, ...payload },
     });
+    if (!error) playOrderPlaced();
   };
 
   const updateNextReadiness = async (newVal: number) => {
