@@ -645,7 +645,7 @@ const AdminGames = () => {
               <h3 className="text-lg font-semibold">Turn Processing</h3>
               <div className="flex items-center gap-3">
                 <Button onClick={runTurn} disabled={processing || !mapState || selectedGame.status !== "active"}>
-                  {processing ? "Processing..." : `Run Turn ${selectedGame.turn_number + 1}`}
+                  {processing ? "Processing..." : `Run Turn ${selectedGame.turn_number}`}
                 </Button>
                 {!mapState && <span className="text-sm text-destructive">Import a map first</span>}
                 {selectedGame.status !== "active" && mapState && <span className="text-sm text-muted-foreground">Set status to Active to run turns</span>}
