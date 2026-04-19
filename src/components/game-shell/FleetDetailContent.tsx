@@ -557,31 +557,26 @@ function EnemyFleetView({
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  // Strip leading "Fleet " or trailing " Fleet" from the displayed name
+  const displayFleetName = (fleet.fleet_name || "")
+    .replace(/^\s*fleet\s+/i, "")
+    .replace(/\s+fleet\s*$/i, "")
+    .trim() || fleet.fleet_name;
+
   return (
     <>
       <ImperialCard title="Hostile Contact">
         <div className="space-y-2.5">
-          <div className="flex items-center gap-2">
-            <span
-              className="inline-block w-3 h-3 rounded-full border border-bronze/50"
-              style={{ backgroundColor: factionColor }}
-            />
-            <div className="flex-1 min-w-0">
-              <div className="text-[10px] font-heading uppercase tracking-widest text-bronze-dark">
-                Faction
-              </div>
-              <div className="text-base font-bold font-heading text-foreground truncate">
-                {factionName}
-              </div>
-            </div>
+          <div className="text-base font-bold font-heading text-muted-foreground truncate">
+            {displayFleetName}
           </div>
-          <div>
-            <div className="text-[10px] font-heading uppercase tracking-widest text-bronze-dark">
-              Fleet Designation
-            </div>
-            <div className="text-sm font-bold text-foreground truncate">
-              {fleet.fleet_name}
-            </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-[10px] font-heading uppercase tracking-widest text-bronze-dark">
+              Faction
+            </span>
+            <span className="text-sm font-bold font-heading text-muted-foreground truncate">
+              {factionName}
+            </span>
           </div>
           <div className="flex items-center justify-between text-sm pt-1 border-t border-border">
             <span className="text-[hsl(20_25%_10%)] font-bold">Size</span>
