@@ -202,7 +202,9 @@ const PlayerMapCanvas: React.FC<Props> = ({
         if (isLive) {
           alpha = Math.min(1, alpha * 2.4 + 0.15);
         } else if (isRemembered) {
-          alpha = alpha * 0.6;
+          // Explored-but-not-currently-in-sensor: noticeably brighter than fog
+          // so the player can tell they've scouted this space.
+          alpha = Math.min(1, alpha * 1.1 + 0.15);
         } else {
           alpha = alpha * 0.2;
         }
@@ -216,17 +218,16 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.fillStyle = fillColor;
       ctx.fill();
 
-      // Border — brightest for live, faint for memory; never-seen hexes still get
-      // a visible outline so the player can click them to issue move orders.
-      // Borders are drawn at full opacity (independent of fill alpha) so the
-      // grid remains legible through the fog.
+      // Border — brightest for live, medium for explored memory, faintest for
+      // never-seen fog (which still gets a thin outline so the player can click
+      // to issue move orders).
       ctx.globalAlpha = 1;
       if (isLive) {
         ctx.strokeStyle = "rgba(255,255,255,0.22)";
         ctx.lineWidth = 0.75;
       } else if (isRemembered) {
-        ctx.strokeStyle = "rgba(255,255,255,0.12)";
-        ctx.lineWidth = 0.5;
+        ctx.strokeStyle = "rgba(255,255,255,0.20)";
+        ctx.lineWidth = 0.6;
       } else {
         ctx.strokeStyle = "rgba(200,169,110,0.18)";
         ctx.lineWidth = 0.5;
