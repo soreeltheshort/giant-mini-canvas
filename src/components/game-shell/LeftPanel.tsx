@@ -320,7 +320,7 @@ function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapDa
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
           <div className="space-y-2">
-            <Row label="Population" value={realSys.current_population.toLocaleString()} />
+            <Row label="Population" value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Uninhabited"} />
             <Row label="Condition"><StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge></Row>
             <Row label="Morale" value={`${realSys.morale}`} />
             <Row label="Resources" value={`${realSys.resources}`} />
