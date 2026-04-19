@@ -310,7 +310,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
           <Row label="Supply" value={`${totalSupply}`} />
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
           <Row label="Ships" value={`${totalShips}`} />
-          <Row label="Position" value={`(${fleet.hex_x}, ${fleet.hex_y})`} />
+          
         </div>
       </ImperialCard>
 
@@ -583,10 +583,6 @@ function EnemyFleetView({
             <span className="font-bold text-crimson font-heading uppercase tracking-wider text-xs">
               {sizeDescriptor}
             </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-[hsl(20_25%_10%)] font-bold">Position</span>
-            <span className="font-bold text-foreground">({fleet.hex_x}, {fleet.hex_y})</span>
           </div>
         </div>
       </ImperialCard>
