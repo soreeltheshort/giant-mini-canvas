@@ -23,6 +23,8 @@ interface LeftPanelProps {
   ordersSubmitted?: boolean;
   /** Toggle order submission. */
   onSubmitOrders?: () => void;
+  /** When true, render full-width (mobile stacked layout) instead of fixed 14rem rail. */
+  fullWidth?: boolean;
   /** Inline context (used on tablet where right panel is hidden) */
   inlineContext?: {
     mode: GameMode;
