@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { ChevronDown } from "lucide-react";
 import type { GlobalStats } from "./gameShellTypes";
 
 interface GameHeaderProps {
@@ -8,6 +7,8 @@ interface GameHeaderProps {
   factionName: string;
   playerName: string;
   backTo: string;
+  /** When true, the viewer is an admin impersonating a player — show the player name. */
+  isImpersonating?: boolean;
 }
 
 const LaurelIcon = () => (
@@ -22,6 +23,7 @@ export default function GameHeader({
   factionName,
   playerName,
   backTo,
+  isImpersonating = false,
 }: GameHeaderProps) {
   return (
     <header className="h-11 flex items-center justify-between px-4 bg-marble border-b-2 border-bronze/60 relative z-30 shrink-0">
@@ -43,15 +45,14 @@ export default function GameHeader({
         </span>
       </div>
 
-      {/* Right: faction & player */}
+      {/* Right: faction (and player name only when admin is impersonating) */}
       <div className="flex items-center gap-3">
         <div className="text-right">
           <p className="text-[10px] font-heading font-semibold text-bronze-dark uppercase tracking-wider">{factionName}</p>
-          <p className="text-[9px] text-muted-foreground">{playerName}</p>
+          {isImpersonating && (
+            <p className="text-[9px] text-muted-foreground">Logged in as: {playerName}</p>
+          )}
         </div>
-        <button className="w-7 h-7 rounded-sm border border-bronze/40 bg-ivory-dark flex items-center justify-center text-bronze hover:border-bronze transition-colors bronze-glow-hover">
-          <ChevronDown className="w-3.5 h-3.5" />
-        </button>
       </div>
     </header>
   );

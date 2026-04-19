@@ -682,6 +682,7 @@ const PlayerGame = () => {
         factionName={factionName}
         playerName={playerName}
         backTo={isAdmin ? "/admin/games" : "/my-games"}
+        isImpersonating={isAdmin}
       />
 
       <div className={`flex-1 flex overflow-hidden ${isMobile ? "flex-col" : ""}`}>
