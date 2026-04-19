@@ -224,7 +224,7 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
           <div className="space-y-2">
-            <Row label="Population" value={realSys.current_population.toLocaleString()} />
+            <Row label="Population" value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Uninhabited"} />
             <Row label="Condition" figured>
               <StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge>
             </Row>

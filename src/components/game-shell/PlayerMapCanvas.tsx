@@ -605,7 +605,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
         <div className="absolute top-3 left-3 rounded-lg bg-background/90 border border-bronze/30 px-3 py-2 text-xs space-y-0.5 pointer-events-none">
           <div className="font-heading font-semibold text-foreground">{hoveredSystem.system_name}</div>
           <div className="text-muted-foreground">
-            Pop: {hoveredSystem.current_population.toLocaleString()} · Condition: {hoveredSystem.condition}
+            Pop: {hoveredSystem.current_population > 0 ? hoveredSystem.current_population.toLocaleString() : "Uninhabited"} · Condition: {hoveredSystem.condition}
           </div>
           <div className="text-muted-foreground">
             Owner: {hoveredSystem.owner} · Resources: {hoveredSystem.resources}
