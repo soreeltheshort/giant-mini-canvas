@@ -23,19 +23,17 @@ function stepToward(
   toX: number,
   toY: number,
 ): { x: number; y: number } {
-  const a = offsetToCube(fromX, fromY);
-  const b = offsetToCube(toX, toY);
-  // Move along the largest axial delta — simple greedy step.
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const dz = b.z - a.z;
+  const [ax, ay, az] = offsetToCube(fromX, fromY);
+  const [bx, by, bz] = offsetToCube(toX, toY);
+  const dx = bx - ax;
+  const dy = by - ay;
+  const dz = bz - az;
   const adx = Math.abs(dx);
   const ady = Math.abs(dy);
   const adz = Math.abs(dz);
-  let nx = a.x, ny = a.y, nz = a.z;
+  let nx = ax, ny = ay, nz = az;
   if (adx >= ady && adx >= adz) {
     nx += Math.sign(dx);
-    // Balance one of the other axes
     if (ady >= adz) ny += Math.sign(dy); else nz += Math.sign(dz);
   } else if (ady >= adx && ady >= adz) {
     ny += Math.sign(dy);
@@ -89,16 +87,21 @@ export const movementPhase: Phase = {
       }
 
       // Determine effective map_speed: slowest non-zero map_speed in the fleet.
-      // Look up composition from the fleets table → fleet_ships → ship_types.
+      // map_speed isn't on ShipTypeForUpkeep, so look it up directly from ship_types.
       let effectiveSpeed = 1;
       try {
         const { data: composition } = await (supabase as any)
           .from("fleet_ships")
           .select("ship_type_id, quantity")
           .eq("fleet_id", fleet.source_fleet_id);
-        if (composition && composition.length > 0) {
-          const speeds = composition
-            .map((c: any) => ctx.shipTypes.find(st => st.id === c.ship_type_id)?.map_speed ?? 0)
+        const typeIds = (composition || []).map((c: any) => c.ship_type_id).filter(Boolean);
+        if (typeIds.length > 0) {
+          const { data: typeRows } = await (supabase as any)
+            .from("ship_types")
+            .select("id, map_speed")
+            .in("id", typeIds);
+          const speeds = (typeRows || [])
+            .map((t: any) => Number(t.map_speed) || 0)
             .filter((s: number) => s > 0);
           if (speeds.length > 0) effectiveSpeed = Math.min(...speeds);
         }
@@ -106,10 +109,9 @@ export const movementPhase: Phase = {
         // fall through with default speed
       }
 
-      const totalDistance = cubeDistance(
-        offsetToCube(fleet.hex_x, fleet.hex_y),
-        offsetToCube(destX, destY),
-      );
+      const [ax, ay, az] = offsetToCube(fleet.hex_x, fleet.hex_y);
+      const [bx, by, bz] = offsetToCube(destX, destY);
+      const totalDistance = cubeDistance(ax, ay, az, bx, by, bz);
       const stepsToTake = Math.min(effectiveSpeed, totalDistance);
 
       let curX = fleet.hex_x;
