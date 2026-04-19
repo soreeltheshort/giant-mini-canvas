@@ -165,6 +165,21 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
     );
   }
 
+  // ── Enemy fleet view ──
+  // When the player does not own this fleet, render a stripped-down intel card:
+  //   prominent faction + fleet name, fleet-size descriptor (from points),
+  //   and a list of any ship types the player has personally encountered in combat.
+  if (!canEdit) {
+    return (
+      <EnemyFleetView
+        fleet={fleet}
+        ships={ships}
+        shipTypes={shipTypes}
+        observerPlayerId={orderContext?.playerId}
+      />
+    );
+  }
+
   // Effective "next turn" readiness — what current orders dictate
   const nextReadiness = detail.next_readiness ?? detail.readiness;
 
