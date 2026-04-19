@@ -201,6 +201,9 @@ const MapTestingConfig = () => {
 
         {/* ── Turn Economy Constants ── */}
         <TurnConstantsSection isAdmin={isAdmin} />
+
+        {/* ── Fleet Size Categories ── */}
+        <FleetSizeCategoriesSection isAdmin={isAdmin} />
       </div>
     </div>
   );
@@ -624,6 +627,152 @@ function TurnConstantsSection({ isAdmin }: { isAdmin: boolean }) {
         ))}
         {constants.length === 0 && (
           <p className="text-sm text-muted-foreground">No constants defined yet.</p>
+        )}
+      </div>
+    </ConfigSection>
+  );
+}
+
+/* ── Fleet Size Categories ── */
+interface FleetSizeRow {
+  id: string;
+  descriptor: string;
+  min_points: number;
+  max_points: number;
+  sort_order: number;
+  _new?: boolean;
+}
+
+function FleetSizeCategoriesSection({ isAdmin }: { isAdmin: boolean }) {
+  const [rows, setRows] = useState<FleetSizeRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await (supabase as any)
+        .from("fleet_size_categories")
+        .select("id, descriptor, min_points, max_points, sort_order")
+        .order("sort_order");
+      if (data) setRows(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const patch = (id: string, p: Partial<FleetSizeRow>) =>
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, ...p } : r)));
+
+  const persist = async (row: FleetSizeRow) => {
+    if (!isAdmin) return;
+    setSaving(row.id);
+    const payload = {
+      descriptor: row.descriptor,
+      min_points: row.min_points,
+      max_points: row.max_points,
+      sort_order: row.sort_order,
+    };
+    if (row._new) {
+      const { data, error } = await (supabase as any)
+        .from("fleet_size_categories").insert(payload).select().single();
+      if (!error && data) {
+        setRows(prev => prev.map(r => (r.id === row.id ? { ...data } : r)));
+      }
+    } else {
+      await (supabase as any).from("fleet_size_categories").update(payload).eq("id", row.id);
+    }
+    setSaving(null);
+  };
+
+  const remove = async (row: FleetSizeRow) => {
+    if (!isAdmin) return;
+    if (!row._new) {
+      await (supabase as any).from("fleet_size_categories").delete().eq("id", row.id);
+    }
+    setRows(prev => prev.filter(r => r.id !== row.id));
+  };
+
+  const addRow = () => {
+    const nextOrder = rows.length === 0 ? 1 : Math.max(...rows.map(r => r.sort_order)) + 1;
+    setRows(prev => [
+      ...prev,
+      {
+        id: `new-${Date.now()}`,
+        descriptor: "New Tier",
+        min_points: 0,
+        max_points: 0,
+        sort_order: nextOrder,
+        _new: true,
+      },
+    ]);
+  };
+
+  if (loading) return <p className="text-xs text-muted-foreground">Loading fleet size categories...</p>;
+
+  return (
+    <ConfigSection
+      title="Fleet Size Categories"
+      desc="Map total fleet point value to descriptor words shown to opposing players (e.g. Skirmish Force, Armada). Ranges should not overlap."
+    >
+      <div className="space-y-2">
+        {rows.length === 0 && (
+          <p className="text-sm text-muted-foreground">No size categories defined yet.</p>
+        )}
+        {rows.map(row => (
+          <div key={row.id} className="flex items-end gap-2 rounded border border-border px-3 py-2">
+            <div className="flex-1 min-w-0">
+              <Label className="text-[10px] text-muted-foreground">Descriptor</Label>
+              <Input
+                value={row.descriptor}
+                disabled={!isAdmin}
+                onChange={(e) => patch(row.id, { descriptor: e.target.value })}
+                onBlur={() => persist(row)}
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="w-24">
+              <Label className="text-[10px] text-muted-foreground">Min Points</Label>
+              <Input
+                type="number"
+                value={row.min_points}
+                disabled={!isAdmin}
+                onChange={(e) => patch(row.id, { min_points: Number(e.target.value) })}
+                onBlur={() => persist(row)}
+                className="h-8 text-sm text-right font-mono"
+              />
+            </div>
+            <div className="w-24">
+              <Label className="text-[10px] text-muted-foreground">Max Points</Label>
+              <Input
+                type="number"
+                value={row.max_points}
+                disabled={!isAdmin}
+                onChange={(e) => patch(row.id, { max_points: Number(e.target.value) })}
+                onBlur={() => persist(row)}
+                className="h-8 text-sm text-right font-mono"
+              />
+            </div>
+            <div className="w-16">
+              <Label className="text-[10px] text-muted-foreground">Order</Label>
+              <Input
+                type="number"
+                value={row.sort_order}
+                disabled={!isAdmin}
+                onChange={(e) => patch(row.id, { sort_order: Number(e.target.value) })}
+                onBlur={() => persist(row)}
+                className="h-8 text-sm text-right font-mono"
+              />
+            </div>
+            {isAdmin && (
+              <Button size="sm" variant="ghost" className="h-8 text-xs text-destructive" onClick={() => remove(row)}>
+                Delete
+              </Button>
+            )}
+            {saving === row.id && <span className="text-[10px] text-muted-foreground">Saving...</span>}
+          </div>
+        ))}
+        {isAdmin && (
+          <Button size="sm" variant="outline" onClick={addRow}>+ Add Size Category</Button>
         )}
       </div>
     </ConfigSection>

@@ -333,6 +333,36 @@ export type Database = {
           },
         ]
       }
+      fleet_size_categories: {
+        Row: {
+          created_at: string
+          descriptor: string
+          id: string
+          max_points: number
+          min_points: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descriptor: string
+          id?: string
+          max_points?: number
+          min_points?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descriptor?: string
+          id?: string
+          max_points?: number
+          min_points?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       fleets: {
         Row: {
           created_at: string
@@ -699,6 +729,64 @@ export type Database = {
           weight?: number
         }
         Relationships: []
+      }
+      player_fleet_intel: {
+        Row: {
+          created_at: string
+          enemy_fleet_id: string
+          game_id: string
+          id: string
+          last_seen_turn: number
+          observer_player_id: string
+          quantity_seen: number
+          ship_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enemy_fleet_id: string
+          game_id: string
+          id?: string
+          last_seen_turn?: number
+          observer_player_id: string
+          quantity_seen?: number
+          ship_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enemy_fleet_id?: string
+          game_id?: string
+          id?: string
+          last_seen_turn?: number
+          observer_player_id?: string
+          quantity_seen?: number
+          ship_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_fleet_intel_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_fleet_intel_observer_player_id_fkey"
+            columns: ["observer_player_id"]
+            isOneToOne: false
+            referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_fleet_intel_ship_type_id_fkey"
+            columns: ["ship_type_id"]
+            isOneToOne: false
+            referencedRelation: "ship_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_orders: {
         Row: {

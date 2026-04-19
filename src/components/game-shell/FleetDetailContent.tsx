@@ -6,6 +6,23 @@ import FleetCompositionEditor, { type FleetShipRow } from "./FleetCompositionEdi
 import type { MapFleet } from "@/lib/mapTypes";
 import type { ShipTypeLookup } from "./ContextPanel";
 
+const PROVINCE_FACTION_NAMES: Record<string, string> = {
+  PROVINCE_1: "Valerian",
+  PROVINCE_2: "Aurelian",
+  PROVINCE_3: "Cassian",
+  PROVINCE_4: "Dravian",
+  PROVINCE_5: "Marcellan",
+  PROVINCE_6: "Octavian",
+};
+const PROVINCE_FACTION_COLORS: Record<string, string> = {
+  PROVINCE_1: "#f97316",
+  PROVINCE_2: "#06b6d4",
+  PROVINCE_3: "#eab308",
+  PROVINCE_4: "#a855f7",
+  PROVINCE_5: "#f472b6",
+  PROVINCE_6: "#14b8a6",
+};
+
 const READINESS_LEVELS = [
   { value: 1, label: "Readiness 1 – Combat Ready", maintenance: 1.4 },
   { value: 2, label: "Readiness 2 – Standard", maintenance: 1.0 },
@@ -145,6 +162,21 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
       <ImperialCard title={fleet.fleet_name}>
         <p className="text-[10px] text-muted-foreground italic">Fleet record not found.</p>
       </ImperialCard>
+    );
+  }
+
+  // ── Enemy fleet view ──
+  // When the player does not own this fleet, render a stripped-down intel card:
+  //   prominent faction + fleet name, fleet-size descriptor (from points),
+  //   and a list of any ship types the player has personally encountered in combat.
+  if (!canEdit) {
+    return (
+      <EnemyFleetView
+        fleet={fleet}
+        ships={ships}
+        shipTypes={shipTypes}
+        observerPlayerId={orderContext?.playerId}
+      />
     );
   }
 
@@ -439,5 +471,166 @@ function Row({ label, value, children, valueClassName }: { label: string; value?
         ? children
         : <span className={`font-bold text-[hsl(20_25%_10%)] ${valueClassName ?? ""}`}>{value}</span>}
     </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ *  Enemy Fleet Intel View
+ * ────────────────────────────────────────────────────────────────────── */
+
+interface FleetSizeCategory {
+  descriptor: string;
+  min_points: number;
+  max_points: number;
+}
+
+interface IntelRow {
+  ship_type_id: string;
+  quantity_seen: number;
+  last_seen_turn: number;
+}
+
+function EnemyFleetView({
+  fleet,
+  ships,
+  shipTypes,
+  observerPlayerId,
+}: {
+  fleet: MapFleet;
+  ships: FleetShipRow[];
+  shipTypes: ShipTypeLookup[];
+  observerPlayerId?: string;
+}) {
+  const [categories, setCategories] = useState<FleetSizeCategory[]>([]);
+  const [intel, setIntel] = useState<IntelRow[]>([]);
+  const [loadingExtras, setLoadingExtras] = useState(true);
+
+  // Compute total point value of the enemy fleet from its actual ship list.
+  // The player only sees the descriptor, not the underlying number.
+  let totalPoints = 0;
+  for (const s of ships) {
+    const st = shipTypes.find(t => t.id === s.ship_type_id);
+    if (st) totalPoints += (st.point_cost ?? 0) * (s.quantity || 0);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [{ data: cats }, { data: intelRows }] = await Promise.all([
+        (supabase as any).from("fleet_size_categories")
+          .select("descriptor, min_points, max_points")
+          .order("sort_order"),
+        observerPlayerId
+          ? (supabase as any).from("player_fleet_intel")
+              .select("ship_type_id, quantity_seen, last_seen_turn")
+              .eq("observer_player_id", observerPlayerId)
+              .eq("enemy_fleet_id", fleet.source_fleet_id || "")
+          : Promise.resolve({ data: [] as IntelRow[] }),
+      ]);
+      if (cancelled) return;
+      setCategories((cats as FleetSizeCategory[]) || []);
+      setIntel(((intelRows as IntelRow[]) || []));
+      setLoadingExtras(false);
+    })();
+    return () => { cancelled = true; };
+  }, [observerPlayerId, fleet.source_fleet_id]);
+
+  const sizeDescriptor = categories.find(
+    c => totalPoints >= c.min_points && totalPoints <= c.max_points,
+  )?.descriptor ?? (loadingExtras ? "…" : "Unknown");
+
+  const factionName = PROVINCE_FACTION_NAMES[fleet.owner_classification] ?? fleet.owner_classification;
+  const factionColor = PROVINCE_FACTION_COLORS[fleet.owner_classification] ?? "#888";
+
+  // Resolve ship-type details for any encountered ships.
+  const encountered = intel
+    .map(row => {
+      const st = shipTypes.find(t => t.id === row.ship_type_id);
+      return {
+        id: row.ship_type_id,
+        name: st?.name ?? "Unknown class",
+        ship_id: st?.ship_id ?? "",
+        hull_class: st?.hull_class ?? "",
+        quantity: row.quantity_seen,
+        last_seen_turn: row.last_seen_turn,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return (
+    <>
+      <ImperialCard title="Hostile Contact">
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block w-3 h-3 rounded-full border border-bronze/50"
+              style={{ backgroundColor: factionColor }}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-heading uppercase tracking-widest text-bronze-dark">
+                Faction
+              </div>
+              <div className="text-base font-bold font-heading text-foreground truncate">
+                {factionName}
+              </div>
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] font-heading uppercase tracking-widest text-bronze-dark">
+              Fleet Designation
+            </div>
+            <div className="text-sm font-bold text-foreground truncate">
+              {fleet.fleet_name}
+            </div>
+          </div>
+          <div className="flex items-center justify-between text-sm pt-1 border-t border-border">
+            <span className="text-[hsl(20_25%_10%)] font-bold">Size</span>
+            <span className="font-bold text-crimson font-heading uppercase tracking-wider text-xs">
+              {sizeDescriptor}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-[hsl(20_25%_10%)] font-bold">Position</span>
+            <span className="font-bold text-foreground">({fleet.hex_x}, {fleet.hex_y})</span>
+          </div>
+        </div>
+      </ImperialCard>
+
+      <ImperialCard title="Combat Intelligence">
+        {loadingExtras ? (
+          <p className="text-[10px] text-muted-foreground italic">Reviewing dispatches…</p>
+        ) : encountered.length === 0 ? (
+          <p className="text-[11px] text-muted-foreground italic">
+            No prior engagements logged. Your forces have not faced this fleet in battle.
+          </p>
+        ) : (
+          <div className="space-y-1">
+            <p className="text-[10px] text-bronze-dark font-heading uppercase tracking-wider">
+              Ship classes encountered in combat
+            </p>
+            <ul className="space-y-1">
+              {encountered.map(s => (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between text-xs border-b border-border/50 py-1"
+                >
+                  <span className="font-semibold text-foreground truncate">
+                    {s.name}
+                    {s.hull_class && (
+                      <span className="ml-1 text-[10px] text-muted-foreground">
+                        ({s.hull_class})
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-[10px] text-bronze-dark font-mono whitespace-nowrap">
+                    T{s.last_seen_turn}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </ImperialCard>
+    </>
   );
 }
