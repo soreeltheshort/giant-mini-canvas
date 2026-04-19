@@ -98,14 +98,15 @@ function useComputedVisibility(
     const allSystems = Array.from(mapState.systems.values());
     const live = new Set<number>();
 
-    // 1. Core + own-province hexes are always live (full sensor coverage of home).
-    //    Other-province systems are NOT marked live here — they come in through
-    //    `persisted` (seeded at game setup with every Core + Province system) and
-    //    therefore render as "ever seen" memory: location known, faded ghost.
+    // 1. Core + Explored Marches + own-province hexes are always live (terrain
+    //    that everyone can see). Other-province systems are NOT marked live
+    //    here — they come in through `persisted` (seeded at game setup with
+    //    every Core + Province system) and therefore render as "ever seen"
+    //    memory: location known, faded ghost.
     for (const sys of allSystems) {
       const sysHex = hexById.get(sys.hex_id);
       if (!sysHex) continue;
-      if (sysHex.classification === "CORE" || sysHex.classification === ownProvince) {
+      if (sysHex.classification === "CORE" || sysHex.classification === "MARCHES" || sysHex.classification === ownProvince) {
         live.add(sys.system_id);
       }
       if (sys.owner === ownProvince) live.add(sys.system_id);
@@ -167,9 +168,9 @@ function useVisibleHexKeys(
     const ownProvince = `PROVINCE_${player.player_slot}`;
     const SENSOR_RADIUS = 1;
 
-    // 1. Core + own-province hexes are always live
+    // 1. Core + Explored Marches + own-province hexes are always live
     for (const hex of mapState.hexes.values()) {
-      if (hex.classification === "CORE" || hex.classification === ownProvince) {
+      if (hex.classification === "CORE" || hex.classification === "MARCHES" || hex.classification === ownProvince) {
         live.add(hexKey(hex.x, hex.y));
       }
     }

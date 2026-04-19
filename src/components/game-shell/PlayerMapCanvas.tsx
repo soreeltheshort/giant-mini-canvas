@@ -98,7 +98,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
     const set = new Set<string>();
     for (const [key, hex] of hexes) {
       const cls = hex.classification;
-      if (cls === "CORE" || cls.startsWith("PROVINCE_")) {
+      if (cls === "CORE" || cls === "MARCHES" || cls.startsWith("PROVINCE_")) {
         set.add(key);
       }
     }

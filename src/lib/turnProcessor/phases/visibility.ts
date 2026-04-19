@@ -22,7 +22,7 @@ export const visibilityPhase: Phase = {
     const baselineIds: number[] = [];
     for (const sys of mapState.systems.values()) {
       const cls = (hexClassById.get(sys.hex_id) || sys.classification || "").toUpperCase();
-      if (cls === "CORE" || cls.startsWith("PROVINCE_")) baselineIds.push(sys.system_id);
+      if (cls === "CORE" || cls === "MARCHES" || cls.startsWith("PROVINCE_")) baselineIds.push(sys.system_id);
     }
 
     for (const gp of players) {
