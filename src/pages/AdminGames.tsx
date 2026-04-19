@@ -515,6 +515,7 @@ const AdminGames = () => {
   const refreshLogs = async (gameId: string) => {
     const { data } = await (supabase as any).from("game_logs").select("id, turn_number, log_type, message, created_at").eq("game_id", gameId).order("created_at", { ascending: false }).limit(100);
     setLogs(data || []);
+    setLogRefreshKey(k => k + 1);
   };
 
   const getProfileLabel = (userId: string) => {
