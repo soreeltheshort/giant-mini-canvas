@@ -87,6 +87,7 @@ const AdminGames = () => {
   const [mapState, setMapState] = useState<MapState | null>(null);
   const [shipTypes, setShipTypes] = useState<ShipTypeForUpkeep[]>([]);
   const [snapshots, setSnapshots] = useState<GameSnapshotRow[]>([]);
+  const [logRefreshKey, setLogRefreshKey] = useState(0);
 
   // new game form
   const [newGameName, setNewGameName] = useState("");
