@@ -57,6 +57,8 @@ export interface FleetOrderContext {
 interface Props {
   fleet: MapFleet;
   shipTypes?: ShipTypeLookup[];
+  /** All fleets in the game (for resolving target fleet names in attack orders). */
+  allFleets?: MapFleet[];
   /** Whether this player owns / can edit this fleet */
   canEdit: boolean;
   /** When provided, readiness/strategy changes are written as player_orders. */
@@ -77,7 +79,7 @@ interface PendingOrder {
   order_json: any;
 }
 
-export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
+export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
   const [ships, setShips] = useState<FleetShipRow[]>([]);
@@ -292,7 +294,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, ord
   };
 
   const targetFleetName = attackOrder
-    ? attackOrder.order_json?.target_fleet_id ?? "Unknown"
+    ? (allFleets.find(f => f.fleet_id === attackOrder.order_json?.target_fleet_id)?.fleet_name
+        ?? attackOrder.order_json?.target_fleet_id
+        ?? "Unknown")
     : null;
 
   // Only one active order per fleet

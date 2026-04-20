@@ -372,7 +372,7 @@ function InlineArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderC
 
   if (realFleet) {
     const canEdit = !!playerOwnerClassification && realFleet.owner_classification === playerOwnerClassification;
-    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} canEdit={canEdit} orderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />;
+    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} allFleets={gameData?.fleets} canEdit={canEdit} orderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />;
   }
 
   const d = ARMY_DETAILS[id];
