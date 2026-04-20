@@ -92,6 +92,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
   const [supplyCoefficient, setSupplyCoefficient] = useState<number>(10);
   const [replenishOpen, setReplenishOpen] = useState(false);
+  const [repairOpen, setRepairOpen] = useState(false);
   const [replenishAmount, setReplenishAmount] = useState(0);
 
   const sourceId = fleet.source_fleet_id;
