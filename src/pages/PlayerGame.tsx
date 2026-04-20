@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { MapState, SystemData, MapFleet, FacilityType, HexData } from "@/lib/mapTypes";
 import { hexKey } from "@/lib/mapTypes";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+import { isHexBlockedForPlayer } from "@/lib/hexAccess";
 
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
