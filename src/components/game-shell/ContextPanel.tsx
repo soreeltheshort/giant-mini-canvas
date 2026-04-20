@@ -68,9 +68,11 @@ interface ContextPanelProps {
   ) => void;
   combatPointsAvailable?: number;
   onOrdersChanged?: () => void;
+  /** Selection setter so the empty Strategic Overview can list-select planets/fleets/news. */
+  onSelect?: (selection: MapSelection) => void;
 }
 
-export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: ContextPanelProps) {
+export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect }: ContextPanelProps) {
   return (
     <aside className="w-72 bg-marble border-l-2 border-bronze/40 flex flex-col relative z-20 shrink-0 animate-fade-in">
       {/* Header */}
@@ -97,7 +99,7 @@ export default function ContextPanel({ mode, selection, news, onClose, onClearSe
         ) : selection.type === "faction" ? (
           <FactionDetail id={selection.id} />
         ) : (
-          <EmptyState mode={mode} />
+          <EmptyState mode={mode} news={news} gameData={gameData} playerOwnerClassification={playerOwnerClassification} onSelect={onSelect} />
         )}
       </div>
 
