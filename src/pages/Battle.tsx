@@ -7,7 +7,8 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { runBattle, eventsToJSON, eventsToCSV, eventsToTXT, FleetSnapshot, BattleResult, BattleEvent, PhaseConfig, GroupModConfig, CombatConstants, WeaponTargetPref, GroundCombatOutcome } from "@/lib/battleEngine";
+import { runBattle, eventsToJSON, eventsToCSV, eventsToTXT, FleetSnapshot, BattleResult, BattleEvent } from "@/lib/battleEngine";
+import { loadFleetSnapshot as sharedLoadFleetSnapshot, loadBattleConfig, calcGroundUnits } from "@/lib/battleSetup";
 
 interface FleetOption {
   id: string;
