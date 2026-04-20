@@ -140,12 +140,12 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
                     transition-all duration-150
                     ${active
                       ? "bg-crimson text-primary-foreground shadow-sm"
-                      : "text-foreground hover:bg-ivory-dark bronze-glow-hover"
+                      : "text-senate-dark hover:bg-ivory-dark bronze-glow-hover"
                     }
                   `}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-heading font-semibold uppercase tracking-wider">{label}</span>
+                  <span className="text-[11px] font-heading font-bold uppercase tracking-wider">{label}</span>
                 </button>
               );
             })}
