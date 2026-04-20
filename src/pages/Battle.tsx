@@ -7,7 +7,8 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { runBattle, eventsToJSON, eventsToCSV, eventsToTXT, FleetSnapshot, BattleResult, BattleEvent, PhaseConfig, GroupModConfig, CombatConstants, WeaponTargetPref, GroundCombatOutcome } from "@/lib/battleEngine";
+import { runBattle, eventsToJSON, eventsToCSV, eventsToTXT, FleetSnapshot, BattleResult, BattleEvent } from "@/lib/battleEngine";
+import { loadFleetSnapshot as sharedLoadFleetSnapshot, loadBattleConfig, calcGroundUnits } from "@/lib/battleSetup";
 
 interface FleetOption {
   id: string;
@@ -75,20 +76,8 @@ const Battle = () => {
   }, []);
 
   const loadFleetSnapshot = async (fleetId: string): Promise<FleetSnapshot | null> => {
-    const { data: fleet } = await supabase.from("fleets").select("*").eq("id", fleetId).single();
-    if (!fleet) return null;
-    const { data: ships } = await supabase.from("fleet_ships").select("*, ship_types(*)").eq("fleet_id", fleetId);
-    if (!ships) return null;
-    return {
-      id: fleet.id,
-      name: fleet.name,
-      readiness: fleet.readiness ?? 2,
-      ships: ships.map((s: any) => ({
-        ship_type: s.ship_types,
-        quantity: s.quantity,
-        tactical_group: s.tactical_group,
-      })),
-    };
+    const loaded = await sharedLoadFleetSnapshot(supabase, fleetId);
+    return loaded?.snapshot ?? null;
   };
 
   const runSim = async () => {
@@ -98,40 +87,12 @@ const Battle = () => {
     const snapB = await loadFleetSnapshot(fleetBId);
     if (!snapA || !snapB) { toast({ title: "Failed to load fleets", variant: "destructive" }); setRunning(false); return; }
 
-    // Load battle config from DB
-    const [{ data: phasesData }, { data: modsData }, { data: constsData }, { data: weaponPrefsData }, { data: groundOutcomesData }] = await Promise.all([
-      supabase.from("battle_phases").select("*").order("seq_order"),
-      supabase.from("group_modifiers").select("*"),
-      supabase.from("combat_constants").select("*"),
-      supabase.from("weapon_target_preferences").select("*").order("priority"),
-      supabase.from("ground_combat_outcomes").select("*").order("probability"),
-    ]);
-    const phases: PhaseConfig[] | undefined = phasesData?.map(p => ({
-      name: p.name, groupsA: p.groups_a, groupsB: p.groups_b, modA: Number(p.mod_a), modB: Number(p.mod_b), requiredGroup: p.required_group ?? null,
-    }));
-    const groupMods: GroupModConfig[] | undefined = modsData?.map(g => ({
-      group_name: g.group_name, attack_mod: Number(g.attack_mod), defense_mod: Number(g.defense_mod),
-    }));
-    const combatConsts: CombatConstants | undefined = constsData ? constsData.reduce((acc, row) => {
-      (acc as any)[row.key] = Number(row.value);
-      return acc;
-    }, {} as CombatConstants) : undefined;
-    const weaponPrefs: WeaponTargetPref[] | undefined = weaponPrefsData?.map(w => ({
-      weapon_key: w.weapon_key, hull_class: w.hull_class, priority: w.priority,
-    }));
-    const groundOutcomes: GroundCombatOutcome[] | undefined = groundOutcomesData?.map(o => ({
-      probability: Number(o.probability), damage: Number(o.damage),
-    }));
+    // Shared loader — identical to what the in-game combat phase uses
+    const { phases, groupMods, combatConsts, weaponPrefs, groundOutcomes } = await loadBattleConfig(supabase);
 
     const usedSeed = seed || Math.random().toString(36).substring(2, 10);
     if (!seed) setSeed(usedSeed);
 
-    // Calculate ground units only from ships in "Attack Planet" tactical group
-    const calcGroundUnits = (snap: FleetSnapshot) => {
-      return snap.ships
-        .filter(s => s.tactical_group === "Attack Planet")
-        .reduce((sum, s) => sum + (s.ship_type.ground_invasion || 0) * s.quantity, 0);
-    };
     const groundUnitsA = calcGroundUnits(snapA);
     const groundUnitsB = calcGroundUnits(snapB);
 
