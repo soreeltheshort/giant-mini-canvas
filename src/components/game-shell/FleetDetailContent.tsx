@@ -316,14 +316,16 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const supplyDelta = Math.max(0, maxSupply - currentSupply);
 
   // ── Replenish eligibility: fleet must be on a hex with a player-owned system ──
-  const atOwnedPlanet = useMemo(() => {
-    if (!canEdit) return false;
-    return allSystems.some(s =>
-      s.x === fleet.hex_x &&
-      s.y === fleet.hex_y &&
-      s.owner === fleet.owner_classification,
-    );
-  }, [allSystems, fleet.hex_x, fleet.hex_y, fleet.owner_classification, canEdit]);
+  let atOwnedPlanet = false;
+  if (canEdit) {
+    for (const s of allSystems) {
+      const hex = allHexes?.get(`${fleet.hex_x},${fleet.hex_y}`);
+      if (hex && s.hex_id === hex.hex_id && s.owner === fleet.owner_classification) {
+        atOwnedPlanet = true;
+        break;
+      }
+    }
+  }
 
   const replenishOrder = pendingOrders.find(
     o => o.order_type === "other" && o.order_json?.kind === "replenish_supply",
