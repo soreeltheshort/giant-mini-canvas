@@ -548,6 +548,20 @@ const PlayerGame = () => {
       setTargeting(null);
       return;
     }
+    // Block check: a fleet may not be ordered to a hex closed to this player
+    // (CORE for everyone; foreign-faction systems for non-owners).
+    const destHex = mapState?.hexes.get(hexKey(hex.x, hex.y));
+    const destSystem = destHex
+      ? Array.from(mapState!.systems.values()).find(s => s.hex_id === destHex.hex_id)
+      : undefined;
+    if (destHex) {
+      const check = isHexBlockedForPlayer(destHex, destSystem, player.player_slot);
+      if (check.blocked) {
+        toast({ title: "Destination blocked", description: check.message, variant: "destructive" });
+        setTargeting(null);
+        return;
+      }
+    }
     try {
       await (supabase as any).from("player_orders")
         .delete()
