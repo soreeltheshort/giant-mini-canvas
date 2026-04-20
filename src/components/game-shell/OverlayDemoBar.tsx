@@ -27,9 +27,7 @@ export default function OverlayDemoBar() {
     <>
       {/* Trigger bar — positioned at bottom of map area */}
       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-marble-dark/80 border-t border-border">
-        <span className="text-[9px] font-heading uppercase tracking-[0.15em] text-muted-foreground mr-2">
-          Overlays
-        </span>
+        {/* Overlays label removed */}
         {DEMOS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
