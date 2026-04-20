@@ -178,11 +178,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       );
       if (existingReplenish) {
         setReplenishAmount(Number(existingReplenish.order_json?.amount) || 0);
-        setReplenishOpen(true);
       } else {
-        setReplenishAmount(0);
-        setReplenishOpen(false);
+        // Will be re-defaulted to max delta below once we have totals.
+        setReplenishAmount(-1);
       }
+      setReplenishOpen(false);
+      setRepairOpen(false);
       setLoading(false);
     }
     load();
