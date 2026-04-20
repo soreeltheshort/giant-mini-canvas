@@ -40,6 +40,8 @@ interface LeftPanelProps {
     ) => void;
     combatPointsAvailable?: number;
     onOrdersChanged?: () => void;
+    /** Selection setter so the empty Strategic Overview can list-select planets/fleets/news. */
+    onSelect?: (selection: MapSelection) => void;
   };
 }
 
