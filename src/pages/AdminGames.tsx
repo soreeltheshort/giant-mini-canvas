@@ -388,15 +388,22 @@ const AdminGames = () => {
 
   /** Build the list of system IDs in CORE / PROVINCE hexes */
   const buildVisibleSystemIds = (ms: MapState): number[] => {
-    // Build hex_id → classification lookup
+    // Build hex_id → classification lookup (used as a fallback)
     const hexClassById = new Map<number, string>();
     for (const h of ms.hexes.values()) {
       hexClassById.set(h.hex_id, h.classification);
     }
+    const isBaseline = (cls: string) =>
+      cls === "CORE" || cls === "MARCHES" || cls.startsWith("PROVINCE_");
     const ids: number[] = [];
     for (const [, sys] of ms.systems) {
-      const cls = hexClassById.get(sys.hex_id)?.toUpperCase() ?? sys.classification?.toUpperCase() ?? "";
-      if (cls === "CORE" || cls === "MARCHES" || cls.startsWith("PROVINCE_")) {
+      // Accept the system as baseline if either its own classification or the
+      // underlying hex's classification matches. Maps generated before the
+      // explored-marches rename can have system.classification = "MARCHES"
+      // while the hex is still tagged "UNEXPLORED_MARCHES".
+      const sysCls = (sys.classification || "").toUpperCase();
+      const hexCls = (hexClassById.get(sys.hex_id) || "").toUpperCase();
+      if (isBaseline(sysCls) || isBaseline(hexCls)) {
         ids.push(sys.system_id);
       }
     }
