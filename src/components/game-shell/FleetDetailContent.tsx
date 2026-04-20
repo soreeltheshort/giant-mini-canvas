@@ -113,7 +113,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       const [{ data: f }, { data: fs }, { data: po }] = await Promise.all([
         supabase
           .from("fleets")
-          .select("id, name, readiness, next_readiness, special1_role, special2_role")
+          .select("id, name, readiness, next_readiness, special1_role, special2_role, current_supply")
           .eq("id", sourceId)
           .maybeSingle(),
         supabase
@@ -131,6 +131,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           next_readiness: (f as any).next_readiness ?? null,
           special1_role: f.special1_role || "Flank",
           special2_role: f.special2_role || "Flank",
+          current_supply: (f as any).current_supply ?? 0,
         });
       } else {
         setDetail(null);
