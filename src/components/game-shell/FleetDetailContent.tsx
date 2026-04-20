@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { playOrderPlaced } from "@/lib/uiSounds";
 import { ImperialCard } from "./ImperialCard";
 import FleetCompositionEditor, { type FleetShipRow } from "./FleetCompositionEditor";
-import type { MapFleet } from "@/lib/mapTypes";
+import type { MapFleet, SystemData } from "@/lib/mapTypes";
 import type { ShipTypeLookup } from "./ContextPanel";
 
 const PROVINCE_FACTION_NAMES: Record<string, string> = {
