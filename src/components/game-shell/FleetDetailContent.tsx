@@ -347,9 +347,11 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                 </button>
               ) : (
                 <>
-                  <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
-                    Issue Order {noPointsLeft && <span className="text-crimson">(no combat points)</span>}
-                  </label>
+                  {noPointsLeft && (
+                    <label className="text-[10px] font-heading uppercase tracking-wider text-crimson font-bold block">
+                      No combat points
+                    </label>
+                  )}
                   <div className="flex gap-1.5">
                     <button
                       disabled={noPointsLeft}
