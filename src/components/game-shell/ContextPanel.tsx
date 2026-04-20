@@ -136,7 +136,31 @@ function getPanelTitle(mode: GameMode, selection: MapSelection): string {
 }
 
 /* ── Empty States ── */
-function EmptyState({ mode }: { mode: GameMode }) {
+function EmptyState({
+  mode,
+  news,
+  gameData,
+  playerOwnerClassification,
+  onSelect,
+}: {
+  mode: GameMode;
+  news?: NewsStory[];
+  gameData?: GameMapData;
+  playerOwnerClassification?: string;
+  onSelect?: (selection: MapSelection) => void;
+}) {
+  // Strategic Overview (military mode) — Dispatches + scrollable planets/fleets.
+  if (mode === "military") {
+    return (
+      <StrategicOverviewEmpty
+        news={news ?? []}
+        gameData={gameData}
+        playerOwnerClassification={playerOwnerClassification}
+        onSelect={onSelect}
+      />
+    );
+  }
+
   const content = {
     diplomacy: {
       icon: Landmark,
@@ -149,19 +173,6 @@ function EmptyState({ mode }: { mode: GameMode }) {
         { label: "Active Treaties", value: "3" },
         { label: "Pending Proposals", value: "1" },
         { label: "Senate Standing", value: "Favorable" },
-      ],
-    },
-    military: {
-      icon: Swords,
-      title: "Strategic Overview",
-      lines: [
-        "Select a fleet or garrison on the map to view details.",
-        "Fleet movement orders can be issued from this panel.",
-      ],
-      stats: [
-        { label: "Total Fleets", value: "2" },
-        { label: "Total Ships", value: "16" },
-        { label: "Active Engagements", value: "0" },
       ],
     },
     production: {
@@ -177,9 +188,9 @@ function EmptyState({ mode }: { mode: GameMode }) {
         { label: "Avg Efficiency", value: "72%" },
       ],
     },
-  };
+  } as const;
 
-  const c = content[mode];
+  const c = content[mode as "diplomacy" | "production"];
 
   return (
     <>
@@ -199,6 +210,122 @@ function EmptyState({ mode }: { mode: GameMode }) {
             </div>
           ))}
         </div>
+      </ImperialCard>
+    </>
+  );
+}
+
+/**
+ * Strategic Overview default panel content:
+ *   1. Dispatches (latest unread, then click into the news detail)
+ *   2. Scrollable list of player-owned planets — click to open RegionDetail
+ *   3. Scrollable list of player-owned fleets   — click to open ArmyDetail
+ */
+function StrategicOverviewEmpty({
+  news,
+  gameData,
+  playerOwnerClassification,
+  onSelect,
+}: {
+  news: NewsStory[];
+  gameData?: GameMapData;
+  playerOwnerClassification?: string;
+  onSelect?: (selection: MapSelection) => void;
+}) {
+  const ownedSystems = gameData && playerOwnerClassification
+    ? Array.from(gameData.systems.values())
+        .filter((s) => s.owner === playerOwnerClassification)
+        .sort((a, b) => a.system_name.localeCompare(b.system_name))
+    : [];
+  const ownedFleets = gameData && playerOwnerClassification
+    ? gameData.fleets
+        .filter((f) => f.owner_classification === playerOwnerClassification)
+        .slice()
+        .sort((a, b) => a.fleet_name.localeCompare(b.fleet_name))
+    : [];
+
+  const unread = news.filter((n) => !n.read);
+
+  return (
+    <>
+      {/* 1 ─ Dispatches */}
+      <ImperialCard title="Dispatches">
+        {news.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground italic">No dispatches.</p>
+        ) : (
+          <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+            {news.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => onSelect?.({ type: "news", id: n.id })}
+                className={`w-full text-left bg-ivory border border-border rounded-sm p-2 space-y-1 hover:border-bronze/60 bronze-glow-hover transition-colors ${n.read ? "opacity-70" : ""}`}
+              >
+                <div className="flex items-start gap-1.5">
+                  <StatusBadge variant={NEWS_CATEGORY_VARIANT[n.category]}>{n.category}</StatusBadge>
+                  <span className="text-[9px] text-muted-foreground ml-auto">T{n.turn}</span>
+                </div>
+                <p className="text-[11px] font-semibold text-foreground leading-tight">{n.headline}</p>
+              </button>
+            ))}
+          </div>
+        )}
+        {unread.length > 0 && (
+          <p className="mt-1.5 text-[9px] font-heading uppercase tracking-widest text-crimson">
+            {unread.length} unread
+          </p>
+        )}
+      </ImperialCard>
+
+      {/* 2 ─ Planets */}
+      <ImperialCard title={`Planets (${ownedSystems.length})`}>
+        {ownedSystems.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground italic">No systems under your control.</p>
+        ) : (
+          <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+            {ownedSystems.map((s) => (
+              <button
+                key={s.system_id}
+                onClick={() => onSelect?.({ type: "region", id: `sys-${s.system_id}` })}
+                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm border border-border bg-ivory hover:border-bronze/60 bronze-glow-hover transition-colors text-left"
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Globe2 className="w-3 h-3 text-bronze shrink-0" />
+                  <span className="text-[11px] font-semibold text-foreground truncate">{s.system_name}</span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-[9px] text-muted-foreground">Cnd {s.condition}</span>
+                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </ImperialCard>
+
+      {/* 3 ─ Fleets */}
+      <ImperialCard title={`Fleets (${ownedFleets.length})`}>
+        {ownedFleets.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground italic">No fleets in service.</p>
+        ) : (
+          <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+            {ownedFleets.map((f) => (
+              <button
+                key={f.fleet_id}
+                onClick={() => onSelect?.({ type: "army", id: `fleet-${f.fleet_id}` })}
+                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm border border-border bg-ivory hover:border-bronze/60 bronze-glow-hover transition-colors text-left"
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Sword className="w-3 h-3 text-bronze shrink-0" />
+                  <span className="text-[11px] font-semibold text-foreground truncate">{f.fleet_name}</span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-[9px] text-muted-foreground">{f.hex_x},{f.hex_y}</span>
+                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </ImperialCard>
     </>
   );
