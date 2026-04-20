@@ -88,8 +88,27 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const [ships, setShips] = useState<FleetShipRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
+  const [supplyCoefficient, setSupplyCoefficient] = useState<number>(10);
+  const [replenishOpen, setReplenishOpen] = useState(false);
+  const [replenishAmount, setReplenishAmount] = useState(0);
 
   const sourceId = fleet.source_fleet_id;
+
+  // Fetch the supply capacity coefficient once.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("combat_constants")
+        .select("value")
+        .eq("key", "supply_capacity_coefficient")
+        .maybeSingle();
+      if (!cancelled && data?.value !== undefined) {
+        setSupplyCoefficient(Number(data.value) || 10);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
