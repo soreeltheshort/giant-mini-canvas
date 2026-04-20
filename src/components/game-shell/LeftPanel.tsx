@@ -133,7 +133,7 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
                   key={id}
                   onClick={() => onModeChange(id)}
                   className={`
-                    flex-1 flex flex-col items-center justify-center gap-1 px-1 py-2
+                    flex-1 flex items-center justify-center gap-1 px-1 py-1
                     transition-all duration-150
                     ${active
                       ? "bg-crimson text-primary-foreground shadow-sm"
@@ -141,8 +141,8 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
                     }
                   `}
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span className="text-[11px] font-heading font-bold uppercase tracking-wider">{label}</span>
+                  <Icon className="w-3 h-3" />
+                  <span className="text-[10px] font-heading font-bold uppercase tracking-wider">{label}</span>
                 </button>
               );
             })}
