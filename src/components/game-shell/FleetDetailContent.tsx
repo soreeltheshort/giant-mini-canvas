@@ -310,6 +310,26 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const readinessChanged = detail.next_readiness !== null && detail.next_readiness !== detail.readiness;
   const previewMaintenance = Math.round(baseMaintenance * readinessMaintMult(previewReadiness) * 100) / 100;
 
+  // ── Supply (max = sum of supply_pod × coefficient) ──
+  const maxSupply = totalSupply * supplyCoefficient;
+  const currentSupply = Math.min(detail.current_supply, maxSupply);
+  const supplyDelta = Math.max(0, maxSupply - currentSupply);
+
+  // ── Replenish eligibility: fleet must be on a hex with a player-owned system ──
+  const atOwnedPlanet = useMemo(() => {
+    if (!canEdit) return false;
+    return allSystems.some(s =>
+      s.x === fleet.hex_x &&
+      s.y === fleet.hex_y &&
+      s.owner === fleet.owner_classification,
+    );
+  }, [allSystems, fleet.hex_x, fleet.hex_y, fleet.owner_classification, canEdit]);
+
+  const replenishOrder = pendingOrders.find(
+    o => o.order_type === "other" && o.order_json?.kind === "replenish_supply",
+  );
+  const projectedSupplyCost = atOwnedPlanet ? replenishAmount : 0;
+
   // ── Pending move/attack orders ──
   const moveOrder = pendingOrders.find(o => o.order_type === "fleet_move");
   const attackOrder = pendingOrders.find(o => o.order_type === "other" && o.order_json?.kind === "fleet_attack");
