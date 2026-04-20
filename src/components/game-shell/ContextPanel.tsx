@@ -48,6 +48,8 @@ export interface GameMapData {
   facilityTypes: FacilityType[];
   facilityTypesFull?: FacilityTypeFull[];
   shipTypes?: ShipTypeLookup[];
+  /** Hex lookup keyed by "x,y" — used for fleet-at-planet eligibility checks. */
+  hexes?: Map<string, import("@/lib/mapTypes").HexData>;
 }
 
 interface ContextPanelProps {
