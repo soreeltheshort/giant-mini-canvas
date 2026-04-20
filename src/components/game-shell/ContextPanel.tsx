@@ -271,7 +271,7 @@ function StrategicOverviewEmpty({
                   <StatusBadge variant={NEWS_CATEGORY_VARIANT[n.category]}>{n.category}</StatusBadge>
                   <span className="text-[9px] text-muted-foreground ml-auto">T{n.turn}</span>
                 </div>
-                <p className="text-[11px] font-semibold text-foreground leading-tight">{n.headline}</p>
+                <p className="text-[11px] font-semibold text-senate-dark leading-tight">{n.headline}</p>
               </button>
             ))}
           </div>
@@ -297,11 +297,11 @@ function StrategicOverviewEmpty({
               >
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Globe2 className="w-3 h-3 text-bronze shrink-0" />
-                  <span className="text-[11px] font-semibold text-foreground truncate">{s.system_name}</span>
+                  <span className="text-[11px] font-semibold text-senate-dark truncate">{s.system_name}</span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-[9px] text-muted-foreground">Cnd {s.condition}</span>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-[9px] text-senate-dark/70">Cnd {s.condition}</span>
+                  <ChevronRight className="w-3 h-3 text-senate-dark/60" />
                 </div>
               </button>
             ))}
@@ -323,11 +323,11 @@ function StrategicOverviewEmpty({
               >
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Sword className="w-3 h-3 text-bronze shrink-0" />
-                  <span className="text-[11px] font-semibold text-foreground truncate">{f.fleet_name}</span>
+                  <span className="text-[11px] font-semibold text-senate-dark truncate">{f.fleet_name}</span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-[9px] text-muted-foreground">{f.hex_x},{f.hex_y}</span>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-[9px] text-senate-dark/70">{f.hex_x},{f.hex_y}</span>
+                  <ChevronRight className="w-3 h-3 text-senate-dark/60" />
                 </div>
               </button>
             ))}
