@@ -1,4 +1,4 @@
-import { X, Landmark, Swords, Hammer, Scroll } from "lucide-react";
+import { X, Landmark, Swords, Hammer, Scroll, Globe2, Sword, ChevronRight } from "lucide-react";
 import type { GameMode, MapSelection, NewsStory } from "./gameShellTypes";
 import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTypes";
 import { ImperialCard } from "./ImperialCard";
@@ -7,6 +7,13 @@ import { ProgressBar } from "./ProgressBar";
 import FleetDetailContent from "./FleetDetailContent";
 import type { SystemData, MapFleet, FacilityType } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
+
+const NEWS_CATEGORY_VARIANT: Record<NewsStory["category"], "info" | "danger" | "success" | "warning"> = {
+  diplomatic: "info",
+  military: "danger",
+  economic: "success",
+  event: "warning",
+};
 
 export interface ShipTypeLookup {
   id: string;
