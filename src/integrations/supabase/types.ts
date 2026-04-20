@@ -836,6 +836,54 @@ export type Database = {
           },
         ]
       }
+      player_system_intel: {
+        Row: {
+          created_at: string
+          game_id: string
+          id: string
+          last_seen_turn: number
+          observer_player_id: string
+          snapshot_json: Json
+          system_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          id?: string
+          last_seen_turn?: number
+          observer_player_id: string
+          snapshot_json?: Json
+          system_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          id?: string
+          last_seen_turn?: number
+          observer_player_id?: string
+          snapshot_json?: Json
+          system_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_system_intel_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_system_intel_observer_player_id_fkey"
+            columns: ["observer_player_id"]
+            isOneToOne: false
+            referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
