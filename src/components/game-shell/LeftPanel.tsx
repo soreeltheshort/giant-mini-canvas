@@ -172,9 +172,11 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
         >
           {ordersSubmitted ? "Withdraw Orders" : "Submit Orders"}
         </button>
-        <p className={`text-[9px] font-heading uppercase tracking-widest text-center ${ordersSubmitted ? "text-bronze-dark" : "text-muted-foreground"}`}>
-          {ordersSubmitted ? "✓ Submitted — you may keep editing" : "Not Submitted"}
-        </p>
+        {ordersSubmitted && (
+          <p className="text-[9px] font-heading uppercase tracking-widest text-center text-bronze-dark">
+            ✓ Submitted — you may keep editing
+          </p>
+        )}
       </div>
     </aside>
   );
