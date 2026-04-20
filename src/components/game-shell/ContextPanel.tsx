@@ -232,14 +232,21 @@ function StrategicOverviewEmpty({
   playerOwnerClassification?: string;
   onSelect?: (selection: MapSelection) => void;
 }) {
-  const ownedSystems = gameData && playerOwnerClassification
+  const playerFactionName = playerOwnerClassification
+    ? CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null
+    : null;
+  const matchesOwner = (owner: string | undefined | null) => {
+    if (!owner || !playerOwnerClassification) return false;
+    return owner === playerOwnerClassification || (!!playerFactionName && owner === playerFactionName);
+  };
+  const ownedSystems = gameData
     ? Array.from(gameData.systems.values())
-        .filter((s) => s.owner === playerOwnerClassification)
+        .filter((s) => matchesOwner(s.owner))
         .sort((a, b) => a.system_name.localeCompare(b.system_name))
     : [];
-  const ownedFleets = gameData && playerOwnerClassification
+  const ownedFleets = gameData
     ? gameData.fleets
-        .filter((f) => f.owner_classification === playerOwnerClassification)
+        .filter((f) => matchesOwner(f.owner_classification))
         .slice()
         .sort((a, b) => a.fleet_name.localeCompare(b.fleet_name))
     : [];
