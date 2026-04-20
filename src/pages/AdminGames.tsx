@@ -811,10 +811,19 @@ function serializeMapState(state: MapState): any {
 }
 
 function deserializeMapState(json: any): MapState {
+  // Dedupe systems by system_id. Stored JSON may contain the same system
+  // twice (once keyed by system_id, once by hex_id) due to legacy serialization.
+  const systems = new Map<number, SystemData>();
+  const rawEntries: Array<[any, SystemData]> = Array.isArray(json.systems) ? json.systems : [];
+  for (const [, sys] of rawEntries) {
+    if (sys && typeof sys.system_id === "number" && !systems.has(sys.system_id)) {
+      systems.set(sys.system_id, sys);
+    }
+  }
   return {
     mapData: json.mapData,
     hexes: new Map(json.hexes),
-    systems: new Map(json.systems),
+    systems,
     regions: json.regions || [],
     facilityTypes: json.facilityTypes || [],
     fleets: json.fleets || [],
