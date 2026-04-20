@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ["'Space Grotesk'", "sans-serif"],
-        body: ["'Inter'", "sans-serif"],
+        heading: ["'Cinzel'", "Georgia", "serif"],
+        body: ["'Source Sans 3'", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
