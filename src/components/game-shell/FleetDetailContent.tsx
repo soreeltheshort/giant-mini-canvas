@@ -407,77 +407,48 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       {canEdit && (
         <ImperialCard title="Logistics">
           <div className="space-y-2.5">
-            <Row
-              label="Supply"
-              value={`${currentSupply} / ${maxSupply}`}
-            />
-
-            {!replenishOpen ? (
-              <button
-                disabled={supplyDelta <= 0 && !replenishOrder}
-                onClick={() => {
-                  setReplenishOpen(true);
-                  if (atOwnedPlanet && replenishAmount === 0 && !replenishOrder) {
-                    // Pre-fill to a sensible default of "fill up"
-                    setReplenishAmount(supplyDelta);
-                  }
-                }}
-                className="w-full h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {replenishOrder
-                  ? `Replenish Order: +${replenishAmount} (${projectedSupplyCost} ₡)`
-                  : supplyDelta <= 0
-                  ? "Supply Full"
-                  : "Replenish"}
-              </button>
-            ) : (
-              <div className="space-y-2 pt-1 border-t border-border">
-                <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
-                  Replenish Supply
-                  {!atOwnedPlanet && (
-                    <span className="block normal-case text-[10px] text-crimson font-semibold mt-0.5">
-                      Must be at one of your own planets to replenish.
-                    </span>
-                  )}
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={supplyDelta}
-                  step={1}
-                  value={Math.min(replenishAmount, supplyDelta)}
-                  disabled={!atOwnedPlanet || supplyDelta <= 0}
-                  onChange={(e) => setReplenishAmount(Number(e.target.value))}
-                  onPointerUp={() => persistReplenishAmount(Math.min(replenishAmount, supplyDelta))}
-                  onKeyUp={() => persistReplenishAmount(Math.min(replenishAmount, supplyDelta))}
-                  className="w-full accent-bronze disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-bronze-dark font-semibold">
-                    +{Math.min(replenishAmount, supplyDelta)} supply
-                  </span>
-                  <span className={`font-bold ${projectedSupplyCost > 0 ? "text-crimson" : "text-muted-foreground"}`}>
-                    Projected cost: ₡{projectedSupplyCost}
-                  </span>
-                </div>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => {
-                      setReplenishOpen(false);
-                      if (replenishAmount > 0) {
-                        setReplenishAmount(0);
-                        persistReplenishAmount(0);
-                      }
-                    }}
-                    className="flex-1 h-7 rounded-sm border border-crimson/60 bg-background px-2 text-[11px] text-crimson font-heading font-bold uppercase tracking-wider hover:bg-crimson/10"
-                  >
-                    {replenishAmount > 0 ? "Cancel" : "Close"}
-                  </button>
-                </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[hsl(20_25%_10%)] font-bold">Supply</span>
+                <span className="font-bold text-[hsl(20_25%_10%)]">
+                  {currentSupply + Math.min(replenishAmount, supplyDelta)} / {maxSupply}
+                </span>
               </div>
-            )}
+              <input
+                type="range"
+                min={0}
+                max={supplyDelta}
+                step={1}
+                value={Math.min(replenishAmount, supplyDelta)}
+                disabled={supplyDelta <= 0}
+                onChange={(e) => setReplenishAmount(Number(e.target.value))}
+                onPointerUp={() => persistReplenishAmount(Math.min(replenishAmount, supplyDelta))}
+                onKeyUp={() => persistReplenishAmount(Math.min(replenishAmount, supplyDelta))}
+                className="w-full accent-bronze disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            <button
+              onClick={() => setReplenishOpen(true)}
+              className="w-full h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60"
+            >
+              Replenish
+            </button>
+            <button
+              onClick={() => setRepairOpen(true)}
+              className="w-full h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60"
+            >
+              Repair
+            </button>
           </div>
         </ImperialCard>
+      )}
+
+      {replenishOpen && (
+        <FleetActionPopup title="Fleet Replenish" onClose={() => setReplenishOpen(false)} />
+      )}
+      {repairOpen && (
+        <FleetActionPopup title="Fleet Repair" onClose={() => setRepairOpen(false)} />
       )}
 
       <ImperialCard title="Orders">
