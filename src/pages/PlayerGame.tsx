@@ -737,6 +737,7 @@ const PlayerGame = () => {
             onStartTargeting: setTargeting,
             combatPointsAvailable,
             onOrdersChanged: refreshOrders,
+            onSelect: setSelection,
           } : undefined}
           fullWidth={isMobile}
         />
