@@ -1,13 +1,9 @@
 import { useState } from "react";
-import { Swords, Hammer } from "lucide-react";
-import {
-  MilitaryOverlay,
-  ProductionOverlay,
-} from "./OverlayVariants";
+import { Swords } from "lucide-react";
+import { MilitaryOverlay } from "./OverlayVariants";
 
 const DEMOS = [
   { id: "military", label: "Military Order", icon: Swords, desc: "Standard fleet movement" },
-  { id: "production", label: "Production Queue", icon: Hammer, desc: "Standard build management" },
 ] as const;
 
 type DemoId = (typeof DEMOS)[number]["id"];
@@ -39,7 +35,6 @@ export default function OverlayDemoBar() {
 
       {/* Overlay instances */}
       <MilitaryOverlay open={activeOverlay === "military"} onClose={close} />
-      <ProductionOverlay open={activeOverlay === "production"} onClose={close} />
     </>
   );
 }
