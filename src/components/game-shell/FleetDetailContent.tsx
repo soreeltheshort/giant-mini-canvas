@@ -319,6 +319,11 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const currentSupply = Math.min(detail.current_supply, maxSupply);
   const supplyDelta = Math.max(0, maxSupply - currentSupply);
 
+  // Default the slider to "fill up" once we know the delta (sentinel value -1 from load).
+  useEffect(() => {
+    if (replenishAmount < 0) setReplenishAmount(supplyDelta);
+  }, [replenishAmount, supplyDelta]);
+
   // ── Replenish eligibility: fleet must be on a hex with a player-owned system ──
   let atOwnedPlanet = false;
   if (canEdit) {
