@@ -40,7 +40,7 @@ export default function GameHeader({
         </Link>
         <span className="text-bronze/40">|</span>
         <span className="font-heading text-sm font-semibold text-foreground">{gameName}</span>
-        <span className="text-[10px] text-muted-foreground font-medium bg-ivory-dark px-2 py-0.5 rounded-sm border border-border">
+        <span className="text-sm font-heading font-bold uppercase tracking-wider text-crimson bg-ivory-dark px-2.5 py-1 rounded-sm border border-bronze">
           Turn {turnNumber}
         </span>
       </div>
