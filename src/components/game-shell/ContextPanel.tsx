@@ -75,17 +75,7 @@ interface ContextPanelProps {
 export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect }: ContextPanelProps) {
   return (
     <aside className="w-72 bg-marble border-l-2 border-bronze/40 flex flex-col relative z-20 shrink-0 animate-fade-in">
-      {/* Header — hidden on the default Strategic / Diplomatic / Production overview to save vertical space. */}
-      {selection.type !== "none" && (
-        <div className="h-10 flex items-center justify-between px-3 border-b border-border bronze-border-b shrink-0">
-          <h2 className="font-heading text-[10px] font-semibold uppercase tracking-[0.15em] text-bronze-dark flex items-center gap-1.5">
-            <ModeIcon mode={mode} selection={selection} />
-            {getPanelTitle(mode, selection)}
-          </h2>
-        </div>
-      )}
-
-      {/* Content */}
+      {/* Content — header bar removed; first card sits flush at the top. */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {selection.type === "news" ? (
           <NewsDetail story={news.find((n) => n.id === selection.id)} />
