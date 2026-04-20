@@ -219,7 +219,7 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
 }
 
 /* ── Inline Context Content (mirrors ContextPanel content) ── */
-function InlineContextContent({ mode, selection, news, onClearSelection, gameData, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: {
+function InlineContextContent({ mode, selection, news, onClearSelection, gameData, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect }: {
   mode: GameMode;
   selection: MapSelection;
   news: NewsStory[];
@@ -230,6 +230,7 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
   onStartTargeting?: (t: { mode: "hex"; orderType: "fleet_move"; fleetId: string } | { mode: "fleet"; orderType: "attack"; fleetId: string }) => void;
   combatPointsAvailable?: number;
   onOrdersChanged?: () => void;
+  onSelect?: (selection: MapSelection) => void;
 }) {
   const getModeIcon = () => {
     if (selection.type === "news") return <Scroll className="w-3.5 h-3.5" />;
@@ -268,7 +269,7 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
         ) : selection.type === "faction" ? (
           <InlineFactionDetail id={selection.id} />
         ) : (
-          <InlineEmptyState mode={mode} />
+          <InlineEmptyState mode={mode} news={news} gameData={gameData} playerOwnerClassification={playerOwnerClassification} onSelect={onSelect} />
         )}
       </div>
       {selection.type !== "none" && (
@@ -285,14 +286,123 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
   );
 }
 
+const NEWS_CATEGORY_VARIANT: Record<NewsStory["category"], "info" | "danger" | "success" | "warning"> = {
+  diplomatic: "info",
+  military: "danger",
+  economic: "success",
+  event: "warning",
+};
+
 /* ── Inline detail sub-components ── */
-function InlineEmptyState({ mode }: { mode: GameMode }) {
+function InlineEmptyState({ mode, news, gameData, playerOwnerClassification, onSelect }: {
+  mode: GameMode;
+  news?: NewsStory[];
+  gameData?: GameMapData;
+  playerOwnerClassification?: string;
+  onSelect?: (selection: MapSelection) => void;
+}) {
+  if (mode === "military") {
+    const ownedSystems = gameData && playerOwnerClassification
+      ? Array.from(gameData.systems.values())
+          .filter((s) => s.owner === playerOwnerClassification)
+          .sort((a, b) => a.system_name.localeCompare(b.system_name))
+      : [];
+    const ownedFleets = gameData && playerOwnerClassification
+      ? gameData.fleets
+          .filter((f) => f.owner_classification === playerOwnerClassification)
+          .slice()
+          .sort((a, b) => a.fleet_name.localeCompare(b.fleet_name))
+      : [];
+    const newsList = news ?? [];
+    const unread = newsList.filter((n) => !n.read);
+
+    return (
+      <>
+        <ImperialCard title="Dispatches">
+          {newsList.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground italic">No dispatches.</p>
+          ) : (
+            <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+              {newsList.map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => onSelect?.({ type: "news", id: n.id })}
+                  className={`w-full text-left bg-ivory border border-border rounded-sm p-2 space-y-1 hover:border-bronze/60 bronze-glow-hover transition-colors ${n.read ? "opacity-70" : ""}`}
+                >
+                  <div className="flex items-start gap-1.5">
+                    <StatusBadge variant={NEWS_CATEGORY_VARIANT[n.category]}>{n.category}</StatusBadge>
+                    <span className="text-[9px] text-muted-foreground ml-auto">T{n.turn}</span>
+                  </div>
+                  <p className="text-[11px] font-semibold text-foreground leading-tight">{n.headline}</p>
+                </button>
+              ))}
+            </div>
+          )}
+          {unread.length > 0 && (
+            <p className="mt-1.5 text-[9px] font-heading uppercase tracking-widest text-crimson">
+              {unread.length} unread
+            </p>
+          )}
+        </ImperialCard>
+
+        <ImperialCard title={`Planets (${ownedSystems.length})`}>
+          {ownedSystems.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground italic">No systems under your control.</p>
+          ) : (
+            <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+              {ownedSystems.map((s) => (
+                <button
+                  key={s.system_id}
+                  onClick={() => onSelect?.({ type: "region", id: `sys-${s.system_id}` })}
+                  className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm border border-border bg-ivory hover:border-bronze/60 bronze-glow-hover transition-colors text-left"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Globe2 className="w-3 h-3 text-bronze shrink-0" />
+                    <span className="text-[11px] font-semibold text-foreground truncate">{s.system_name}</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[9px] text-muted-foreground">Cnd {s.condition}</span>
+                    <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </ImperialCard>
+
+        <ImperialCard title={`Fleets (${ownedFleets.length})`}>
+          {ownedFleets.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground italic">No fleets in service.</p>
+          ) : (
+            <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+              {ownedFleets.map((f) => (
+                <button
+                  key={f.fleet_id}
+                  onClick={() => onSelect?.({ type: "army", id: `fleet-${f.fleet_id}` })}
+                  className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm border border-border bg-ivory hover:border-bronze/60 bronze-glow-hover transition-colors text-left"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Sword className="w-3 h-3 text-bronze shrink-0" />
+                    <span className="text-[11px] font-semibold text-foreground truncate">{f.fleet_name}</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[9px] text-muted-foreground">{f.hex_x},{f.hex_y}</span>
+                    <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </ImperialCard>
+      </>
+    );
+  }
+
   const content = {
     diplomacy: { stats: [{ label: "Active Treaties", value: "3" }, { label: "Pending Proposals", value: "1" }, { label: "Senate Standing", value: "Favorable" }] },
-    military: { stats: [{ label: "Total Fleets", value: "2" }, { label: "Total Ships", value: "16" }, { label: "Active Engagements", value: "0" }] },
     production: { stats: [{ label: "Active Facilities", value: "4" }, { label: "Queue Items", value: "3" }, { label: "Avg Efficiency", value: "72%" }] },
-  };
-  const c = content[mode];
+  } as const;
+  const c = content[mode as "diplomacy" | "production"];
   return (
     <ImperialCard title="Summary">
       <div className="space-y-2">
