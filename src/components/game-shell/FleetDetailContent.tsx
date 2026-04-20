@@ -361,6 +361,32 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const activeOrder: "move" | "attack" | null = moveOrder ? "move" : attackOrder ? "attack" : null;
   const noPointsLeft = (combatPointsAvailable ?? Infinity) <= 0;
 
+  // ── Replenish supply order persistence ──
+  const persistReplenishAmount = async (amount: number) => {
+    if (!orderContext) return;
+    const { gameId, playerId, turnNumber } = orderContext;
+    // Always clear any existing replenish_supply order for this fleet+turn
+    await (supabase as any).from("player_orders")
+      .delete()
+      .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+      .eq("order_type", "other")
+      .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
+      .filter("order_json->>kind", "eq", "replenish_supply");
+    if (amount > 0) {
+      await (supabase as any).from("player_orders").insert({
+        game_id: gameId, player_id: playerId, turn_number: turnNumber,
+        order_type: "other",
+        order_json: {
+          fleet_id: fleet.fleet_id,
+          kind: "replenish_supply",
+          amount,
+        },
+      });
+      playOrderPlaced();
+    }
+    onOrdersChanged?.();
+  };
+
   return (
     <>
       <ImperialCard title={fleet.fleet_name}>
