@@ -320,37 +320,8 @@ function InlineEmptyState({ mode, news, gameData, playerOwnerClassification, onS
           .slice()
           .sort((a, b) => a.fleet_name.localeCompare(b.fleet_name))
       : [];
-    const newsList = news ?? [];
-    const unread = newsList.filter((n) => !n.read);
-
     return (
       <>
-        <ImperialCard title="Dispatches">
-          {newsList.length === 0 ? (
-            <p className="text-[10px] text-muted-foreground italic">No dispatches.</p>
-          ) : (
-            <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
-              {newsList.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => onSelect?.({ type: "news", id: n.id })}
-                  className={`w-full text-left bg-ivory border border-border rounded-sm p-2 space-y-1 hover:border-bronze/60 bronze-glow-hover transition-colors ${n.read ? "opacity-70" : ""}`}
-                >
-                  <div className="flex items-start gap-1.5">
-                    <StatusBadge variant={NEWS_CATEGORY_VARIANT[n.category]}>{n.category}</StatusBadge>
-                    <span className="text-[9px] text-muted-foreground ml-auto">T{n.turn}</span>
-                  </div>
-                  <p className="text-[11px] font-semibold text-senate-dark leading-tight">{n.headline}</p>
-                </button>
-              ))}
-            </div>
-          )}
-          {unread.length > 0 && (
-            <p className="mt-1.5 text-[9px] font-heading uppercase tracking-widest text-crimson">
-              {unread.length} unread
-            </p>
-          )}
-        </ImperialCard>
 
         <ImperialCard title={`Planets (${ownedSystems.length})`}>
           {ownedSystems.length === 0 ? (
