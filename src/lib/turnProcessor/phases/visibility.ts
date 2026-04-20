@@ -21,15 +21,22 @@ export const visibilityPhase: Phase = {
   async run(ctx: TurnContext) {
     const { supabase, gameId, mapState, currentTurn, players } = ctx;
 
-    // hex_id → classification
+    // hex_id → classification (used as a fallback only)
     const hexClassById = new Map<number, string>();
     for (const h of mapState.hexes.values()) hexClassById.set(h.hex_id, h.classification);
 
+    // A system is "ever-seen" baseline if EITHER the system's own classification
+    // OR the hex it sits on is Core, an Explored March, or a Province.
+    // Some maps tag the system with `classification: "MARCHES"` even though the
+    // underlying hex is still `UNEXPLORED_MARCHES`, so we accept either source.
     const baselineIds: number[] = [];
     const baselineSystems = [];
     for (const sys of mapState.systems.values()) {
-      const cls = (hexClassById.get(sys.hex_id) || sys.classification || "").toUpperCase();
-      if (cls === "CORE" || cls === "MARCHES" || cls.startsWith("PROVINCE_")) {
+      const sysCls = (sys.classification || "").toUpperCase();
+      const hexCls = (hexClassById.get(sys.hex_id) || "").toUpperCase();
+      const isBaseline = (cls: string) =>
+        cls === "CORE" || cls === "MARCHES" || cls.startsWith("PROVINCE_");
+      if (isBaseline(sysCls) || isBaseline(hexCls)) {
         baselineIds.push(sys.system_id);
         baselineSystems.push(sys);
       }
