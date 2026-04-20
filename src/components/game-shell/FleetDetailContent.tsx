@@ -637,6 +637,38 @@ interface IntelRow {
   last_seen_turn: number;
 }
 
+/**
+ * Generic modal popup for fleet logistics actions (Replenish / Repair).
+ * Body is intentionally blank for now — content will be filled in next.
+ */
+function FleetActionPopup({ title, onClose }: { title: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-senate-dark/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-[420px] max-w-[90vw] bg-marble border-2 border-bronze rounded-sm shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-2 border-b border-bronze/40 bg-marble-dark">
+          <h3 className="text-sm font-heading font-bold uppercase tracking-wider text-bronze-dark">
+            {title}
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-bronze-dark hover:text-crimson font-bold text-lg leading-none px-1"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+        <div className="p-6 min-h-[160px]" />
+      </div>
+    </div>
+  );
+}
+
 function EnemyFleetView({
   fleet,
   ships,
