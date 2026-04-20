@@ -178,6 +178,14 @@ const PlayerMapCanvas: React.FC<Props> = ({
       let fillColor: string;
       let alpha: number;
 
+      // For province hexes, only show the colored province tint when the hex
+      // is in live sensor range OR it belongs to the viewing player. Otherwise
+      // render it as neutral fog (same brightness as marches fog) so enemy
+      // provinces outside sensor range don't broadcast their color.
+      const isProvinceHex = hex.classification.startsWith("PROVINCE_");
+      const isOwnProvince = !!ownClassification && hex.classification === ownClassification;
+      const showProvinceTint = isProvinceHex && (isLive || isOwnProvince);
+
       if (isUnexplored) {
         fillColor = "#111118";
         alpha = 0.6;
@@ -187,11 +195,15 @@ const PlayerMapCanvas: React.FC<Props> = ({
       } else if (isCore) {
         fillColor = "#2a2a3a";
         alpha = 1;
-      } else {
+      } else if (showProvinceTint) {
         // Province — use a muted version of the province color
         const baseColor = CLASSIFICATION_COLORS[hex.classification] || "#444";
         fillColor = baseColor;
         alpha = 0.25;
+      } else {
+        // Enemy province out of sensor range — render as neutral fog
+        fillColor = "#1a1a24";
+        alpha = 0.8;
       }
 
       // Visibility tinting:
