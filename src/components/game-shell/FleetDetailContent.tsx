@@ -57,6 +57,8 @@ export interface FleetOrderContext {
 interface Props {
   fleet: MapFleet;
   shipTypes?: ShipTypeLookup[];
+  /** All fleets in the game (for resolving target fleet names in attack orders). */
+  allFleets?: MapFleet[];
   /** Whether this player owns / can edit this fleet */
   canEdit: boolean;
   /** When provided, readiness/strategy changes are written as player_orders. */
