@@ -5,7 +5,6 @@ import {
   DiplomacyOverlay,
   MilitaryOverlay,
   ProductionOverlay,
-  MajorEventOverlay,
 } from "./OverlayVariants";
 
 const DEMOS = [
