@@ -1,15 +1,11 @@
 import { useState } from "react";
-import { Scroll, Landmark, Swords, Hammer } from "lucide-react";
+import { Swords, Hammer } from "lucide-react";
 import {
-  NewsOverlay,
-  DiplomacyOverlay,
   MilitaryOverlay,
   ProductionOverlay,
 } from "./OverlayVariants";
 
 const DEMOS = [
-  { id: "news", label: "News Dispatch", icon: Scroll, desc: "Standard two-column news story" },
-  { id: "diplomacy", label: "Diplomacy", icon: Landmark, desc: "Expanded treaty negotiation" },
   { id: "military", label: "Military Order", icon: Swords, desc: "Standard fleet movement" },
   { id: "production", label: "Production Queue", icon: Hammer, desc: "Standard build management" },
 ] as const;
@@ -25,7 +21,6 @@ export default function OverlayDemoBar() {
     <>
       {/* Trigger bar — positioned at bottom of map area */}
       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-marble-dark/80 border-t border-border">
-        {/* Overlays label removed */}
         {DEMOS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -43,11 +38,8 @@ export default function OverlayDemoBar() {
       </div>
 
       {/* Overlay instances */}
-      <NewsOverlay open={activeOverlay === "news"} onClose={close} />
-      <DiplomacyOverlay open={activeOverlay === "diplomacy"} onClose={close} />
       <MilitaryOverlay open={activeOverlay === "military"} onClose={close} />
       <ProductionOverlay open={activeOverlay === "production"} onClose={close} />
-      
     </>
   );
 }
