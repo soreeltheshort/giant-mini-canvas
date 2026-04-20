@@ -366,6 +366,7 @@ export type Database = {
       fleets: {
         Row: {
           created_at: string
+          current_supply: number
           id: string
           name: string
           next_readiness: number | null
@@ -380,6 +381,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          current_supply?: number
           id?: string
           name: string
           next_readiness?: number | null
@@ -394,6 +396,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          current_supply?: number
           id?: string
           name?: string
           next_readiness?: number | null

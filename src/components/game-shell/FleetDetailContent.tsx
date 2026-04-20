@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { playOrderPlaced } from "@/lib/uiSounds";
 import { ImperialCard } from "./ImperialCard";
 import FleetCompositionEditor, { type FleetShipRow } from "./FleetCompositionEditor";
-import type { MapFleet } from "@/lib/mapTypes";
+import type { MapFleet, SystemData, HexData } from "@/lib/mapTypes";
 import type { ShipTypeLookup } from "./ContextPanel";
 
 const PROVINCE_FACTION_NAMES: Record<string, string> = {
@@ -46,6 +46,7 @@ interface FleetDetail {
   next_readiness: number | null;
   special1_role: string;
   special2_role: string;
+  current_supply: number;
 }
 
 export interface FleetOrderContext {
@@ -59,6 +60,10 @@ interface Props {
   shipTypes?: ShipTypeLookup[];
   /** All fleets in the game (for resolving target fleet names in attack orders). */
   allFleets?: MapFleet[];
+  /** All systems on the map — used to determine if the fleet is at a player-owned planet. */
+  allSystems?: SystemData[];
+  /** Hex lookup keyed by "x,y" — used to translate fleet coordinates to a hex_id/system. */
+  allHexes?: Map<string, HexData>;
   /** Whether this player owns / can edit this fleet */
   canEdit: boolean;
   /** When provided, readiness/strategy changes are written as player_orders. */
@@ -79,14 +84,33 @@ interface PendingOrder {
   order_json: any;
 }
 
-export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
+export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], allSystems = [], allHexes, canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
   const [ships, setShips] = useState<FleetShipRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
+  const [supplyCoefficient, setSupplyCoefficient] = useState<number>(10);
+  const [replenishOpen, setReplenishOpen] = useState(false);
+  const [replenishAmount, setReplenishAmount] = useState(0);
 
   const sourceId = fleet.source_fleet_id;
+
+  // Fetch the supply capacity coefficient once.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("combat_constants")
+        .select("value")
+        .eq("key", "supply_capacity_coefficient")
+        .maybeSingle();
+      if (!cancelled && data?.value !== undefined) {
+        setSupplyCoefficient(Number(data.value) || 10);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +134,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       const [{ data: f }, { data: fs }, { data: po }] = await Promise.all([
         supabase
           .from("fleets")
-          .select("id, name, readiness, next_readiness, special1_role, special2_role")
+          .select("id, name, readiness, next_readiness, special1_role, special2_role, current_supply")
           .eq("id", sourceId)
           .maybeSingle(),
         supabase
@@ -128,6 +152,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           next_readiness: (f as any).next_readiness ?? null,
           special1_role: f.special1_role || "Flank",
           special2_role: f.special2_role || "Flank",
+          current_supply: (f as any).current_supply ?? 0,
         });
       } else {
         setDetail(null);
@@ -145,7 +170,18 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         };
       });
       setShips(rows);
-      setPendingOrders(((po as any[]) || []) as PendingOrder[]);
+      const orders = ((po as any[]) || []) as PendingOrder[];
+      setPendingOrders(orders);
+      const existingReplenish = orders.find(
+        o => o.order_type === "other" && o.order_json?.kind === "replenish_supply",
+      );
+      if (existingReplenish) {
+        setReplenishAmount(Number(existingReplenish.order_json?.amount) || 0);
+        setReplenishOpen(true);
+      } else {
+        setReplenishAmount(0);
+        setReplenishOpen(false);
+      }
       setLoading(false);
     }
     load();
@@ -276,6 +312,28 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const readinessChanged = detail.next_readiness !== null && detail.next_readiness !== detail.readiness;
   const previewMaintenance = Math.round(baseMaintenance * readinessMaintMult(previewReadiness) * 100) / 100;
 
+  // ── Supply (max = sum of supply_pod × coefficient) ──
+  const maxSupply = totalSupply * supplyCoefficient;
+  const currentSupply = Math.min(detail.current_supply, maxSupply);
+  const supplyDelta = Math.max(0, maxSupply - currentSupply);
+
+  // ── Replenish eligibility: fleet must be on a hex with a player-owned system ──
+  let atOwnedPlanet = false;
+  if (canEdit) {
+    for (const s of allSystems) {
+      const hex = allHexes?.get(`${fleet.hex_x},${fleet.hex_y}`);
+      if (hex && s.hex_id === hex.hex_id && s.owner === fleet.owner_classification) {
+        atOwnedPlanet = true;
+        break;
+      }
+    }
+  }
+
+  const replenishOrder = pendingOrders.find(
+    o => o.order_type === "other" && o.order_json?.kind === "replenish_supply",
+  );
+  const projectedSupplyCost = atOwnedPlanet ? replenishAmount : 0;
+
   // ── Pending move/attack orders ──
   const moveOrder = pendingOrders.find(o => o.order_type === "fleet_move");
   const attackOrder = pendingOrders.find(o => o.order_type === "other" && o.order_json?.kind === "fleet_attack");
@@ -303,6 +361,32 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const activeOrder: "move" | "attack" | null = moveOrder ? "move" : attackOrder ? "attack" : null;
   const noPointsLeft = (combatPointsAvailable ?? Infinity) <= 0;
 
+  // ── Replenish supply order persistence ──
+  const persistReplenishAmount = async (amount: number) => {
+    if (!orderContext) return;
+    const { gameId, playerId, turnNumber } = orderContext;
+    // Always clear any existing replenish_supply order for this fleet+turn
+    await (supabase as any).from("player_orders")
+      .delete()
+      .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+      .eq("order_type", "other")
+      .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
+      .filter("order_json->>kind", "eq", "replenish_supply");
+    if (amount > 0) {
+      await (supabase as any).from("player_orders").insert({
+        game_id: gameId, player_id: playerId, turn_number: turnNumber,
+        order_type: "other",
+        order_json: {
+          fleet_id: fleet.fleet_id,
+          kind: "replenish_supply",
+          amount,
+        },
+      });
+      playOrderPlaced();
+    }
+    onOrdersChanged?.();
+  };
+
   return (
     <>
       <ImperialCard title={fleet.fleet_name}>
@@ -322,31 +406,76 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
 
       {canEdit && (
         <ImperialCard title="Logistics">
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              onClick={() => toast({ title: "Replenish supply", description: "Not yet implemented." })}
-              className="h-8 rounded-sm border border-input bg-background px-2 text-[11px] text-foreground font-semibold hover:border-bronze/60"
-            >
-              Replenish Supply
-            </button>
-            <button
-              onClick={() => toast({ title: "Replenish fighters", description: "Not yet implemented." })}
-              className="h-8 rounded-sm border border-input bg-background px-2 text-[11px] text-foreground font-semibold hover:border-bronze/60"
-            >
-              Replenish Fighters
-            </button>
-            <button
-              onClick={() => toast({ title: "Replenish gunships", description: "Not yet implemented." })}
-              className="h-8 rounded-sm border border-input bg-background px-2 text-[11px] text-foreground font-semibold hover:border-bronze/60"
-            >
-              Replenish Gunships
-            </button>
-            <button
-              onClick={() => toast({ title: "Repair ships", description: "Not yet implemented." })}
-              className="h-8 rounded-sm border border-input bg-background px-2 text-[11px] text-foreground font-semibold hover:border-bronze/60"
-            >
-              Repair Ships
-            </button>
+          <div className="space-y-2.5">
+            <Row
+              label="Supply"
+              value={`${currentSupply} / ${maxSupply}`}
+            />
+
+            {!replenishOpen ? (
+              <button
+                disabled={supplyDelta <= 0 && !replenishOrder}
+                onClick={() => {
+                  setReplenishOpen(true);
+                  if (atOwnedPlanet && replenishAmount === 0 && !replenishOrder) {
+                    // Pre-fill to a sensible default of "fill up"
+                    setReplenishAmount(supplyDelta);
+                  }
+                }}
+                className="w-full h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {replenishOrder
+                  ? `Replenish Order: +${replenishAmount} (${projectedSupplyCost} ₡)`
+                  : supplyDelta <= 0
+                  ? "Supply Full"
+                  : "Replenish"}
+              </button>
+            ) : (
+              <div className="space-y-2 pt-1 border-t border-border">
+                <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
+                  Replenish Supply
+                  {!atOwnedPlanet && (
+                    <span className="block normal-case text-[10px] text-crimson font-semibold mt-0.5">
+                      Must be at one of your own planets to replenish.
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={supplyDelta}
+                  step={1}
+                  value={Math.min(replenishAmount, supplyDelta)}
+                  disabled={!atOwnedPlanet || supplyDelta <= 0}
+                  onChange={(e) => setReplenishAmount(Number(e.target.value))}
+                  onPointerUp={() => persistReplenishAmount(Math.min(replenishAmount, supplyDelta))}
+                  onKeyUp={() => persistReplenishAmount(Math.min(replenishAmount, supplyDelta))}
+                  className="w-full accent-bronze disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-bronze-dark font-semibold">
+                    +{Math.min(replenishAmount, supplyDelta)} supply
+                  </span>
+                  <span className={`font-bold ${projectedSupplyCost > 0 ? "text-crimson" : "text-muted-foreground"}`}>
+                    Projected cost: ₡{projectedSupplyCost}
+                  </span>
+                </div>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => {
+                      setReplenishOpen(false);
+                      if (replenishAmount > 0) {
+                        setReplenishAmount(0);
+                        persistReplenishAmount(0);
+                      }
+                    }}
+                    className="flex-1 h-7 rounded-sm border border-crimson/60 bg-background px-2 text-[11px] text-crimson font-heading font-bold uppercase tracking-wider hover:bg-crimson/10"
+                  >
+                    {replenishAmount > 0 ? "Cancel" : "Close"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </ImperialCard>
       )}

@@ -48,6 +48,8 @@ export interface GameMapData {
   facilityTypes: FacilityType[];
   facilityTypesFull?: FacilityTypeFull[];
   shipTypes?: ShipTypeLookup[];
+  /** Hex lookup keyed by "x,y" — used for fleet-at-planet eligibility checks. */
+  hexes?: Map<string, import("@/lib/mapTypes").HexData>;
 }
 
 interface ContextPanelProps {
@@ -505,7 +507,21 @@ function ArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext
 
   if (realFleet) {
     const canEdit = !!playerOwnerClassification && realFleet.owner_classification === playerOwnerClassification;
-    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} allFleets={gameData?.fleets} canEdit={canEdit} orderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />;
+    const allSystems = gameData ? Array.from(gameData.systems.values()) : [];
+    return (
+      <FleetDetailContent
+        fleet={realFleet}
+        shipTypes={gameData?.shipTypes}
+        allFleets={gameData?.fleets}
+        allSystems={allSystems}
+        allHexes={gameData?.hexes}
+        canEdit={canEdit}
+        orderContext={fleetOrderContext}
+        onStartTargeting={onStartTargeting}
+        combatPointsAvailable={combatPointsAvailable}
+        onOrdersChanged={onOrdersChanged}
+      />
+    );
   }
 
   // Fallback to dummy
