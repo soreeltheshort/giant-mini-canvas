@@ -190,8 +190,14 @@ const PlayerMapCanvas: React.FC<Props> = ({
         fillColor = "#111118";
         alpha = 0.6;
       } else if (isMarches) {
-        fillColor = "#1a1a24";
-        alpha = 0.8;
+        // Marches: bright fill only when in live sensor range; otherwise fog.
+        if (isLive) {
+          fillColor = "#1a1a24";
+          alpha = 0.8;
+        } else {
+          fillColor = "#111118";
+          alpha = 0.6;
+        }
       } else if (isCore) {
         fillColor = "#2a2a3a";
         alpha = 1;
@@ -202,8 +208,8 @@ const PlayerMapCanvas: React.FC<Props> = ({
         alpha = 0.25;
       } else {
         // Enemy province out of sensor range — render as neutral fog
-        fillColor = "#1a1a24";
-        alpha = 0.8;
+        fillColor = "#111118";
+        alpha = 0.6;
       }
 
       // Visibility tinting:
