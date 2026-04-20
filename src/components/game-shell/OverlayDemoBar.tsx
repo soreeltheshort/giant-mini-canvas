@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Scroll, Landmark, Swords, Hammer, AlertTriangle } from "lucide-react";
+import { Scroll, Landmark, Swords, Hammer } from "lucide-react";
 import {
   NewsOverlay,
   DiplomacyOverlay,
@@ -13,7 +13,6 @@ const DEMOS = [
   { id: "diplomacy", label: "Diplomacy", icon: Landmark, desc: "Expanded treaty negotiation" },
   { id: "military", label: "Military Order", icon: Swords, desc: "Standard fleet movement" },
   { id: "production", label: "Production Queue", icon: Hammer, desc: "Standard build management" },
-  { id: "event", label: "Major Event", icon: AlertTriangle, desc: "Cinematic critical event" },
 ] as const;
 
 type DemoId = (typeof DEMOS)[number]["id"];
