@@ -18,6 +18,7 @@ import { importFromSqlite, exportToSqlite } from "@/lib/mapDatabase";
 import { processNextTurn, DEFAULT_TURN_CONSTANTS, ShipTypeForUpkeep } from "@/lib/turnEngine";
 import { runTurnProcessor } from "@/lib/turnProcessor";
 import { SystemData, MapState } from "@/lib/mapTypes";
+import { buildSystemSnapshot } from "@/lib/systemIntel";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TurnLogViewer from "@/components/game-shell/TurnLogViewer";
