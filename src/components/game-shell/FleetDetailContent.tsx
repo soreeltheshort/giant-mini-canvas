@@ -294,7 +294,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   };
 
   const targetFleetName = attackOrder
-    ? attackOrder.order_json?.target_fleet_id ?? "Unknown"
+    ? (allFleets.find(f => f.fleet_id === attackOrder.order_json?.target_fleet_id)?.fleet_name
+        ?? attackOrder.order_json?.target_fleet_id
+        ?? "Unknown")
     : null;
 
   // Only one active order per fleet
