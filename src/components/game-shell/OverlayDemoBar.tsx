@@ -47,7 +47,7 @@ export default function OverlayDemoBar() {
       <DiplomacyOverlay open={activeOverlay === "diplomacy"} onClose={close} />
       <MilitaryOverlay open={activeOverlay === "military"} onClose={close} />
       <ProductionOverlay open={activeOverlay === "production"} onClose={close} />
-      <MajorEventOverlay open={activeOverlay === "event"} onClose={close} />
+      
     </>
   );
 }
