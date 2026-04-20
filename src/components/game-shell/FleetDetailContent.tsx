@@ -62,6 +62,8 @@ interface Props {
   allFleets?: MapFleet[];
   /** All systems on the map — used to determine if the fleet is at a player-owned planet. */
   allSystems?: SystemData[];
+  /** Hex lookup keyed by "x,y" — used to translate fleet coordinates to a hex_id/system. */
+  allHexes?: Map<string, HexData>;
   /** Whether this player owns / can edit this fleet */
   canEdit: boolean;
   /** When provided, readiness/strategy changes are written as player_orders. */
@@ -82,7 +84,7 @@ interface PendingOrder {
   order_json: any;
 }
 
-export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], allSystems = [], canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
+export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], allSystems = [], allHexes, canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
   const [ships, setShips] = useState<FleetShipRow[]>([]);
