@@ -320,6 +320,37 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         </div>
       </ImperialCard>
 
+      {canEdit && (
+        <ImperialCard title="Logistics">
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => toast({ title: "Replenish supply", description: "Not yet implemented." })}
+              className="h-8 rounded-sm border border-input bg-background px-2 text-[11px] text-foreground font-semibold hover:border-bronze/60"
+            >
+              Replenish Supply
+            </button>
+            <button
+              onClick={() => toast({ title: "Replenish fighters", description: "Not yet implemented." })}
+              className="h-8 rounded-sm border border-input bg-background px-2 text-[11px] text-foreground font-semibold hover:border-bronze/60"
+            >
+              Replenish Fighters
+            </button>
+            <button
+              onClick={() => toast({ title: "Replenish gunships", description: "Not yet implemented." })}
+              className="h-8 rounded-sm border border-input bg-background px-2 text-[11px] text-foreground font-semibold hover:border-bronze/60"
+            >
+              Replenish Gunships
+            </button>
+            <button
+              onClick={() => toast({ title: "Repair ships", description: "Not yet implemented." })}
+              className="h-8 rounded-sm border border-input bg-background px-2 text-[11px] text-foreground font-semibold hover:border-bronze/60"
+            >
+              Repair Ships
+            </button>
+          </div>
+        </ImperialCard>
+      )}
+
       <ImperialCard title="Orders">
         <div className="space-y-2.5">
           {!activeOrder && (
