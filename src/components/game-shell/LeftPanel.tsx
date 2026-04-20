@@ -70,7 +70,7 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
   const latestUnread = news.find((n) => !n.read);
 
   return (
-    <aside className={`${fullWidth ? "w-full border-b-2 border-r-0" : "w-56 border-r-2"} bg-marble flex flex-col border-bronze/40 relative z-20 shrink-0 overflow-hidden`}>
+    <aside className={`${fullWidth ? "w-full border-b-2 border-r-0" : "w-72 border-r-2"} bg-marble flex flex-col border-bronze/40 relative z-20 shrink-0 overflow-hidden`}>
       <div className="flex-1 overflow-y-auto">
         {/* ── Global Stats ── */}
         <div className="p-3 space-y-2 border-b border-border">
@@ -126,31 +126,30 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
           </div>
         </div>
 
-        {/* ── Mode Navigation ── */}
-        <div className="p-3 space-y-1.5 border-b border-border">
-          <h3 className="font-heading text-[10px] font-semibold uppercase tracking-[0.15em] text-bronze-dark mb-2">
-            Command
-          </h3>
-          {MODE_ITEMS.map(({ id, label, icon: Icon }) => {
-            const active = activeMode === id;
-            return (
-              <button
-                key={id}
-                onClick={() => onModeChange(id)}
-                className={`
-                  w-full flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-left
-                  transition-all duration-150
-                  ${active
-                    ? "bg-crimson text-primary-foreground shadow-sm"
-                    : "text-foreground hover:bg-ivory-dark bronze-glow-hover"
-                  }
-                `}
-              >
-                <Icon className="w-4 h-4" />
-                <span className="text-xs font-heading font-semibold uppercase tracking-wider">{label}</span>
-              </button>
-            );
-          })}
+        {/* ── Mode Navigation (horizontal tabs) ── */}
+        <div className="p-3 border-b border-border">
+          <div className="flex items-stretch gap-1 rounded-sm border border-bronze/40 bg-ivory overflow-hidden">
+            {MODE_ITEMS.map(({ id, label, icon: Icon }) => {
+              const active = activeMode === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => onModeChange(id)}
+                  className={`
+                    flex-1 flex flex-col items-center justify-center gap-1 px-1 py-2
+                    transition-all duration-150
+                    ${active
+                      ? "bg-crimson text-primary-foreground shadow-sm"
+                      : "text-foreground hover:bg-ivory-dark bronze-glow-hover"
+                    }
+                  `}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="text-[10px] font-heading font-semibold uppercase tracking-wider">{label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* ── Inline Context (tablet mode) ── */}

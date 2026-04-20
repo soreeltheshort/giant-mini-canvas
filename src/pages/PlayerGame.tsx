@@ -730,7 +730,7 @@ const PlayerGame = () => {
           onViewNews={handleViewNews}
           ordersSubmitted={!!player?.orders_locked}
           onSubmitOrders={submitOrders}
-          inlineContext={isTablet ? {
+          inlineContext={{
             mode: activeMode,
             selection,
             news: DUMMY_NEWS,
@@ -749,7 +749,7 @@ const PlayerGame = () => {
             combatPointsAvailable,
             onOrdersChanged: refreshOrders,
             onSelect: setSelection,
-          } : undefined}
+          }}
           fullWidth={isMobile}
         />
 
@@ -784,32 +784,7 @@ const PlayerGame = () => {
           <OverlayDemoBar />
         </div>
 
-        {/* Right Context Panel — hidden on tablet */}
-        {!isTablet && rightPanelOpen && (
-          <ContextPanel
-            mode={activeMode}
-            selection={selection}
-            news={DUMMY_NEWS}
-            onClose={() => setRightPanelOpen(false)}
-            onClearSelection={() => setSelection({ type: "none" })}
-            onBuildFacility={handleBuildFacility}
-            playerTreasury={player?.treasury ?? 0}
-            playerOwnerClassification={`PROVINCE_${player.player_slot}`}
-            fleetOrderContext={{ gameId: game.id, playerId: player.id, turnNumber: game.turn_number }}
-            onStartTargeting={setTargeting}
-            combatPointsAvailable={combatPointsAvailable}
-            onOrdersChanged={refreshOrders}
-            onSelect={setSelection}
-            gameData={mapState ? {
-              systems: mapState.systems,
-              fleets: mapState.fleets,
-              facilityTypes: dbFacilityTypes,
-              facilityTypesFull: dbFacilityTypesFull,
-              shipTypes: dbShipTypes,
-              hexes: mapState.hexes,
-            } : undefined}
-          />
-        )}
+        {/* Right Context Panel removed — content now rendered inline in LeftPanel */}
       </div>
 
     </div>
