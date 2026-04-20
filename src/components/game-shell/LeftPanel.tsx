@@ -96,9 +96,6 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
 
         {/* ── Capability Ratings ── */}
         <div className="p-3 space-y-1.5 border-b border-border">
-          <h3 className="font-heading text-[10px] font-semibold uppercase tracking-[0.15em] text-bronze-dark mb-2">
-            Capabilities
-          </h3>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Crown className="w-3 h-3 text-bronze" />
