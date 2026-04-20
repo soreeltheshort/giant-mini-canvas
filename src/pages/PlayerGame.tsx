@@ -812,11 +812,6 @@ const PlayerGame = () => {
         )}
       </div>
 
-      <BottomStrip
-        mode={activeMode}
-        turnNumber={game.turn_number}
-        factionName={factionName}
-      />
     </div>
   );
 };
