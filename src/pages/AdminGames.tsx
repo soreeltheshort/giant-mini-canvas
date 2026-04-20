@@ -418,6 +418,30 @@ const AdminGames = () => {
           .update({ visible_system_ids: visibleIds })
           .eq("id", gp.id);
       }
+
+      // Pre-populate fog-of-war memory for every baseline (Core/Province/Marches)
+      // system. This gives every player a starting "last known state" snapshot
+      // for the explored map, even before they move a fleet.
+      const visibleSet = new Set(visibleIds);
+      const baselineSystems = Array.from(ms.systems.values()).filter(s => visibleSet.has(s.system_id));
+      const intelRows: any[] = [];
+      for (const gp of gamePlayers) {
+        for (const sys of baselineSystems) {
+          intelRows.push({
+            game_id: gameId,
+            observer_player_id: gp.id,
+            system_id: sys.system_id,
+            last_seen_turn: 0,
+            snapshot_json: buildSystemSnapshot(sys),
+          });
+        }
+      }
+      const CHUNK = 500;
+      for (let i = 0; i < intelRows.length; i += CHUNK) {
+        await (supabase as any)
+          .from("player_system_intel")
+          .upsert(intelRows.slice(i, i + CHUNK), { onConflict: "observer_player_id,system_id" });
+      }
     }
     return { count: visibleIds.length, players: gamePlayers?.length ?? 0 };
   };
