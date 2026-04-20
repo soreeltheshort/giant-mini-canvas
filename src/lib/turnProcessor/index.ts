@@ -23,9 +23,9 @@ import { combatPhase } from "./phases/combat";
 
 export const PHASE_ORDER: Phase[] = [
   economyPhase,
+  combatPhase,
   movementPhase,
   visibilityPhase,
-  combatPhase,
 ];
 
 export interface RunTurnArgs {
