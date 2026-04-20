@@ -109,15 +109,16 @@ function useComputedVisibility(
     const allSystems = Array.from(mapState.systems.values());
     const live = new Set<number>();
 
-    // 1. Core + Explored Marches + own-province hexes are always live (terrain
-    //    that everyone can see). Other-province systems are NOT marked live
-    //    here — they come in through `persisted` (seeded at game setup with
-    //    every Core + Province system) and therefore render as "ever seen"
-    //    memory: location known, faded ghost.
+    // 1. Always-live: Core hexes + the player's own province + any system the
+    //    player owns. Other-province systems and Marches systems are NOT live
+    //    by classification — they only appear via sensor scan around an owned
+    //    fleet/system. Otherwise they fall back to "ever seen" memory (faded
+    //    ghost), so the player remembers planet locations but doesn't get a
+    //    live readout without scouting.
     for (const sys of allSystems) {
       const sysHex = hexById.get(sys.hex_id);
       if (!sysHex) continue;
-      if (sysHex.classification === "CORE" || sysHex.classification === "MARCHES" || sysHex.classification === ownProvince) {
+      if (sysHex.classification === "CORE" || sysHex.classification === ownProvince) {
         live.add(sys.system_id);
       }
       if (sys.owner === ownProvince) live.add(sys.system_id);
