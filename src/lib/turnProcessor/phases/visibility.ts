@@ -35,9 +35,14 @@ export const visibilityPhase: Phase = {
       }
     }
 
+    // Merge baseline with each player's existing "ever seen" memory rather than
+    // overwriting it. Otherwise systems discovered via sensor scan (e.g. a fleet
+    // moving into the marches) get forgotten on turn rollover.
     for (const gp of players) {
+      const prior = Array.isArray(gp.visible_system_ids) ? gp.visible_system_ids as number[] : [];
+      const merged = Array.from(new Set<number>([...prior, ...baselineIds]));
       await (supabase as any).from("game_players")
-        .update({ visible_system_ids: baselineIds }).eq("id", gp.id);
+        .update({ visible_system_ids: merged }).eq("id", gp.id);
     }
 
     // Refresh fog-of-war memory: upsert intel for every currently-visible system.
