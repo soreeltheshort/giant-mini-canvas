@@ -126,44 +126,6 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
           </div>
         </div>
 
-        {/* ── News Feed ── */}
-        <div className="p-3 border-b border-border space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Scroll className="w-3 h-3 text-bronze" />
-              <h3 className="font-heading text-[10px] font-semibold uppercase tracking-[0.15em] text-bronze-dark">
-                Dispatches
-              </h3>
-            </div>
-            {unreadCount > 0 && (
-              <span className="w-5 h-5 bg-crimson text-primary-foreground text-[9px] font-bold flex items-center justify-center rounded-sm">
-                {unreadCount}
-              </span>
-            )}
-          </div>
-
-          {latestUnread ? (
-            <div className="bg-ivory border border-border rounded-sm p-2 space-y-1.5 bronze-glow-hover">
-              <div className="flex items-start gap-1.5">
-                <StatusBadge variant={CATEGORY_COLORS[latestUnread.category] as any || "neutral"}>
-                  {latestUnread.category}
-                </StatusBadge>
-                <span className="text-[9px] text-muted-foreground ml-auto">T{latestUnread.turn}</span>
-              </div>
-              <p className="text-[11px] font-semibold text-foreground leading-tight">{latestUnread.headline}</p>
-            </div>
-          ) : (
-            <p className="text-[10px] text-muted-foreground italic">No new dispatches.</p>
-          )}
-
-          <button
-            onClick={onViewNews}
-            className="flex items-center gap-1 text-[10px] font-heading font-semibold uppercase tracking-wider text-crimson hover:text-crimson-light transition-colors w-full justify-center py-1 border border-border rounded-sm hover:border-bronze/40 bg-ivory"
-          >
-            View Dispatches <ChevronRight className="w-3 h-3" />
-          </button>
-        </div>
-
         {/* ── Mode Navigation ── */}
         <div className="p-3 space-y-1.5 border-b border-border">
           <h3 className="font-heading text-[10px] font-semibold uppercase tracking-[0.15em] text-bronze-dark mb-2">
