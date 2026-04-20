@@ -79,7 +79,7 @@ interface PendingOrder {
   order_json: any;
 }
 
-export default function FleetDetailContent({ fleet, shipTypes = [], canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
+export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
   const [ships, setShips] = useState<FleetShipRow[]>([]);
