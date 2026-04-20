@@ -806,6 +806,7 @@ const PlayerGame = () => {
               facilityTypes: dbFacilityTypes,
               facilityTypesFull: dbFacilityTypesFull,
               shipTypes: dbShipTypes,
+              hexes: mapState.hexes,
             } : undefined}
           />
         )}
