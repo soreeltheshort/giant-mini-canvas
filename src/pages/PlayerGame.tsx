@@ -788,6 +788,7 @@ const PlayerGame = () => {
             onStartTargeting={setTargeting}
             combatPointsAvailable={combatPointsAvailable}
             onOrdersChanged={refreshOrders}
+            onSelect={setSelection}
             gameData={mapState ? {
               systems: mapState.systems,
               fleets: mapState.fleets,
