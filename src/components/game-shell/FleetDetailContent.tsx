@@ -46,6 +46,7 @@ interface FleetDetail {
   next_readiness: number | null;
   special1_role: string;
   special2_role: string;
+  current_supply: number;
 }
 
 export interface FleetOrderContext {
@@ -59,6 +60,8 @@ interface Props {
   shipTypes?: ShipTypeLookup[];
   /** All fleets in the game (for resolving target fleet names in attack orders). */
   allFleets?: MapFleet[];
+  /** All systems on the map — used to determine if the fleet is at a player-owned planet. */
+  allSystems?: SystemData[];
   /** Whether this player owns / can edit this fleet */
   canEdit: boolean;
   /** When provided, readiness/strategy changes are written as player_orders. */
@@ -79,7 +82,7 @@ interface PendingOrder {
   order_json: any;
 }
 
-export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
+export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], allSystems = [], canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
   const [ships, setShips] = useState<FleetShipRow[]>([]);
