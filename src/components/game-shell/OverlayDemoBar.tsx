@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { Landmark, Swords, Hammer } from "lucide-react";
+import { Swords, Hammer } from "lucide-react";
 import {
-  DiplomacyOverlay,
   MilitaryOverlay,
   ProductionOverlay,
 } from "./OverlayVariants";
 
 const DEMOS = [
-  { id: "diplomacy", label: "Diplomacy", icon: Landmark, desc: "Expanded treaty negotiation" },
   { id: "military", label: "Military Order", icon: Swords, desc: "Standard fleet movement" },
   { id: "production", label: "Production Queue", icon: Hammer, desc: "Standard build management" },
 ] as const;
@@ -40,7 +38,6 @@ export default function OverlayDemoBar() {
       </div>
 
       {/* Overlay instances */}
-      <DiplomacyOverlay open={activeOverlay === "diplomacy"} onClose={close} />
       <MilitaryOverlay open={activeOverlay === "military"} onClose={close} />
       <ProductionOverlay open={activeOverlay === "production"} onClose={close} />
     </>
