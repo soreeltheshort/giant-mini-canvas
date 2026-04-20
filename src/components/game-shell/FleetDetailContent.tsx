@@ -168,7 +168,18 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         };
       });
       setShips(rows);
-      setPendingOrders(((po as any[]) || []) as PendingOrder[]);
+      const orders = ((po as any[]) || []) as PendingOrder[];
+      setPendingOrders(orders);
+      const existingReplenish = orders.find(
+        o => o.order_type === "other" && o.order_json?.kind === "replenish_supply",
+      );
+      if (existingReplenish) {
+        setReplenishAmount(Number(existingReplenish.order_json?.amount) || 0);
+        setReplenishOpen(true);
+      } else {
+        setReplenishAmount(0);
+        setReplenishOpen(false);
+      }
       setLoading(false);
     }
     load();
