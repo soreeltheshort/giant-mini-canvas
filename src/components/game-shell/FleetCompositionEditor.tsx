@@ -50,9 +50,12 @@ export default function FleetCompositionEditor({
     [special1Role, special2Role]
   );
 
+  // NOTE: this editor mutates the per-game roster (`game_fleet_ships`), never
+  // the player's saved Fleet Builder rows in `fleet_ships`. The row ids in
+  // `ships` come from `game_fleet_ships`.
   const persistGroup = async (rowId: string, newGroup: string) => {
     const { error } = await supabase
-      .from("fleet_ships")
+      .from("game_fleet_ships")
       .update({ tactical_group: newGroup })
       .eq("id", rowId);
     if (error) {
@@ -86,15 +89,15 @@ export default function FleetCompositionEditor({
       prev.map((s) => (s.id === rowId ? { ...s, quantity: safe } : s))
     );
     if (safe <= 0) {
-      await supabase.from("fleet_ships").delete().eq("id", rowId);
+      await supabase.from("game_fleet_ships").delete().eq("id", rowId);
       setShips((prev) => prev.filter((s) => s.id !== rowId));
     } else {
-      await supabase.from("fleet_ships").update({ quantity: safe }).eq("id", rowId);
+      await supabase.from("game_fleet_ships").update({ quantity: safe }).eq("id", rowId);
     }
   };
 
   const removeRow = async (rowId: string) => {
-    await supabase.from("fleet_ships").delete().eq("id", rowId);
+    await supabase.from("game_fleet_ships").delete().eq("id", rowId);
     setShips((prev) => prev.filter((s) => s.id !== rowId));
   };
 

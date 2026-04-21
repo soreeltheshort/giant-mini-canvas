@@ -139,9 +139,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           .eq("id", sourceId)
           .maybeSingle(),
         supabase
-          .from("fleet_ships")
+          .from("game_fleet_ships")
           .select("id, ship_type_id, quantity, tactical_group")
-          .eq("fleet_id", sourceId),
+          .eq("game_fleet_id", fleet.fleet_id),
         ordersPromise,
       ]);
       if (cancelled) return;
