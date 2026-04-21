@@ -695,6 +695,14 @@ const PlayerGame = () => {
     return null;
   })();
 
+  // Rebase dummy dispatch turn numbers so the latest dispatch matches the current game turn.
+  const rebasedNews = (() => {
+    const currentTurn = game.turn_number;
+    const maxDummyTurn = Math.max(...DUMMY_NEWS.map(n => n.turn));
+    const offset = currentTurn - maxDummyTurn;
+    return DUMMY_NEWS.map(n => ({ ...n, turn: Math.max(1, n.turn + offset) }));
+  })();
+
   if (!player.initialized && initStep > 0) {
     return <InitScreen step={initStep} factionName={factionName} onContinue={advanceInit} />;
   }
