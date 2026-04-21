@@ -214,8 +214,17 @@ const PlayerMapCanvas: React.FC<Props> = ({
       //   live      → bright
       //   remembered (not live) → faded ghost
       //   never seen → very dim fog
+      // Exception: province hexes owned by OTHER players keep their muted
+      // political tint regardless of sensor coverage. Otherwise an enemy
+      // planet you survey would light up that hex with the enemy's faction
+      // color as if YOU controlled it.
+      const isForeignProvinceHex =
+        isProvinceHex && (!ownClassification || hex.classification !== ownClassification);
+
       if (hasLive || hasMemory) {
-        if (isLive) {
+        if (isForeignProvinceHex) {
+          // Hold the muted province tint — no survey-brightening boost.
+        } else if (isLive) {
           alpha = Math.min(1, alpha * 2.4 + 0.15);
         } else if (isRemembered) {
           // Explored-but-not-currently-in-sensor: noticeably brighter than fog
