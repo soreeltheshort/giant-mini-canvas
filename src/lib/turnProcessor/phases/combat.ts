@@ -126,14 +126,28 @@ export const combatPhase: Phase = {
         4, 4, groundOutcomes, 0, groundUnitsA, groundUnitsB,
       );
 
-      // Persist battle_run + events for full replay
-      const { data: battleRun } = await (supabase as any).from("battle_runs").insert({
+      // Persist battle_run + events for full replay.
+      // RLS on battle_runs/battle_events requires created_by_user_id = auth.uid(),
+      // so we tag the run with the user who is processing the turn.
+      const { data: authData } = await (supabase as any).auth.getUser();
+      const runnerUserId: string | null = authData?.user?.id ?? null;
+
+      const { data: battleRun, error: brErr } = await (supabase as any).from("battle_runs").insert({
         fleet_a_snapshot_json: snapA.snapshot as any,
         fleet_b_snapshot_json: snapB.snapshot as any,
         seed: seedStr,
         result_json: { winner: battleResult.winner, game_id: gameId, turn_number: currentTurn } as any,
-        created_by_user_id: null,
+        created_by_user_id: runnerUserId,
       }).select().maybeSingle();
+
+      if (brErr) {
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "combat",
+          log_type: "battle_run_persist_failed",
+          message: `Failed to persist battle replay: ${brErr.message || brErr}`,
+          details_json: { error: String(brErr.message || brErr) },
+        });
+      }
 
       if (battleRun) {
         const eventRows = battleResult.events.map((e: any) => ({
@@ -143,7 +157,15 @@ export const combatPhase: Phase = {
           admin_explain_text: e.admin_explain_text,
         }));
         if (eventRows.length > 0) {
-          await (supabase as any).from("battle_events").insert(eventRows);
+          const { error: beErr } = await (supabase as any).from("battle_events").insert(eventRows);
+          if (beErr) {
+            ctx.logs.push({
+              game_id: gameId, turn_number: currentTurn, phase: "combat",
+              log_type: "battle_events_persist_failed",
+              message: `Failed to persist battle events: ${beErr.message || beErr}`,
+              details_json: { error: String(beErr.message || beErr) },
+            });
+          }
         }
       }
 
