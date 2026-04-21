@@ -435,6 +435,7 @@ const HexMapEditor: React.FC = () => {
       <RightPanel
         hex={selectedHex}
         system={selectedSystem}
+        fleetsAtHex={selectedHex ? (mapState.fleets || []).filter(f => f.hex_x === selectedHex.x && f.hex_y === selectedHex.y) : []}
         facilityTypes={facilityTypesForUI}
         dbFacilityTypes={dbFacilityTypes}
         factions={factions}
