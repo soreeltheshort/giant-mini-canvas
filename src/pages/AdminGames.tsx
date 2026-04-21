@@ -320,18 +320,20 @@ const AdminGames = () => {
         console.warn("[Game Start] mapState is null — no economics calculated");
       }
 
-      // Also calculate fleet maintenance from game_fleets
+      // Also calculate fleet maintenance from game_fleets — read ship counts
+      // from per-game roster so post-combat losses (in later turn re-runs) are
+      // honored. At Game Start the per-game roster is identical to the source
+      // fleet (just snapshotted by the trg_game_fleets_snapshot_ships trigger).
       const { data: gameFleets } = await (supabase as any)
         .from("game_fleets")
-        .select("fleet_id, owner_classification")
+        .select("id, fleet_id, owner_classification")
         .eq("game_id", selectedGame.id);
       if (gameFleets && gameFleets.length > 0) {
-        // Get fleet ship details for maintenance calculation
-        const fleetIds = gameFleets.map((gf: any) => gf.fleet_id);
+        const gameFleetIds = gameFleets.map((gf: any) => gf.id);
         const { data: fleetShips } = await (supabase as any)
-          .from("fleet_ships")
-          .select("fleet_id, ship_type_id, quantity")
-          .in("fleet_id", fleetIds);
+          .from("game_fleet_ships")
+          .select("game_fleet_id, ship_type_id, quantity")
+          .in("game_fleet_id", gameFleetIds);
         const { data: allShipTypes } = await (supabase as any)
           .from("ship_types")
           .select("id, maintenance");
@@ -343,7 +345,7 @@ const AdminGames = () => {
           for (const gf of gameFleets) {
             const ownerSlot = nameToSlot.get((gf.owner_classification || "").toLowerCase());
             if (ownerSlot === undefined) continue;
-            const ships = fleetShips.filter((fs: any) => fs.fleet_id === gf.fleet_id);
+            const ships = fleetShips.filter((fs: any) => fs.game_fleet_id === gf.id);
             let fleetMaint = 0;
             for (const fs of ships) {
               fleetMaint += (shipMaintMap.get(fs.ship_type_id) || 0) * fs.quantity;

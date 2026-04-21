@@ -411,6 +411,48 @@ export type Database = {
         }
         Relationships: []
       }
+      game_fleet_ships: {
+        Row: {
+          game_fleet_id: string
+          id: string
+          notes: string | null
+          quantity: number
+          ship_type_id: string
+          tactical_group: string
+        }
+        Insert: {
+          game_fleet_id: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          ship_type_id: string
+          tactical_group?: string
+        }
+        Update: {
+          game_fleet_id?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          ship_type_id?: string
+          tactical_group?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_fleet_ships_game_fleet_id_fkey"
+            columns: ["game_fleet_id"]
+            isOneToOne: false
+            referencedRelation: "game_fleets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_fleet_ships_ship_type_id_fkey"
+            columns: ["ship_type_id"]
+            isOneToOne: false
+            referencedRelation: "ship_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_fleets: {
         Row: {
           created_at: string

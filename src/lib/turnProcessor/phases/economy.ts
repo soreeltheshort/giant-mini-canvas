@@ -68,16 +68,17 @@ export const economyPhase: Phase = {
       });
     }
 
-    // 2. Fleet maintenance from game_fleets
+    // 2. Fleet maintenance from game_fleets — read ship counts from per-game
+    //    roster (`game_fleet_ships`) so combat losses reduce upkeep.
     const { data: gameFleets } = await (supabase as any)
       .from("game_fleets")
-      .select("fleet_id, owner_classification")
+      .select("id, fleet_id, owner_classification")
       .eq("game_id", gameId);
 
     if (gameFleets && gameFleets.length > 0) {
-      const fleetIds = gameFleets.map((gf: any) => gf.fleet_id);
+      const gameFleetIds = gameFleets.map((gf: any) => gf.id);
       const [{ data: fleetShips }, { data: allShipTypes }] = await Promise.all([
-        (supabase as any).from("fleet_ships").select("fleet_id, ship_type_id, quantity").in("fleet_id", fleetIds),
+        (supabase as any).from("game_fleet_ships").select("game_fleet_id, ship_type_id, quantity").in("game_fleet_id", gameFleetIds),
         (supabase as any).from("ship_types").select("id, maintenance"),
       ]);
       const shipMaintMap = new Map<string, number>();
@@ -86,7 +87,7 @@ export const economyPhase: Phase = {
       for (const gf of gameFleets) {
         const slot = ownerToSlot(gf.owner_classification);
         if (slot === undefined) continue;
-        const ships = (fleetShips || []).filter((fs: any) => fs.fleet_id === gf.fleet_id);
+        const ships = (fleetShips || []).filter((fs: any) => fs.game_fleet_id === gf.id);
         const fleetMaint = ships.reduce(
           (sum: number, fs: any) => sum + (shipMaintMap.get(fs.ship_type_id) || 0) * fs.quantity,
           0

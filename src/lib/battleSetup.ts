@@ -24,7 +24,10 @@ import type {
 
 export interface FleetCompositionRow {
   id: string;
-  fleet_id: string;
+  /** Source table the row lives in. Combat must write back to the same table. */
+  source: "fleet_ships" | "game_fleet_ships";
+  /** parent id (fleet_id for fleet_ships, game_fleet_id for game_fleet_ships) */
+  parent_id: string;
   ship_type_id: string;
   quantity: number;
   tactical_group: string;
@@ -32,7 +35,7 @@ export interface FleetCompositionRow {
 
 export interface LoadedFleet {
   snapshot: FleetSnapshot;
-  /** Raw fleet_ships rows — used by the turn processor to apply losses. */
+  /** Raw composition rows — used by the turn processor to apply losses. */
   rows: FleetCompositionRow[];
 }
 
@@ -44,10 +47,22 @@ export interface BattleConfigBundle {
   groundOutcomes: GroundCombatOutcome[] | undefined;
 }
 
-/** Load a single fleet snapshot the same way the Battle simulator does. */
+/**
+ * Load a single fleet snapshot the same way the Battle simulator does.
+ *
+ * - Fleet metadata (name, readiness) ALWAYS comes from the source `fleets` row.
+ * - Ship composition source depends on context:
+ *     - If `gameFleetId` is provided, ships are loaded from `game_fleet_ships`
+ *       (the per-game roster) and the returned rows carry that id so combat
+ *       writebacks land in `game_fleet_ships`. Player saved fleets are not
+ *       mutated by combat — that was the previous bug.
+ *     - Otherwise (Battle Simulator, Fleet Builder previews) ships are loaded
+ *       from `fleet_ships` keyed by the source fleet id.
+ */
 export async function loadFleetSnapshot(
   supabase: SupabaseClient,
   fleetId: string,
+  gameFleetId?: string,
 ): Promise<LoadedFleet | null> {
   const { data: fleet } = await (supabase as any)
     .from("fleets")
@@ -56,22 +71,38 @@ export async function loadFleetSnapshot(
     .maybeSingle();
   if (!fleet) return null;
 
-  const { data: ships } = await (supabase as any)
-    .from("fleet_ships")
-    .select("id, fleet_id, ship_type_id, quantity, tactical_group, ship_types(*)")
-    .eq("fleet_id", fleetId);
+  let ships: any[] = [];
+  let source: "fleet_ships" | "game_fleet_ships" = "fleet_ships";
+  let parentId = fleetId;
 
-  const rows: FleetCompositionRow[] = (ships || [])
+  if (gameFleetId) {
+    source = "game_fleet_ships";
+    parentId = gameFleetId;
+    const { data } = await (supabase as any)
+      .from("game_fleet_ships")
+      .select("id, game_fleet_id, ship_type_id, quantity, tactical_group, ship_types(*)")
+      .eq("game_fleet_id", gameFleetId);
+    ships = data || [];
+  } else {
+    const { data } = await (supabase as any)
+      .from("fleet_ships")
+      .select("id, fleet_id, ship_type_id, quantity, tactical_group, ship_types(*)")
+      .eq("fleet_id", fleetId);
+    ships = data || [];
+  }
+
+  const rows: FleetCompositionRow[] = ships
     .filter((s: any) => s.quantity > 0 && s.ship_types)
     .map((s: any) => ({
       id: s.id,
-      fleet_id: s.fleet_id,
+      source,
+      parent_id: parentId,
       ship_type_id: s.ship_type_id,
       quantity: s.quantity,
       tactical_group: s.tactical_group,
     }));
 
-  const shipsForSnap: FleetShipData[] = (ships || [])
+  const shipsForSnap: FleetShipData[] = ships
     .filter((s: any) => s.quantity > 0 && s.ship_types)
     .map((s: any) => ({
       ship_type: s.ship_types as ShipTypeData,

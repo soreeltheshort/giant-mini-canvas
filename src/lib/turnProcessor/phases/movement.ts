@@ -87,13 +87,14 @@ export const movementPhase: Phase = {
       }
 
       // Determine effective map_speed: slowest non-zero map_speed in the fleet.
-      // map_speed isn't on ShipTypeForUpkeep, so look it up directly from ship_types.
+      // Read from per-game roster (`game_fleet_ships`) so we account for ships
+      // already lost in combat — not the player's pristine saved fleet.
       let effectiveSpeed = 1;
       try {
         const { data: composition } = await (supabase as any)
-          .from("fleet_ships")
+          .from("game_fleet_ships")
           .select("ship_type_id, quantity")
-          .eq("fleet_id", fleet.source_fleet_id);
+          .eq("game_fleet_id", fleet.fleet_id);
         const typeIds = (composition || []).map((c: any) => c.ship_type_id).filter(Boolean);
         if (typeIds.length > 0) {
           const { data: typeRows } = await (supabase as any)
