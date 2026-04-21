@@ -52,11 +52,22 @@ export const visibilityPhase: Phase = {
         .update({ visible_system_ids: merged }).eq("id", gp.id);
     }
 
-    // Refresh fog-of-war memory: upsert intel for every currently-visible system.
-    // upsert on (observer_player_id, system_id) updates last_seen_turn + snapshot.
+    // Refresh fog-of-war memory: upsert intel for every system the player can
+    // currently see. This includes baseline systems (Core/Provinces/Marches) AND
+    // any extra systems they have ever scanned (stored in visible_system_ids
+    // after the merge above — e.g. fleets that pushed sensors into the marches).
+    // Without this, a system seen via a sensor sweep gets forgotten the moment
+    // the fleet moves away because no snapshot was ever written.
+    const systemById = new Map<number, typeof baselineSystems[number]>();
+    for (const sys of mapState.systems.values()) systemById.set(sys.system_id, sys);
+
     const intelRows: any[] = [];
     for (const gp of players) {
-      for (const sys of baselineSystems) {
+      const prior = Array.isArray(gp.visible_system_ids) ? gp.visible_system_ids as number[] : [];
+      const fullVisible = new Set<number>([...prior, ...baselineIds]);
+      for (const sid of fullVisible) {
+        const sys = systemById.get(sid);
+        if (!sys) continue;
         intelRows.push({
           game_id: gameId,
           observer_player_id: gp.id,
