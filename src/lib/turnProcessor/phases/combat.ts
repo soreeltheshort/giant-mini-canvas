@@ -201,7 +201,7 @@ export const combatPhase: Phase = {
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "combat",
         log_type: "battle_resolved",
-        message: `Battle: ${attackerMF.fleet_name} vs ${targetMF.fleet_name} — winner: ${battleResult.winner === "draw" ? "Draw" : `Fleet ${battleResult.winner}`}. Survivors A=${lossesA.totalAfter}/${lossesA.totalBefore}, B=${lossesB.totalAfter}/${lossesB.totalBefore}.`,
+        message: `Battle: ${attackerMF.fleet_name} vs ${targetMF.fleet_name} — winner: ${battleResult.winner === "draw" ? "Draw" : battleResult.winner === "A" ? "Attacker" : "Defender"}. Survivors Attacker=${lossesA.totalAfter}/${lossesA.totalBefore}, Defender=${lossesB.totalAfter}/${lossesB.totalBefore}.`,
         details_json: {
           battle_run_id: battleRun?.id,
           seed: seedStr,

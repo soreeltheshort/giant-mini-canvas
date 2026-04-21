@@ -204,7 +204,7 @@ export default function TurnLogViewer({ gameId, showDetails = false, recentTurns
                                     <div className="space-y-1">
                                       <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Outcome</p>
                                       <p className="text-foreground">
-                                        Winner: <span className="font-medium">{e.details_json.winner === "draw" ? "Draw" : `Fleet ${e.details_json.winner ?? "Unknown"}`}</span>
+                                        Winner: <span className="font-medium">{e.details_json.winner === "draw" ? "Draw" : e.details_json.winner === "A" ? "Attacker" : e.details_json.winner === "B" ? "Defender" : "Unknown"}</span>
                                       </p>
                                       <p className="text-foreground">Attacker: {e.details_json.attacker_name ?? "Unknown"}</p>
                                       <p className="text-foreground">Defender: {e.details_json.target_name ?? "Unknown"}</p>
