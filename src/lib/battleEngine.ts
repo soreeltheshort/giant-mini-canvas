@@ -370,7 +370,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
 
   emit("battle_start", { fleetA: fleetA.name, fleetB: fleetB.name, seed: seedStr, shipsA: shipsA.length, shipsB: shipsB.length },
     `Battle begins: ${fleetA.name} vs ${fleetB.name}`,
-    `Battle initialized with seed "${seedStr}". Fleet A: ${shipsA.length} ships, Fleet B: ${shipsB.length} ships.`);
+    `Battle initialized with seed "${seedStr}". Attacker: ${shipsA.length} ships, Defender: ${shipsB.length} ships.`);
 
   // 2) INITIATIVE (based on combat speed)
   const avgSpeedA = shipsA.length ? Math.round(shipsA.reduce((s, sh) => s + sh.cbt_speed, 0) / shipsA.length) : 0;
@@ -379,8 +379,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
   const initB = 100 + avgSpeedB * 5;
 
   emit("initiative", { initA, initB, avgSpeedA, avgSpeedB },
-    `Initiative: Fleet A=${initA}, Fleet B=${initB}. ${initA >= initB ? "Fleet A" : "Fleet B"} has initiative.`,
-    `Initiative calc: Base 100 + avgCbtSpeed*5. A: 100+${avgSpeedA}*5=${initA}. B: 100+${avgSpeedB}*5=${initB}.`);
+    `Initiative: Attacker=${initA}, Defender=${initB}. ${initA >= initB ? "Attacker" : "Defender"} has initiative.`,
+    `Initiative calc: Base 100 + avgCbtSpeed*5. Attacker: 100+${avgSpeedA}*5=${initA}. Defender: 100+${avgSpeedB}*5=${initB}.`);
 
   tick++;
 
@@ -568,8 +568,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
       emit("ground_phase_start", {
         phase: phase.name, groundA: currentGroundA, groundB: currentGroundB,
       },
-        `Ground Combat begins in "${phase.name}": Fleet A has ${currentGroundA} ground units, Fleet B has ${currentGroundB} ground units.`,
-        `Ground combat sub-phase in "${phase.name}". A ground=${currentGroundA}, B ground=${currentGroundB} (includes planet defense).`
+        `Ground Combat begins in "${phase.name}": Attacker has ${currentGroundA} ground units, Defender has ${currentGroundB} ground units.`,
+        `Ground combat sub-phase in "${phase.name}". Attacker ground=${currentGroundA}, Defender ground=${currentGroundB} (includes planet defense).`
       );
 
       // Each unit rolls independently — all attacks are simultaneous
@@ -634,8 +634,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         groundA_after: currentGroundA, groundB_after: currentGroundB,
         unitRollsA, unitRollsB,
       },
-        `Ground Combat: Fleet A (${Math.floor(prevGroundA)} units) attacks → ${totalDamageFromA.toFixed(1)} total damage, ${killsA > 0 ? killsA : 0} kills. Fleet B (${Math.floor(prevGroundB)} units) attacks → ${totalDamageFromB.toFixed(1)} total damage, ${killsB > 0 ? killsB : 0} kills. Remaining: A=${currentGroundA.toFixed(1)}, B=${currentGroundB.toFixed(1)}.`,
-        `Ground sub-phase (simultaneous). A: ${Math.floor(prevGroundA)} units roll [${summarizeRolls(unitRollsA)}] = ${totalDamageFromA.toFixed(1)} total dmg on B. B: ${Math.floor(prevGroundB)} units roll [${summarizeRolls(unitRollsB)}] = ${totalDamageFromB.toFixed(1)} total dmg on A. After: A=${currentGroundA.toFixed(1)}, B=${currentGroundB.toFixed(1)}.`
+        `Ground Combat: Attacker (${Math.floor(prevGroundA)} units) attacks → ${totalDamageFromA.toFixed(1)} total damage, ${killsA > 0 ? killsA : 0} kills. Defender (${Math.floor(prevGroundB)} units) attacks → ${totalDamageFromB.toFixed(1)} total damage, ${killsB > 0 ? killsB : 0} kills. Remaining: Attacker=${currentGroundA.toFixed(1)}, Defender=${currentGroundB.toFixed(1)}.`,
+        `Ground sub-phase (simultaneous). Attacker: ${Math.floor(prevGroundA)} units roll [${summarizeRolls(unitRollsA)}] = ${totalDamageFromA.toFixed(1)} total dmg on Defender. Defender: ${Math.floor(prevGroundB)} units roll [${summarizeRolls(unitRollsB)}] = ${totalDamageFromB.toFixed(1)} total dmg on Attacker. After: Attacker=${currentGroundA.toFixed(1)}, Defender=${currentGroundB.toFixed(1)}.`
       );
 
       if (currentGroundA <= 0 && currentGroundB <= 0) {
@@ -644,15 +644,15 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           `Ground combat ended in mutual destruction.`);
       } else if (currentGroundA <= 0) {
         emit("ground_combat_end", { result: "B_wins", remaining: currentGroundB },
-          `Ground Combat: Fleet B's ground forces win with ${currentGroundB.toFixed(1)} units remaining.`,
-          `Ground combat: Side B wins. Remaining=${currentGroundB.toFixed(1)}.`);
+          `Ground Combat: Defender's ground forces win with ${currentGroundB.toFixed(1)} units remaining.`,
+          `Ground combat: Defender wins. Remaining=${currentGroundB.toFixed(1)}.`);
       } else if (currentGroundB <= 0) {
         emit("ground_combat_end", { result: "A_wins", remaining: currentGroundA },
-          `Ground Combat: Fleet A's ground forces win with ${currentGroundA.toFixed(1)} units remaining.`,
-          `Ground combat: Side A wins. Remaining=${currentGroundA.toFixed(1)}.`);
+          `Ground Combat: Attacker's ground forces win with ${currentGroundA.toFixed(1)} units remaining.`,
+          `Ground combat: Attacker wins. Remaining=${currentGroundA.toFixed(1)}.`);
         emit("planet_taken", { takenBy: "A", remainingGroundUnits: currentGroundA },
-          `🏴 Planet Taken! Fleet A's ground forces have conquered the planet with ${currentGroundA.toFixed(1)} units remaining.`,
-          `Planet taken by Side A. Defending ground forces eliminated. Remaining attacker ground units: ${currentGroundA.toFixed(1)}.`);
+          `🏴 Planet Taken! Attacker's ground forces have conquered the planet with ${currentGroundA.toFixed(1)} units remaining.`,
+          `Planet taken by Attacker. Defending ground forces eliminated. Remaining attacker ground units: ${currentGroundA.toFixed(1)}.`);
       }
 
       // If ground combat occurred but planet was NOT taken, flag as Planet Invaded
@@ -670,9 +670,10 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
   const aliveB = alive("B").length;
   const winner: "A" | "B" | "draw" = aliveA > 0 && aliveB === 0 ? "A" : aliveB > 0 && aliveA === 0 ? "B" : aliveA === 0 && aliveB === 0 ? "draw" : aliveA > aliveB ? "A" : aliveB > aliveA ? "B" : "draw";
 
+  const winnerLabel = winner === "A" ? "Attacker" : winner === "B" ? "Defender" : "Draw";
   emit("battle_end", { winner, aliveA, aliveB },
-    `Battle over! ${winner === "draw" ? "Draw!" : `Fleet ${winner} wins!`} Survivors: A=${aliveA}, B=${aliveB}.`,
-    `Battle concluded. Fleet A survivors: ${aliveA}/${shipsA.length}. Fleet B survivors: ${aliveB}/${shipsB.length}. Winner: ${winner}.`);
+    `Battle over! ${winner === "draw" ? "Draw!" : `${winnerLabel} wins!`} Survivors: Attacker=${aliveA}, Defender=${aliveB}.`,
+    `Battle concluded. Attacker survivors: ${aliveA}/${shipsA.length}. Defender survivors: ${aliveB}/${shipsB.length}. Winner: ${winnerLabel}.`);
 
   return {
     winner,
