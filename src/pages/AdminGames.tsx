@@ -15,6 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { importFromSqlite, exportToSqlite } from "@/lib/mapDatabase";
+import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { processNextTurn, DEFAULT_TURN_CONSTANTS, ShipTypeForUpkeep } from "@/lib/turnEngine";
 import { runTurnProcessor } from "@/lib/turnProcessor";
 import { SystemData, MapState } from "@/lib/mapTypes";
@@ -185,10 +186,22 @@ const AdminGames = () => {
       if (!file) return;
       try {
         const state = await importFromSqlite(file);
-        setMapState(state);
-        const serialized = serializeMapState(state);
+        // Materialize fleets into game_fleets rows so the per-game ship
+        // roster (game_fleet_ships) is populated by the snapshot trigger.
+        // The map JSON's fleet_id is rewritten to the new game_fleets.id
+        // so downstream lookups work.
+        const { updatedMap, created, reused } = await materializeGameFleets(
+          selectedGame.id,
+          state,
+        );
+        setMapState(updatedMap);
+        const serialized = serializeMapState(updatedMap);
         await (supabase as any).from("games").update({ map_data_json: serialized }).eq("id", selectedGame.id);
-        await addLog(selectedGame.id, "map_imported", `Map imported from file: ${file.name}`);
+        await addLog(
+          selectedGame.id,
+          "map_imported",
+          `Map imported from file: ${file.name} (fleets materialized: ${created} new, ${reused} reused)`,
+        );
         toast({ title: "Map imported and saved" });
         await refreshLogs(selectedGame.id);
       } catch (err: any) {
