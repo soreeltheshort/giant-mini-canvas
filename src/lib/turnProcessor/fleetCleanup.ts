@@ -29,7 +29,7 @@
  * Keep this function the single entry point for fleet removal so future
  * cleanup steps only need to be added in one place.
  */
-import type { TurnContext } from "./types";
+import type { TurnContext, PhaseName } from "./types";
 
 export interface DestroyFleetArgs {
   ctx: TurnContext;
@@ -41,6 +41,8 @@ export interface DestroyFleetArgs {
   fleetName: string;
   /** Why the fleet is being removed (e.g. "combat_wiped"). */
   reason: string;
+  /** Phase that triggered the destruction (used for log attribution). */
+  phase?: PhaseName;
 }
 
 export async function destroyFleet(args: DestroyFleetArgs): Promise<void> {
@@ -58,7 +60,7 @@ export async function destroyFleet(args: DestroyFleetArgs): Promise<void> {
     ctx.logs.push({
       game_id: gameId,
       turn_number: currentTurn,
-      phase: "cleanup",
+      phase,
       log_type: "fleet_destroy_failed",
       message: `Failed to remove destroyed fleet ${fleetName}: ${delErr.message || delErr}`,
       details_json: { game_fleet_id: gameFleetId, source_fleet_id: sourceFleetId, reason },
@@ -78,7 +80,7 @@ export async function destroyFleet(args: DestroyFleetArgs): Promise<void> {
   ctx.logs.push({
     game_id: gameId,
     turn_number: currentTurn,
-    phase: "cleanup",
+    phase,
     log_type: "fleet_destroyed",
     message: `Fleet ${fleetName} removed from the map (${reason}).`,
     details_json: { game_fleet_id: gameFleetId, source_fleet_id: sourceFleetId, reason },
