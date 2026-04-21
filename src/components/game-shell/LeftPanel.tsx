@@ -651,7 +651,7 @@ function InlineNewsDetail({ story }: { story?: NewsStory }) {
   if (!story) return <p className="text-xs text-muted-foreground">Dispatch not found.</p>;
   return (
     <ImperialCard title={story.headline} subtitle={`Turn ${story.turn} · ${story.category}`}>
-      <p className="text-xs text-foreground leading-relaxed">{story.summary}</p>
+      <p className="text-xs font-medium text-foreground leading-relaxed">{story.summary}</p>
     </ImperialCard>
   );
 }
