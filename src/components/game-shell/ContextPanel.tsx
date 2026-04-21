@@ -244,6 +244,9 @@ function EmptyState({
 
   return (
     <>
+      {/* Dispatches relevant to this modality, surfaced right under the title. */}
+      <DispatchesCard mode={mode} news={news ?? []} onSelect={onSelect} />
+
       <div className="text-center py-4 space-y-2">
         <c.icon className="w-8 h-8 text-bronze/40 mx-auto" />
         <h3 className="font-heading text-sm font-semibold text-foreground">{c.title}</h3>
