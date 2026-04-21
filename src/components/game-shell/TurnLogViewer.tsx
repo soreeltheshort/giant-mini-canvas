@@ -10,9 +10,10 @@
  * with empty phase are bucketed into "Other".
  */
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 
 interface LogRow {
   id: string;
@@ -130,22 +131,33 @@ export default function TurnLogViewer({ gameId, showDetails = false, recentTurns
                       <span className="text-[10px] text-muted-foreground">{entries.length} entries</span>
                     </div>
                     <ul className="space-y-1 text-xs">
-                      {entries.map(e => (
-                        <li key={e.id} className="flex gap-2">
-                          <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
-                            {new Date(e.created_at).toLocaleTimeString()}
-                          </span>
-                          <span className="text-foreground">{e.message}</span>
-                          {showDetails && e.details_json && Object.keys(e.details_json).length > 0 && (
-                            <details className="ml-1">
-                              <summary className="cursor-pointer text-[10px] text-bronze-dark">json</summary>
-                              <pre className="text-[10px] bg-muted/50 p-2 rounded mt-1 overflow-x-auto">
-                                {JSON.stringify(e.details_json, null, 2)}
-                              </pre>
-                            </details>
-                          )}
-                        </li>
-                      ))}
+                      {entries.map(e => {
+                        const battleRunId = e.details_json?.battle_run_id as string | undefined;
+                        return (
+                          <li key={e.id} className="flex gap-2 flex-wrap">
+                            <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
+                              {new Date(e.created_at).toLocaleTimeString()}
+                            </span>
+                            <span className="text-foreground">{e.message}</span>
+                            {battleRunId && (
+                              <Link
+                                to={`/battle-replay/${battleRunId}`}
+                                className="inline-flex items-center gap-0.5 text-[10px] text-bronze-dark hover:text-primary underline"
+                              >
+                                view full combat log <ExternalLink className="w-2.5 h-2.5" />
+                              </Link>
+                            )}
+                            {showDetails && e.details_json && Object.keys(e.details_json).length > 0 && (
+                              <details className="ml-1">
+                                <summary className="cursor-pointer text-[10px] text-bronze-dark">json</summary>
+                                <pre className="text-[10px] bg-muted/50 p-2 rounded mt-1 overflow-x-auto">
+                                  {JSON.stringify(e.details_json, null, 2)}
+                                </pre>
+                              </details>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 ))}

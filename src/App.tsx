@@ -12,6 +12,7 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import FleetBuilder from "./pages/FleetBuilder";
 import Battle from "./pages/Battle";
+import BattleReplay from "./pages/BattleReplay";
 import Manual from "./pages/Manual";
 import AdminBattleDebug from "./pages/AdminBattleDebug";
 import AdminWeapons from "./pages/AdminWeapons";
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/dashboard" element={<RequireRole roles={["admin", "tester"]}><Dashboard /></RequireRole>} />
             <Route path="/fleet-builder" element={<RequireRole roles={["admin", "tester"]}><FleetBuilder /></RequireRole>} />
             <Route path="/battle" element={<RequireRole roles={["admin", "tester"]}><Battle /></RequireRole>} />
+            <Route path="/battle-replay/:runId" element={<BattleReplay />} />
             <Route path="/manual" element={<Manual />} />
             <Route path="/map-testing" element={<RequireRole roles={["admin", "tester"]}><MapTesting /></RequireRole>} />
             <Route path="/map-testing/config" element={<RequireRole roles={["admin", "tester"]}><MapTestingConfig /></RequireRole>} />
