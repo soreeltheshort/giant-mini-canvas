@@ -15,6 +15,65 @@ const NEWS_CATEGORY_VARIANT: Record<NewsStory["category"], "info" | "danger" | "
   event: "warning",
 };
 
+/** Maps a game mode to the dispatch category it should surface in its Overview. */
+const MODE_DISPATCH_CATEGORY: Record<GameMode, NewsStory["category"]> = {
+  diplomacy: "diplomatic",
+  military: "military",
+  production: "economic",
+};
+
+/**
+ * Reusable Dispatches card. Filters `news` by the category that matches `mode`,
+ * shows unread first, and lets the caller route clicks to a dispatch detail view.
+ * Used at the top of every Overview empty state (Diplomacy / Military / Production)
+ * so each modality surfaces its own incoming dispatches.
+ */
+export function DispatchesCard({
+  mode,
+  news,
+  onSelect,
+}: {
+  mode: GameMode;
+  news: NewsStory[];
+  onSelect?: (selection: MapSelection) => void;
+}) {
+  const category = MODE_DISPATCH_CATEGORY[mode];
+  const filtered = news
+    .filter((n) => n.category === category)
+    .slice()
+    .sort((a, b) => Number(a.read) - Number(b.read) || b.turn - a.turn);
+  const unread = filtered.filter((n) => !n.read).length;
+
+  return (
+    <ImperialCard title="Dispatches">
+      {filtered.length === 0 ? (
+        <p className="text-[10px] text-muted-foreground italic">No new dispatches.</p>
+      ) : (
+        <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+          {filtered.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => onSelect?.({ type: "news", id: n.id })}
+              className={`w-full text-left bg-ivory border border-border rounded-sm p-2 space-y-1 hover:border-bronze/60 bronze-glow-hover transition-colors ${n.read ? "opacity-70" : ""}`}
+            >
+              <div className="flex items-start gap-1.5">
+                <StatusBadge variant={NEWS_CATEGORY_VARIANT[n.category]}>{n.category}</StatusBadge>
+                <span className="text-[9px] text-muted-foreground ml-auto">T{n.turn}</span>
+              </div>
+              <p className="text-[11px] font-semibold text-senate-dark leading-tight">{n.headline}</p>
+            </button>
+          ))}
+        </div>
+      )}
+      {unread > 0 && (
+        <p className="mt-1.5 text-[9px] font-heading uppercase tracking-widest text-crimson">
+          {unread} new
+        </p>
+      )}
+    </ImperialCard>
+  );
+}
+
 export interface ShipTypeLookup {
   id: string;
   name: string;
