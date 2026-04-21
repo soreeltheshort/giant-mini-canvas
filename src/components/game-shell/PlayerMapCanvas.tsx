@@ -178,13 +178,14 @@ const PlayerMapCanvas: React.FC<Props> = ({
       let fillColor: string;
       let alpha: number;
 
-      // For province hexes, only show the colored province tint when the hex
-      // is in live sensor range OR it belongs to the viewing player. Otherwise
-      // render it as neutral fog (same brightness as marches fog) so enemy
-      // provinces outside sensor range don't broadcast their color.
+      // For province hexes, show the muted province tint when the hex is in
+      // live sensor range, belongs to the viewing player, OR has ever been
+      // seen (remembered). Players permanently remember the political map of
+      // explored space — sensor coverage only governs whether you see what's
+      // happening *right now*, not whether you remember whose territory it is.
       const isProvinceHex = hex.classification.startsWith("PROVINCE_");
       const isOwnProvince = !!ownClassification && hex.classification === ownClassification;
-      const showProvinceTint = isProvinceHex && (isLive || isOwnProvince);
+      const showProvinceTint = isProvinceHex && (isLive || isOwnProvince || isRemembered);
 
       if (isUnexplored) {
         fillColor = "#111118";
@@ -207,7 +208,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
         fillColor = baseColor;
         alpha = 0.25;
       } else {
-        // Enemy province out of sensor range — render as neutral fog
+        // Enemy province never seen — neutral fog
         fillColor = "#111118";
         alpha = 0.6;
       }
