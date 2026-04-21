@@ -25,6 +25,7 @@
 import type { Phase, TurnContext } from "../types";
 import { runBattle } from "@/lib/battleEngine";
 import { loadFleetSnapshot, loadBattleConfig, calcGroundUnits, type FleetCompositionRow } from "@/lib/battleSetup";
+import { destroyFleet } from "../fleetCleanup";
 
 /**
  * Apply battle losses back to fleet_ships. Compares pre-battle quantity per
@@ -175,15 +176,26 @@ export const combatPhase: Phase = {
       const lossesA = await applyLosses(supabase as any, snapA.rows, aFinal);
       const lossesB = await applyLosses(supabase as any, snapB.rows, bFinal);
 
-      // If a fleet is wiped, remove its game_fleets row + map entry
-      const wipeFleet = async (mf: typeof attackerMF) => {
-        await (supabase as any).from("game_fleets")
-          .delete().eq("game_id", gameId).eq("fleet_id", mf.source_fleet_id);
-        const idx = ctx.mapState.fleets.indexOf(mf);
-        if (idx >= 0) ctx.mapState.fleets.splice(idx, 1);
-      };
-      if (lossesA.totalAfter <= 0) await wipeFleet(attackerMF);
-      if (lossesB.totalAfter <= 0) await wipeFleet(targetMF);
+      // If a fleet is wiped, fully remove it from the game via the shared
+      // cleanup helper (single entry point for fleet destruction).
+      if (lossesA.totalAfter <= 0) {
+        await destroyFleet({
+          ctx,
+          gameFleetId: attackerMF.fleet_id,
+          sourceFleetId: attackerMF.source_fleet_id,
+          fleetName: attackerMF.fleet_name,
+          reason: "combat_wiped",
+        });
+      }
+      if (lossesB.totalAfter <= 0) {
+        await destroyFleet({
+          ctx,
+          gameFleetId: targetMF.fleet_id,
+          sourceFleetId: targetMF.source_fleet_id,
+          fleetName: targetMF.fleet_name,
+          reason: "combat_wiped",
+        });
+      }
 
       resolved++;
       ctx.logs.push({
