@@ -134,7 +134,7 @@ export const combatPhase: Phase = {
 
     let resolved = 0;
 
-    for (const order of attackOrders) {
+    for (const order of effectiveAttackOrders) {
       const oj = order.order_json as any;
       const attackerGameFleetId: string = oj.fleet_id;
       const targetGameFleetId: string = oj.target_fleet_id;
