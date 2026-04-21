@@ -1,7 +1,17 @@
 import {
-  Coins, Star, Crown, Target,
-  Scroll, Swords, Landmark, Hammer, ChevronRight,
-  TrendingUp, TrendingDown, Globe2, Sword,
+  Coins,
+  Star,
+  Crown,
+  Target,
+  Scroll,
+  Swords,
+  Landmark,
+  Hammer,
+  ChevronRight,
+  TrendingUp,
+  TrendingDown,
+  Globe2,
+  Sword,
 } from "lucide-react";
 import type { GameMode, GlobalStats, NewsStory, MapSelection } from "./gameShellTypes";
 import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTypes";
@@ -35,8 +45,9 @@ interface LeftPanelProps {
     playerOwnerClassification?: string;
     fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
     onStartTargeting?: (
-      t: { mode: "hex"; orderType: "fleet_move"; fleetId: string }
-        | { mode: "fleet"; orderType: "attack"; fleetId: string }
+      t:
+        | { mode: "hex"; orderType: "fleet_move"; fleetId: string }
+        | { mode: "fleet"; orderType: "attack"; fleetId: string },
     ) => void;
     combatPointsAvailable?: number;
     onOrdersChanged?: () => void;
@@ -45,12 +56,13 @@ interface LeftPanelProps {
   };
 }
 
-const STAT_ITEMS: { key: keyof GlobalStats; label: string; icon: React.ElementType; format?: (v: number) => string }[] = [
-  { key: "treasury", label: "Treasury", icon: Coins, format: (v) => `₡${v.toLocaleString()}` },
-  { key: "tribute", label: "Income", icon: TrendingUp, format: (v) => `+₡${v.toLocaleString()}` },
-  { key: "maintenance", label: "Costs", icon: TrendingDown, format: (v) => `-₡${v.toLocaleString()}` },
-  { key: "influence", label: "Influence", icon: Star, format: (v) => `${v}` },
-];
+const STAT_ITEMS: { key: keyof GlobalStats; label: string; icon: React.ElementType; format?: (v: number) => string }[] =
+  [
+    { key: "treasury", label: "Treasury", icon: Coins, format: (v) => `₡${v.toLocaleString()}` },
+    { key: "tribute", label: "Income", icon: TrendingUp, format: (v) => `+₡${v.toLocaleString()}` },
+    { key: "maintenance", label: "Costs", icon: TrendingDown, format: (v) => `-₡${v.toLocaleString()}` },
+    { key: "influence", label: "Influence", icon: Star, format: (v) => `${v}` },
+  ];
 
 const MODE_ITEMS: { id: GameMode; label: string; icon: React.ElementType }[] = [
   { id: "diplomacy", label: "Diplomacy", icon: Landmark },
@@ -65,12 +77,24 @@ const CATEGORY_COLORS: Record<string, string> = {
   event: "warning",
 };
 
-export default function LeftPanel({ stats, news, activeMode, onModeChange, onViewNews, inlineContext, ordersSubmitted = false, onSubmitOrders, fullWidth = false }: LeftPanelProps) {
+export default function LeftPanel({
+  stats,
+  news,
+  activeMode,
+  onModeChange,
+  onViewNews,
+  inlineContext,
+  ordersSubmitted = false,
+  onSubmitOrders,
+  fullWidth = false,
+}: LeftPanelProps) {
   const unreadCount = news.filter((n) => !n.read).length;
   const latestUnread = news.find((n) => !n.read);
 
   return (
-    <aside className={`${fullWidth ? "w-full border-b-2 border-r-0" : "w-72 border-r-2"} bg-marble flex flex-col border-bronze/40 relative z-20 shrink-0 overflow-hidden`}>
+    <aside
+      className={`${fullWidth ? "w-full border-b-2 border-r-0" : "w-72 border-r-2"} bg-marble flex flex-col border-bronze/40 relative z-20 shrink-0 overflow-hidden`}
+    >
       <div className="flex-1 overflow-y-auto">
         {/* ── Global Stats ── */}
         <div className="p-3 space-y-2 border-b border-border">
@@ -135,9 +159,10 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
                   className={`
                     flex-1 flex items-center justify-center gap-1 px-1 py-1
                     transition-all duration-150
-                    ${active
-                      ? "bg-crimson text-primary-foreground shadow-sm"
-                      : "text-senate-dark hover:bg-ivory-dark bronze-glow-hover"
+                    ${
+                      active
+                        ? "bg-crimson text-primary-foreground shadow-sm"
+                        : "text-senate-dark hover:bg-ivory-dark bronze-glow-hover"
                     }
                   `}
                 >
@@ -150,9 +175,7 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
         </div>
 
         {/* ── Inline Context (tablet mode) ── */}
-        {inlineContext && (
-          <InlineContextContent {...inlineContext} />
-        )}
+        {inlineContext && <InlineContextContent {...inlineContext} />}
       </div>
 
       {/* ── Bottom: Submit Orders ── */}
@@ -166,7 +189,7 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
               : "bg-crimson text-primary-foreground hover:bg-crimson-light"
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          {ordersSubmitted ? "Withdraw Orders" : "Submit Orders"}
+          {ordersSubmitted ? "Withdraw Turn" : "Submit Turn"}
         </button>
         {ordersSubmitted && (
           <p className="text-[9px] font-heading uppercase tracking-widest text-center text-bronze-dark">
@@ -179,7 +202,19 @@ export default function LeftPanel({ stats, news, activeMode, onModeChange, onVie
 }
 
 /* ── Inline Context Content (mirrors ContextPanel content) ── */
-function InlineContextContent({ mode, selection, news, onClearSelection, gameData, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect }: {
+function InlineContextContent({
+  mode,
+  selection,
+  news,
+  onClearSelection,
+  gameData,
+  playerOwnerClassification,
+  fleetOrderContext,
+  onStartTargeting,
+  combatPointsAvailable,
+  onOrdersChanged,
+  onSelect,
+}: {
   mode: GameMode;
   selection: MapSelection;
   news: NewsStory[];
@@ -187,7 +222,11 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
   gameData?: GameMapData;
   playerOwnerClassification?: string;
   fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
-  onStartTargeting?: (t: { mode: "hex"; orderType: "fleet_move"; fleetId: string } | { mode: "fleet"; orderType: "attack"; fleetId: string }) => void;
+  onStartTargeting?: (
+    t:
+      | { mode: "hex"; orderType: "fleet_move"; fleetId: string }
+      | { mode: "fleet"; orderType: "attack"; fleetId: string },
+  ) => void;
   combatPointsAvailable?: number;
   onOrdersChanged?: () => void;
   onSelect?: (selection: MapSelection) => void;
@@ -205,7 +244,11 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
     if (selection.type === "army") return "Fleet Detail";
     if (selection.type === "production-center") return "Production";
     if (selection.type === "faction") return "Faction Intel";
-    const titles = { diplomacy: "Diplomatic Overview", military: "Strategic Overview", production: "Production Overview" };
+    const titles = {
+      diplomacy: "Diplomatic Overview",
+      military: "Strategic Overview",
+      production: "Production Overview",
+    };
     return titles[mode];
   };
 
@@ -223,13 +266,27 @@ function InlineContextContent({ mode, selection, news, onClearSelection, gameDat
         ) : selection.type === "region" ? (
           <InlineRegionDetail id={selection.id} gameData={gameData} />
         ) : selection.type === "army" ? (
-          <InlineArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />
+          <InlineArmyDetail
+            id={selection.id}
+            gameData={gameData}
+            playerOwnerClassification={playerOwnerClassification}
+            fleetOrderContext={fleetOrderContext}
+            onStartTargeting={onStartTargeting}
+            combatPointsAvailable={combatPointsAvailable}
+            onOrdersChanged={onOrdersChanged}
+          />
         ) : selection.type === "production-center" ? (
           <InlineProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
           <InlineFactionDetail id={selection.id} />
         ) : (
-          <InlineEmptyState mode={mode} news={news} gameData={gameData} playerOwnerClassification={playerOwnerClassification} onSelect={onSelect} />
+          <InlineEmptyState
+            mode={mode}
+            news={news}
+            gameData={gameData}
+            playerOwnerClassification={playerOwnerClassification}
+            onSelect={onSelect}
+          />
         )}
       </div>
       {selection.type !== "none" && (
@@ -254,7 +311,13 @@ const NEWS_CATEGORY_VARIANT: Record<NewsStory["category"], "info" | "danger" | "
 };
 
 /* ── Inline detail sub-components ── */
-function InlineEmptyState({ mode, news, gameData, playerOwnerClassification, onSelect }: {
+function InlineEmptyState({
+  mode,
+  news,
+  gameData,
+  playerOwnerClassification,
+  onSelect,
+}: {
   mode: GameMode;
   news?: NewsStory[];
   gameData?: GameMapData;
@@ -263,7 +326,7 @@ function InlineEmptyState({ mode, news, gameData, playerOwnerClassification, onS
 }) {
   if (mode === "military") {
     const playerFactionName = playerOwnerClassification
-      ? CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null
+      ? (CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null)
       : null;
     const matchesOwner = (owner: string | undefined | null) => {
       if (!owner || !playerOwnerClassification) return false;
@@ -282,7 +345,6 @@ function InlineEmptyState({ mode, news, gameData, playerOwnerClassification, onS
       : [];
     return (
       <>
-
         <ImperialCard title={`Planets (${ownedSystems.length})`}>
           {ownedSystems.length === 0 ? (
             <p className="text-[10px] text-muted-foreground italic">No systems under your control.</p>
@@ -324,7 +386,9 @@ function InlineEmptyState({ mode, news, gameData, playerOwnerClassification, onS
                     <span className="text-[11px] font-semibold text-senate-dark truncate">{f.fleet_name}</span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[9px] text-senate-dark/70">{f.hex_x},{f.hex_y}</span>
+                    <span className="text-[9px] text-senate-dark/70">
+                      {f.hex_x},{f.hex_y}
+                    </span>
                     <ChevronRight className="w-3 h-3 text-senate-dark/60" />
                   </div>
                 </button>
@@ -337,8 +401,20 @@ function InlineEmptyState({ mode, news, gameData, playerOwnerClassification, onS
   }
 
   const content = {
-    diplomacy: { stats: [{ label: "Active Treaties", value: "3" }, { label: "Pending Proposals", value: "1" }, { label: "Senate Standing", value: "Favorable" }] },
-    production: { stats: [{ label: "Active Facilities", value: "4" }, { label: "Queue Items", value: "3" }, { label: "Avg Efficiency", value: "72%" }] },
+    diplomacy: {
+      stats: [
+        { label: "Active Treaties", value: "3" },
+        { label: "Pending Proposals", value: "1" },
+        { label: "Senate Standing", value: "Favorable" },
+      ],
+    },
+    production: {
+      stats: [
+        { label: "Active Facilities", value: "4" },
+        { label: "Queue Items", value: "3" },
+        { label: "Avg Efficiency", value: "72%" },
+      ],
+    },
   } as const;
   const c = content[mode as "diplomacy" | "production"];
   return (
@@ -357,13 +433,12 @@ function InlineEmptyState({ mode, news, gameData, playerOwnerClassification, onS
 
 function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
-  const realSys = !isNaN(sysId) && gameData
-    ? Array.from(gameData.systems.values()).find(s => s.system_id === sysId)
-    : undefined;
+  const realSys =
+    !isNaN(sysId) && gameData ? Array.from(gameData.systems.values()).find((s) => s.system_id === sysId) : undefined;
 
   if (realSys) {
-    const facilityNames = (realSys.facilities || []).map(f => {
-      const ft = gameData!.facilityTypes.find(t => t.facility_type_id === f.facility_type_id);
+    const facilityNames = (realSys.facilities || []).map((f) => {
+      const ft = gameData!.facilityTypes.find((t) => t.facility_type_id === f.facility_type_id);
       return { name: ft?.name || f.facility_type_id, icon: ft?.icon || "🏭", qty: f.quantity };
     });
     const conditionVariant = realSys.condition >= 70 ? "success" : realSys.condition >= 40 ? "warning" : "danger";
@@ -372,8 +447,13 @@ function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapDa
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
           <div className="space-y-2">
-            <Row label="Population" value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Uninhabited"} />
-            <Row label="Condition"><StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge></Row>
+            <Row
+              label="Population"
+              value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Uninhabited"}
+            />
+            <Row label="Condition">
+              <StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge>
+            </Row>
             <Row label="Morale" value={`${realSys.morale}`} />
             <Row label="Resources" value={`${realSys.resources}`} />
           </div>
@@ -382,8 +462,13 @@ function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapDa
           <ImperialCard title="Facilities">
             <div className="space-y-1.5">
               {facilityNames.map((f, i) => (
-                <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0">
-                  <span>{f.icon} {f.name}</span>
+                <div
+                  key={i}
+                  className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0"
+                >
+                  <span>
+                    {f.icon} {f.name}
+                  </span>
                   <span className="font-semibold text-bronze">×{f.qty}</span>
                 </div>
               ))}
@@ -401,14 +486,32 @@ function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapDa
       <ImperialCard title={d.name} subtitle={d.classification}>
         <div className="space-y-2">
           <Row label="Population" value={d.population} />
-          <Row label="Condition"><StatusBadge variant={d.condition === "Stable" || d.condition === "Prosperous" ? "success" : d.condition === "Contested" ? "danger" : "info"}>{d.condition}</StatusBadge></Row>
+          <Row label="Condition">
+            <StatusBadge
+              variant={
+                d.condition === "Stable" || d.condition === "Prosperous"
+                  ? "success"
+                  : d.condition === "Contested"
+                    ? "danger"
+                    : "info"
+              }
+            >
+              {d.condition}
+            </StatusBadge>
+          </Row>
           <Row label="Garrison" value={d.garrison} />
         </div>
       </ImperialCard>
       <ImperialCard title="Resources">
         <div className="space-y-2.5">
           {d.resources.map((r) => (
-            <ProgressBar key={r.label} label={r.label} value={r.value} max={r.max} color={r.value >= 70 ? "bronze" : r.value >= 40 ? "bronze" : "crimson"} />
+            <ProgressBar
+              key={r.label}
+              label={r.label}
+              value={r.value}
+              max={r.max}
+              color={r.value >= 70 ? "bronze" : r.value >= 40 ? "bronze" : "crimson"}
+            />
           ))}
         </div>
       </ImperialCard>
@@ -416,13 +519,44 @@ function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapDa
   );
 }
 
-function InlineArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: { id: string; gameData?: GameMapData; playerOwnerClassification?: string; fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number }; onStartTargeting?: (t: { mode: "hex"; orderType: "fleet_move"; fleetId: string } | { mode: "fleet"; orderType: "attack"; fleetId: string }) => void; combatPointsAvailable?: number; onOrdersChanged?: () => void }) {
+function InlineArmyDetail({
+  id,
+  gameData,
+  playerOwnerClassification,
+  fleetOrderContext,
+  onStartTargeting,
+  combatPointsAvailable,
+  onOrdersChanged,
+}: {
+  id: string;
+  gameData?: GameMapData;
+  playerOwnerClassification?: string;
+  fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
+  onStartTargeting?: (
+    t:
+      | { mode: "hex"; orderType: "fleet_move"; fleetId: string }
+      | { mode: "fleet"; orderType: "attack"; fleetId: string },
+  ) => void;
+  combatPointsAvailable?: number;
+  onOrdersChanged?: () => void;
+}) {
   const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
-  const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
+  const realFleet = fleetId && gameData ? gameData.fleets.find((f) => f.fleet_id === fleetId) : undefined;
 
   if (realFleet) {
     const canEdit = !!playerOwnerClassification && realFleet.owner_classification === playerOwnerClassification;
-    return <FleetDetailContent fleet={realFleet} shipTypes={gameData?.shipTypes} allFleets={gameData?.fleets} canEdit={canEdit} orderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />;
+    return (
+      <FleetDetailContent
+        fleet={realFleet}
+        shipTypes={gameData?.shipTypes}
+        allFleets={gameData?.fleets}
+        canEdit={canEdit}
+        orderContext={fleetOrderContext}
+        onStartTargeting={onStartTargeting}
+        combatPointsAvailable={combatPointsAvailable}
+        onOrdersChanged={onOrdersChanged}
+      />
+    );
   }
 
   const d = ARMY_DETAILS[id];
@@ -431,7 +565,9 @@ function InlineArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderC
     <>
       <ImperialCard title={d.name} subtitle={`Commander: ${d.commander}`}>
         <div className="space-y-2">
-          <Row label="Status"><StatusBadge variant={d.status === "Alert" ? "warning" : "info"}>{d.status}</StatusBadge></Row>
+          <Row label="Status">
+            <StatusBadge variant={d.status === "Alert" ? "warning" : "info"}>{d.status}</StatusBadge>
+          </Row>
           <ProgressBar label="Strength" value={d.strength} max={d.maxStrength} color="bronze" />
           <ProgressBar label="Morale" value={d.morale} max={100} color={d.morale >= 70 ? "bronze" : "crimson"} />
         </div>
@@ -439,7 +575,10 @@ function InlineArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderC
       <ImperialCard title="Fleet Composition">
         <div className="space-y-1.5">
           {d.ships.map((s) => (
-            <div key={s.name} className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0">
+            <div
+              key={s.name}
+              className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0"
+            >
               <span>{s.name}</span>
               <span className="font-semibold text-bronze">×{s.count}</span>
             </div>
@@ -458,19 +597,29 @@ function InlineProductionDetail({ id }: { id: string }) {
       <ImperialCard title={d.name} subtitle={d.type}>
         <div className="space-y-2">
           <ProgressBar label="Output" value={d.output} max={d.capacity} color="bronze" />
-          <ProgressBar label="Efficiency" value={d.efficiency} max={100} color={d.efficiency >= 70 ? "bronze" : "crimson"} />
+          <ProgressBar
+            label="Efficiency"
+            value={d.efficiency}
+            max={100}
+            color={d.efficiency >= 70 ? "bronze" : "crimson"}
+          />
         </div>
       </ImperialCard>
       <ImperialCard title="Build Queue">
         <div className="space-y-1.5">
           {d.queue.length === 0 ? (
             <p className="text-[10px] text-muted-foreground italic">Queue empty.</p>
-          ) : d.queue.map((q, i) => (
-            <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0">
-              <span>{q.item}</span>
-              <span className="text-muted-foreground">{q.turns}T</span>
-            </div>
-          ))}
+          ) : (
+            d.queue.map((q, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0"
+              >
+                <span>{q.item}</span>
+                <span className="text-muted-foreground">{q.turns}T</span>
+              </div>
+            ))
+          )}
         </div>
       </ImperialCard>
     </>
@@ -482,8 +631,12 @@ function InlineFactionDetail({ id }: { id: string }) {
     <ImperialCard title="Faction Intelligence">
       <div className="space-y-2">
         <Row label="Faction" value={id} />
-        <Row label="Relations"><StatusBadge variant="warning">Neutral</StatusBadge></Row>
-        <Row label="Military Posture"><StatusBadge variant="info">Defensive</StatusBadge></Row>
+        <Row label="Relations">
+          <StatusBadge variant="warning">Neutral</StatusBadge>
+        </Row>
+        <Row label="Military Posture">
+          <StatusBadge variant="info">Defensive</StatusBadge>
+        </Row>
         <Row label="Trade Status" value="Open" />
       </div>
     </ImperialCard>
