@@ -345,6 +345,7 @@ function InlineEmptyState({
       : [];
     return (
       <>
+        <DispatchesCard mode="military" news={news ?? []} onSelect={onSelect} />
         <ImperialCard title={`Planets (${ownedSystems.length})`}>
           {ownedSystems.length === 0 ? (
             <p className="text-[10px] text-muted-foreground italic">No systems under your control.</p>
@@ -418,16 +419,19 @@ function InlineEmptyState({
   } as const;
   const c = content[mode as "diplomacy" | "production"];
   return (
-    <ImperialCard title="Summary">
-      <div className="space-y-2">
-        {c.stats.map((s) => (
-          <div key={s.label} className="flex justify-between text-xs">
-            <span className="text-muted-foreground">{s.label}</span>
-            <span className="font-semibold">{s.value}</span>
-          </div>
-        ))}
-      </div>
-    </ImperialCard>
+    <>
+      <DispatchesCard mode={mode} news={news ?? []} onSelect={onSelect} />
+      <ImperialCard title="Summary">
+        <div className="space-y-2">
+          {c.stats.map((s) => (
+            <div key={s.label} className="flex justify-between text-xs">
+              <span className="text-muted-foreground">{s.label}</span>
+              <span className="font-semibold">{s.value}</span>
+            </div>
+          ))}
+        </div>
+      </ImperialCard>
+    </>
   );
 }
 
