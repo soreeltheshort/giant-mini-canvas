@@ -234,12 +234,12 @@ const BattleReplay = () => {
           </div>
         </div>
 
-        {/* Initial fleet rosters from snapshots */}
+        {/* Per-ship final status reconstructed from snapshots + events */}
         <div className="mt-6 grid gap-6 md:grid-cols-2">
           {[
-            { label: "Fleet A", snap: snapA },
-            { label: "Fleet B", snap: snapB },
-          ].map(({ label, snap }) => (
+            { label: "Fleet A", snap: snapA, ships: finalShipsA },
+            { label: "Fleet B", snap: snapB, ships: finalShipsB },
+          ].map(({ label, snap, ships }) => (
             <div key={label} className="border border-border rounded p-4">
               <h3 className="font-heading text-sm font-bold text-foreground mb-2">
                 {label}: {snap?.name}
@@ -249,17 +249,31 @@ const BattleReplay = () => {
                   <tr className="border-b border-border">
                     <th className="py-1 text-left text-muted-foreground">Ship</th>
                     <th className="py-1 text-left text-muted-foreground">Group</th>
-                    <th className="py-1 text-right text-muted-foreground">Qty</th>
+                    <th className="py-1 text-right text-muted-foreground">Hull</th>
+                    <th className="py-1 text-left pl-2 text-muted-foreground">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {snap?.ships?.map((s: any, i: number) => (
-                    <tr key={i} className="border-b border-border/50">
-                      <td className="py-1 text-foreground">{s.ship_type?.name}</td>
-                      <td className="py-1 text-muted-foreground">{s.tactical_group}</td>
-                      <td className="py-1 text-right text-foreground">{s.quantity}</td>
-                    </tr>
-                  ))}
+                  {ships.map(s => {
+                    const status = s.crippled
+                      ? "Destroyed"
+                      : s.currentHull <= s.maxHull / 2
+                      ? "Crippled"
+                      : "Operational";
+                    const statusColor = status === "Destroyed"
+                      ? "text-destructive"
+                      : status === "Crippled"
+                      ? "text-yellow-500"
+                      : "text-green-500";
+                    return (
+                      <tr key={s.instanceId} className="border-b border-border/50">
+                        <td className="py-1 text-foreground">{s.name}</td>
+                        <td className="py-1 text-muted-foreground">{s.tacticalGroup}</td>
+                        <td className="py-1 text-right text-foreground">{s.currentHull}/{s.maxHull}</td>
+                        <td className={`py-1 pl-2 font-medium ${statusColor}`}>{status}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
