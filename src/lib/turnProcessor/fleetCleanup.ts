@@ -46,7 +46,7 @@ export interface DestroyFleetArgs {
 }
 
 export async function destroyFleet(args: DestroyFleetArgs): Promise<void> {
-  const { ctx, gameFleetId, sourceFleetId, fleetName, reason } = args;
+  const { ctx, gameFleetId, sourceFleetId, fleetName, reason, phase = "combat" } = args;
   const { supabase, gameId, currentTurn } = ctx;
 
   // 1. Remove the fleet's placement on the map.
