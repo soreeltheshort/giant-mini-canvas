@@ -28,8 +28,14 @@ import { loadFleetSnapshot, loadBattleConfig, calcGroundUnits, type FleetComposi
 import { destroyFleet } from "../fleetCleanup";
 
 /**
- * Apply battle losses back to fleet_ships. Compares pre-battle quantity per
- * (ship_type_id, tactical_group) row with post-battle survivors.
+ * Apply battle losses back to the composition table the rows were loaded from
+ * (game_fleet_ships for in-game battles; fleet_ships only if the loader was
+ * called without a gameFleetId, e.g. simulator). Compares pre-battle quantity
+ * per (ship_type_id, tactical_group) row with post-battle survivors.
+ *
+ * NOTE: combat must NEVER write to `fleet_ships` for in-game battles — that
+ * destroys the player's saved Fleet Builder design. Always pass gameFleetId
+ * when loading the snapshot upstream.
  */
 async function applyLosses(
   supabase: any,
@@ -56,10 +62,11 @@ async function applyLosses(
     if (lost > 0) {
       losses[`${row.ship_type_id}:${row.tactical_group}`] = lost;
     }
+    const table = row.source; // "game_fleet_ships" or "fleet_ships"
     if (survivors <= 0) {
-      await supabase.from("fleet_ships").delete().eq("id", row.id);
+      await supabase.from(table).delete().eq("id", row.id);
     } else if (survivors !== row.quantity) {
-      await supabase.from("fleet_ships").update({ quantity: survivors }).eq("id", row.id);
+      await supabase.from(table).update({ quantity: survivors }).eq("id", row.id);
     }
   }
 
@@ -151,8 +158,11 @@ export const combatPhase: Phase = {
         continue;
       }
 
-      const snapA = await loadFleetSnapshot(supabase as any, attackerMF.source_fleet_id);
-      const snapB = await loadFleetSnapshot(supabase as any, targetMF.source_fleet_id);
+      // Pass game_fleet_id so the snapshot is loaded from per-game roster
+      // (`game_fleet_ships`) and combat losses write back to that table — never
+      // the player's saved fleet rows.
+      const snapA = await loadFleetSnapshot(supabase as any, attackerMF.source_fleet_id, attackerMF.fleet_id);
+      const snapB = await loadFleetSnapshot(supabase as any, targetMF.source_fleet_id, targetMF.fleet_id);
       if (!snapA || !snapB || snapA.snapshot.ships.length === 0 || snapB.snapshot.ships.length === 0) {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "combat",
