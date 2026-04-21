@@ -178,14 +178,12 @@ const PlayerMapCanvas: React.FC<Props> = ({
       let fillColor: string;
       let alpha: number;
 
-      // For province hexes, show the muted province tint when the hex is in
-      // live sensor range, belongs to the viewing player, OR has ever been
-      // seen (remembered). Players permanently remember the political map of
-      // explored space — sensor coverage only governs whether you see what's
-      // happening *right now*, not whether you remember whose territory it is.
+      // Province borders are part of the public political map — every player
+      // knows which faction owns which province from turn 1. So all province
+      // hexes always show their muted faction tint, regardless of sensor
+      // coverage. Sensor coverage only governs whether you see what's happening
+      // *inside* those hexes (systems, fleets), not the political color.
       const isProvinceHex = hex.classification.startsWith("PROVINCE_");
-      const isOwnProvince = !!ownClassification && hex.classification === ownClassification;
-      const showProvinceTint = isProvinceHex && (isLive || isOwnProvince || isRemembered);
 
       if (isUnexplored) {
         fillColor = "#111118";
@@ -202,13 +200,12 @@ const PlayerMapCanvas: React.FC<Props> = ({
       } else if (isCore) {
         fillColor = "#2a2a3a";
         alpha = 1;
-      } else if (showProvinceTint) {
+      } else if (isProvinceHex) {
         // Province — use a muted version of the province color
         const baseColor = CLASSIFICATION_COLORS[hex.classification] || "#444";
         fillColor = baseColor;
         alpha = 0.25;
       } else {
-        // Enemy province never seen — neutral fog
         fillColor = "#111118";
         alpha = 0.6;
       }
