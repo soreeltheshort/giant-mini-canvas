@@ -131,14 +131,74 @@ const BattleReplay = () => {
   const gameId = (run.result_json as any)?.game_id;
   const turnNumber = (run.result_json as any)?.turn_number;
 
+  // Reconstruct per-ship instances from snapshots (matches battleEngine expandFleet
+  // ordering: stable per-fleet counter, one row per individual hull). Then replay
+  // damage events to derive final hull / crippled state.
+  type ReplayShip = {
+    instanceId: string;
+    name: string;
+    tacticalGroup: string;
+    maxHull: number;
+    currentHull: number;
+    crippled: boolean;
+    fleet: "A" | "B";
+  };
+
+  const buildInstances = (snap: FleetSnapshot | undefined, fleet: "A" | "B"): ReplayShip[] => {
+    const out: ReplayShip[] = [];
+    if (!snap?.ships) return out;
+    let counter = 0;
+    // battleEngine uses a single counter shared across both fleets, but instanceIds
+    // are namespaced by `${fleet}-N` and the counter is incremented for both fleets
+    // in sequence (A first, then B). We mirror that by starting B's counter where A left off.
+    // We cannot know A's count here without computing it — so callers pass the right offset.
+    for (const fs of snap.ships as any[]) {
+      const qty = fs.quantity ?? 1;
+      for (let i = 0; i < qty; i++) {
+        out.push({
+          instanceId: `${fleet}-${counter++}`,
+          name: `${fs.ship_type?.name ?? "Ship"} #${i + 1}`,
+          tacticalGroup: fs.tactical_group ?? "Core",
+          maxHull: fs.ship_type?.hull ?? 0,
+          currentHull: fs.ship_type?.hull ?? 0,
+          crippled: false,
+          fleet,
+        });
+      }
+    }
+    return out;
+  };
+
+  // Match battleEngine: idCounter is shared, A first then B.
+  const shipsARaw = buildInstances(snapA, "A");
+  const offsetB = shipsARaw.length;
+  const shipsBRaw = buildInstances(snapB, "B").map((s, idx) => ({
+    ...s,
+    instanceId: `B-${offsetB + idx}`,
+  }));
+
+  const byId = new Map<string, ReplayShip>();
+  [...shipsARaw, ...shipsBRaw].forEach(s => byId.set(s.instanceId, { ...s }));
+
+  for (const ev of events) {
+    if (ev.event_type !== "fire_hit") continue;
+    const p = ev.payload_json as any;
+    const tgt = byId.get(p?.target);
+    if (!tgt) continue;
+    const dmg = Number(p?.actualDmg ?? 0);
+    tgt.currentHull = Math.max(0, tgt.currentHull - dmg);
+    if (p?.crippled || tgt.currentHull <= 0) tgt.crippled = true;
+  }
+
+  const finalShipsA = shipsARaw.map(s => byId.get(s.instanceId)!);
+  const finalShipsB = shipsBRaw.map(s => byId.get(s.instanceId)!);
+
   // Reconstruct a minimal BattleResult shape for export utilities.
   const fakeResult: BattleResult = {
     seed: run.seed,
     winner,
     events,
-    // finalState isn't reconstructible from logs alone — pass empty arrays
-    // (only used inside eventsToJSON, which serialises whatever we hand in).
-    finalState: { fleetA: [], fleetB: [] } as any,
+    finalState: { fleetA: finalShipsA as any, fleetB: finalShipsB as any },
   } as any;
 
   const showDebug = isAdmin || isTester;
@@ -174,12 +234,12 @@ const BattleReplay = () => {
           </div>
         </div>
 
-        {/* Initial fleet rosters from snapshots */}
+        {/* Per-ship final status reconstructed from snapshots + events */}
         <div className="mt-6 grid gap-6 md:grid-cols-2">
           {[
-            { label: "Fleet A", snap: snapA },
-            { label: "Fleet B", snap: snapB },
-          ].map(({ label, snap }) => (
+            { label: "Fleet A", snap: snapA, ships: finalShipsA },
+            { label: "Fleet B", snap: snapB, ships: finalShipsB },
+          ].map(({ label, snap, ships }) => (
             <div key={label} className="border border-border rounded p-4">
               <h3 className="font-heading text-sm font-bold text-foreground mb-2">
                 {label}: {snap?.name}
@@ -189,17 +249,31 @@ const BattleReplay = () => {
                   <tr className="border-b border-border">
                     <th className="py-1 text-left text-muted-foreground">Ship</th>
                     <th className="py-1 text-left text-muted-foreground">Group</th>
-                    <th className="py-1 text-right text-muted-foreground">Qty</th>
+                    <th className="py-1 text-right text-muted-foreground">Hull</th>
+                    <th className="py-1 text-left pl-2 text-muted-foreground">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {snap?.ships?.map((s: any, i: number) => (
-                    <tr key={i} className="border-b border-border/50">
-                      <td className="py-1 text-foreground">{s.ship_type?.name}</td>
-                      <td className="py-1 text-muted-foreground">{s.tactical_group}</td>
-                      <td className="py-1 text-right text-foreground">{s.quantity}</td>
-                    </tr>
-                  ))}
+                  {ships.map(s => {
+                    const status = s.crippled
+                      ? "Destroyed"
+                      : s.currentHull <= s.maxHull / 2
+                      ? "Crippled"
+                      : "Operational";
+                    const statusColor = status === "Destroyed"
+                      ? "text-destructive"
+                      : status === "Crippled"
+                      ? "text-yellow-500"
+                      : "text-green-500";
+                    return (
+                      <tr key={s.instanceId} className="border-b border-border/50">
+                        <td className="py-1 text-foreground">{s.name}</td>
+                        <td className="py-1 text-muted-foreground">{s.tacticalGroup}</td>
+                        <td className="py-1 text-right text-foreground">{s.currentHull}/{s.maxHull}</td>
+                        <td className={`py-1 pl-2 font-medium ${statusColor}`}>{status}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
