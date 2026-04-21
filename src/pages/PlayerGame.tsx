@@ -724,7 +724,7 @@ const PlayerGame = () => {
             combatPointsRemaining: player?.combat_points_remaining ?? 3,
             combatPointsPending: pendingFleetOrderCount,
           }}
-          news={DUMMY_NEWS}
+          news={rebasedNews}
           activeMode={activeMode}
           onModeChange={handleModeChange}
           onViewNews={handleViewNews}
@@ -733,7 +733,7 @@ const PlayerGame = () => {
           inlineContext={{
             mode: activeMode,
             selection,
-            news: DUMMY_NEWS,
+            news: rebasedNews,
             onClearSelection: () => setSelection({ type: "none" }),
             gameData: mapState ? {
               systems: mapState.systems,
