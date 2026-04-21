@@ -243,10 +243,12 @@ export const combatPhase: Phase = {
       }
 
       resolved++;
+      const attackerReadiness = (snapA.snapshot as any).readiness ?? 2;
+      const defenderReadiness = (snapB.snapshot as any).readiness ?? 2;
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "combat",
         log_type: "battle_resolved",
-        message: `Battle: ${attackerMF.fleet_name} vs ${targetMF.fleet_name} — winner: ${battleResult.winner === "draw" ? "Draw" : battleResult.winner === "A" ? "Attacker" : "Defender"}. Survivors Attacker=${lossesA.totalAfter}/${lossesA.totalBefore}, Defender=${lossesB.totalAfter}/${lossesB.totalBefore}.`,
+        message: `Battle: ${attackerMF.fleet_name} (R${attackerReadiness}) vs ${targetMF.fleet_name} (R${defenderReadiness}) — winner: ${battleResult.winner === "draw" ? "Draw" : battleResult.winner === "A" ? "Attacker" : "Defender"}. Survivors Attacker=${lossesA.totalAfter}/${lossesA.totalBefore}, Defender=${lossesB.totalAfter}/${lossesB.totalBefore}.`,
         details_json: {
           battle_run_id: battleRun?.id,
           seed: seedStr,
@@ -254,6 +256,8 @@ export const combatPhase: Phase = {
           target_fleet_id: targetGameFleetId,
           attacker_name: attackerMF.fleet_name,
           target_name: targetMF.fleet_name,
+          attacker_readiness: attackerReadiness,
+          defender_readiness: defenderReadiness,
           winner: battleResult.winner,
           attacker_losses: lossesA.losses,
           target_losses: lossesB.losses,
