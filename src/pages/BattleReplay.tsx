@@ -217,7 +217,7 @@ const BattleReplay = () => {
 
         <div className="mt-6 border border-border p-4 rounded">
           <h2 className="font-heading text-lg font-bold text-foreground">
-            {winner === "draw" ? "Draw" : `Fleet ${winner} wins`}
+            {winner === "draw" ? "Draw" : `${winner === "A" ? "Attacker" : "Defender"} wins`}
           </h2>
           <p className="text-sm text-muted-foreground">
             {events.length} event(s) · Recorded {new Date(run.created_at).toLocaleString()}
@@ -237,8 +237,8 @@ const BattleReplay = () => {
         {/* Per-ship final status reconstructed from snapshots + events */}
         <div className="mt-6 grid gap-6 md:grid-cols-2">
           {[
-            { label: "Fleet A", snap: snapA, ships: finalShipsA },
-            { label: "Fleet B", snap: snapB, ships: finalShipsB },
+            { label: "Attacker", snap: snapA, ships: finalShipsA },
+            { label: "Defender", snap: snapB, ships: finalShipsB },
           ].map(({ label, snap, ships }) => (
             <div key={label} className="border border-border rounded p-4">
               <h3 className="font-heading text-sm font-bold text-foreground mb-2">
