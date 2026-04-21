@@ -221,6 +221,20 @@ const RightPanel: React.FC<Props> = ({
             </div>
           </div>
 
+          {/* Fleets at this hex */}
+          {fleetsAtHex.length > 0 && (
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Fleets ({fleetsAtHex.length})
+              </h3>
+              <div className="space-y-2">
+                {fleetsAtHex.map((f) => (
+                  <FleetCompositionView key={f.fleet_id} fleet={f} />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Change Classification */}
           <div>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Set Classification</h3>
