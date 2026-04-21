@@ -409,4 +409,103 @@ function FloatField({ label, value, onChange }: { label: string; value: number; 
   );
 }
 
+interface ShipRow {
+  ship_type_id: string;
+  quantity: number;
+  tactical_group: string;
+}
+interface ShipTypeInfo {
+  id: string;
+  name: string;
+  class: string;
+  hull_class: string;
+  point_cost: number;
+}
+
+function FleetCompositionView({ fleet }: { fleet: MapFleet }) {
+  const [ships, setShips] = useState<ShipRow[]>([]);
+  const [shipTypes, setShipTypes] = useState<Map<string, ShipTypeInfo>>(new Map());
+  const [fleetMeta, setFleetMeta] = useState<{ name: string; readiness: number; points_budget: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const [{ data: fleetRow }, { data: shipRows }, { data: typeRows }] = await Promise.all([
+        supabase.from("fleets").select("name, readiness, points_budget").eq("id", fleet.source_fleet_id).maybeSingle(),
+        supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group").eq("fleet_id", fleet.source_fleet_id),
+        supabase.from("ship_types").select("id, name, class, hull_class, point_cost"),
+      ]);
+      if (cancelled) return;
+      const map = new Map<string, ShipTypeInfo>();
+      for (const t of typeRows || []) map.set(t.id, t as ShipTypeInfo);
+      setShipTypes(map);
+      setShips(shipRows || []);
+      setFleetMeta(fleetRow ? { name: fleetRow.name, readiness: fleetRow.readiness, points_budget: fleetRow.points_budget } : null);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [fleet.source_fleet_id]);
+
+  const totalShips = ships.reduce((s, r) => s + (r.quantity || 0), 0);
+  const totalPoints = ships.reduce((s, r) => s + (shipTypes.get(r.ship_type_id)?.point_cost || 0) * (r.quantity || 0), 0);
+
+  // Group by tactical group
+  const byGroup = new Map<string, ShipRow[]>();
+  for (const r of ships) {
+    const g = r.tactical_group || "core";
+    if (!byGroup.has(g)) byGroup.set(g, []);
+    byGroup.get(g)!.push(r);
+  }
+
+  const ownerColor = CLASSIFICATION_COLORS[fleet.owner_classification as HexClassification] || "#999";
+
+  return (
+    <div className="rounded border border-border bg-muted/30 p-2 space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <span className="inline-block h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: ownerColor }} />
+        <span className="text-xs font-semibold truncate flex-1">{fleet.fleet_name}</span>
+        {fleetMeta && (
+          <span className="text-[10px] text-muted-foreground">R{fleetMeta.readiness}</span>
+        )}
+      </div>
+      <div className="flex justify-between text-[10px] text-muted-foreground">
+        <span>{CLASSIFICATION_LABELS[fleet.owner_classification as HexClassification] || fleet.owner_classification}</span>
+        <span>{totalShips} ships · {totalPoints}pts</span>
+      </div>
+
+      {loading ? (
+        <p className="text-[10px] text-muted-foreground italic">Loading composition...</p>
+      ) : ships.length === 0 ? (
+        <p className="text-[10px] text-muted-foreground italic">No ships assigned</p>
+      ) : (
+        <div className="space-y-1.5 pt-1 border-t border-border">
+          {Array.from(byGroup.entries()).map(([group, rows]) => (
+            <div key={group}>
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
+                {group}
+              </div>
+              <div className="space-y-0.5">
+                {rows.map((r, i) => {
+                  const t = shipTypes.get(r.ship_type_id);
+                  return (
+                    <div key={`${r.ship_type_id}-${i}`} className="flex justify-between items-center text-[10px]">
+                      <span className="truncate flex-1">
+                        <span className="text-muted-foreground mr-1">{t?.class || "?"}</span>
+                        {t?.name || r.ship_type_id}
+                      </span>
+                      <span className="font-medium tabular-nums">×{r.quantity}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default RightPanel;
