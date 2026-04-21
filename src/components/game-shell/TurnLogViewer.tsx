@@ -35,6 +35,20 @@ interface Props {
   refreshKey?: number;
 }
 
+interface BattleDetails {
+  battle_run_id?: string;
+  seed?: string;
+  attacker_name?: string;
+  target_name?: string;
+  winner?: string;
+  attacker_survivors?: number;
+  target_survivors?: number;
+  attacker_wiped?: boolean;
+  target_wiped?: boolean;
+  attacker_losses?: Record<string, number>;
+  target_losses?: Record<string, number>;
+}
+
 const PHASE_LABELS: Record<string, string> = {
   summary: "Summary",
   economy: "Economy",
@@ -45,6 +59,34 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 const PHASE_ORDER = ["summary", "economy", "movement", "visibility", "combat", ""];
+
+const isObjectRecord = (value: unknown): value is Record<string, any> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isBattleDetails = (log: LogRow): log is LogRow & { details_json: BattleDetails } =>
+  log.log_type === "battle_resolved" && isObjectRecord(log.details_json);
+
+const prettifyLossKey = (key: string) => {
+  const suffix = key.includes(":") ? key.split(":").slice(1).join(":") : key;
+  return suffix.replace(/_/g, " ");
+};
+
+const renderLossSummary = (losses?: Record<string, number>) => {
+  if (!losses || Object.keys(losses).length === 0) {
+    return <span className="text-muted-foreground">None</span>;
+  }
+
+  return (
+    <ul className="space-y-1">
+      {Object.entries(losses).map(([key, value]) => (
+        <li key={key} className="flex items-center justify-between gap-3">
+          <span className="text-muted-foreground">{prettifyLossKey(key)}</span>
+          <span className="font-medium text-foreground">{value}</span>
+        </li>
+      ))}
+    </ul>
+  );
+};
 
 export default function TurnLogViewer({ gameId, showDetails = false, recentTurnsLimit = 5, refreshKey = 0 }: Props) {
   const [logs, setLogs] = useState<LogRow[]>([]);
@@ -64,7 +106,6 @@ export default function TurnLogViewer({ gameId, showDetails = false, recentTurns
         .limit(500);
       if (cancelled) return;
       setLogs(data || []);
-      // Auto-open the most recent turn
       if (data && data.length > 0) {
         const maxTurn = Math.max(...data.map((l: LogRow) => l.turn_number));
         setOpenTurns(new Set([maxTurn]));
@@ -130,27 +171,81 @@ export default function TurnLogViewer({ gameId, showDetails = false, recentTurns
                       <Badge className="text-[10px]">{label}</Badge>
                       <span className="text-[10px] text-muted-foreground">{entries.length} entries</span>
                     </div>
-                    <ul className="space-y-1 text-xs">
+                    <ul className="space-y-2 text-xs">
                       {entries.map(e => {
                         const battleRunId = e.details_json?.battle_run_id as string | undefined;
+                        const hasDetails = showDetails && isObjectRecord(e.details_json) && Object.keys(e.details_json).length > 0;
+                        const hasBattleDetails = hasDetails && isBattleDetails(e);
+
                         return (
-                          <li key={e.id} className="flex gap-2 flex-wrap">
-                            <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
-                              {new Date(e.created_at).toLocaleTimeString()}
-                            </span>
-                            <span className="text-foreground">{e.message}</span>
-                            {battleRunId && (
-                              <Link
-                                to={`/battle-replay/${battleRunId}`}
-                                className="inline-flex items-center gap-0.5 text-[10px] text-bronze-dark hover:text-primary underline"
-                              >
-                                view full combat log <ExternalLink className="w-2.5 h-2.5" />
-                              </Link>
+                          <li key={e.id} className="space-y-1.5 rounded-sm">
+                            <div className="flex gap-2 flex-wrap items-start">
+                              <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
+                                {new Date(e.created_at).toLocaleTimeString()}
+                              </span>
+                              <span className="text-foreground">{e.message}</span>
+                              {battleRunId && (
+                                <Link
+                                  to={`/battle-replay/${battleRunId}`}
+                                  className="inline-flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 underline"
+                                >
+                                  view full combat log <ExternalLink className="w-2.5 h-2.5" />
+                                </Link>
+                              )}
+                            </div>
+
+                            {hasBattleDetails && (
+                              <details className="ml-6 rounded border border-border bg-muted/20" open>
+                                <summary className="cursor-pointer px-2 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-foreground">
+                                  Battle details
+                                </summary>
+                                <div className="space-y-3 border-t border-border px-3 py-2">
+                                  <div className="grid gap-2 md:grid-cols-2">
+                                    <div className="space-y-1">
+                                      <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Outcome</p>
+                                      <p className="text-foreground">
+                                        Winner: <span className="font-medium">{e.details_json.winner === "draw" ? "Draw" : `Fleet ${e.details_json.winner ?? "Unknown"}`}</span>
+                                      </p>
+                                      <p className="text-foreground">Attacker: {e.details_json.attacker_name ?? "Unknown"}</p>
+                                      <p className="text-foreground">Defender: {e.details_json.target_name ?? "Unknown"}</p>
+                                      <p className="text-foreground">Attacker survivors: {e.details_json.attacker_survivors ?? "—"}</p>
+                                      <p className="text-foreground">Defender survivors: {e.details_json.target_survivors ?? "—"}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Fleet status</p>
+                                      <p className="text-foreground">Attacker destroyed: {e.details_json.attacker_wiped ? "Yes" : "No"}</p>
+                                      <p className="text-foreground">Defender destroyed: {e.details_json.target_wiped ? "Yes" : "No"}</p>
+                                      {e.details_json.seed && (
+                                        <p className="break-all text-muted-foreground">
+                                          Seed: <span className="font-mono text-[10px]">{e.details_json.seed}</span>
+                                        </p>
+                                      )}
+                                      {!battleRunId && (
+                                        <p className="text-muted-foreground">
+                                          Full replay unavailable for this older battle log.
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="grid gap-3 md:grid-cols-2">
+                                    <div>
+                                      <p className="mb-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Attacker losses</p>
+                                      {renderLossSummary(e.details_json.attacker_losses)}
+                                    </div>
+                                    <div>
+                                      <p className="mb-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Defender losses</p>
+                                      {renderLossSummary(e.details_json.target_losses)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </details>
                             )}
-                            {showDetails && e.details_json && Object.keys(e.details_json).length > 0 && (
-                              <details className="ml-1">
-                                <summary className="cursor-pointer text-[10px] text-bronze-dark">json</summary>
-                                <pre className="text-[10px] bg-muted/50 p-2 rounded mt-1 overflow-x-auto">
+
+                            {!hasBattleDetails && hasDetails && (
+                              <details className="ml-6">
+                                <summary className="cursor-pointer text-[10px] text-foreground">details</summary>
+                                <pre className="mt-1 overflow-x-auto rounded bg-muted/50 p-2 text-[10px] text-foreground">
                                   {JSON.stringify(e.details_json, null, 2)}
                                 </pre>
                               </details>
