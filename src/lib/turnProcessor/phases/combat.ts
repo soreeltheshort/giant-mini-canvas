@@ -84,12 +84,57 @@ export const combatPhase: Phase = {
       return;
     }
 
+    // Mutual-attack resolution: if Fleet A ordered an attack on Fleet B AND
+    // Fleet B ordered an attack on Fleet A, only ONE engagement is resolved.
+    // The "attacker" role is decided randomly (deterministically per turn) so
+    // neither player is auto-favored by giving an order. We drop the losing
+    // order from the queue before processing.
+    const orderByPair = new Map<string, typeof attackOrders[number]>();
+    for (const o of attackOrders) {
+      const oj = o.order_json as any;
+      orderByPair.set(`${oj.fleet_id}->${oj.target_fleet_id}`, o);
+    }
+    const droppedOrderIds = new Set<string>();
+    const handledPairs = new Set<string>();
+    for (const o of attackOrders) {
+      const oj = o.order_json as any;
+      const a: string = oj.fleet_id;
+      const b: string = oj.target_fleet_id;
+      const pairKey = [a, b].sort().join("|");
+      if (handledPairs.has(pairKey)) continue;
+      const reverse = orderByPair.get(`${b}->${a}`);
+      if (reverse) {
+        // Mutual attack — pick one order deterministically from the turn seed.
+        const seed = `${gameId}-t${currentTurn}-mutual-${pairKey}`;
+        let h = 2166136261;
+        for (let i = 0; i < seed.length; i++) {
+          h ^= seed.charCodeAt(i);
+          h = (h * 16777619) >>> 0;
+        }
+        const pickFirst = (h % 2) === 0;
+        const dropped = pickFirst ? reverse : o;
+        droppedOrderIds.add(dropped.id);
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "combat",
+          log_type: "mutual_attack_resolved",
+          message: `Mutual attack between fleets — attacker chosen randomly.`,
+          details_json: {
+            pair: [a, b],
+            kept_order_id: pickFirst ? o.id : reverse.id,
+            dropped_order_id: dropped.id,
+          },
+        });
+      }
+      handledPairs.add(pairKey);
+    }
+    const effectiveAttackOrders = attackOrders.filter(o => !droppedOrderIds.has(o.id));
+
     // Battle config (shared across all engagements this turn — same as simulator)
     const { phases, groupMods, combatConsts, weaponPrefs, groundOutcomes } = await loadBattleConfig(supabase as any);
 
     let resolved = 0;
 
-    for (const order of attackOrders) {
+    for (const order of effectiveAttackOrders) {
       const oj = order.order_json as any;
       const attackerGameFleetId: string = oj.fleet_id;
       const targetGameFleetId: string = oj.target_fleet_id;
