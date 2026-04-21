@@ -155,7 +155,7 @@ const Battle = () => {
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <div>
-            <label className="text-xs text-muted-foreground">Fleet A</label>
+            <label className="text-xs text-muted-foreground">Attacker</label>
             <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={fleetAId} onChange={e => setFleetAId(e.target.value)}>
               <option value="">Select fleet...</option>
               {fleets.map(f => <option key={f.id} value={f.id}>{f.name}{f.capacityWarnings?.length ? " ⚠️" : ""}</option>)}
@@ -166,13 +166,13 @@ const Battle = () => {
                 <div className="mt-1 text-xs text-yellow-500 font-medium">⚠️ {f.capacityWarnings.join(", ")}</div>
               ) : null;
             })()}
-            <label className="mt-2 block text-xs text-muted-foreground">Admiral A Rating</label>
+            <label className="mt-2 block text-xs text-muted-foreground">Attacker Admiral Rating</label>
             <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={admiralA} onChange={e => setAdmiralA(Number(e.target.value))}>
               {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Fleet B</label>
+            <label className="text-xs text-muted-foreground">Defender</label>
             <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={fleetBId} onChange={e => setFleetBId(e.target.value)}>
               <option value="">Select fleet...</option>
               {fleets.map(f => <option key={f.id} value={f.id}>{f.name}{f.capacityWarnings?.length ? " ⚠️" : ""}</option>)}
@@ -183,7 +183,7 @@ const Battle = () => {
                 <div className="mt-1 text-xs text-yellow-500 font-medium">⚠️ {f.capacityWarnings.join(", ")}</div>
               ) : null;
             })()}
-            <label className="mt-2 block text-xs text-muted-foreground">Admiral B Rating</label>
+            <label className="mt-2 block text-xs text-muted-foreground">Defender Admiral Rating</label>
             <select className="mt-1 w-full rounded border border-input bg-background p-2 text-sm text-foreground" value={admiralB} onChange={e => setAdmiralB(Number(e.target.value))}>
               {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
             </select>
@@ -204,7 +204,7 @@ const Battle = () => {
           <div className="mt-8">
             <div className="border border-border p-4">
               <h2 className="font-heading text-lg font-bold text-foreground">
-                {result.winner === "draw" ? "Draw!" : `Fleet ${result.winner} Wins!`}
+                {result.winner === "draw" ? "Draw!" : `${result.winner === "A" ? "Attacker" : "Defender"} Wins!`}
               </h2>
               <p className="text-sm text-muted-foreground">Seed: {result.seed} · {result.events.length} events</p>
               <div className="mt-3 flex gap-2">
@@ -217,8 +217,8 @@ const Battle = () => {
             {/* Final ship status */}
             <div className="mt-6 grid gap-6 md:grid-cols-2">
               {[
-                { label: "Fleet A", ships: result.finalState.fleetA, snap: fleetASnap },
-                { label: "Fleet B", ships: result.finalState.fleetB, snap: fleetBSnap },
+                { label: "Attacker", ships: result.finalState.fleetA, snap: fleetASnap },
+                { label: "Defender", ships: result.finalState.fleetB, snap: fleetBSnap },
               ].map(({ label, ships, snap }) => (
                 <div key={label} className="border border-border rounded p-4">
                   <h3 className="font-heading text-sm font-bold text-foreground mb-2">{label}: {snap?.name}</h3>
