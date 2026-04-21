@@ -146,11 +146,18 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       ]);
       if (cancelled) return;
       if (f) {
+        // Prefer pending player_orders readiness over the (legacy) fleets.next_readiness
+        // column so the UI reflects the order the player just placed this turn.
+        const orders = ((po as any[]) || []) as PendingOrder[];
+        const pendingReadiness = orders.find(o => o.order_type === "set_readiness");
+        const nextR = pendingReadiness
+          ? Number(pendingReadiness.order_json?.next_readiness)
+          : ((f as any).next_readiness ?? null);
         setDetail({
           id: f.id,
           name: f.name,
           readiness: f.readiness ?? 2,
-          next_readiness: (f as any).next_readiness ?? null,
+          next_readiness: Number.isFinite(nextR) ? nextR : null,
           special1_role: f.special1_role || "Flank",
           special2_role: f.special2_role || "Flank",
           current_supply: (f as any).current_supply ?? 0,
@@ -312,6 +319,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const mapSpeedDisplay = minMapSpeed === Infinity ? 0 : minMapSpeed;
   const previewReadiness = detail.next_readiness ?? detail.readiness;
   const readinessChanged = detail.next_readiness !== null && detail.next_readiness !== detail.readiness;
+  const currentMaintenance = Math.round(baseMaintenance * readinessMaintMult(detail.readiness) * 100) / 100;
   const previewMaintenance = Math.round(baseMaintenance * readinessMaintMult(previewReadiness) * 100) / 100;
 
   // ── Supply (max = sum of supply_pod × coefficient) ──
@@ -401,8 +409,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         <div className="space-y-2">
           <Row
             label="Maintenance"
-            value={`₡${previewMaintenance}`}
-            valueClassName={readinessChanged ? "italic text-crimson" : undefined}
+            value={
+              readinessChanged
+                ? `₡${currentMaintenance} (₡${previewMaintenance})`
+                : `₡${currentMaintenance}`
+            }
+            valueClassName={readinessChanged ? "text-crimson" : undefined}
           />
           <Row label="Repair" value={`${totalRepair}`} />
           <Row label="Supply" value={`${totalSupply}`} />
