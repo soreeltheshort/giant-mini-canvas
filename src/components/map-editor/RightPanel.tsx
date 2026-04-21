@@ -7,6 +7,7 @@ import {
   SystemType,
   FacilityType,
   SystemFacility,
+  MapFleet,
   HexClassification,
   ALL_CLASSIFICATIONS,
   CLASSIFICATION_LABELS,
@@ -14,6 +15,35 @@ import {
 } from "@/lib/mapTypes";
 import { DbFaction } from "@/hooks/useFactions";
 import { DbFacilityType } from "@/hooks/useFacilityTypes";
+import { DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
+import { supabase } from "@/integrations/supabase/client";
+interface Props {
+  hex: HexData | null;
+  system: SystemData | undefined;
+  fleetsAtHex?: MapFleet[];
+  facilityTypes: FacilityType[];
+  dbFacilityTypes: DbFacilityType[];
+  factions: DbFaction[];
+  onClassificationChange: (hexId: number, c: HexClassification) => void;
+  onAddSystem: (hexId: number, name: string, rank: number) => void;
+  onUpdateSystem: (hexId: number, updates: Partial<Omit<SystemData, "system_id" | "map_id" | "hex_id">>) => void;
+  onRemoveSystem: (hexId: number) => void;
+  onSearchCoords: (x: number, y: number) => void;
+}
+
+const RightPanel: React.FC<Props> = ({
+  hex,
+  system,
+  fleetsAtHex = [],
+  facilityTypes,
+  dbFacilityTypes,
+  factions,
+  onClassificationChange,
+  onAddSystem,
+  onUpdateSystem,
+  onRemoveSystem,
+  onSearchCoords,
+}) => {
 import { DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
 interface Props {
   hex: HexData | null;
