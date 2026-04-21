@@ -44,32 +44,6 @@ const RightPanel: React.FC<Props> = ({
   onRemoveSystem,
   onSearchCoords,
 }) => {
-import { DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
-interface Props {
-  hex: HexData | null;
-  system: SystemData | undefined;
-  facilityTypes: FacilityType[];
-  dbFacilityTypes: DbFacilityType[];
-  factions: DbFaction[];
-  onClassificationChange: (hexId: number, c: HexClassification) => void;
-  onAddSystem: (hexId: number, name: string, rank: number) => void;
-  onUpdateSystem: (hexId: number, updates: Partial<Omit<SystemData, "system_id" | "map_id" | "hex_id">>) => void;
-  onRemoveSystem: (hexId: number) => void;
-  onSearchCoords: (x: number, y: number) => void;
-}
-
-const RightPanel: React.FC<Props> = ({
-  hex,
-  system,
-  facilityTypes,
-  dbFacilityTypes,
-  factions,
-  onClassificationChange,
-  onAddSystem,
-  onUpdateSystem,
-  onRemoveSystem,
-  onSearchCoords,
-}) => {
   const [sysName, setSysName] = useState("");
   const [sysRank, setSysRank] = useState(1);
   const [sysOwner, setSysOwner] = useState("");
