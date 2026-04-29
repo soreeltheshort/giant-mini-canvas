@@ -413,6 +413,8 @@ export type Database = {
       }
       game_fleet_ships: {
         Row: {
+          crippled: boolean
+          current_hp: number | null
           game_fleet_id: string
           id: string
           notes: string | null
@@ -421,6 +423,8 @@ export type Database = {
           tactical_group: string
         }
         Insert: {
+          crippled?: boolean
+          current_hp?: number | null
           game_fleet_id: string
           id?: string
           notes?: string | null
@@ -429,6 +433,8 @@ export type Database = {
           tactical_group?: string
         }
         Update: {
+          crippled?: boolean
+          current_hp?: number | null
           game_fleet_id?: string
           id?: string
           notes?: string | null
