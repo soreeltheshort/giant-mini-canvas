@@ -197,9 +197,10 @@ export default function FleetCompositionEditor({
                         const max = s.max_hp ?? null;
                         const cur = s.current_hp ?? null;
                         if (s.crippled) {
+                          const shown = cur != null ? cur : 0;
                           return (
                             <span className="text-crimson/70 normal-case tracking-normal font-semibold">
-                              {max != null ? `0/${max} · ` : ""}Crippled
+                              {max != null ? `${shown}/${max} · ` : ""}Crippled
                             </span>
                           );
                         }
