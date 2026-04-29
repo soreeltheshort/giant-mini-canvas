@@ -336,7 +336,15 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   // ── Supply (max = sum of supply_pod × coefficient) ──
   const maxSupply = totalSupply * supplyCoefficient;
   const currentSupply = Math.min(detail.current_supply, maxSupply);
-  const supplyDelta = Math.max(0, maxSupply - currentSupply);
+
+  // Repair orders consume supply (1 supply per HP). Subtract from current.
+  const pendingRepairOrder = pendingOrders.find(
+    o => o.order_type === "other" && o.order_json?.kind === "repair_fleet",
+  );
+  const pendingRepairCost = (pendingRepairOrder?.order_json?.assignments as RepairAssignment[] | undefined)
+    ?.reduce((sum, a) => sum + (Number(a.amount) || 0), 0) ?? 0;
+  const projectedSupply = Math.max(0, currentSupply - pendingRepairCost);
+  const supplyDelta = Math.max(0, maxSupply - projectedSupply);
 
   // If the slider hasn't been seeded yet (sentinel -1 from load), default to "fill up".
   if (replenishAmount < 0 && supplyDelta >= 0) {
