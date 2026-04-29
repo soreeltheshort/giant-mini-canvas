@@ -1038,14 +1038,14 @@ function RepairPopup({
             <button
               onClick={autoFill}
               disabled={cap <= 0 || rows.length === 0}
-              className="flex-1 h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs text-foreground font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed text-[#272d34]"
             >
               Auto-fill in priority
             </button>
             <button
               onClick={clearAll}
               disabled={totalAssigned === 0}
-              className="flex-1 h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs text-foreground font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed text-[#272d34]"
             >
               Clear
             </button>
