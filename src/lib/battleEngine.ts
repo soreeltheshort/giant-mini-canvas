@@ -496,7 +496,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           const armorReduction = isCrit ? 0 : Math.max(target.armor - mount.armorPenetration, 0);
           const actualDmg = Math.max(0, rawDmg - armorReduction);
           target.currentHull -= actualDmg;
-          const wouldCripple = target.currentHull <= 0;
+          const crippleAt = Math.floor(target.maxHull * cc.cripple_hp_threshold);
+          const wouldCripple = target.currentHull <= crippleAt;
 
           const critTag = isCrit ? " CRITICAL!" : "";
           emit("fire_hit", {
