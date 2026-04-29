@@ -61,15 +61,24 @@ async function applyLosses(
     for (const row of rows) {
       totalBefore += 1; // one DB row = one ship in per-instance mode
       const final = byRow.get(row.id);
-      if (!final || final.crippled) {
-        // Crippled = removed from the fleet permanently.
+      if (!final) {
+        // No final state means the ship was somehow not represented in the
+        // engine — destroy the row to stay safe.
         await supabase.from("game_fleet_ships").delete().eq("id", row.id);
+        losses[`${row.ship_type_id}:${row.tactical_group}`] =
+          (losses[`${row.ship_type_id}:${row.tactical_group}`] || 0) + 1;
+        continue;
+      }
+      const newHp = Math.max(0, Math.min(final.currentHull, final.maxHull));
+      if (final.crippled) {
+        // Crippled ships persist in the fleet but are flagged. They count
+        // as a loss for combat purposes (can't fight) but the row stays so
+        // the player can repair/scrap them later.
+        await supabase.from("game_fleet_ships").update({ current_hp: newHp, crippled: true }).eq("id", row.id);
         losses[`${row.ship_type_id}:${row.tactical_group}`] =
           (losses[`${row.ship_type_id}:${row.tactical_group}`] || 0) + 1;
       } else {
         totalAfter += 1;
-        const newHp = Math.max(0, Math.min(final.currentHull, final.maxHull));
-        // Only update if HP changed to avoid noisy writes.
         if (newHp < final.maxHull) {
           await supabase.from("game_fleet_ships").update({ current_hp: newHp, crippled: false }).eq("id", row.id);
         } else {
