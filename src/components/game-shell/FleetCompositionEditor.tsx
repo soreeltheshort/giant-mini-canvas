@@ -163,16 +163,20 @@ export default function FleetCompositionEditor({
               </h4>
             </div>
             <div className="space-y-1">
-              {displayShips.length === 0 && canEdit && !listEachShip && (
+              {displayShips.length === 0 && canEdit && (
                 <p className="text-[9px] text-foreground/60 italic px-1">
                   Drop ships here
                 </p>
               )}
-              {displayShips.map((s) => (
+              {displayShips.map((s) => {
+                // In listEachShip mode the row id is suffixed (`${realId}__${i}`)
+                // so React keys stay unique; strip it to get the underlying DB id.
+                const realId = listEachShip ? s.id.split("__")[0] : s.id;
+                return (
                 <div
                   key={s.id}
-                  draggable={canEdit && !listEachShip}
-                  onDragStart={() => canEdit && !listEachShip && setDragId(s.id)}
+                  draggable={canEdit}
+                  onDragStart={() => canEdit && setDragId(realId)}
                   onDragEnd={() => {
                     setDragId(null);
                     setDragOverGroup(null);
@@ -184,12 +188,12 @@ export default function FleetCompositionEditor({
                       ? "bg-yellow-200/40"
                       : ""
                   } ${
-                    canEdit && !listEachShip
+                    canEdit
                       ? "cursor-grab active:cursor-grabbing hover:bg-muted/50"
                       : ""
-                  } ${dragId === s.id ? "opacity-40" : ""}`}
+                  } ${dragId === realId ? "opacity-40" : ""}`}
                 >
-                  {canEdit && !listEachShip && (
+                  {canEdit && (
                     <GripVertical className="h-3 w-3 text-foreground/60 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
