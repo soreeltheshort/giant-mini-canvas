@@ -1129,7 +1129,7 @@ function RepairPopup({
                       <button
                         onClick={() => setAmount(i, r.amount + 1)}
                         disabled={r.amount >= r.missing || remaining <= 0}
-                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory text-foreground font-bold text-sm leading-none hover:border-bronze disabled:opacity-30"
+                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
                         aria-label="Increase"
                       >
                         +
