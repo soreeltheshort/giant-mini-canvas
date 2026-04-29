@@ -589,10 +589,14 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         fireWeaponsOfType(order.attacker, order.enemies, weaponType, order.attackMod, 0);
       }
 
-      // Now apply deferred crippling: any ship at 0 hull that wasn't already crippled
+      // Now apply deferred crippling: any ship at/below the cripple threshold
+      // (fraction of maxHull) that wasn't already crippled. HP is preserved
+      // (clamped to >= 0) so post-battle UI can show how badly damaged it is.
       for (const ship of [...aInPhase, ...bInPhase]) {
-        if (!ship.crippled && ship.currentHull <= 0) {
-          ship.currentHull = 0;
+        if (ship.crippled) continue;
+        const crippleAt = Math.floor(ship.maxHull * cc.cripple_hp_threshold);
+        if (ship.currentHull <= crippleAt) {
+          if (ship.currentHull < 0) ship.currentHull = 0;
           ship.crippled = true;
         }
       }
