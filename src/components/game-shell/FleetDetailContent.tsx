@@ -1397,7 +1397,7 @@ function RepairPopup({
                       </button>
                       <button
                         onClick={() => maxRow(i)}
-                        disabled={r.amount >= r.missing || (cap - totalAssigned + r.amount) <= r.amount}
+                        disabled={r.amount >= r.missing || (repairCap - totalAssigned + r.amount) <= r.amount}
                         className="h-7 px-2 rounded-sm border border-bronze/60 bg-ivory font-bold text-[10px] uppercase tracking-wider hover:border-bronze disabled:opacity-30 text-[#272d34]"
                       >
                         Max
