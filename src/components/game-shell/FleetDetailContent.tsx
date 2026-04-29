@@ -567,10 +567,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                 : `${currentSupply} / ${maxSupply}`
             }
           />
-          {(fighterCap > 0 || gunshipCap > 0) && (
+          {(fighterCap > 0 || gunshipCap > 0 || fighterStorage > 0 || gunshipStorage > 0) && (
             <>
-              {fighterCap > 0 && <Row label="Fighters" value={`${fighterUsed} / ${fighterCap}`} />}
-              {gunshipCap > 0 && <Row label="Gunships" value={`${gunshipUsed} / ${gunshipCap}`} />}
+              {fighterCap > 0 && <Row label="Fighter Bays" value={`${fighterUsed} / ${fighterCap}`} />}
+              {fighterStorage > 0 && <Row label="Fighter Storage" value={`${fighterStorage}`} />}
+              {gunshipCap > 0 && <Row label="Gunship Bays" value={`${gunshipUsed} / ${gunshipCap}`} />}
+              {gunshipStorage > 0 && <Row label="Gunship Storage" value={`${gunshipStorage}`} />}
             </>
           )}
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
