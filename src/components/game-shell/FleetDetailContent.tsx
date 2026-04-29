@@ -140,7 +140,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           .maybeSingle(),
         supabase
           .from("game_fleet_ships")
-          .select("id, ship_type_id, quantity, tactical_group, current_hp, crippled")
+          // Join ship_types so we always have max hull for HP display, even if the
+          // shipTypes prop lookup is stale or missing this type.
+          .select("id, ship_type_id, quantity, tactical_group, current_hp, crippled, ship_types(hull, name, ship_id, hull_class)")
           .eq("game_fleet_id", fleet.fleet_id),
         ordersPromise,
       ]);
