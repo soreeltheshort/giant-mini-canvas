@@ -71,10 +71,14 @@ async function applyLosses(
         continue;
       }
       const newHp = Math.max(0, Math.min(final.currentHull, final.maxHull));
-      if (final.crippled) {
-        // Crippled ships persist in the fleet but are flagged. They count
-        // as a loss for combat purposes (can't fight) but the row stays so
-        // the player can repair/scrap them later.
+      if (newHp <= 0) {
+        // Hull = 0 means the ship is truly destroyed — remove from the fleet.
+        await supabase.from("game_fleet_ships").delete().eq("id", row.id);
+        losses[`${row.ship_type_id}:${row.tactical_group}`] =
+          (losses[`${row.ship_type_id}:${row.tactical_group}`] || 0) + 1;
+      } else if (final.crippled) {
+        // Crippled (hull > 0 but below threshold): row persists, flagged.
+        // Counts as a combat loss (can't fight) but stays for repair/scrap.
         await supabase.from("game_fleet_ships").update({ current_hp: newHp, crippled: true }).eq("id", row.id);
         losses[`${row.ship_type_id}:${row.tactical_group}`] =
           (losses[`${row.ship_type_id}:${row.tactical_group}`] || 0) + 1;
