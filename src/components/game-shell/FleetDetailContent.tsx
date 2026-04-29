@@ -1503,7 +1503,7 @@ function RepairPopup({
                       </button>
                     </div>
                     <div className="text-[10px] font-semibold text-bronze-dark mt-1">
-                      {c?.bucket === "fighter" ? "fighter" : "gunship"} · slots {(c?.slots ?? 0) * b.quantity} · supply ₡{cost}
+                      {c?.bucket === "fighter" ? "fighter" : "gunship"} · slots {(c?.slots ?? 0) * b.quantity} · {cost} supply
                     </div>
                   </div>
                 );
