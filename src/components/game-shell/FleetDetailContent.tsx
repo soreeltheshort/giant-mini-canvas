@@ -1124,7 +1124,7 @@ function RepairPopup({
                         max={r.missing}
                         value={r.amount}
                         onChange={(e) => setAmount(i, Number(e.target.value) || 0)}
-                        className="w-14 h-7 rounded-sm border border-bronze/60 bg-ivory px-1 text-center text-xs font-bold text-foreground"
+                        className="w-14 h-7 rounded-sm border border-bronze/60 bg-ivory px-1 text-center text-xs font-bold text-[#272d34]"
                       />
                       <button
                         onClick={() => setAmount(i, r.amount + 1)}
