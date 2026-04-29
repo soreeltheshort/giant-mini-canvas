@@ -451,18 +451,30 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               />
             </div>
 
-            <button
-              onClick={() => setReplenishOpen(true)}
-              className="w-full h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60"
-            >
-              Replenish
-            </button>
-            <button
-              onClick={() => setRepairOpen(true)}
-              className="w-full h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60"
-            >
-              Repair
-            </button>
+            {(() => {
+              const replenishDisabled = supplyDelta <= 0;
+              const repairDisabled = !ships.some(
+                s => s.crippled || (s.current_hp != null && s.max_hp != null && s.current_hp < s.max_hp),
+              );
+              return (
+                <>
+                  <button
+                    onClick={() => setReplenishOpen(true)}
+                    disabled={replenishDisabled}
+                    className="w-full h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-input"
+                  >
+                    Replenish
+                  </button>
+                  <button
+                    onClick={() => setRepairOpen(true)}
+                    disabled={repairDisabled}
+                    className="w-full h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-input"
+                  >
+                    Repair
+                  </button>
+                </>
+              );
+            })()}
           </div>
         </ImperialCard>
       )}
