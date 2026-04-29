@@ -251,7 +251,8 @@ export default function FleetCompositionEditor({
                     </span>
                   ))}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );
