@@ -357,21 +357,24 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     const instances: ShipInstance[] = [];
     for (const fs of snapshot.ships) {
       for (let i = 0; i < fs.quantity; i++) {
+        const inst = fs.instances?.[i];
+        const startHull = inst?.currentHull ?? fs.ship_type.hull;
         instances.push({
           instanceId: `${fleet}-${idCounter++}`,
+          sourceRowId: inst?.sourceRowId,
           typeId: fs.ship_type.id,
           name: `${fs.ship_type.name} #${i + 1}`,
           class: fs.ship_type.class,
           hull_class: fs.ship_type.class,
           maxHull: fs.ship_type.hull,
-          currentHull: fs.ship_type.hull,
+          currentHull: startHull,
           armor: fs.ship_type.armor,
           weapons: getWeaponMounts(fs.ship_type),
           sensor_rating: fs.ship_type.sensor_rating,
           cbt_speed: fs.ship_type.cbt_speed,
           tacticalGroup: fs.tactical_group,
           fleet,
-          crippled: false,
+          crippled: !!inst?.crippled,
           target_preference: fs.ship_type.target_preference || fs.ship_type.class,
           shipTypeData: fs.ship_type,
         });
