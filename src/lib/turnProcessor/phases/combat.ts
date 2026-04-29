@@ -214,6 +214,7 @@ export const combatPhase: Phase = {
         snapA.snapshot, snapB.snapshot, seedStr,
         phases, groupMods, combatConsts, weaponPrefs,
         4, 4, groundOutcomes, 0, groundUnitsA, groundUnitsB,
+        weaponStats,
       );
 
       // Persist battle_run + events for full replay.
