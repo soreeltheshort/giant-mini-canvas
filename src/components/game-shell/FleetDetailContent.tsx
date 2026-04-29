@@ -594,11 +594,15 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               <input
                 type="range"
                 min={0}
-                max={supplyDelta}
+                max={maxSupply}
                 step={1}
-                value={Math.min(replenishAmount, supplyDelta)}
+                value={projectedSupply + Math.min(replenishAmount, supplyDelta)}
                 disabled={supplyDelta <= 0}
-                onChange={(e) => setReplenishAmount(Number(e.target.value))}
+                onChange={(e) => {
+                  const total = Number(e.target.value);
+                  const next = Math.max(0, Math.min(supplyDelta, total - projectedSupply));
+                  setReplenishAmount(next);
+                }}
                 onPointerUp={() => persistReplenishAmount(Math.min(replenishAmount, supplyDelta))}
                 onKeyUp={() => persistReplenishAmount(Math.min(replenishAmount, supplyDelta))}
                 className="w-full accent-bronze disabled:opacity-50 disabled:cursor-not-allowed"
