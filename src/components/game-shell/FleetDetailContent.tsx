@@ -113,6 +113,12 @@ interface PendingOrder {
   order_json: any;
 }
 
+/** Build-strikecraft order item: a quantity of a specific FL/FH/GS ship type. */
+export interface BuildItem {
+  ship_type_id: string;
+  quantity: number;
+}
+
 export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], allSystems = [], allHexes, canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
