@@ -18,6 +18,7 @@ import { importFromSqlite, exportToSqlite } from "@/lib/mapDatabase";
 import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { processNextTurn, DEFAULT_TURN_CONSTANTS, ShipTypeForUpkeep } from "@/lib/turnEngine";
 import { runTurnProcessor } from "@/lib/turnProcessor";
+import { runTurnZero } from "@/lib/turnZero";
 import { SystemData, MapState } from "@/lib/mapTypes";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
 import { Badge } from "@/components/ui/badge";
@@ -286,7 +287,15 @@ const AdminGames = () => {
 
     // When transitioning to active, set turn 1 + orders phase + process visibility + Turn 1 economics
     if (status === "active" && selectedGame.status === "setup") {
-      await processInitialVisibility(selectedGame.id);
+      // Run Turn 0 — seeds visibility (and any future start-of-game steps).
+      // Loads its own MapState from the DB so it never silently no-ops.
+      try {
+        const tz = await runTurnZero(supabase as any, selectedGame.id);
+        toast({ title: "Turn 0 complete", description: `${tz.systemsSeeded} systems seeded for ${tz.playersUpdated} player(s).` });
+      } catch (e: any) {
+        toast({ title: "Turn 0 failed", description: e?.message ?? String(e), variant: "destructive" });
+        return;
+      }
       await (supabase as any).from("games").update({ status, turn_number: 1, turn_phase: "orders" }).eq("id", selectedGame.id);
 
       // Roll any setup-phase orders (turn_number = 0) forward to turn 1 so they
