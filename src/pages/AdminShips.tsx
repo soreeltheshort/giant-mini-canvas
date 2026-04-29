@@ -501,7 +501,7 @@ const AdminShips = () => {
                           {f.options!.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       ) : f.type === "number" ? (
-                        <Input className={`h-7 ${f.width || "w-16"} text-xs`} type="number"
+                        <Input className={`h-7 ${f.width || "w-16"} text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`} type="text" inputMode="decimal"
                           value={s[f.key] as number}
                           onChange={e => updateField(s.id, f.key, f.key === "maintenance" ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0)} />
                       ) : (
@@ -512,25 +512,25 @@ const AdminShips = () => {
                   ))}
                   {WEAPON_FIELDS.map(f => (
                     <td key={f.key} className="px-1 py-1">
-                      <Input className="h-7 w-12 text-xs" type="number" value={s[f.key] as number}
+                      <Input className="h-7 w-14 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" type="text" inputMode="numeric" value={s[f.key] as number}
                         onChange={e => updateField(s.id, f.key, parseInt(e.target.value) || 0)} />
                     </td>
                   ))}
                   {UTILITY_FIELDS.map(f => (
                     <td key={f.key} className="px-1 py-1">
-                      <Input className="h-7 w-12 text-xs" type="number" value={s[f.key] as number}
+                      <Input className="h-7 w-14 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" type="text" inputMode="numeric" value={s[f.key] as number}
                         onChange={e => updateField(s.id, f.key, parseInt(e.target.value) || 0)} />
                     </td>
                   ))}
                   {VIRTUAL_ATK_FIELDS.map(f => (
                     <td key={f.key} className="px-1 py-1 border-l border-border">
-                      <Input className="h-7 w-14 text-xs" type="number" step="0.1" value={s[f.key] as number}
+                      <Input className="h-7 w-14 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" type="text" inputMode="decimal" value={s[f.key] as number}
                         onChange={e => updateField(s.id, f.key, parseFloat(e.target.value) || 0)} />
                     </td>
                   ))}
                   {VIRTUAL_DEF_FIELDS.map(f => (
                     <td key={f.key} className="px-1 py-1 border-l border-border">
-                      <Input className="h-7 w-14 text-xs" type="number" step="0.1" value={s[f.key] as number}
+                      <Input className="h-7 w-14 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" type="text" inputMode="decimal" value={s[f.key] as number}
                         onChange={e => updateField(s.id, f.key, parseFloat(e.target.value) || 0)} />
                     </td>
                   ))}
