@@ -333,7 +333,7 @@ function getGroupModifier(group: string, type: "attack" | "defense", modifiers: 
   return type === "attack" ? mod.attack_mod : mod.defense_mod;
 }
 
-export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants, weaponTargetPrefs?: WeaponTargetPref[], admiralRatingA: number = 4, admiralRatingB: number = 4, groundOutcomes?: GroundCombatOutcome[], groundDefense: number = 0, groundUnitsA: number = 0, groundUnitsB: number = 0): BattleResult {
+export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants, weaponTargetPrefs?: WeaponTargetPref[], admiralRatingA: number = 4, admiralRatingB: number = 4, groundOutcomes?: GroundCombatOutcome[], groundDefense: number = 0, groundUnitsA: number = 0, groundUnitsB: number = 0, weaponStats?: WeaponStatsMap): BattleResult {
   const activePhases = phases && phases.length > 0 ? phases : DEFAULT_PHASES;
   const activeMods = groupModifiers && groupModifiers.length > 0 ? groupModifiers : DEFAULT_GROUP_MODS;
   const cc = combatConsts ?? DEFAULT_COMBAT_CONSTANTS;
