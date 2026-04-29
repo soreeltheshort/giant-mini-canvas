@@ -49,6 +49,35 @@ interface FleetDetail {
   current_supply: number;
 }
 
+/** Per-ship-type capacity + cost data needed for strikecraft build orders. */
+interface ShipTypeExtra {
+  fighter_bay: number;
+  fighter_storage: number;
+  gun_ship_link: number;
+  gunship_storage: number;
+  point_cost: number;
+  hull: number;
+  /** Class designator: FL, FH, GS, etc. */
+  class: string;
+}
+
+/** Buildable strikecraft entry (FL/FH/GS) shown in the build picker. */
+interface StrikecraftCatalogEntry {
+  id: string;
+  name: string;
+  ship_id: string;
+  class: string;          // FL | FH | GS
+  point_cost: number;
+  hull: number;
+  /**
+   * Slots consumed in the host capacity:
+   *  - FL = 1 fighter slot, FH = 2 fighter slots, GS = 1 gunship slot.
+   */
+  slots: number;
+  /** "fighter" | "gunship" */
+  bucket: "fighter" | "gunship";
+}
+
 export interface FleetOrderContext {
   gameId: string;
   playerId: string;
