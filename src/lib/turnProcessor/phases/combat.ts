@@ -279,9 +279,10 @@ export const combatPhase: Phase = {
       const lossesA = await applyLosses(supabase as any, snapA.rows, aFinal);
       const lossesB = await applyLosses(supabase as any, snapB.rows, bFinal);
 
-      // If a fleet is wiped, fully remove it from the game via the shared
-      // cleanup helper (single entry point for fleet destruction).
-      if (lossesA.totalAfter <= 0) {
+      // If a fleet has zero rows left at all (no survivors AND no crippled),
+      // remove it from the map. Crippled-only fleets persist so the player
+      // can repair/scrap them.
+      if (lossesA.totalRemaining <= 0) {
         await destroyFleet({
           ctx,
           gameFleetId: attackerMF.fleet_id,
@@ -290,7 +291,7 @@ export const combatPhase: Phase = {
           reason: "combat_wiped",
         });
       }
-      if (lossesB.totalAfter <= 0) {
+      if (lossesB.totalRemaining <= 0) {
         await destroyFleet({
           ctx,
           gameFleetId: targetMF.fleet_id,
