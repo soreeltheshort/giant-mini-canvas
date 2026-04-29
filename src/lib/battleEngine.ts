@@ -480,8 +480,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         if (hit) {
           const critRoll = rng();
           const isCrit = critRoll <= cc.critical_hit_chance;
-          const dmgVariance = cc.dmg_variance_min + rng() * cc.dmg_variance_range;
-          const baseDmg = Math.round(mount.damage * dmgVariance);
+          const baseDmg = mount.damage;
           const rawDmg = isCrit ? Math.round(baseDmg * cc.critical_hit_multiplier) : baseDmg;
           const armorReduction = isCrit ? 0 : Math.max(target.armor - mount.armorPenetration, 0);
           const actualDmg = Math.max(0, rawDmg - armorReduction);
