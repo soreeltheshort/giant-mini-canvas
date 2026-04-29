@@ -457,7 +457,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[hsl(20_25%_10%)] font-bold">Supply</span>
                 <span className="font-bold text-[hsl(20_25%_10%)]">
-                  {currentSupply + Math.min(replenishAmount, supplyDelta)} / {maxSupply}
+                  {projectedSupply + Math.min(replenishAmount, supplyDelta)} / {maxSupply}
                 </span>
               </div>
               <input
