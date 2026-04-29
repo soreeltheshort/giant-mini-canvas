@@ -393,6 +393,8 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   let availableRepair = 0;
   let totalSupply = 0;
   let minMapSpeed = Infinity;
+  // Strikecraft capacity & current usage (FL = 1 fighter slot, FH = 2, GS = 1 gunship slot).
+  let fighterCap = 0, fighterUsed = 0, gunshipCap = 0, gunshipUsed = 0;
   for (const s of ships) {
     const st = shipTypes.find(t => t.id === s.ship_type_id);
     if (!st) continue;
@@ -402,6 +404,15 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     if (s.tactical_group === "Rear") availableRepair += repairContribution;
     totalSupply += (st.supply_pod ?? 0) * s.quantity;
     if ((st.map_speed ?? 0) > 0 && st.map_speed! < minMapSpeed) minMapSpeed = st.map_speed!;
+
+    const ext = shipTypeExtras.get(s.ship_type_id);
+    if (ext) {
+      fighterCap += ext.fighter_bay * s.quantity;
+      gunshipCap += ext.gun_ship_link * s.quantity;
+      if (ext.class === "FL") fighterUsed += 1 * s.quantity;
+      else if (ext.class === "FH") fighterUsed += 2 * s.quantity;
+      else if (ext.class === "GS") gunshipUsed += 1 * s.quantity;
+    }
   }
   const mapSpeedDisplay = minMapSpeed === Infinity ? 0 : minMapSpeed;
   const previewReadiness = detail.next_readiness ?? detail.readiness;
@@ -419,7 +430,19 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   );
   const pendingRepairCost = (pendingRepairOrder?.order_json?.assignments as RepairAssignment[] | undefined)
     ?.reduce((sum, a) => sum + (Number(a.amount) || 0), 0) ?? 0;
-  const projectedSupply = Math.max(0, currentSupply - pendingRepairCost);
+
+  // Build-strikecraft orders also consume supply (1 supply per ship point_cost).
+  const pendingBuildOrder = pendingOrders.find(
+    o => o.order_type === "other" && o.order_json?.kind === "build_strikecraft",
+  );
+  const pendingBuildItems = (pendingBuildOrder?.order_json?.items as BuildItem[] | undefined) ?? [];
+  const pendingBuildCost = pendingBuildItems.reduce((sum, it) => {
+    const ext = shipTypeExtras.get(it.ship_type_id);
+    return sum + (ext?.point_cost ?? 0) * (Number(it.quantity) || 0);
+  }, 0);
+
+  const pendingTotalCost = pendingRepairCost + pendingBuildCost;
+  const projectedSupply = Math.max(0, currentSupply - pendingTotalCost);
   const supplyDelta = Math.max(0, maxSupply - projectedSupply);
 
   // If the slider hasn't been seeded yet (sentinel -1 from load), default to "fill up".
