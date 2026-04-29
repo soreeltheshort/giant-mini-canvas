@@ -255,15 +255,19 @@ const BattleReplay = () => {
                 </thead>
                 <tbody>
                   {ships.map(s => {
-                    const status = s.crippled
+                    const status = s.currentHull <= 0
                       ? "Destroyed"
-                      : s.currentHull <= s.maxHull / 2
+                      : s.crippled
                       ? "Crippled"
+                      : s.currentHull < s.maxHull
+                      ? "Damaged"
                       : "Operational";
                     const statusColor = status === "Destroyed"
                       ? "text-destructive"
                       : status === "Crippled"
                       ? "text-yellow-500"
+                      : status === "Damaged"
+                      ? "text-orange-500"
                       : "text-green-500";
                     return (
                       <tr key={s.instanceId} className="border-b border-border/50">
