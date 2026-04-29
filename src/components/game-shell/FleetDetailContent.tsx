@@ -49,6 +49,35 @@ interface FleetDetail {
   current_supply: number;
 }
 
+/** Per-ship-type capacity + cost data needed for strikecraft build orders. */
+interface ShipTypeExtra {
+  fighter_bay: number;
+  fighter_storage: number;
+  gun_ship_link: number;
+  gunship_storage: number;
+  point_cost: number;
+  hull: number;
+  /** Class designator: FL, FH, GS, etc. */
+  class: string;
+}
+
+/** Buildable strikecraft entry (FL/FH/GS) shown in the build picker. */
+interface StrikecraftCatalogEntry {
+  id: string;
+  name: string;
+  ship_id: string;
+  class: string;          // FL | FH | GS
+  point_cost: number;
+  hull: number;
+  /**
+   * Slots consumed in the host capacity:
+   *  - FL = 1 fighter slot, FH = 2 fighter slots, GS = 1 gunship slot.
+   */
+  slots: number;
+  /** "fighter" | "gunship" */
+  bucket: "fighter" | "gunship";
+}
+
 export interface FleetOrderContext {
   gameId: string;
   playerId: string;
@@ -84,6 +113,12 @@ interface PendingOrder {
   order_json: any;
 }
 
+/** Build-strikecraft order item: a quantity of a specific FL/FH/GS ship type. */
+export interface BuildItem {
+  ship_type_id: string;
+  quantity: number;
+}
+
 export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], allSystems = [], allHexes, canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
@@ -94,6 +129,11 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const [replenishOpen, setReplenishOpen] = useState(false);
   const [repairOpen, setRepairOpen] = useState(false);
   const [replenishAmount, setReplenishAmount] = useState(0);
+  // Extra ship-type data (capacity + cost) needed for build-strikecraft orders.
+  // Keyed by ship_type_id.
+  const [shipTypeExtras, setShipTypeExtras] = useState<Map<string, ShipTypeExtra>>(new Map());
+  // Catalog of buildable strikecraft classes (FL/FH/GS), used in the build queue UI.
+  const [strikecraftCatalog, setStrikecraftCatalog] = useState<StrikecraftCatalogEntry[]>([]);
 
   const sourceId = fleet.source_fleet_id;
 
@@ -109,6 +149,48 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       if (!cancelled && data?.value !== undefined) {
         setSupplyCoefficient(Number(data.value) || 10);
       }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Fetch ship-type extras (capacity, point_cost, hull) and the buildable
+  // strikecraft catalog. One-shot fetch; ship_types is small and rarely changes.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("ship_types")
+        .select("id, name, ship_id, class, hull_class, hull, point_cost, fighter_bay, fighter_storage, gun_ship_link, gunship_storage");
+      if (cancelled || !data) return;
+      const extras = new Map<string, ShipTypeExtra>();
+      const catalog: StrikecraftCatalogEntry[] = [];
+      for (const r of data as any[]) {
+        extras.set(r.id, {
+          fighter_bay: Number(r.fighter_bay) || 0,
+          fighter_storage: Number(r.fighter_storage) || 0,
+          gun_ship_link: Number(r.gun_ship_link) || 0,
+          gunship_storage: Number(r.gunship_storage) || 0,
+          point_cost: Number(r.point_cost) || 0,
+          hull: Number(r.hull) || 0,
+          class: r.class || "",
+        });
+        const cls = String(r.class || "");
+        if (cls === "FL" || cls === "FH" || cls === "GS") {
+          catalog.push({
+            id: r.id,
+            name: r.name,
+            ship_id: r.ship_id || "",
+            class: cls,
+            point_cost: Number(r.point_cost) || 0,
+            hull: Number(r.hull) || 0,
+            slots: cls === "FH" ? 2 : 1,
+            bucket: cls === "GS" ? "gunship" : "fighter",
+          });
+        }
+      }
+      catalog.sort((a, b) => a.point_cost - b.point_cost || a.name.localeCompare(b.name));
+      setShipTypeExtras(extras);
+      setStrikecraftCatalog(catalog);
     })();
     return () => { cancelled = true; };
   }, []);
@@ -317,6 +399,8 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   let availableRepair = 0;
   let totalSupply = 0;
   let minMapSpeed = Infinity;
+  // Strikecraft capacity & current usage (FL = 1 fighter slot, FH = 2, GS = 1 gunship slot).
+  let fighterCap = 0, fighterUsed = 0, gunshipCap = 0, gunshipUsed = 0;
   for (const s of ships) {
     const st = shipTypes.find(t => t.id === s.ship_type_id);
     if (!st) continue;
@@ -326,6 +410,15 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     if (s.tactical_group === "Rear") availableRepair += repairContribution;
     totalSupply += (st.supply_pod ?? 0) * s.quantity;
     if ((st.map_speed ?? 0) > 0 && st.map_speed! < minMapSpeed) minMapSpeed = st.map_speed!;
+
+    const ext = shipTypeExtras.get(s.ship_type_id);
+    if (ext) {
+      fighterCap += ext.fighter_bay * s.quantity;
+      gunshipCap += ext.gun_ship_link * s.quantity;
+      if (ext.class === "FL") fighterUsed += 1 * s.quantity;
+      else if (ext.class === "FH") fighterUsed += 2 * s.quantity;
+      else if (ext.class === "GS") gunshipUsed += 1 * s.quantity;
+    }
   }
   const mapSpeedDisplay = minMapSpeed === Infinity ? 0 : minMapSpeed;
   const previewReadiness = detail.next_readiness ?? detail.readiness;
@@ -343,7 +436,19 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   );
   const pendingRepairCost = (pendingRepairOrder?.order_json?.assignments as RepairAssignment[] | undefined)
     ?.reduce((sum, a) => sum + (Number(a.amount) || 0), 0) ?? 0;
-  const projectedSupply = Math.max(0, currentSupply - pendingRepairCost);
+
+  // Build-strikecraft orders also consume supply (1 supply per ship point_cost).
+  const pendingBuildOrder = pendingOrders.find(
+    o => o.order_type === "other" && o.order_json?.kind === "build_strikecraft",
+  );
+  const pendingBuildItems = (pendingBuildOrder?.order_json?.items as BuildItem[] | undefined) ?? [];
+  const pendingBuildCost = pendingBuildItems.reduce((sum, it) => {
+    const ext = shipTypeExtras.get(it.ship_type_id);
+    return sum + (ext?.point_cost ?? 0) * (Number(it.quantity) || 0);
+  }, 0);
+
+  const pendingTotalCost = pendingRepairCost + pendingBuildCost;
+  const projectedSupply = Math.max(0, currentSupply - pendingTotalCost);
   const supplyDelta = Math.max(0, maxSupply - projectedSupply);
 
   // If the slider hasn't been seeded yet (sentinel -1 from load), default to "fill up".
@@ -439,11 +544,17 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           <Row
             label="Supply"
             value={
-              pendingRepairCost > 0
+              pendingTotalCost > 0
                 ? `${currentSupply} (${projectedSupply}) / ${maxSupply}`
                 : `${currentSupply} / ${maxSupply}`
             }
           />
+          {(fighterCap > 0 || gunshipCap > 0) && (
+            <>
+              {fighterCap > 0 && <Row label="Fighters" value={`${fighterUsed} / ${fighterCap}`} />}
+              {gunshipCap > 0 && <Row label="Gunships" value={`${gunshipUsed} / ${gunshipCap}`} />}
+            </>
+          )}
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
           <Row label="Ships" value={`${totalShips}`} />
           
@@ -479,11 +590,16 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               const canRepair = ships.some(
                 s => s.crippled || (s.current_hp != null && s.max_hp != null && s.current_hp < s.max_hp),
               );
-              const disabled = !canReplenish && !canRepair;
+              // Build orders are available whenever there is unused fighter or
+              // gunship capacity (regardless of damage state).
+              const canBuild =
+                strikecraftCatalog.length > 0 &&
+                (fighterCap - fighterUsed > 0 || gunshipCap - gunshipUsed > 0);
+              const disabled = !canReplenish && !canRepair && !canBuild;
               return (
                 <button
                   onClick={() => {
-                    if (canRepair) setRepairOpen(true);
+                    if (canRepair || canBuild) setRepairOpen(true);
                     if (canReplenish) setReplenishOpen(true);
                   }}
                   disabled={disabled}
@@ -508,27 +624,56 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           existingAssignments={(pendingOrders.find(
             o => o.order_type === "other" && o.order_json?.kind === "repair_fleet",
           )?.order_json?.assignments as RepairAssignment[] | undefined) ?? []}
+          existingBuildItems={pendingBuildItems}
+          strikecraftCatalog={strikecraftCatalog}
+          fighterCap={fighterCap}
+          fighterUsed={fighterUsed}
+          gunshipCap={gunshipCap}
+          gunshipUsed={gunshipUsed}
           onClose={() => setRepairOpen(false)}
-          onSave={async (assignments) => {
+          onSave={async (assignments, buildItems) => {
             if (!orderContext) return;
             const { gameId, playerId, turnNumber } = orderContext;
+            // Clear both repair and build orders for this fleet+turn, then re-insert
+            // any non-empty queues.
             await (supabase as any).from("player_orders")
               .delete()
               .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
               .eq("order_type", "other")
               .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
               .filter("order_json->>kind", "eq", "repair_fleet");
-            const filtered = assignments.filter(a => a.amount > 0);
-            if (filtered.length > 0) {
+            await (supabase as any).from("player_orders")
+              .delete()
+              .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+              .eq("order_type", "other")
+              .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
+              .filter("order_json->>kind", "eq", "build_strikecraft");
+
+            const filteredRepairs = assignments.filter(a => a.amount > 0);
+            if (filteredRepairs.length > 0) {
               await (supabase as any).from("player_orders").insert({
                 game_id: gameId, player_id: playerId, turn_number: turnNumber,
                 order_type: "other",
                 order_json: {
                   fleet_id: fleet.fleet_id,
                   kind: "repair_fleet",
-                  assignments: filtered,
+                  assignments: filteredRepairs,
                 },
               });
+            }
+            const filteredBuilds = buildItems.filter(b => b.quantity > 0);
+            if (filteredBuilds.length > 0) {
+              await (supabase as any).from("player_orders").insert({
+                game_id: gameId, player_id: playerId, turn_number: turnNumber,
+                order_type: "other",
+                order_json: {
+                  fleet_id: fleet.fleet_id,
+                  kind: "build_strikecraft",
+                  items: filteredBuilds,
+                },
+              });
+            }
+            if (filteredRepairs.length > 0 || filteredBuilds.length > 0) {
               playOrderPlaced();
             }
             // Refresh local pending orders
@@ -538,10 +683,14 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
             setPendingOrders(((po as any[]) || []) as PendingOrder[]);
 
-            // Auto-fill replenish slider to top off supply (post-repair).
-            // Each HP repaired costs 1 supply; refill back to maxSupply.
-            const repairCost = filtered.reduce((s, a) => s + (Number(a.amount) || 0), 0);
-            const newProjected = Math.max(0, currentSupply - repairCost);
+            // Auto-fill replenish slider to top off supply (post-repair AND post-build).
+            // Repairs cost 1 supply per HP; builds cost point_cost per ship.
+            const repairCost = filteredRepairs.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+            const buildCost = filteredBuilds.reduce((s, b) => {
+              const ext = shipTypeExtras.get(b.ship_type_id);
+              return s + (ext?.point_cost ?? 0) * (Number(b.quantity) || 0);
+            }, 0);
+            const newProjected = Math.max(0, currentSupply - repairCost - buildCost);
             const newDelta = Math.max(0, maxSupply - newProjected);
             setReplenishAmount(newDelta);
             await persistReplenishAmount(newDelta);
@@ -913,8 +1062,16 @@ interface RepairPopupProps {
   availableRepair: number;
   availableSupply: number;
   existingAssignments: RepairAssignment[];
+  /** Build-strikecraft items already queued (to seed the popup). */
+  existingBuildItems: BuildItem[];
+  /** Selectable strikecraft (FL/FH/GS) for new build orders. */
+  strikecraftCatalog: StrikecraftCatalogEntry[];
+  fighterCap: number;
+  fighterUsed: number;
+  gunshipCap: number;
+  gunshipUsed: number;
   onClose: () => void;
-  onSave: (assignments: RepairAssignment[]) => void | Promise<void>;
+  onSave: (assignments: RepairAssignment[], buildItems: BuildItem[]) => void | Promise<void>;
 }
 
 interface RepairRow {
@@ -934,6 +1091,12 @@ function RepairPopup({
   availableRepair,
   availableSupply,
   existingAssignments,
+  existingBuildItems,
+  strikecraftCatalog,
+  fighterCap,
+  fighterUsed,
+  gunshipCap,
+  gunshipUsed,
   onClose,
   onSave,
 }: RepairPopupProps) {
@@ -976,10 +1139,39 @@ function RepairPopup({
   })();
 
   const [rows, setRows] = useState<RepairRow[]>(damaged);
+  // Build queue: array of { ship_type_id, quantity } seeded from any existing order.
+  const [buildRows, setBuildRows] = useState<BuildItem[]>(
+    existingBuildItems.length > 0
+      ? existingBuildItems.map(b => ({ ship_type_id: b.ship_type_id, quantity: b.quantity }))
+      : [],
+  );
 
-  const cap = Math.min(availableRepair, availableSupply);
+  const repairCap = Math.min(availableRepair, availableSupply);
   const totalAssigned = rows.reduce((s, r) => s + r.amount, 0);
-  const remaining = Math.max(0, cap - totalAssigned);
+
+  // Build queue cost (1 supply per point_cost) and slot consumption.
+  const catalogById = new Map(strikecraftCatalog.map(c => [c.id, c]));
+  const buildSupplyCost = buildRows.reduce((sum, b) => {
+    const c = catalogById.get(b.ship_type_id);
+    return sum + (c?.point_cost ?? 0) * (Number(b.quantity) || 0);
+  }, 0);
+  const buildFighterSlots = buildRows.reduce((sum, b) => {
+    const c = catalogById.get(b.ship_type_id);
+    return c && c.bucket === "fighter" ? sum + c.slots * b.quantity : sum;
+  }, 0);
+  const buildGunshipSlots = buildRows.reduce((sum, b) => {
+    const c = catalogById.get(b.ship_type_id);
+    return c && c.bucket === "gunship" ? sum + c.slots * b.quantity : sum;
+  }, 0);
+
+  // Supply must cover BOTH the repair queue AND the build queue.
+  const repairAndBuildSupply = totalAssigned + buildSupplyCost;
+  const supplyOver = repairAndBuildSupply > availableSupply;
+  const remaining = Math.max(0, repairCap - totalAssigned);
+
+  // Available remaining capacity for new builds.
+  const fighterFree = Math.max(0, fighterCap - fighterUsed - buildFighterSlots);
+  const gunshipFree = Math.max(0, gunshipCap - gunshipUsed - buildGunshipSlots);
 
   function move(index: number, dir: -1 | 1) {
     const j = index + dir;
@@ -993,7 +1185,7 @@ function RepairPopup({
     const next = rows.slice();
     const row = next[index];
     const others = totalAssigned - row.amount;
-    const maxForRow = Math.min(row.missing, Math.max(0, cap - others));
+    const maxForRow = Math.min(row.missing, Math.max(0, repairCap - others));
     row.amount = Math.max(0, Math.min(raw, maxForRow));
     setRows(next);
   }
@@ -1001,7 +1193,7 @@ function RepairPopup({
   function maxRow(index: number) {
     const row = rows[index];
     const others = totalAssigned - row.amount;
-    setAmount(index, Math.min(row.missing, Math.max(0, cap - others)));
+    setAmount(index, Math.min(row.missing, Math.max(0, repairCap - others)));
   }
 
   function clearAll() {
@@ -1010,13 +1202,53 @@ function RepairPopup({
 
   function autoFill() {
     // Walk in priority order; greedily fill each ship up to its missing HP.
-    let pool = cap;
+    let pool = repairCap;
     const next = rows.map(r => {
       const give = Math.max(0, Math.min(r.missing, pool));
       pool -= give;
       return { ...r, amount: give };
     });
     setRows(next);
+  }
+
+  // ── Build queue helpers ──
+  function addBuildRow() {
+    // Default to the cheapest catalog entry whose bucket still has capacity.
+    const candidate = strikecraftCatalog.find(c =>
+      c.bucket === "fighter" ? fighterFree >= c.slots : gunshipFree >= c.slots,
+    ) ?? strikecraftCatalog[0];
+    if (!candidate) return;
+    setBuildRows([...buildRows, { ship_type_id: candidate.id, quantity: 1 }]);
+  }
+  function removeBuildRow(index: number) {
+    const next = buildRows.slice();
+    next.splice(index, 1);
+    setBuildRows(next);
+  }
+  function setBuildShipType(index: number, shipTypeId: string) {
+    const next = buildRows.slice();
+    // Reset quantity to 1 when changing class so we don't accidentally over-cap.
+    next[index] = { ship_type_id: shipTypeId, quantity: 1 };
+    setBuildRows(next);
+  }
+  function setBuildQty(index: number, raw: number) {
+    const next = buildRows.slice();
+    const item = next[index];
+    const c = catalogById.get(item.ship_type_id);
+    if (!c) return;
+    // Determine free slots in the relevant bucket *excluding this row*.
+    const otherSlots = next.reduce((sum, b, i) => {
+      if (i === index) return sum;
+      const oc = catalogById.get(b.ship_type_id);
+      if (!oc || oc.bucket !== c.bucket) return sum;
+      return sum + oc.slots * b.quantity;
+    }, 0);
+    const free = c.bucket === "fighter"
+      ? Math.max(0, fighterCap - fighterUsed - otherSlots)
+      : Math.max(0, gunshipCap - gunshipUsed - otherSlots);
+    const maxQty = Math.floor(free / c.slots);
+    item.quantity = Math.max(0, Math.min(raw, maxQty));
+    setBuildRows(next);
   }
 
   return (
@@ -1052,16 +1284,21 @@ function RepairPopup({
               <div className="font-bold text-sm text-[#272d34]">{availableSupply}</div>
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-bronze-dark font-semibold">Assigned / Cap</div>
-              <div className={`font-bold text-sm ${totalAssigned > cap ? "text-crimson" : "text-[#272d34]"}`}>
-                {totalAssigned} / {cap}
+              <div className="text-[10px] uppercase tracking-wider text-bronze-dark font-semibold">Supply Used</div>
+              <div className={`font-bold text-sm ${supplyOver ? "text-crimson" : "text-[#272d34]"}`}>
+                {repairAndBuildSupply} / {availableSupply}
               </div>
+              {buildSupplyCost > 0 && (
+                <div className="text-[9px] font-semibold text-bronze-dark mt-0.5">
+                  repair {totalAssigned} + build {buildSupplyCost}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex gap-1.5 mt-2.5">
             <button
               onClick={autoFill}
-              disabled={cap <= 0 || rows.length === 0}
+              disabled={repairCap <= 0 || rows.length === 0}
               className="flex-1 h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed text-[#272d34]"
             >
               Auto-fill in priority
@@ -1160,7 +1397,7 @@ function RepairPopup({
                       </button>
                       <button
                         onClick={() => maxRow(i)}
-                        disabled={r.amount >= r.missing || (cap - totalAssigned + r.amount) <= r.amount}
+                        disabled={r.amount >= r.missing || (repairCap - totalAssigned + r.amount) <= r.amount}
                         className="h-7 px-2 rounded-sm border border-bronze/60 bg-ivory font-bold text-[10px] uppercase tracking-wider hover:border-bronze disabled:opacity-30 text-[#272d34]"
                       >
                         Max
@@ -1174,6 +1411,113 @@ function RepairPopup({
               </div>
             );
           })}
+
+          {(fighterCap > 0 || gunshipCap > 0) && (
+            <div className="pt-2 mt-2 border-t border-bronze/40 space-y-2">
+              <div className="flex items-baseline justify-between">
+                <h4 className="text-[11px] font-heading font-bold uppercase tracking-wider text-bronze-dark">
+                  Build Strikecraft
+                </h4>
+                <div className="text-[10px] font-semibold text-bronze-dark space-x-2">
+                  {fighterCap > 0 && (
+                    <span className={fighterFree < 0 ? "text-crimson" : ""}>
+                      Fighters {fighterUsed + buildFighterSlots}/{fighterCap}
+                    </span>
+                  )}
+                  {gunshipCap > 0 && (
+                    <span className={gunshipFree < 0 ? "text-crimson" : ""}>
+                      Gunships {gunshipUsed + buildGunshipSlots}/{gunshipCap}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {buildRows.length === 0 && (
+                <p className="text-[11px] text-bronze-dark italic">
+                  No builds queued. Empty fighter or gunship capacity can be filled here at a cost of the ship's point value in supply.
+                </p>
+              )}
+
+              {buildRows.map((b, i) => {
+                const c = catalogById.get(b.ship_type_id);
+                const cost = (c?.point_cost ?? 0) * b.quantity;
+                // Per-row max: free slots in this bucket (excluding self), divided by slots-per-ship.
+                const otherSlots = buildRows.reduce((sum, x, j) => {
+                  if (j === i || !c) return sum;
+                  const xc = catalogById.get(x.ship_type_id);
+                  if (!xc || xc.bucket !== c.bucket) return sum;
+                  return sum + xc.slots * x.quantity;
+                }, 0);
+                const bucketCap = c?.bucket === "fighter" ? fighterCap : gunshipCap;
+                const bucketUsed = c?.bucket === "fighter" ? fighterUsed : gunshipUsed;
+                const free = c ? Math.max(0, bucketCap - bucketUsed - otherSlots) : 0;
+                const maxQty = c ? Math.floor(free / c.slots) : 0;
+                return (
+                  <div
+                    key={i}
+                    className="border border-bronze/40 rounded-sm p-2 bg-bronze/5"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        value={b.ship_type_id}
+                        onChange={(e) => setBuildShipType(i, e.target.value)}
+                        className="grow min-w-0 h-7 rounded-sm border border-bronze/60 bg-ivory px-1 text-[11px] font-semibold text-[#272d34]"
+                      >
+                        {strikecraftCatalog.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} [{s.class}] · ₡{s.point_cost}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => setBuildQty(i, b.quantity - 1)}
+                        disabled={b.quantity <= 0}
+                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                        aria-label="Decrease"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={maxQty}
+                        value={b.quantity}
+                        onChange={(e) => setBuildQty(i, Number(e.target.value) || 0)}
+                        className="w-12 h-7 rounded-sm border border-bronze/60 bg-ivory px-1 text-center text-xs font-bold text-[#272d34]"
+                      />
+                      <button
+                        onClick={() => setBuildQty(i, b.quantity + 1)}
+                        disabled={b.quantity >= maxQty}
+                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                        aria-label="Increase"
+                      >
+                        +
+                      </button>
+                      <button
+                        onClick={() => removeBuildRow(i)}
+                        className="w-7 h-7 rounded-sm border border-crimson/50 bg-ivory font-bold text-sm leading-none hover:border-crimson text-crimson"
+                        aria-label="Remove"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="text-[10px] font-semibold text-bronze-dark mt-1">
+                      {c?.bucket === "fighter" ? "fighter" : "gunship"} · slots {(c?.slots ?? 0) * b.quantity} · supply ₡{cost}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <button
+                onClick={addBuildRow}
+                disabled={(fighterFree <= 0 && gunshipFree <= 0) || strikecraftCatalog.length === 0}
+                className="w-full h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-[11px] font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed text-[#272d34]"
+              >
+                + Add Build Order
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 px-4 py-3 border-t border-bronze/40 bg-ivory-dark shrink-0">
@@ -1184,8 +1528,11 @@ function RepairPopup({
             Cancel
           </button>
           <button
-            onClick={() => onSave(rows.map(r => ({ ship_id: r.ship_id, amount: r.amount })))}
-            disabled={totalAssigned > cap}
+            onClick={() => onSave(
+              rows.map(r => ({ ship_id: r.ship_id, amount: r.amount })),
+              buildRows.filter(b => b.quantity > 0),
+            )}
+            disabled={totalAssigned > repairCap || supplyOver}
             className="flex-1 h-9 rounded-sm border-2 border-bronze bg-bronze/20 px-2 text-xs text-bronze-dark font-heading font-bold uppercase tracking-wider hover:bg-bronze/30 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save Order

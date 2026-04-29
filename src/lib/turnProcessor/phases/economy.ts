@@ -220,5 +220,135 @@ export const economyPhase: Phase = {
         });
       }
     }
+
+    // 5. Apply queued build_strikecraft orders.
+    //    Co-mingled with repair orders in the Repair & Replenish UI. Each unit
+    //    costs `point_cost` in fleet supply. Capacity is re-checked at process
+    //    time and any units that no longer fit are dropped (logged).
+    const buildOrders = ctx.orders.filter(
+      o => o.order_type === "other" && o.order_json?.kind === "build_strikecraft",
+    );
+    if (buildOrders.length > 0) {
+      // Cache: ship_type lookups (for cost / hull / class / capacity contributions).
+      const { data: stData } = await (supabase as any)
+        .from("ship_types")
+        .select("id, name, ship_id, class, hull, point_cost, fighter_bay, gun_ship_link");
+      const stMap = new Map<string, any>();
+      for (const r of (stData || [])) stMap.set(r.id, r);
+
+      let buildsApplied = 0;
+      for (const order of buildOrders) {
+        const gameFleetId = order.order_json?.fleet_id;
+        const items = (order.order_json?.items as Array<{ ship_type_id: string; quantity: number }>) || [];
+        if (!gameFleetId || items.length === 0) continue;
+
+        const { data: gf } = await (supabase as any)
+          .from("game_fleets").select("id, fleet_id, fleet_name").eq("id", gameFleetId).maybeSingle();
+        if (!gf?.fleet_id) continue;
+
+        const { data: fl } = await (supabase as any)
+          .from("fleets").select("id, current_supply").eq("id", gf.fleet_id).maybeSingle();
+        if (!fl) continue;
+
+        // Compute current capacity & usage from the live game roster.
+        const { data: gfShips } = await (supabase as any)
+          .from("game_fleet_ships").select("ship_type_id, quantity").eq("game_fleet_id", gameFleetId);
+        let fighterCap = 0, fighterUsed = 0, gunshipCap = 0, gunshipUsed = 0;
+        for (const r of (gfShips || [])) {
+          const st = stMap.get(r.ship_type_id);
+          if (!st) continue;
+          const qty = Number(r.quantity) || 0;
+          fighterCap += (Number(st.fighter_bay) || 0) * qty;
+          gunshipCap += (Number(st.gun_ship_link) || 0) * qty;
+          if (st.class === "FL") fighterUsed += 1 * qty;
+          else if (st.class === "FH") fighterUsed += 2 * qty;
+          else if (st.class === "GS") gunshipUsed += 1 * qty;
+        }
+
+        let supplyAvail = Number(fl.current_supply) || 0;
+        const built: Array<{ ship_type_id: string; class: string; granted: number; cost: number }> = [];
+        const dropped: Array<{ ship_type_id: string; class: string; reason: string; requested: number }> = [];
+
+        for (const item of items) {
+          const st = stMap.get(item.ship_type_id);
+          const requested = Math.max(0, Math.floor(Number(item.quantity) || 0));
+          if (!st || requested <= 0) continue;
+          const cls = String(st.class);
+          if (cls !== "FL" && cls !== "FH" && cls !== "GS") {
+            dropped.push({ ship_type_id: item.ship_type_id, class: cls, reason: "not a strikecraft class", requested });
+            continue;
+          }
+          const slotsPer = cls === "FH" ? 2 : 1;
+          const bucket: "fighter" | "gunship" = cls === "GS" ? "gunship" : "fighter";
+          const free = bucket === "fighter"
+            ? Math.max(0, fighterCap - fighterUsed)
+            : Math.max(0, gunshipCap - gunshipUsed);
+          const fitByCapacity = Math.floor(free / slotsPer);
+          const cost = Number(st.point_cost) || 0;
+          const fitBySupply = cost > 0 ? Math.floor(supplyAvail / cost) : requested;
+          const granted = Math.max(0, Math.min(requested, fitByCapacity, fitBySupply));
+          if (granted < requested) {
+            dropped.push({
+              ship_type_id: item.ship_type_id,
+              class: cls,
+              reason: granted === 0
+                ? (fitByCapacity === 0 ? "no capacity" : "no supply")
+                : "partial (capacity or supply limited)",
+              requested: requested - granted,
+            });
+          }
+          if (granted <= 0) continue;
+
+          // Insert one row per ship at full HP (matches snapshot trigger pattern).
+          const inserts = Array.from({ length: granted }).map(() => ({
+            game_fleet_id: gameFleetId,
+            ship_type_id: item.ship_type_id,
+            quantity: 1,
+            tactical_group: "Core",
+            current_hp: Number(st.hull) || null,
+            crippled: false,
+          }));
+          await (supabase as any).from("game_fleet_ships").insert(inserts);
+
+          // Deduct supply & consume capacity slots immediately so subsequent
+          // items in the same order respect the running totals.
+          const totalCost = cost * granted;
+          supplyAvail -= totalCost;
+          if (bucket === "fighter") fighterUsed += slotsPer * granted;
+          else gunshipUsed += slotsPer * granted;
+
+          built.push({ ship_type_id: item.ship_type_id, class: cls, granted, cost: totalCost });
+        }
+
+        // Persist new supply balance.
+        await (supabase as any).from("fleets").update({ current_supply: Math.max(0, supplyAvail) }).eq("id", fl.id);
+        buildsApplied++;
+
+        ctx.logs.push({
+          game_id: gameId,
+          turn_number: currentTurn,
+          phase: "economy",
+          log_type: "strikecraft_built",
+          message: `${gf.fleet_name || "Fleet"}: built ${built.reduce((s, b) => s + b.granted, 0)} strikecraft (${built.length} class(es))`,
+          details_json: {
+            fleet_id: fl.id,
+            game_fleet_id: gameFleetId,
+            built,
+            dropped,
+            supply_remaining: Math.max(0, supplyAvail),
+          },
+        });
+      }
+
+      if (buildsApplied > 0) {
+        ctx.logs.push({
+          game_id: gameId,
+          turn_number: currentTurn,
+          phase: "economy",
+          log_type: "strikecraft_summary",
+          message: `Applied ${buildsApplied} strikecraft build order(s).`,
+        });
+      }
+    }
   },
 };
