@@ -22,6 +22,8 @@ interface Props {
   /** Strategy roles drive which lanes are shown (mirrors FleetBuilder). */
   special1Role: string;
   special2Role: string;
+  /** When true, each ship is listed individually (no quantity, no remove button). */
+  listEachShip?: boolean;
 }
 
 const BASE_GROUPS = ["Core", "Attack"];
@@ -34,6 +36,7 @@ export default function FleetCompositionEditor({
   canEdit,
   special1Role,
   special2Role,
+  listEachShip = false,
 }: Props) {
   const { toast } = useToast();
   const [dragId, setDragId] = useState<string | null>(null);
@@ -115,6 +118,16 @@ export default function FleetCompositionEditor({
         const groupShips = ships.filter((s) => s.tactical_group === group);
         const isOver = dragOverGroup === group;
         const totalQty = groupShips.reduce((sum, s) => sum + s.quantity, 0);
+        const displayShips: FleetShipRow[] = listEachShip
+          ? groupShips.flatMap((s) =>
+              Array.from({ length: s.quantity }, (_, i) => ({
+                ...s,
+                quantity: 1,
+                // Suffix the key so React doesn't collide; id stays for drag mapping.
+                id: `${s.id}__${i}`,
+              }))
+            )
+          : groupShips;
         return (
           <div
             key={group}
@@ -146,27 +159,27 @@ export default function FleetCompositionEditor({
               </h4>
             </div>
             <div className="space-y-1">
-              {groupShips.length === 0 && canEdit && (
+              {displayShips.length === 0 && canEdit && !listEachShip && (
                 <p className="text-[9px] text-foreground/60 italic px-1">
                   Drop ships here
                 </p>
               )}
-              {groupShips.map((s) => (
+              {displayShips.map((s) => (
                 <div
                   key={s.id}
-                  draggable={canEdit}
-                  onDragStart={() => canEdit && setDragId(s.id)}
+                  draggable={canEdit && !listEachShip}
+                  onDragStart={() => canEdit && !listEachShip && setDragId(s.id)}
                   onDragEnd={() => {
                     setDragId(null);
                     setDragOverGroup(null);
                   }}
                   className={`flex items-center gap-1.5 rounded-sm px-1.5 py-1 transition-opacity ${
-                    canEdit
+                    canEdit && !listEachShip
                       ? "cursor-grab active:cursor-grabbing hover:bg-muted/50"
                       : ""
                   } ${dragId === s.id ? "opacity-40" : ""}`}
                 >
-                  {canEdit && (
+                  {canEdit && !listEachShip && (
                     <GripVertical className="h-3 w-3 text-foreground/60 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
@@ -178,7 +191,7 @@ export default function FleetCompositionEditor({
                       {s.hull_class}
                     </div>
                   </div>
-                  {canEdit ? (
+                  {!listEachShip && (canEdit ? (
                     <>
                       <input
                         type="number"
@@ -202,7 +215,7 @@ export default function FleetCompositionEditor({
                     <span className="font-bold text-bronze text-xs">
                       ×{s.quantity}
                     </span>
-                  )}
+                  ))}
                 </div>
               ))}
             </div>
