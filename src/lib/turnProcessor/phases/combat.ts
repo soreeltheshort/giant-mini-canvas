@@ -78,8 +78,10 @@ async function applyLosses(
         await supabase.from("game_fleet_ships").update({ current_hp: newHp, crippled: true }).eq("id", row.id);
         losses[`${row.ship_type_id}:${row.tactical_group}`] =
           (losses[`${row.ship_type_id}:${row.tactical_group}`] || 0) + 1;
+        totalRemaining += 1;
       } else {
         totalAfter += 1;
+        totalRemaining += 1;
         if (newHp < final.maxHull) {
           await supabase.from("game_fleet_ships").update({ current_hp: newHp, crippled: false }).eq("id", row.id);
         } else {
@@ -88,7 +90,7 @@ async function applyLosses(
         }
       }
     }
-    return { losses, totalBefore, totalAfter };
+    return { losses, totalBefore, totalAfter, totalRemaining };
   }
 
   // Legacy aggregate-row path (simulator only).
