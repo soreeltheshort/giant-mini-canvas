@@ -338,6 +338,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
   const activeMods = groupModifiers && groupModifiers.length > 0 ? groupModifiers : DEFAULT_GROUP_MODS;
   const cc = combatConsts ?? DEFAULT_COMBAT_CONSTANTS;
   const weaponPrefs = weaponTargetPrefs ?? [];
+  // Merge DB-loaded weapon stats over the hardcoded fallback so any keys not yet in the DB still resolve.
+  const activeWeaponStats: WeaponStatsMap = { ...WEAPON_STATS, ...(weaponStats ?? {}) };
   const activeGroundOutcomes = groundOutcomes ?? [];
   let currentGroundA = groundUnitsA;
   let currentGroundB = groundUnitsB + groundDefense;
