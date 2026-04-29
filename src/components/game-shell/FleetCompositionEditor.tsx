@@ -167,19 +167,19 @@ export default function FleetCompositionEditor({
               {displayShips.map((s) => (
                 <div
                   key={s.id}
-                  draggable={canEdit}
-                  onDragStart={() => canEdit && setDragId(s.id)}
+                  draggable={canEdit && !listEachShip}
+                  onDragStart={() => canEdit && !listEachShip && setDragId(s.id)}
                   onDragEnd={() => {
                     setDragId(null);
                     setDragOverGroup(null);
                   }}
                   className={`flex items-center gap-1.5 rounded-sm px-1.5 py-1 transition-opacity ${
-                    canEdit
+                    canEdit && !listEachShip
                       ? "cursor-grab active:cursor-grabbing hover:bg-muted/50"
                       : ""
                   } ${dragId === s.id ? "opacity-40" : ""}`}
                 >
-                  {canEdit && (
+                  {canEdit && !listEachShip && (
                     <GripVertical className="h-3 w-3 text-foreground/60 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
@@ -191,7 +191,7 @@ export default function FleetCompositionEditor({
                       {s.hull_class}
                     </div>
                   </div>
-                  {canEdit ? (
+                  {!listEachShip && (canEdit ? (
                     <>
                       <input
                         type="number"
@@ -215,7 +215,7 @@ export default function FleetCompositionEditor({
                     <span className="font-bold text-bronze text-xs">
                       ×{s.quantity}
                     </span>
-                  )}
+                  ))}
                 </div>
               ))}
             </div>
