@@ -1021,11 +1021,11 @@ function RepairPopup({
           <div className="grid grid-cols-3 gap-2 text-xs font-bold text-foreground">
             <div>
               <div className="text-[10px] uppercase tracking-wider text-bronze-dark font-semibold">Available Repair</div>
-              <div className="text-foreground font-bold text-sm">{availableRepair}</div>
+              <div className="font-bold text-sm text-[#272d34]">{availableRepair}</div>
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-wider text-bronze-dark font-semibold">Available Supply</div>
-              <div className="text-foreground font-bold text-sm">{availableSupply}</div>
+              <div className="font-bold text-sm text-[#272d34]">{availableSupply}</div>
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-wider text-bronze-dark font-semibold">Assigned / Cap</div>
@@ -1073,7 +1073,7 @@ function RepairPopup({
                       onClick={() => move(i, -1)}
                       disabled={i === 0}
                       aria-label="Move up"
-                      className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory text-foreground font-bold text-sm leading-none hover:border-bronze disabled:opacity-30"
+                      className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
                     >
                       ↑
                     </button>
@@ -1081,7 +1081,7 @@ function RepairPopup({
                       onClick={() => move(i, 1)}
                       disabled={i === rows.length - 1}
                       aria-label="Move down"
-                      className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory text-foreground font-bold text-sm leading-none hover:border-bronze disabled:opacity-30"
+                      className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
                     >
                       ↓
                     </button>
@@ -1112,7 +1112,7 @@ function RepairPopup({
                       <button
                         onClick={() => setAmount(i, r.amount - 1)}
                         disabled={r.amount <= 0}
-                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory text-foreground font-bold text-sm leading-none hover:border-bronze disabled:opacity-30"
+                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
                         aria-label="Decrease"
                       >
                         −
