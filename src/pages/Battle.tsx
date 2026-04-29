@@ -88,7 +88,7 @@ const Battle = () => {
     if (!snapA || !snapB) { toast({ title: "Failed to load fleets", variant: "destructive" }); setRunning(false); return; }
 
     // Shared loader — identical to what the in-game combat phase uses
-    const { phases, groupMods, combatConsts, weaponPrefs, groundOutcomes } = await loadBattleConfig(supabase);
+    const { phases, groupMods, combatConsts, weaponPrefs, groundOutcomes, weaponStats } = await loadBattleConfig(supabase);
 
     const usedSeed = seed || Math.random().toString(36).substring(2, 10);
     if (!seed) setSeed(usedSeed);
@@ -96,7 +96,7 @@ const Battle = () => {
     const groundUnitsA = calcGroundUnits(snapA);
     const groundUnitsB = calcGroundUnits(snapB);
 
-    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods, combatConsts, weaponPrefs, admiralA, admiralB, groundOutcomes, groundDefense, groundUnitsA, groundUnitsB);
+    const battleResult = runBattle(snapA, snapB, usedSeed, phases, groupMods, combatConsts, weaponPrefs, admiralA, admiralB, groundOutcomes, groundDefense, groundUnitsA, groundUnitsB, weaponStats);
     setFleetASnap(snapA);
     setFleetBSnap(snapB);
     setResult(battleResult);
