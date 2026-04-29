@@ -196,7 +196,11 @@ export const economyPhase: Phase = {
           0,
         );
         const maxSupplies = totalSupplyPods * supplyCoefficient;
-        const current = Math.min(Number(fl.current_supply) || 0, maxSupplies);
+        // Preserve any existing supply even if the fleet's capacity has shrunk
+        // (e.g. supply-pod ships were destroyed in a prior combat). Never write
+        // a value lower than what's already in storage.
+        const existing = Number(fl.current_supply) || 0;
+        const current = existing;
         const delta = Math.max(0, maxSupplies - current);
         const granted = Math.min(requested, delta);
         const next = current + granted;
