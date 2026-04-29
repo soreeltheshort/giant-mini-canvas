@@ -336,7 +336,15 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   // ── Supply (max = sum of supply_pod × coefficient) ──
   const maxSupply = totalSupply * supplyCoefficient;
   const currentSupply = Math.min(detail.current_supply, maxSupply);
-  const supplyDelta = Math.max(0, maxSupply - currentSupply);
+
+  // Repair orders consume supply (1 supply per HP). Subtract from current.
+  const pendingRepairOrder = pendingOrders.find(
+    o => o.order_type === "other" && o.order_json?.kind === "repair_fleet",
+  );
+  const pendingRepairCost = (pendingRepairOrder?.order_json?.assignments as RepairAssignment[] | undefined)
+    ?.reduce((sum, a) => sum + (Number(a.amount) || 0), 0) ?? 0;
+  const projectedSupply = Math.max(0, currentSupply - pendingRepairCost);
+  const supplyDelta = Math.max(0, maxSupply - projectedSupply);
 
   // If the slider hasn't been seeded yet (sentinel -1 from load), default to "fill up".
   if (replenishAmount < 0 && supplyDelta >= 0) {
@@ -428,7 +436,14 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
             valueClassName={readinessChanged ? "text-crimson" : undefined}
           />
           <Row label="Repair" value={`${availableRepair} / ${totalRepair}`} />
-          <Row label="Supply" value={`${currentSupply} / ${maxSupply}`} />
+          <Row
+            label="Supply"
+            value={
+              pendingRepairCost > 0
+                ? `${currentSupply} (${projectedSupply}) / ${maxSupply}`
+                : `${currentSupply} / ${maxSupply}`
+            }
+          />
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
           <Row label="Ships" value={`${totalShips}`} />
           
@@ -442,7 +457,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[hsl(20_25%_10%)] font-bold">Supply</span>
                 <span className="font-bold text-[hsl(20_25%_10%)]">
-                  {currentSupply + Math.min(replenishAmount, supplyDelta)} / {maxSupply}
+                  {projectedSupply + Math.min(replenishAmount, supplyDelta)} / {maxSupply}
                 </span>
               </div>
               <input
@@ -522,6 +537,15 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
               .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
             setPendingOrders(((po as any[]) || []) as PendingOrder[]);
+
+            // Auto-fill replenish slider to top off supply (post-repair).
+            // Each HP repaired costs 1 supply; refill back to maxSupply.
+            const repairCost = filtered.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+            const newProjected = Math.max(0, currentSupply - repairCost);
+            const newDelta = Math.max(0, maxSupply - newProjected);
+            setReplenishAmount(newDelta);
+            await persistReplenishAmount(newDelta);
+
             onOrdersChanged?.();
             setRepairOpen(false);
           }}
