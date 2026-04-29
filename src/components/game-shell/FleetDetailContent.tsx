@@ -1066,8 +1066,10 @@ function RepairPopup({
             return (
               <div
                 key={r.ship_id}
-                className={`border border-bronze/40 rounded-sm p-2 ${
-                  r.crippled ? "bg-crimson/10" : "bg-yellow-200/30"
+                className={`border rounded-sm p-2 ${
+                  r.crippled
+                    ? "bg-[hsl(25_85%_55%)]/30 border-[hsl(15_70%_35%)]"
+                    : "bg-[hsl(210_85%_88%)] border-[hsl(210_60%_45%)]"
                 }`}
               >
                 <div className="flex items-start gap-2">
@@ -1091,24 +1093,26 @@ function RepairPopup({
                   </div>
                   <div className="grow min-w-0">
                     <div className="flex items-baseline justify-between gap-2">
-                      <div className="text-xs font-bold text-[hsl(20_25%_10%)] truncate">
-                        <span className="text-bronze-dark mr-1">#{i + 1}</span>
+                      <div className="text-xs font-bold text-[hsl(20_25%_8%)] truncate">
+                        <span className="text-[hsl(20_25%_25%)] mr-1">#{i + 1}</span>
                         {r.ship_name}
                         {r.ship_display_id && (
-                          <span className="text-bronze-dark font-normal ml-1">
+                          <span className="text-[hsl(20_25%_25%)] font-semibold ml-1">
                             [{r.ship_display_id}]
                           </span>
                         )}
                         {r.crippled && (
-                          <span className="text-crimson font-bold ml-1">⚠</span>
+                          <span className="ml-1 px-1 py-0.5 text-[9px] font-heading font-bold uppercase tracking-wider bg-[hsl(15_75%_30%)] text-ivory rounded-sm">
+                            Crippled
+                          </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-bronze-dark shrink-0">{r.hull_class}</div>
+                      <div className="text-[10px] font-semibold text-[hsl(20_25%_15%)] shrink-0">{r.hull_class}</div>
                     </div>
-                    <div className="text-[11px] font-semibold text-[hsl(20_25%_10%)] mt-0.5">
+                    <div className="text-[11px] font-bold text-[hsl(20_25%_8%)] mt-0.5">
                       Hull: {r.current_hp} / {r.max_hp}
                       {r.amount > 0 && (
-                        <span className="text-crimson ml-1">→ {projected}</span>
+                        <span className="ml-1 px-1 rounded-sm bg-[hsl(140_50%_30%)] text-ivory font-bold">→ {projected}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 mt-1.5">
