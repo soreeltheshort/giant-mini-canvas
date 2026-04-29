@@ -167,6 +167,10 @@ export interface FleetSnapshot {
 
 interface ShipInstance {
   instanceId: string;
+  /** When the snapshot was loaded from a per-game roster, this is the
+   *  game_fleet_ships.id this ship represents. Used by combat persistence to
+   *  write back per-ship damage. Undefined for simulator runs. */
+  sourceRowId?: string;
   typeId: string;
   name: string;
   class: string;
