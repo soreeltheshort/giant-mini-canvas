@@ -400,21 +400,39 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   let totalSupply = 0;
   let minMapSpeed = Infinity;
   // Strikecraft capacity & current usage (FL = 1 fighter slot, FH = 2, GS = 1 gunship slot).
+  // Crippled non-strikecraft ships do NOT contribute bays/links/repair/sensors,
+  // but DO still hold supply and storage. Crippled strikecraft still occupy
+  // a slot (they're parked, not destroyed) and still count against capacity.
+  // Crippled ships also move at half map_speed.
   let fighterCap = 0, fighterUsed = 0, gunshipCap = 0, gunshipUsed = 0;
+  let fighterStorage = 0, gunshipStorage = 0;
   for (const s of ships) {
     const st = shipTypes.find(t => t.id === s.ship_type_id);
     if (!st) continue;
+    const isCrippled = !!s.crippled;
     baseMaintenance += (st.maintenance ?? 0) * s.quantity;
-    const repairContribution = (st.repair_pod ?? 0) * s.quantity;
+    // Crippled ships can't operate their repair pods.
+    const repairContribution = isCrippled ? 0 : (st.repair_pod ?? 0) * s.quantity;
     totalRepair += repairContribution;
     if (s.tactical_group === "Rear") availableRepair += repairContribution;
+    // Supply pods still hold supply even when crippled.
     totalSupply += (st.supply_pod ?? 0) * s.quantity;
-    if ((st.map_speed ?? 0) > 0 && st.map_speed! < minMapSpeed) minMapSpeed = st.map_speed!;
+    // Crippled ships move at half map_speed (round up, min 1 if originally >0).
+    const rawSpeed = st.map_speed ?? 0;
+    const effSpeed = rawSpeed > 0 && isCrippled ? Math.max(1, Math.ceil(rawSpeed / 2)) : rawSpeed;
+    if (effSpeed > 0 && effSpeed < minMapSpeed) minMapSpeed = effSpeed;
 
     const ext = shipTypeExtras.get(s.ship_type_id);
     if (ext) {
-      fighterCap += ext.fighter_bay * s.quantity;
-      gunshipCap += ext.gun_ship_link * s.quantity;
+      // Crippled non-strikecraft can't deploy → bays/links don't contribute capacity.
+      // Storage (passive holds) still counts.
+      if (!isCrippled) {
+        fighterCap += ext.fighter_bay * s.quantity;
+        gunshipCap += ext.gun_ship_link * s.quantity;
+      }
+      fighterStorage += ext.fighter_storage * s.quantity;
+      gunshipStorage += ext.gunship_storage * s.quantity;
+      // Strikecraft themselves still occupy a slot whether crippled or not.
       if (ext.class === "FL") fighterUsed += 1 * s.quantity;
       else if (ext.class === "FH") fighterUsed += 2 * s.quantity;
       else if (ext.class === "GS") gunshipUsed += 1 * s.quantity;
@@ -549,10 +567,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                 : `${currentSupply} / ${maxSupply}`
             }
           />
-          {(fighterCap > 0 || gunshipCap > 0) && (
+          {(fighterCap > 0 || gunshipCap > 0 || fighterStorage > 0 || gunshipStorage > 0) && (
             <>
-              {fighterCap > 0 && <Row label="Fighters" value={`${fighterUsed} / ${fighterCap}`} />}
-              {gunshipCap > 0 && <Row label="Gunships" value={`${gunshipUsed} / ${gunshipCap}`} />}
+              {fighterCap > 0 && <Row label="Fighter Bays" value={`${fighterUsed} / ${fighterCap}`} />}
+              {fighterStorage > 0 && <Row label="Fighter Storage" value={`${fighterStorage}`} />}
+              {gunshipCap > 0 && <Row label="Gunship Bays" value={`${gunshipUsed} / ${gunshipCap}`} />}
+              {gunshipStorage > 0 && <Row label="Gunship Storage" value={`${gunshipStorage}`} />}
             </>
           )}
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />

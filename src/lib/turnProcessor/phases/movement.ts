@@ -89,11 +89,12 @@ export const movementPhase: Phase = {
       // Determine effective map_speed: slowest non-zero map_speed in the fleet.
       // Read from per-game roster (`game_fleet_ships`) so we account for ships
       // already lost in combat — not the player's pristine saved fleet.
+      // Crippled ships move at HALF map_speed (round up, min 1).
       let effectiveSpeed = 1;
       try {
         const { data: composition } = await (supabase as any)
           .from("game_fleet_ships")
-          .select("ship_type_id, quantity")
+          .select("ship_type_id, quantity, crippled")
           .eq("game_fleet_id", fleet.fleet_id);
         const typeIds = (composition || []).map((c: any) => c.ship_type_id).filter(Boolean);
         if (typeIds.length > 0) {
@@ -101,9 +102,15 @@ export const movementPhase: Phase = {
             .from("ship_types")
             .select("id, map_speed")
             .in("id", typeIds);
-          const speeds = (typeRows || [])
-            .map((t: any) => Number(t.map_speed) || 0)
-            .filter((s: number) => s > 0);
+          const speedById = new Map<string, number>();
+          for (const t of (typeRows || [])) speedById.set(t.id, Number(t.map_speed) || 0);
+          const speeds: number[] = [];
+          for (const c of (composition || [])) {
+            const raw = speedById.get(c.ship_type_id) || 0;
+            if (raw <= 0) continue;
+            const eff = c.crippled ? Math.max(1, Math.ceil(raw / 2)) : raw;
+            speeds.push(eff);
+          }
           if (speeds.length > 0) effectiveSpeed = Math.min(...speeds);
         }
       } catch {
