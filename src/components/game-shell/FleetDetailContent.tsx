@@ -94,6 +94,11 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const [replenishOpen, setReplenishOpen] = useState(false);
   const [repairOpen, setRepairOpen] = useState(false);
   const [replenishAmount, setReplenishAmount] = useState(0);
+  // Extra ship-type data (capacity + cost) needed for build-strikecraft orders.
+  // Keyed by ship_type_id.
+  const [shipTypeExtras, setShipTypeExtras] = useState<Map<string, ShipTypeExtra>>(new Map());
+  // Catalog of buildable strikecraft classes (FL/FH/GS), used in the build queue UI.
+  const [strikecraftCatalog, setStrikecraftCatalog] = useState<StrikecraftCatalogEntry[]>([]);
 
   const sourceId = fleet.source_fleet_id;
 
