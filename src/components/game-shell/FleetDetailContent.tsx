@@ -1062,8 +1062,16 @@ interface RepairPopupProps {
   availableRepair: number;
   availableSupply: number;
   existingAssignments: RepairAssignment[];
+  /** Build-strikecraft items already queued (to seed the popup). */
+  existingBuildItems: BuildItem[];
+  /** Selectable strikecraft (FL/FH/GS) for new build orders. */
+  strikecraftCatalog: StrikecraftCatalogEntry[];
+  fighterCap: number;
+  fighterUsed: number;
+  gunshipCap: number;
+  gunshipUsed: number;
   onClose: () => void;
-  onSave: (assignments: RepairAssignment[]) => void | Promise<void>;
+  onSave: (assignments: RepairAssignment[], buildItems: BuildItem[]) => void | Promise<void>;
 }
 
 interface RepairRow {
