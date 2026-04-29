@@ -157,9 +157,16 @@ export const economyPhase: Phase = {
       o => o.order_type === "other" && o.order_json?.kind === "replenish_supply",
     );
     if (replenishOrders.length > 0) {
-      const { data: coeffRow } = await (supabase as any)
-        .from("combat_constants").select("value").eq("key", "supply_capacity_coefficient").maybeSingle();
-      const supplyCoefficient = Number(coeffRow?.value) || 10;
+      const { data: constRows } = await (supabase as any)
+        .from("combat_constants").select("key, value")
+        .in("key", ["supply_capacity_coefficient", "supply_cost_coefficient"]);
+      const constMap = new Map<string, number>(
+        (constRows || []).map((r: any) => [r.key, Number(r.value)]),
+      );
+      const supplyCoefficient = constMap.get("supply_capacity_coefficient") || 10;
+      const supplyCostCoefficient = constMap.has("supply_cost_coefficient")
+        ? (constMap.get("supply_cost_coefficient") as number)
+        : 1;
 
       const { data: allShipTypes } = await (supabase as any)
         .from("ship_types").select("id, supply_pod");
@@ -193,8 +200,18 @@ export const economyPhase: Phase = {
         const delta = Math.max(0, maxSupplies - current);
         const granted = Math.min(requested, delta);
         const next = current + granted;
+        const cost = Math.ceil(granted * supplyCostCoefficient);
 
         await (supabase as any).from("fleets").update({ current_supply: next }).eq("id", fl.id);
+
+        // Charge the ordering player's treasury via the maintenance accumulator.
+        const orderingPlayer = ctx.players.find(p => p.id === order.player_id);
+        if (orderingPlayer && cost > 0) {
+          const econ = ctx.playerEcon.get(orderingPlayer.player_slot) || { tribute: 0, maintenance: 0 };
+          econ.maintenance += cost;
+          ctx.playerEcon.set(orderingPlayer.player_slot, econ);
+        }
+
         supplyApplied++;
 
         ctx.logs.push({
@@ -202,10 +219,11 @@ export const economyPhase: Phase = {
           turn_number: currentTurn,
           phase: "economy",
           log_type: "supply_replenished",
-          message: `${gf.fleet_name || "Fleet"}: supply ${current} → ${next} / ${maxSupplies} (requested ${requested})`,
+          message: `${gf.fleet_name || "Fleet"}: supply ${current} → ${next} / ${maxSupplies} (requested ${requested}, cost ${cost})`,
           details_json: {
             fleet_id: fl.id, game_fleet_id: gameFleetId,
             current, granted, next, max: maxSupplies, requested,
+            cost, supply_cost_coefficient: supplyCostCoefficient,
           },
         });
       }
