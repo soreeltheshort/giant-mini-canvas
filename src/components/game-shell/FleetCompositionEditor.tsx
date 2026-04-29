@@ -36,6 +36,7 @@ export default function FleetCompositionEditor({
   canEdit,
   special1Role,
   special2Role,
+  listEachShip = false,
 }: Props) {
   const { toast } = useToast();
   const [dragId, setDragId] = useState<string | null>(null);
