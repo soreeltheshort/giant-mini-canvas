@@ -117,7 +117,7 @@ async function applyLosses(
       await supabase.from(table).update({ quantity: survivors }).eq("id", row.id);
     }
   }
-  return { losses, totalBefore, totalAfter };
+  return { losses, totalBefore, totalAfter, totalRemaining };
 }
 
 export const combatPhase: Phase = {
