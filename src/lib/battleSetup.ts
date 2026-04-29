@@ -160,12 +160,14 @@ export async function loadBattleConfig(supabase: SupabaseClient): Promise<Battle
     { data: constsData },
     { data: weaponPrefsData },
     { data: groundOutcomesData },
+    { data: weaponsData },
   ] = await Promise.all([
     (supabase as any).from("battle_phases").select("*").order("seq_order"),
     (supabase as any).from("group_modifiers").select("*"),
     (supabase as any).from("combat_constants").select("*"),
     (supabase as any).from("weapon_target_preferences").select("*").order("priority"),
     (supabase as any).from("ground_combat_outcomes").select("*").order("probability"),
+    (supabase as any).from("weapons").select("weapon_key, type, damage, hit_chance, armor_penetration"),
   ]);
 
   const phases: PhaseConfig[] | undefined = (phasesData || []).map((p: any) => ({
@@ -185,8 +187,23 @@ export async function loadBattleConfig(supabase: SupabaseClient): Promise<Battle
   const groundOutcomes: GroundCombatOutcome[] | undefined = (groundOutcomesData || []).map((o: any) => ({
     probability: Number(o.probability), damage: Number(o.damage),
   }));
+  // Build weapon stats map keyed by engine weapon_key. Skip rows without a key.
+  const weaponStats: WeaponStatsMap | undefined = weaponsData
+    ? (weaponsData as any[]).reduce((acc, row) => {
+        if (!row.weapon_key) return acc;
+        const t = String(row.type || "").toLowerCase();
+        const type: "laser" | "missile" = t === "missile" ? "missile" : "laser";
+        acc[row.weapon_key] = {
+          type,
+          damage: Number(row.damage) || 0,
+          hitChance: Number(row.hit_chance) || 0,
+          armorPenetration: Number(row.armor_penetration) || 0,
+        };
+        return acc;
+      }, {} as WeaponStatsMap)
+    : undefined;
 
-  return { phases, groupMods, combatConsts, weaponPrefs, groundOutcomes };
+  return { phases, groupMods, combatConsts, weaponPrefs, groundOutcomes, weaponStats };
 }
 
 /** Sum of ground_invasion across "Attack Planet" tactical group ships. */
