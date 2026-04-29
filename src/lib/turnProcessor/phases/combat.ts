@@ -43,10 +43,11 @@ async function applyLosses(
   supabase: any,
   rows: FleetCompositionRow[],
   finalShips: Array<{ typeId: string; tacticalGroup: string; crippled: boolean; sourceRowId?: string; currentHull: number; maxHull: number }>,
-): Promise<{ losses: Record<string, number>; totalBefore: number; totalAfter: number }> {
+): Promise<{ losses: Record<string, number>; totalBefore: number; totalAfter: number; totalRemaining: number }> {
   const losses: Record<string, number> = {};
   let totalBefore = 0;
   let totalAfter = 0;
+  let totalRemaining = 0; // active + crippled (rows still in the fleet)
 
   // Detect per-game roster mode by presence of sourceRowId on any survivor.
   const isPerInstance = rows.length > 0 && rows[0].source === "game_fleet_ships";
