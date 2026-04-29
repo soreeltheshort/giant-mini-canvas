@@ -453,17 +453,21 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     const atkBreakdown = getVirtualAttackSpeed(attacker, admiralAtkBonus, attackerReadiness);
 
     for (const mount of mounts) {
-      // Each weapon mount selects its own target based on weapon preferences
-      const { priority: targetPriority, source: targetSource } = getWeaponTargetPriority(mount.key, attacker.target_preference);
-      const target = selectTarget(attacker, enemies, mount.key);
-      if (!target) continue;
-
-      const admiralDefBonus = target.fleet === "A" ? admiralBonusA : admiralBonusB;
-      const defenderReadiness = target.fleet === "A" ? readinessA : readinessB;
-      const defBreakdown = getVirtualDefenseSpeed(target, admiralDefBonus, defenderReadiness);
-      const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
+      // Each weapon mount uses its own preferences for target selection.
+      const { source: targetSource } = getWeaponTargetPriority(mount.key, attacker.target_preference);
 
       for (let gun = 0; gun < mount.count; gun++) {
+        // Re-pick a target for every shot — ships do not maintain a fixed target
+        // between guns or between attackers; each shot randomly chooses from the
+        // currently valid favorite-class targets.
+        const target = selectTarget(attacker, enemies, mount.key);
+        if (!target) continue;
+
+        const admiralDefBonus = target.fleet === "A" ? admiralBonusA : admiralBonusB;
+        const defenderReadiness = target.fleet === "A" ? readinessA : readinessB;
+        const defBreakdown = getVirtualDefenseSpeed(target, admiralDefBonus, defenderReadiness);
+        const defenseMod = getGroupModifier(target.tacticalGroup, "defense", activeMods);
+
 
         const speedDiff = (atkBreakdown.finalSpeed - defBreakdown.finalSpeed) * cc.speed_hit_modifier;
         const hitChance = Math.min(cc.hit_chance_max, Math.max(cc.hit_chance_min, cc.base_hit_chance + attackMod - defenseMod + speedDiff));
