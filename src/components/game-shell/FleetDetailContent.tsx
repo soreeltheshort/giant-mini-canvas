@@ -314,13 +314,16 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const totalShips = ships.reduce((sum, s) => sum + (s.quantity || 0), 0);
   let baseMaintenance = 0;
   let totalRepair = 0;
+  let availableRepair = 0;
   let totalSupply = 0;
   let minMapSpeed = Infinity;
   for (const s of ships) {
     const st = shipTypes.find(t => t.id === s.ship_type_id);
     if (!st) continue;
     baseMaintenance += (st.maintenance ?? 0) * s.quantity;
-    totalRepair += (st.repair_pod ?? 0) * s.quantity;
+    const repairContribution = (st.repair_pod ?? 0) * s.quantity;
+    totalRepair += repairContribution;
+    if (s.tactical_group === "Rear") availableRepair += repairContribution;
     totalSupply += (st.supply_pod ?? 0) * s.quantity;
     if ((st.map_speed ?? 0) > 0 && st.map_speed! < minMapSpeed) minMapSpeed = st.map_speed!;
   }
