@@ -1465,7 +1465,7 @@ function RepairPopup({
                       >
                         {strikecraftCatalog.map(s => (
                           <option key={s.id} value={s.id}>
-                            {s.name} [{s.class}] · ₡{s.point_cost}
+                            {s.name} [{s.class}] · {s.point_cost} supply
                           </option>
                         ))}
                       </select>
