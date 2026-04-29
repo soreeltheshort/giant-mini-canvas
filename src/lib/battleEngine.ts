@@ -377,7 +377,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           maxHull: fs.ship_type.hull,
           currentHull: startHull,
           armor: fs.ship_type.armor,
-          weapons: getWeaponMounts(fs.ship_type),
+          weapons: getWeaponMounts(fs.ship_type, activeWeaponStats),
           sensor_rating: fs.ship_type.sensor_rating,
           cbt_speed: fs.ship_type.cbt_speed,
           tacticalGroup: fs.tactical_group,
