@@ -491,7 +491,46 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         <FleetActionPopup title="Fleet Replenish" onClose={() => setReplenishOpen(false)} />
       )}
       {repairOpen && (
-        <FleetActionPopup title="Fleet Repair" onClose={() => setRepairOpen(false)} />
+        <RepairPopup
+          ships={ships}
+          availableRepair={availableRepair}
+          availableSupply={currentSupply}
+          existingAssignments={(pendingOrders.find(
+            o => o.order_type === "other" && o.order_json?.kind === "repair_fleet",
+          )?.order_json?.assignments as RepairAssignment[] | undefined) ?? []}
+          onClose={() => setRepairOpen(false)}
+          onSave={async (assignments) => {
+            if (!orderContext) return;
+            const { gameId, playerId, turnNumber } = orderContext;
+            await (supabase as any).from("player_orders")
+              .delete()
+              .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+              .eq("order_type", "other")
+              .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
+              .filter("order_json->>kind", "eq", "repair_fleet");
+            const filtered = assignments.filter(a => a.amount > 0);
+            if (filtered.length > 0) {
+              await (supabase as any).from("player_orders").insert({
+                game_id: gameId, player_id: playerId, turn_number: turnNumber,
+                order_type: "other",
+                order_json: {
+                  fleet_id: fleet.fleet_id,
+                  kind: "repair_fleet",
+                  assignments: filtered,
+                },
+              });
+              playOrderPlaced();
+            }
+            // Refresh local pending orders
+            const { data: po } = await (supabase as any).from("player_orders")
+              .select("id, order_type, order_json")
+              .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+              .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
+            setPendingOrders(((po as any[]) || []) as PendingOrder[]);
+            onOrdersChanged?.();
+            setRepairOpen(false);
+          }}
+        />
       )}
 
       <ImperialCard title="Orders">
