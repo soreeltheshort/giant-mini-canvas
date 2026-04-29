@@ -251,15 +251,21 @@ export const economyPhase: Phase = {
         if (!fl) continue;
 
         // Compute current capacity & usage from the live game roster.
+        // Crippled non-strikecraft can't deploy fighters/gunships, so their
+        // bays/links don't contribute capacity. Crippled strikecraft still
+        // occupy a slot.
         const { data: gfShips } = await (supabase as any)
-          .from("game_fleet_ships").select("ship_type_id, quantity").eq("game_fleet_id", gameFleetId);
+          .from("game_fleet_ships").select("ship_type_id, quantity, crippled").eq("game_fleet_id", gameFleetId);
         let fighterCap = 0, fighterUsed = 0, gunshipCap = 0, gunshipUsed = 0;
         for (const r of (gfShips || [])) {
           const st = stMap.get(r.ship_type_id);
           if (!st) continue;
           const qty = Number(r.quantity) || 0;
-          fighterCap += (Number(st.fighter_bay) || 0) * qty;
-          gunshipCap += (Number(st.gun_ship_link) || 0) * qty;
+          const isCrippled = !!r.crippled;
+          if (!isCrippled) {
+            fighterCap += (Number(st.fighter_bay) || 0) * qty;
+            gunshipCap += (Number(st.gun_ship_link) || 0) * qty;
+          }
           if (st.class === "FL") fighterUsed += 1 * qty;
           else if (st.class === "FH") fighterUsed += 2 * qty;
           else if (st.class === "GS") gunshipUsed += 1 * qty;
