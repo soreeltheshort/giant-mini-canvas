@@ -590,11 +590,16 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               const canRepair = ships.some(
                 s => s.crippled || (s.current_hp != null && s.max_hp != null && s.current_hp < s.max_hp),
               );
-              const disabled = !canReplenish && !canRepair;
+              // Build orders are available whenever there is unused fighter or
+              // gunship capacity (regardless of damage state).
+              const canBuild =
+                strikecraftCatalog.length > 0 &&
+                (fighterCap - fighterUsed > 0 || gunshipCap - gunshipUsed > 0);
+              const disabled = !canReplenish && !canRepair && !canBuild;
               return (
                 <button
                   onClick={() => {
-                    if (canRepair) setRepairOpen(true);
+                    if (canRepair || canBuild) setRepairOpen(true);
                     if (canReplenish) setReplenishOpen(true);
                   }}
                   disabled={disabled}
@@ -619,27 +624,56 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           existingAssignments={(pendingOrders.find(
             o => o.order_type === "other" && o.order_json?.kind === "repair_fleet",
           )?.order_json?.assignments as RepairAssignment[] | undefined) ?? []}
+          existingBuildItems={pendingBuildItems}
+          strikecraftCatalog={strikecraftCatalog}
+          fighterCap={fighterCap}
+          fighterUsed={fighterUsed}
+          gunshipCap={gunshipCap}
+          gunshipUsed={gunshipUsed}
           onClose={() => setRepairOpen(false)}
-          onSave={async (assignments) => {
+          onSave={async (assignments, buildItems) => {
             if (!orderContext) return;
             const { gameId, playerId, turnNumber } = orderContext;
+            // Clear both repair and build orders for this fleet+turn, then re-insert
+            // any non-empty queues.
             await (supabase as any).from("player_orders")
               .delete()
               .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
               .eq("order_type", "other")
               .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
               .filter("order_json->>kind", "eq", "repair_fleet");
-            const filtered = assignments.filter(a => a.amount > 0);
-            if (filtered.length > 0) {
+            await (supabase as any).from("player_orders")
+              .delete()
+              .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+              .eq("order_type", "other")
+              .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
+              .filter("order_json->>kind", "eq", "build_strikecraft");
+
+            const filteredRepairs = assignments.filter(a => a.amount > 0);
+            if (filteredRepairs.length > 0) {
               await (supabase as any).from("player_orders").insert({
                 game_id: gameId, player_id: playerId, turn_number: turnNumber,
                 order_type: "other",
                 order_json: {
                   fleet_id: fleet.fleet_id,
                   kind: "repair_fleet",
-                  assignments: filtered,
+                  assignments: filteredRepairs,
                 },
               });
+            }
+            const filteredBuilds = buildItems.filter(b => b.quantity > 0);
+            if (filteredBuilds.length > 0) {
+              await (supabase as any).from("player_orders").insert({
+                game_id: gameId, player_id: playerId, turn_number: turnNumber,
+                order_type: "other",
+                order_json: {
+                  fleet_id: fleet.fleet_id,
+                  kind: "build_strikecraft",
+                  items: filteredBuilds,
+                },
+              });
+            }
+            if (filteredRepairs.length > 0 || filteredBuilds.length > 0) {
               playOrderPlaced();
             }
             // Refresh local pending orders
@@ -649,10 +683,14 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
             setPendingOrders(((po as any[]) || []) as PendingOrder[]);
 
-            // Auto-fill replenish slider to top off supply (post-repair).
-            // Each HP repaired costs 1 supply; refill back to maxSupply.
-            const repairCost = filtered.reduce((s, a) => s + (Number(a.amount) || 0), 0);
-            const newProjected = Math.max(0, currentSupply - repairCost);
+            // Auto-fill replenish slider to top off supply (post-repair AND post-build).
+            // Repairs cost 1 supply per HP; builds cost point_cost per ship.
+            const repairCost = filteredRepairs.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+            const buildCost = filteredBuilds.reduce((s, b) => {
+              const ext = shipTypeExtras.get(b.ship_type_id);
+              return s + (ext?.point_cost ?? 0) * (Number(b.quantity) || 0);
+            }, 0);
+            const newProjected = Math.max(0, currentSupply - repairCost - buildCost);
             const newDelta = Math.max(0, maxSupply - newProjected);
             setReplenishAmount(newDelta);
             await persistReplenishAmount(newDelta);
