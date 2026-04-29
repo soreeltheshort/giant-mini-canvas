@@ -427,15 +427,19 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     const { priority } = weaponKey
       ? getWeaponTargetPriority(weaponKey, attacker.target_preference)
       : { priority: getTargetPriority(attacker.target_preference) };
+    // A ship at 0 hull is effectively destroyed even if its `crippled` flag has
+    // not yet been set (deferred crippling runs at end of weapon pass). Exclude
+    // such ships so attackers don't waste shots on already-dead targets.
+    const isValidTarget = (e: ShipInstance) => !e.crippled && e.currentHull > 0;
     for (const hullClass of priority) {
-      const damaged = enemies.filter(e => e.hull_class === hullClass && !e.crippled && e.currentHull < e.maxHull);
+      const damaged = enemies.filter(e => e.hull_class === hullClass && isValidTarget(e) && e.currentHull < e.maxHull);
       if (damaged.length > 0) return damaged[Math.floor(rng() * damaged.length)];
     }
     for (const hullClass of priority) {
-      const targets = enemies.filter(e => e.hull_class === hullClass && !e.crippled);
+      const targets = enemies.filter(e => e.hull_class === hullClass && isValidTarget(e));
       if (targets.length > 0) return targets[Math.floor(rng() * targets.length)];
     }
-    const remaining = enemies.filter(e => !e.crippled);
+    const remaining = enemies.filter(isValidTarget);
     return remaining.length > 0 ? remaining[Math.floor(rng() * remaining.length)] : null;
   }
 
