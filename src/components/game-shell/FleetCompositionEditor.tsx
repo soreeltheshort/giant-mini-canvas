@@ -118,6 +118,16 @@ export default function FleetCompositionEditor({
         const groupShips = ships.filter((s) => s.tactical_group === group);
         const isOver = dragOverGroup === group;
         const totalQty = groupShips.reduce((sum, s) => sum + s.quantity, 0);
+        const displayShips: FleetShipRow[] = listEachShip
+          ? groupShips.flatMap((s) =>
+              Array.from({ length: s.quantity }, (_, i) => ({
+                ...s,
+                quantity: 1,
+                // Suffix the key so React doesn't collide; id stays for drag mapping.
+                id: `${s.id}__${i}`,
+              }))
+            )
+          : groupShips;
         return (
           <div
             key={group}
