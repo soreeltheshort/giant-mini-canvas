@@ -327,6 +327,7 @@ const DEFAULT_COMBAT_CONSTANTS: CombatConstants = {
   critical_hit_chance: 0.05,
   critical_hit_multiplier: 2.0,
   speed_hit_modifier: 0.02,
+  cripple_hp_threshold: 0.25,
 };
 
 function getGroupModifier(group: string, type: "attack" | "defense", modifiers: GroupModConfig[]): number {
