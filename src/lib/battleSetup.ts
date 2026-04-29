@@ -83,7 +83,7 @@ export async function loadFleetSnapshot(
     parentId = gameFleetId;
     const { data } = await (supabase as any)
       .from("game_fleet_ships")
-      .select("id, game_fleet_id, ship_type_id, quantity, tactical_group, ship_types(*)")
+      .select("id, game_fleet_id, ship_type_id, quantity, tactical_group, current_hp, crippled, ship_types(*)")
       .eq("game_fleet_id", gameFleetId);
     ships = data || [];
   } else {
@@ -103,15 +103,46 @@ export async function loadFleetSnapshot(
       ship_type_id: s.ship_type_id,
       quantity: s.quantity,
       tactical_group: s.tactical_group,
+      current_hp: s.current_hp ?? null,
+      crippled: !!s.crippled,
     }));
 
-  const shipsForSnap: FleetShipData[] = ships
-    .filter((s: any) => s.quantity > 0 && s.ship_types)
-    .map((s: any) => ({
-      ship_type: s.ship_types as ShipTypeData,
-      quantity: s.quantity,
-      tactical_group: s.tactical_group,
-    }));
+  // Build snapshot ships. For per-game rosters we now have one row per ship,
+  // so we group by (ship_type, tactical_group) and pass the per-instance state
+  // through `instances` so the engine carries over HP/crippled and we can map
+  // survivors back to their source rows.
+  const groupKey = (s: any) => `${s.ship_type_id}|${s.tactical_group}`;
+  const grouped = new Map<string, any[]>();
+  for (const s of ships) {
+    if (!s.ship_types || s.quantity <= 0) continue;
+    const k = groupKey(s);
+    const arr = grouped.get(k) ?? [];
+    arr.push(s);
+    grouped.set(k, arr);
+  }
+  const shipsForSnap: FleetShipData[] = Array.from(grouped.values()).map((group) => {
+    const first = group[0];
+    const totalQty = group.reduce((sum, g) => sum + g.quantity, 0);
+    const instances: FleetShipData["instances"] = [];
+    if (source === "game_fleet_ships") {
+      for (const g of group) {
+        // quantity is normally 1 per row in the per-game roster; defensive loop
+        for (let i = 0; i < g.quantity; i++) {
+          instances.push({
+            sourceRowId: g.id,
+            currentHull: g.current_hp ?? undefined,
+            crippled: !!g.crippled,
+          });
+        }
+      }
+    }
+    return {
+      ship_type: first.ship_types as ShipTypeData,
+      quantity: totalQty,
+      tactical_group: first.tactical_group,
+      ...(source === "game_fleet_ships" ? { instances } : {}),
+    };
+  });
 
   return {
     snapshot: { id: fleet.id, name: fleet.name, readiness: fleet.readiness ?? 2, ships: shipsForSnap },
