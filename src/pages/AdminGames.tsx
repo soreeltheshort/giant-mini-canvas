@@ -18,6 +18,7 @@ import { importFromSqlite, exportToSqlite } from "@/lib/mapDatabase";
 import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { processNextTurn, DEFAULT_TURN_CONSTANTS, ShipTypeForUpkeep } from "@/lib/turnEngine";
 import { runTurnProcessor } from "@/lib/turnProcessor";
+import { runTurnZero } from "@/lib/turnZero";
 import { SystemData, MapState } from "@/lib/mapTypes";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
 import { Badge } from "@/components/ui/badge";
