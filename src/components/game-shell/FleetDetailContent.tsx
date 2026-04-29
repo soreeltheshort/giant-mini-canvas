@@ -147,6 +147,48 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     return () => { cancelled = true; };
   }, []);
 
+  // Fetch ship-type extras (capacity, point_cost, hull) and the buildable
+  // strikecraft catalog. One-shot fetch; ship_types is small and rarely changes.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("ship_types")
+        .select("id, name, ship_id, class, hull_class, hull, point_cost, fighter_bay, fighter_storage, gun_ship_link, gunship_storage");
+      if (cancelled || !data) return;
+      const extras = new Map<string, ShipTypeExtra>();
+      const catalog: StrikecraftCatalogEntry[] = [];
+      for (const r of data as any[]) {
+        extras.set(r.id, {
+          fighter_bay: Number(r.fighter_bay) || 0,
+          fighter_storage: Number(r.fighter_storage) || 0,
+          gun_ship_link: Number(r.gun_ship_link) || 0,
+          gunship_storage: Number(r.gunship_storage) || 0,
+          point_cost: Number(r.point_cost) || 0,
+          hull: Number(r.hull) || 0,
+          class: r.class || "",
+        });
+        const cls = String(r.class || "");
+        if (cls === "FL" || cls === "FH" || cls === "GS") {
+          catalog.push({
+            id: r.id,
+            name: r.name,
+            ship_id: r.ship_id || "",
+            class: cls,
+            point_cost: Number(r.point_cost) || 0,
+            hull: Number(r.hull) || 0,
+            slots: cls === "FH" ? 2 : 1,
+            bucket: cls === "GS" ? "gunship" : "fighter",
+          });
+        }
+      }
+      catalog.sort((a, b) => a.point_cost - b.point_cost || a.name.localeCompare(b.name));
+      setShipTypeExtras(extras);
+      setStrikecraftCatalog(catalog);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
