@@ -41,21 +41,32 @@ export async function materializeGameFleets(
   const updatedFleets: MapFleet[] = [];
 
   for (const fl of fleets) {
-    // Already a real UUID and the row exists → reuse.
+    // Already a real UUID for a game_fleets row → reuse.
     if (UUID_RE.test(fl.fleet_id) && existingById.has(fl.fleet_id)) {
       reused += 1;
       updatedFleets.push(fl);
       continue;
     }
 
-    // Insert a new game_fleets row. The trigger snapshots ships into
-    // game_fleet_ships automatically.
-    // We use fl.fleet_id as the source_fleet_id reference for the trigger
+    // The saved-fleet template UUID lives on `source_fleet_id`. Map-editor
+    // synthetic ids (mf-...) live on `fleet_id`. The snapshot trigger reads
+    // `fleet_ships WHERE fleet_id = NEW.fleet_id`, so we MUST insert the real
+    // saved-fleet UUID here, otherwise the per-game roster comes up empty.
+    const sourceFleetId = UUID_RE.test(fl.source_fleet_id || "")
+      ? fl.source_fleet_id
+      : (UUID_RE.test(fl.fleet_id) ? fl.fleet_id : null);
+
+    if (!sourceFleetId) {
+      console.error("[materializeGameFleets] no valid source_fleet_id for fleet", fl);
+      updatedFleets.push(fl);
+      continue;
+    }
+
     const { data: inserted, error } = await (supabase as any)
       .from("game_fleets")
       .insert({
         game_id: gameId,
-        fleet_id: fl.fleet_id,
+        fleet_id: sourceFleetId,
         fleet_name: fl.fleet_name || "",
         owner_classification: fl.owner_classification || "",
         hex_x: fl.hex_x,
