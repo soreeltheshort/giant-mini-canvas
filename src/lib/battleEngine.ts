@@ -83,8 +83,14 @@ interface WeaponMount {
   armorPenetration: number;
 }
 
-// Weapon stats lookup: damage per mount and base hit chance
-const WEAPON_STATS: Record<string, { type: "laser" | "missile"; damage: number; hitChance: number; armorPenetration: number }> = {
+// Weapon stats lookup: damage per mount and base hit chance.
+// These are FALLBACK values used only if no DB-loaded stats are passed to
+// runBattle(). The authoritative values live in the `weapons` table and are
+// loaded via loadBattleConfig() in battleSetup.ts.
+export type WeaponStat = { type: "laser" | "missile"; damage: number; hitChance: number; armorPenetration: number };
+export type WeaponStatsMap = Record<string, WeaponStat>;
+
+const WEAPON_STATS: WeaponStatsMap = {
   laser_2_5cm:    { type: "laser",   damage: 1,  hitChance: 0.75, armorPenetration: 0 },
   laser_4_5cm:    { type: "laser",   damage: 2,  hitChance: 0.70, armorPenetration: 0 },
   laser_6_5cm:    { type: "laser",   damage: 3,  hitChance: 0.68, armorPenetration: 1 },
@@ -114,13 +120,13 @@ const WEAPON_DISPLAY_NAMES: Record<string, string> = {
   missile_half_kt: "½kt Missile",
 };
 
-function getWeaponMounts(shipType: ShipTypeData): WeaponMount[] {
+function getWeaponMounts(shipType: ShipTypeData, statsMap: WeaponStatsMap): WeaponMount[] {
   const mounts: WeaponMount[] = [];
-  for (const [key, stats] of Object.entries(WEAPON_STATS)) {
+  for (const [key, stats] of Object.entries(statsMap)) {
     const count = (shipType as any)[key] as number;
     if (count > 0) {
       mounts.push({
-        name: WEAPON_DISPLAY_NAMES[key],
+        name: WEAPON_DISPLAY_NAMES[key] ?? key,
         key,
         type: stats.type,
         count,
