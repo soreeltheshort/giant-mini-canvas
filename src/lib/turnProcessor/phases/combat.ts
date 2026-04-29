@@ -171,7 +171,7 @@ export const combatPhase: Phase = {
     const effectiveAttackOrders = attackOrders.filter(o => !droppedOrderIds.has(o.id));
 
     // Battle config (shared across all engagements this turn — same as simulator)
-    const { phases, groupMods, combatConsts, weaponPrefs, groundOutcomes } = await loadBattleConfig(supabase as any);
+    const { phases, groupMods, combatConsts, weaponPrefs, groundOutcomes, weaponStats } = await loadBattleConfig(supabase as any);
 
     let resolved = 0;
 
