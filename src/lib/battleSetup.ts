@@ -31,6 +31,9 @@ export interface FleetCompositionRow {
   ship_type_id: string;
   quantity: number;
   tactical_group: string;
+  /** Per-ship state (only meaningful when source = "game_fleet_ships"). */
+  current_hp?: number | null;
+  crippled?: boolean;
 }
 
 export interface LoadedFleet {
