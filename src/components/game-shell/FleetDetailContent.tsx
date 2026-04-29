@@ -1116,10 +1116,16 @@ function RepairPopup({
   onClose,
   onSave,
 }: RepairPopupProps) {
-  // Build initial damaged-ship list. Order = existing assignment order first,
-  // then any other damaged ships appended (crippled first, then most-damaged).
-  const damaged: RepairRow[] = (() => {
-    const dmg = ships
+  // ── Build the initial unified queue ──
+  // Each queue item is either a "repair" row or a "build" row. Order within
+  // the queue is the user-controlled priority used by Auto-fill.
+  type QueueItem =
+    | { kind: "repair"; repair: RepairRow }
+    | { kind: "build"; build: BuildItem };
+
+  const initialQueue: QueueItem[] = (() => {
+    // Build damaged-ship repair candidates.
+    const dmg: RepairRow[] = ships
       .filter(s => s.max_hp != null && s.current_hp != null && s.current_hp < s.max_hp)
       .map(s => {
         const cur = s.current_hp ?? 0;
@@ -1137,135 +1143,217 @@ function RepairPopup({
         } as RepairRow;
       });
 
-    const byId = new Map(dmg.map(r => [r.ship_id, r]));
-    const ordered: RepairRow[] = [];
+    const repairById = new Map(dmg.map(r => [r.ship_id, r]));
+    const queue: QueueItem[] = [];
+
+    // 1. Existing repair assignments first, in their saved order.
     for (const a of existingAssignments) {
-      const r = byId.get(a.ship_id);
+      const r = repairById.get(a.ship_id);
       if (r) {
         r.amount = Math.max(0, Math.min(a.amount, r.missing));
-        ordered.push(r);
-        byId.delete(a.ship_id);
+        queue.push({ kind: "repair", repair: r });
+        repairById.delete(a.ship_id);
       }
     }
-    const rest = Array.from(byId.values()).sort((a, b) => {
+    // 2. Existing build items next, in their saved order.
+    for (const b of existingBuildItems) {
+      queue.push({ kind: "build", build: { ship_type_id: b.ship_type_id, quantity: b.quantity } });
+    }
+    // 3. Any remaining damaged ships (not previously assigned), crippled first
+    //    then most-damaged. Appended at the end so the user can promote them.
+    const rest = Array.from(repairById.values()).sort((a, b) => {
       if (a.crippled !== b.crippled) return a.crippled ? -1 : 1;
       return b.missing - a.missing;
     });
-    return [...ordered, ...rest];
+    for (const r of rest) queue.push({ kind: "repair", repair: r });
+
+    return queue;
   })();
 
-  const [rows, setRows] = useState<RepairRow[]>(damaged);
-  // Build queue: array of { ship_type_id, quantity } seeded from any existing order.
-  const [buildRows, setBuildRows] = useState<BuildItem[]>(
-    existingBuildItems.length > 0
-      ? existingBuildItems.map(b => ({ ship_type_id: b.ship_type_id, quantity: b.quantity }))
-      : [],
-  );
+  const [queue, setQueue] = useState<QueueItem[]>(initialQueue);
 
-  const repairCap = Math.min(availableRepair, availableSupply);
-  const totalAssigned = rows.reduce((s, r) => s + r.amount, 0);
-
-  // Build queue cost (1 supply per point_cost) and slot consumption.
+  // ── Derived totals ──
   const catalogById = new Map(strikecraftCatalog.map(c => [c.id, c]));
-  const buildSupplyCost = buildRows.reduce((sum, b) => {
-    const c = catalogById.get(b.ship_type_id);
-    return sum + (c?.point_cost ?? 0) * (Number(b.quantity) || 0);
+
+  const repairTotal = queue.reduce(
+    (s, q) => s + (q.kind === "repair" ? q.repair.amount : 0),
+    0,
+  );
+  const buildSupplyCost = queue.reduce((s, q) => {
+    if (q.kind !== "build") return s;
+    const c = catalogById.get(q.build.ship_type_id);
+    return s + (c?.point_cost ?? 0) * (Number(q.build.quantity) || 0);
   }, 0);
-  const buildFighterSlots = buildRows.reduce((sum, b) => {
-    const c = catalogById.get(b.ship_type_id);
-    return c && c.bucket === "fighter" ? sum + c.slots * b.quantity : sum;
+  const buildFighterSlots = queue.reduce((s, q) => {
+    if (q.kind !== "build") return s;
+    const c = catalogById.get(q.build.ship_type_id);
+    return c && c.bucket === "fighter" ? s + c.slots * q.build.quantity : s;
   }, 0);
-  const buildGunshipSlots = buildRows.reduce((sum, b) => {
-    const c = catalogById.get(b.ship_type_id);
-    return c && c.bucket === "gunship" ? sum + c.slots * b.quantity : sum;
+  const buildGunshipSlots = queue.reduce((s, q) => {
+    if (q.kind !== "build") return s;
+    const c = catalogById.get(q.build.ship_type_id);
+    return c && c.bucket === "gunship" ? s + c.slots * q.build.quantity : s;
   }, 0);
 
-  // Supply must cover BOTH the repair queue AND the build queue.
-  const repairAndBuildSupply = totalAssigned + buildSupplyCost;
+  const repairAndBuildSupply = repairTotal + buildSupplyCost;
   const supplyOver = repairAndBuildSupply > availableSupply;
-  const remaining = Math.max(0, repairCap - totalAssigned);
+  // Repair is capped by the smaller of available repair pods and remaining supply.
+  const repairCap = Math.min(availableRepair, availableSupply);
 
-  // Available remaining capacity for new builds.
   const fighterFree = Math.max(0, fighterCap - fighterUsed - buildFighterSlots);
   const gunshipFree = Math.max(0, gunshipCap - gunshipUsed - buildGunshipSlots);
 
+  // ── Reordering (works across kinds) ──
   function move(index: number, dir: -1 | 1) {
     const j = index + dir;
-    if (j < 0 || j >= rows.length) return;
-    const next = rows.slice();
+    if (j < 0 || j >= queue.length) return;
+    const next = queue.slice();
     [next[index], next[j]] = [next[j], next[index]];
-    setRows(next);
+    setQueue(next);
   }
 
-  function setAmount(index: number, raw: number) {
-    const next = rows.slice();
-    const row = next[index];
-    const others = totalAssigned - row.amount;
-    const maxForRow = Math.min(row.missing, Math.max(0, repairCap - others));
+  // ── Repair-row mutators ──
+  function setRepairAmount(index: number, raw: number) {
+    const q = queue[index];
+    if (q.kind !== "repair") return;
+    const next = queue.slice();
+    const row = { ...q.repair };
+    const otherRepair = repairTotal - row.amount;
+    const supplyForRow = Math.max(0, availableSupply - buildSupplyCost - otherRepair);
+    const repairPodForRow = Math.max(0, availableRepair - otherRepair);
+    const maxForRow = Math.min(row.missing, supplyForRow, repairPodForRow);
     row.amount = Math.max(0, Math.min(raw, maxForRow));
-    setRows(next);
+    next[index] = { kind: "repair", repair: row };
+    setQueue(next);
+  }
+  function maxRepair(index: number) {
+    const q = queue[index];
+    if (q.kind !== "repair") return;
+    setRepairAmount(index, q.repair.missing);
   }
 
-  function maxRow(index: number) {
-    const row = rows[index];
-    const others = totalAssigned - row.amount;
-    setAmount(index, Math.min(row.missing, Math.max(0, repairCap - others)));
+  // ── Build-row mutators ──
+  function setBuildShipType(index: number, shipTypeId: string) {
+    const q = queue[index];
+    if (q.kind !== "build") return;
+    const next = queue.slice();
+    next[index] = { kind: "build", build: { ship_type_id: shipTypeId, quantity: 1 } };
+    setQueue(next);
   }
-
-  function clearAll() {
-    setRows(rows.map(r => ({ ...r, amount: 0 })));
+  function setBuildQty(index: number, raw: number) {
+    const q = queue[index];
+    if (q.kind !== "build") return;
+    const c = catalogById.get(q.build.ship_type_id);
+    if (!c) return;
+    // Free slots in this bucket excluding this row.
+    const otherSlots = queue.reduce((sum, x, i) => {
+      if (i === index || x.kind !== "build") return sum;
+      const xc = catalogById.get(x.build.ship_type_id);
+      if (!xc || xc.bucket !== c.bucket) return sum;
+      return sum + xc.slots * x.build.quantity;
+    }, 0);
+    const bucketCap = c.bucket === "fighter" ? fighterCap : gunshipCap;
+    const bucketUsed = c.bucket === "fighter" ? fighterUsed : gunshipUsed;
+    const free = Math.max(0, bucketCap - bucketUsed - otherSlots);
+    const fitByCapacity = Math.floor(free / c.slots);
+    // Supply check (excluding this row's current contribution).
+    const otherBuildSupply = queue.reduce((sum, x, i) => {
+      if (i === index || x.kind !== "build") return sum;
+      const xc = catalogById.get(x.build.ship_type_id);
+      return sum + (xc?.point_cost ?? 0) * (Number(x.build.quantity) || 0);
+    }, 0);
+    const supplyForRow = Math.max(0, availableSupply - repairTotal - otherBuildSupply);
+    const fitBySupply = c.point_cost > 0 ? Math.floor(supplyForRow / c.point_cost) : raw;
+    const maxQty = Math.min(fitByCapacity, fitBySupply);
+    const qty = Math.max(0, Math.min(raw, maxQty));
+    const next = queue.slice();
+    next[index] = { kind: "build", build: { ship_type_id: q.build.ship_type_id, quantity: qty } };
+    setQueue(next);
   }
-
-  function autoFill() {
-    // Walk in priority order; greedily fill each ship up to its missing HP.
-    let pool = repairCap;
-    const next = rows.map(r => {
-      const give = Math.max(0, Math.min(r.missing, pool));
-      pool -= give;
-      return { ...r, amount: give };
-    });
-    setRows(next);
+  function removeRow(index: number) {
+    const q = queue[index];
+    const next = queue.slice();
+    if (q.kind === "build") {
+      next.splice(index, 1);
+    } else {
+      // Repair rows stay in the list (they represent damaged ships) but
+      // get zeroed out — same UX as "Clear".
+      next[index] = { kind: "repair", repair: { ...q.repair, amount: 0 } };
+    }
+    setQueue(next);
   }
-
-  // ── Build queue helpers ──
   function addBuildRow() {
-    // Default to the cheapest catalog entry whose bucket still has capacity.
     const candidate = strikecraftCatalog.find(c =>
       c.bucket === "fighter" ? fighterFree >= c.slots : gunshipFree >= c.slots,
     ) ?? strikecraftCatalog[0];
     if (!candidate) return;
-    setBuildRows([...buildRows, { ship_type_id: candidate.id, quantity: 1 }]);
+    setQueue([...queue, { kind: "build", build: { ship_type_id: candidate.id, quantity: 1 } }]);
   }
-  function removeBuildRow(index: number) {
-    const next = buildRows.slice();
-    next.splice(index, 1);
-    setBuildRows(next);
+
+  function clearAll() {
+    const next = queue
+      .map(q =>
+        q.kind === "repair"
+          ? { kind: "repair" as const, repair: { ...q.repair, amount: 0 } }
+          : { kind: "build" as const, build: { ...q.build, quantity: 0 } },
+      )
+      .filter(q => q.kind !== "build" || q.build.quantity > 0); // drop emptied builds
+    setQueue(next);
   }
-  function setBuildShipType(index: number, shipTypeId: string) {
-    const next = buildRows.slice();
-    // Reset quantity to 1 when changing class so we don't accidentally over-cap.
-    next[index] = { ship_type_id: shipTypeId, quantity: 1 };
-    setBuildRows(next);
+
+  // ── Auto-fill: walk the unified queue in priority order ──
+  function autoFill() {
+    let supplyPool = availableSupply;
+    let repairPool = availableRepair;
+    // Track per-bucket slot usage as we go.
+    let fUsed = fighterUsed;
+    let gUsed = gunshipUsed;
+
+    const next = queue.map((q): QueueItem => {
+      if (q.kind === "repair") {
+        const row = { ...q.repair };
+        const give = Math.max(
+          0,
+          Math.min(row.missing, supplyPool, repairPool),
+        );
+        row.amount = give;
+        supplyPool -= give;
+        repairPool -= give;
+        return { kind: "repair", repair: row };
+      }
+      // build
+      const c = catalogById.get(q.build.ship_type_id);
+      if (!c) return q;
+      const bucketCap = c.bucket === "fighter" ? fighterCap : gunshipCap;
+      const bucketUsed = c.bucket === "fighter" ? fUsed : gUsed;
+      const free = Math.max(0, bucketCap - bucketUsed);
+      const fitByCapacity = Math.floor(free / c.slots);
+      const fitBySupply = c.point_cost > 0 ? Math.floor(supplyPool / c.point_cost) : 0;
+      const qty = Math.max(0, Math.min(q.build.quantity || 0, fitByCapacity, fitBySupply));
+      // If user had quantity 0 on a placeholder, fill greedily up to caps.
+      const greedy = q.build.quantity > 0 ? qty : Math.max(0, Math.min(fitByCapacity, fitBySupply));
+      const finalQty = q.build.quantity > 0 ? qty : greedy;
+      supplyPool -= finalQty * c.point_cost;
+      if (c.bucket === "fighter") fUsed += finalQty * c.slots;
+      else gUsed += finalQty * c.slots;
+      return { kind: "build", build: { ship_type_id: q.build.ship_type_id, quantity: finalQty } };
+    });
+    setQueue(next);
   }
-  function setBuildQty(index: number, raw: number) {
-    const next = buildRows.slice();
-    const item = next[index];
-    const c = catalogById.get(item.ship_type_id);
-    if (!c) return;
-    // Determine free slots in the relevant bucket *excluding this row*.
-    const otherSlots = next.reduce((sum, b, i) => {
-      if (i === index) return sum;
-      const oc = catalogById.get(b.ship_type_id);
-      if (!oc || oc.bucket !== c.bucket) return sum;
-      return sum + oc.slots * b.quantity;
-    }, 0);
-    const free = c.bucket === "fighter"
-      ? Math.max(0, fighterCap - fighterUsed - otherSlots)
-      : Math.max(0, gunshipCap - gunshipUsed - otherSlots);
-    const maxQty = Math.floor(free / c.slots);
-    item.quantity = Math.max(0, Math.min(raw, maxQty));
-    setBuildRows(next);
+
+  // ── Save handler ──
+  function handleSave() {
+    const assignments: RepairAssignment[] = queue
+      .filter((q): q is { kind: "repair"; repair: RepairRow } => q.kind === "repair")
+      .map(q => ({ ship_id: q.repair.ship_id, amount: q.repair.amount }));
+    const buildItems: BuildItem[] = queue
+      .filter((q): q is { kind: "build"; build: BuildItem } => q.kind === "build")
+      .map(q => ({ ship_type_id: q.build.ship_type_id, quantity: q.build.quantity }));
+    onSave(assignments, buildItems);
   }
+
+  const hasAnyAssigned = repairTotal > 0 || buildSupplyCost > 0;
+  const canAutoFill = repairCap > 0 || (fighterCap > fighterUsed) || (gunshipCap > gunshipUsed);
 
   return (
     <div
@@ -1278,7 +1366,7 @@ function RepairPopup({
       >
         <div className="flex items-center justify-between px-4 py-2 border-b border-bronze/40 bg-ivory-dark shrink-0">
           <h3 className="text-sm font-heading font-bold uppercase tracking-wider text-bronze-dark">
-            Fleet Repair
+            Fleet Repair &amp; Build
           </h3>
           <button
             onClick={onClose}
@@ -1304,45 +1392,165 @@ function RepairPopup({
               <div className={`font-bold text-sm ${supplyOver ? "text-crimson" : "text-[#272d34]"}`}>
                 {repairAndBuildSupply} / {availableSupply}
               </div>
-              {buildSupplyCost > 0 && (
+              {(repairTotal > 0 || buildSupplyCost > 0) && (
                 <div className="text-[9px] font-semibold text-bronze-dark mt-0.5">
-                  repair {totalAssigned} + build {buildSupplyCost}
+                  repair {repairTotal} + build {buildSupplyCost}
                 </div>
               )}
             </div>
           </div>
+          {(fighterCap > 0 || gunshipCap > 0) && (
+            <div className="mt-2 flex justify-end gap-3 text-[10px] font-semibold text-bronze-dark">
+              {fighterCap > 0 && (
+                <span className={fighterFree < 0 ? "text-crimson" : ""}>
+                  Fighters {fighterUsed + buildFighterSlots}/{fighterCap}
+                </span>
+              )}
+              {gunshipCap > 0 && (
+                <span className={gunshipFree < 0 ? "text-crimson" : ""}>
+                  Gunships {gunshipUsed + buildGunshipSlots}/{gunshipCap}
+                </span>
+              )}
+            </div>
+          )}
           <div className="flex gap-1.5 mt-2.5">
             <button
               onClick={autoFill}
-              disabled={repairCap <= 0 || rows.length === 0}
+              disabled={!canAutoFill || queue.length === 0}
               className="flex-1 h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed text-[#272d34]"
             >
               Auto-fill in priority
             </button>
             <button
               onClick={clearAll}
-              disabled={totalAssigned === 0}
+              disabled={!hasAnyAssigned}
               className="flex-1 h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed text-[#272d34]"
             >
               Clear
+            </button>
+            <button
+              onClick={addBuildRow}
+              disabled={(fighterCap <= 0 && gunshipCap <= 0) || strikecraftCatalog.length === 0}
+              className="flex-1 h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed text-[#272d34]"
+            >
+              + Add Build
             </button>
           </div>
         </div>
 
         <div className="overflow-y-auto p-3 space-y-2 grow">
-          {rows.length === 0 && (
-            <p className="text-xs text-bronze-dark italic">No damaged ships in this fleet.</p>
+          {queue.length === 0 && (
+            <p className="text-xs text-bronze-dark italic">
+              No damaged ships and no builds queued. Use “+ Add Build” to construct strikecraft.
+            </p>
           )}
-          {rows.map((r, i) => {
-            const projected = r.current_hp + r.amount;
+          {queue.map((q, i) => {
+            if (q.kind === "repair") {
+              const r = q.repair;
+              const projected = r.current_hp + r.amount;
+              const otherRepair = repairTotal - r.amount;
+              const supplyForRow = Math.max(0, availableSupply - buildSupplyCost - otherRepair);
+              const repairPodForRow = Math.max(0, availableRepair - otherRepair);
+              const maxForRow = Math.min(r.missing, supplyForRow, repairPodForRow);
+              return (
+                <div
+                  key={`repair-${r.ship_id}`}
+                  className={`border border-bronze/40 rounded-sm p-2 ${
+                    r.crippled ? "bg-crimson/15" : "bg-yellow-200/40"
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <button
+                        onClick={() => move(i, -1)}
+                        disabled={i === 0}
+                        aria-label="Move up"
+                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => move(i, 1)}
+                        disabled={i === queue.length - 1}
+                        aria-label="Move down"
+                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                      >
+                        ↓
+                      </button>
+                    </div>
+                    <div className="grow min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div className="text-xs font-bold text-foreground truncate">
+                          <span className="text-bronze-dark mr-1">#{i + 1}</span>
+                          {r.ship_name}
+                          {r.ship_display_id && (
+                            <span className="text-bronze-dark font-semibold ml-1">
+                              [{r.ship_display_id}]
+                            </span>
+                          )}
+                          {r.crippled && (
+                            <span className="text-crimson/80 normal-case font-semibold ml-1">· Crippled</span>
+                          )}
+                        </div>
+                        <div className="text-[10px] font-semibold text-foreground/85 uppercase tracking-wider shrink-0">{r.hull_class}</div>
+                      </div>
+                      <div className={`text-[11px] font-bold mt-0.5 ${r.crippled ? "text-crimson/80" : "text-amber-800"}`}>
+                        Hull: {r.current_hp} / {r.max_hp}
+                        {r.amount > 0 && (
+                          <span className="ml-1 text-foreground">→ {projected}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <button
+                          onClick={() => setRepairAmount(i, r.amount - 1)}
+                          disabled={r.amount <= 0}
+                          className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                          aria-label="Decrease"
+                        >
+                          −
+                        </button>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={r.missing}
+                          value={r.amount}
+                          onChange={(e) => setRepairAmount(i, Number(e.target.value) || 0)}
+                          className="w-14 h-7 rounded-sm border border-bronze/60 bg-ivory px-1 text-center text-xs font-bold text-[#272d34]"
+                        />
+                        <button
+                          onClick={() => setRepairAmount(i, r.amount + 1)}
+                          disabled={r.amount >= maxForRow}
+                          className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                          aria-label="Increase"
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={() => maxRepair(i)}
+                          disabled={r.amount >= maxForRow}
+                          className="h-7 px-2 rounded-sm border border-bronze/60 bg-ivory font-bold text-[10px] uppercase tracking-wider hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                        >
+                          Max
+                        </button>
+                        <div className="ml-auto text-[10px] font-semibold text-bronze-dark">
+                          missing {r.missing}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // build row
+            const b = q.build;
+            const c = catalogById.get(b.ship_type_id);
+            const cost = (c?.point_cost ?? 0) * b.quantity;
             return (
               <div
-                key={r.ship_id}
-                className={`border border-bronze/40 rounded-sm p-2 ${
-                  r.crippled
-                    ? "bg-crimson/15"
-                    : "bg-yellow-200/40"
-                }`}
+                key={`build-${i}`}
+                className="border border-bronze/40 rounded-sm p-2 bg-bronze/5"
               >
                 <div className="flex items-start gap-2">
                   <div className="flex flex-col gap-1 shrink-0">
@@ -1356,7 +1564,7 @@ function RepairPopup({
                     </button>
                     <button
                       onClick={() => move(i, 1)}
-                      disabled={i === rows.length - 1}
+                      disabled={i === queue.length - 1}
                       aria-label="Move down"
                       className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
                     >
@@ -1364,115 +1572,9 @@ function RepairPopup({
                     </button>
                   </div>
                   <div className="grow min-w-0">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <div className="text-xs font-bold text-foreground truncate">
-                        <span className="text-bronze-dark mr-1">#{i + 1}</span>
-                        {r.ship_name}
-                        {r.ship_display_id && (
-                          <span className="text-bronze-dark font-semibold ml-1">
-                            [{r.ship_display_id}]
-                          </span>
-                        )}
-                        {r.crippled && (
-                          <span className="text-crimson/80 normal-case font-semibold ml-1">· Crippled</span>
-                        )}
-                      </div>
-                      <div className="text-[10px] font-semibold text-foreground/85 uppercase tracking-wider shrink-0">{r.hull_class}</div>
+                    <div className="text-[10px] font-heading font-bold uppercase tracking-wider text-bronze-dark mb-1">
+                      <span className="mr-1">#{i + 1}</span>Build
                     </div>
-                    <div className={`text-[11px] font-bold mt-0.5 ${r.crippled ? "text-crimson/80" : "text-amber-800"}`}>
-                      Hull: {r.current_hp} / {r.max_hp}
-                      {r.amount > 0 && (
-                        <span className="ml-1 text-foreground">→ {projected}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <button
-                        onClick={() => setAmount(i, r.amount - 1)}
-                        disabled={r.amount <= 0}
-                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
-                        aria-label="Decrease"
-                      >
-                        −
-                      </button>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        max={r.missing}
-                        value={r.amount}
-                        onChange={(e) => setAmount(i, Number(e.target.value) || 0)}
-                        className="w-14 h-7 rounded-sm border border-bronze/60 bg-ivory px-1 text-center text-xs font-bold text-[#272d34]"
-                      />
-                      <button
-                        onClick={() => setAmount(i, r.amount + 1)}
-                        disabled={r.amount >= r.missing || remaining <= 0}
-                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
-                        aria-label="Increase"
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => maxRow(i)}
-                        disabled={r.amount >= r.missing || (repairCap - totalAssigned + r.amount) <= r.amount}
-                        className="h-7 px-2 rounded-sm border border-bronze/60 bg-ivory font-bold text-[10px] uppercase tracking-wider hover:border-bronze disabled:opacity-30 text-[#272d34]"
-                      >
-                        Max
-                      </button>
-                      <div className="ml-auto text-[10px] font-semibold text-bronze-dark">
-                        missing {r.missing}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {(fighterCap > 0 || gunshipCap > 0) && (
-            <div className="pt-2 mt-2 border-t border-bronze/40 space-y-2">
-              <div className="flex items-baseline justify-between">
-                <h4 className="text-[11px] font-heading font-bold uppercase tracking-wider text-bronze-dark">
-                  Build Strikecraft
-                </h4>
-                <div className="text-[10px] font-semibold text-bronze-dark space-x-2">
-                  {fighterCap > 0 && (
-                    <span className={fighterFree < 0 ? "text-crimson" : ""}>
-                      Fighters {fighterUsed + buildFighterSlots}/{fighterCap}
-                    </span>
-                  )}
-                  {gunshipCap > 0 && (
-                    <span className={gunshipFree < 0 ? "text-crimson" : ""}>
-                      Gunships {gunshipUsed + buildGunshipSlots}/{gunshipCap}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {buildRows.length === 0 && (
-                <p className="text-[11px] text-bronze-dark italic">
-                  No builds queued. Empty fighter or gunship capacity can be filled here at a cost of the ship's point value in supply.
-                </p>
-              )}
-
-              {buildRows.map((b, i) => {
-                const c = catalogById.get(b.ship_type_id);
-                const cost = (c?.point_cost ?? 0) * b.quantity;
-                // Per-row max: free slots in this bucket (excluding self), divided by slots-per-ship.
-                const otherSlots = buildRows.reduce((sum, x, j) => {
-                  if (j === i || !c) return sum;
-                  const xc = catalogById.get(x.ship_type_id);
-                  if (!xc || xc.bucket !== c.bucket) return sum;
-                  return sum + xc.slots * x.quantity;
-                }, 0);
-                const bucketCap = c?.bucket === "fighter" ? fighterCap : gunshipCap;
-                const bucketUsed = c?.bucket === "fighter" ? fighterUsed : gunshipUsed;
-                const free = c ? Math.max(0, bucketCap - bucketUsed - otherSlots) : 0;
-                const maxQty = c ? Math.floor(free / c.slots) : 0;
-                return (
-                  <div
-                    key={i}
-                    className="border border-bronze/40 rounded-sm p-2 bg-bronze/5"
-                  >
                     <div className="flex items-center gap-1.5">
                       <select
                         value={b.ship_type_id}
@@ -1497,21 +1599,19 @@ function RepairPopup({
                         type="number"
                         inputMode="numeric"
                         min={0}
-                        max={maxQty}
                         value={b.quantity}
                         onChange={(e) => setBuildQty(i, Number(e.target.value) || 0)}
                         className="w-12 h-7 rounded-sm border border-bronze/60 bg-ivory px-1 text-center text-xs font-bold text-[#272d34]"
                       />
                       <button
                         onClick={() => setBuildQty(i, b.quantity + 1)}
-                        disabled={b.quantity >= maxQty}
                         className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
                         aria-label="Increase"
                       >
                         +
                       </button>
                       <button
-                        onClick={() => removeBuildRow(i)}
+                        onClick={() => removeRow(i)}
                         className="w-7 h-7 rounded-sm border border-crimson/50 bg-ivory font-bold text-sm leading-none hover:border-crimson text-crimson"
                         aria-label="Remove"
                       >
@@ -1522,18 +1622,10 @@ function RepairPopup({
                       {c?.bucket === "fighter" ? "fighter" : "gunship"} · slots {(c?.slots ?? 0) * b.quantity} · {cost} supply
                     </div>
                   </div>
-                );
-              })}
-
-              <button
-                onClick={addBuildRow}
-                disabled={(fighterFree <= 0 && gunshipFree <= 0) || strikecraftCatalog.length === 0}
-                className="w-full h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-[11px] font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed text-[#272d34]"
-              >
-                + Add Build Order
-              </button>
-            </div>
-          )}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex gap-2 px-4 py-3 border-t border-bronze/40 bg-ivory-dark shrink-0">
@@ -1544,11 +1636,8 @@ function RepairPopup({
             Cancel
           </button>
           <button
-            onClick={() => onSave(
-              rows.map(r => ({ ship_id: r.ship_id, amount: r.amount })),
-              buildRows.filter(b => b.quantity > 0),
-            )}
-            disabled={totalAssigned > repairCap || supplyOver}
+            onClick={handleSave}
+            disabled={supplyOver || repairTotal > availableRepair}
             className="flex-1 h-9 rounded-sm border-2 border-bronze bg-bronze/20 px-2 text-xs text-bronze-dark font-heading font-bold uppercase tracking-wider hover:bg-bronze/30 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save Order
