@@ -1006,10 +1006,10 @@ function RepairPopup({
       onClick={onClose}
     >
       <div
-        className="relative w-[480px] max-w-[96vw] max-h-[92vh] flex flex-col bg-marble border-2 border-bronze rounded-sm shadow-xl"
+        className="relative w-[480px] max-w-[96vw] max-h-[92vh] flex flex-col bg-ivory border-2 border-bronze rounded-sm shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-2 border-b border-bronze/40 bg-marble-dark shrink-0">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-bronze/40 bg-ivory-dark shrink-0">
           <h3 className="text-sm font-heading font-bold uppercase tracking-wider text-bronze-dark">
             Fleet Repair
           </h3>
@@ -1022,19 +1022,19 @@ function RepairPopup({
           </button>
         </div>
 
-        <div className="px-4 py-3 border-b border-bronze/30 bg-marble-dark/50 shrink-0">
-          <div className="grid grid-cols-3 gap-2 text-xs font-bold text-[hsl(20_25%_10%)]">
+        <div className="px-4 py-3 border-b border-bronze/30 bg-ivory-dark shrink-0">
+          <div className="grid grid-cols-3 gap-2 text-xs font-bold text-foreground">
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-bronze-dark">Available Repair</div>
-              <div>{availableRepair}</div>
+              <div className="text-[10px] uppercase tracking-wider text-bronze-dark font-semibold">Available Repair</div>
+              <div className="text-foreground font-bold text-sm">{availableRepair}</div>
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-bronze-dark">Available Supply</div>
-              <div>{availableSupply}</div>
+              <div className="text-[10px] uppercase tracking-wider text-bronze-dark font-semibold">Available Supply</div>
+              <div className="text-foreground font-bold text-sm">{availableSupply}</div>
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-bronze-dark">Assigned / Cap</div>
-              <div className={totalAssigned > cap ? "text-crimson" : ""}>
+              <div className="text-[10px] uppercase tracking-wider text-bronze-dark font-semibold">Assigned / Cap</div>
+              <div className={`font-bold text-sm ${totalAssigned > cap ? "text-crimson" : "text-foreground"}`}>
                 {totalAssigned} / {cap}
               </div>
             </div>
@@ -1043,14 +1043,14 @@ function RepairPopup({
             <button
               onClick={autoFill}
               disabled={cap <= 0 || rows.length === 0}
-              className="flex-1 h-7 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs text-foreground font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Auto-fill in priority
             </button>
             <button
               onClick={clearAll}
               disabled={totalAssigned === 0}
-              className="flex-1 h-7 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs text-foreground font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Clear
             </button>
