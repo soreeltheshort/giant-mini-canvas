@@ -632,9 +632,6 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         </ImperialCard>
       )}
 
-      {replenishOpen && (
-        <FleetActionPopup title="Fleet Replenish" onClose={() => setReplenishOpen(false)} />
-      )}
       {repairOpen && (
         <RepairPopup
           ships={ships}
