@@ -544,11 +544,17 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           <Row
             label="Supply"
             value={
-              pendingRepairCost > 0
+              pendingTotalCost > 0
                 ? `${currentSupply} (${projectedSupply}) / ${maxSupply}`
                 : `${currentSupply} / ${maxSupply}`
             }
           />
+          {(fighterCap > 0 || gunshipCap > 0) && (
+            <>
+              {fighterCap > 0 && <Row label="Fighters" value={`${fighterUsed} / ${fighterCap}`} />}
+              {gunshipCap > 0 && <Row label="Gunships" value={`${gunshipUsed} / ${gunshipCap}`} />}
+            </>
+          )}
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
           <Row label="Ships" value={`${totalShips}`} />
           
