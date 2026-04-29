@@ -1029,7 +1029,7 @@ function RepairPopup({
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-wider text-bronze-dark font-semibold">Assigned / Cap</div>
-              <div className={`font-bold text-sm ${totalAssigned > cap ? "text-crimson" : "text-foreground"}`}>
+              <div className={`font-bold text-sm ${totalAssigned > cap ? "text-crimson" : "text-[#272d34]"}`}>
                 {totalAssigned} / {cap}
               </div>
             </div>
@@ -1137,7 +1137,7 @@ function RepairPopup({
                       <button
                         onClick={() => maxRow(i)}
                         disabled={r.amount >= r.missing || (cap - totalAssigned + r.amount) <= r.amount}
-                        className="h-7 px-2 rounded-sm border border-bronze/60 bg-ivory text-foreground font-bold text-[10px] uppercase tracking-wider hover:border-bronze disabled:opacity-30"
+                        className="h-7 px-2 rounded-sm border border-bronze/60 bg-ivory font-bold text-[10px] uppercase tracking-wider hover:border-bronze disabled:opacity-30 text-[#272d34]"
                       >
                         Max
                       </button>
