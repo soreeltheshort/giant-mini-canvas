@@ -20,6 +20,7 @@ import type {
   CombatConstants,
   WeaponTargetPref,
   GroundCombatOutcome,
+  WeaponStatsMap,
 } from "@/lib/battleEngine";
 
 export interface FleetCompositionRow {
