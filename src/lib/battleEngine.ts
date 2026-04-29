@@ -137,6 +137,17 @@ export interface FleetShipData {
   ship_type: ShipTypeData;
   quantity: number;
   tactical_group: string;
+  /**
+   * Optional per-instance starting state. When provided, length must equal
+   * `quantity` and each entry initialises one ShipInstance (used by in-game
+   * combat to carry over wounded HP / sourceRowId across turns). The Battle
+   * Simulator omits this so every ship starts at full HP.
+   */
+  instances?: Array<{
+    sourceRowId?: string;
+    currentHull?: number;
+    crippled?: boolean;
+  }>;
 }
 
 // Readiness effectiveness multipliers (matches FleetBuilder READINESS_LEVELS)
