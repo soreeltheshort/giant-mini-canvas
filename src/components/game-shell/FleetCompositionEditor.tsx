@@ -178,6 +178,12 @@ export default function FleetCompositionEditor({
                     setDragOverGroup(null);
                   }}
                   className={`flex items-center gap-1.5 rounded-sm px-1.5 py-1 transition-opacity ${
+                    s.crippled
+                      ? "bg-crimson/15"
+                      : (s.max_hp != null && s.current_hp != null && s.current_hp < s.max_hp)
+                      ? "bg-yellow-200/40"
+                      : ""
+                  } ${
                     canEdit && !listEachShip
                       ? "cursor-grab active:cursor-grabbing hover:bg-muted/50"
                       : ""
