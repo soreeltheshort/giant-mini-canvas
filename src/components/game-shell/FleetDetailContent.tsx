@@ -140,7 +140,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           .maybeSingle(),
         supabase
           .from("game_fleet_ships")
-          .select("id, ship_type_id, quantity, tactical_group, current_hp, crippled")
+          // Join ship_types so we always have max hull for HP display, even if the
+          // shipTypes prop lookup is stale or missing this type.
+          .select("id, ship_type_id, quantity, tactical_group, current_hp, crippled, ship_types(hull, name, ship_id, hull_class)")
           .eq("game_fleet_id", fleet.fleet_id),
         ordersPromise,
       ]);
@@ -167,15 +169,18 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       }
       const rows: FleetShipRow[] = (fs || []).map((r: any) => {
         const st = shipTypes.find(s => s.id === r.ship_type_id);
+        // Joined ship_types row from the DB query — authoritative source for hull.
+        const stJoined = r.ship_types || null;
+        const maxHp = (stJoined?.hull ?? (st as any)?.hull ?? null);
         return {
           id: r.id,
           ship_type_id: r.ship_type_id,
           quantity: r.quantity,
           tactical_group: r.tactical_group,
-          ship_name: st?.name || r.ship_type_id,
-          ship_display_id: st?.ship_id || "",
-          hull_class: st?.hull_class || "",
-          max_hp: (st as any)?.hull ?? null,
+          ship_name: stJoined?.name || st?.name || r.ship_type_id,
+          ship_display_id: stJoined?.ship_id || st?.ship_id || "",
+          hull_class: stJoined?.hull_class || st?.hull_class || "",
+          max_hp: maxHp,
           current_hp: r.current_hp ?? null,
           crippled: !!r.crippled,
         };
