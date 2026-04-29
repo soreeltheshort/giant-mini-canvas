@@ -22,6 +22,8 @@ interface Props {
   /** Strategy roles drive which lanes are shown (mirrors FleetBuilder). */
   special1Role: string;
   special2Role: string;
+  /** When true, each ship is listed individually (no quantity, no remove button). */
+  listEachShip?: boolean;
 }
 
 const BASE_GROUPS = ["Core", "Attack"];
