@@ -879,3 +879,298 @@ function EnemyFleetView({
     </>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Repair popup
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RepairAssignment {
+  ship_id: string;
+  amount: number;
+}
+
+interface RepairPopupProps {
+  ships: FleetShipRow[];
+  availableRepair: number;
+  availableSupply: number;
+  existingAssignments: RepairAssignment[];
+  onClose: () => void;
+  onSave: (assignments: RepairAssignment[]) => void | Promise<void>;
+}
+
+interface RepairRow {
+  ship_id: string;
+  ship_name: string;
+  ship_display_id: string;
+  hull_class: string;
+  current_hp: number;
+  max_hp: number;
+  missing: number;
+  crippled: boolean;
+  amount: number;
+}
+
+function RepairPopup({
+  ships,
+  availableRepair,
+  availableSupply,
+  existingAssignments,
+  onClose,
+  onSave,
+}: RepairPopupProps) {
+  // Build initial damaged-ship list. Order = existing assignment order first,
+  // then any other damaged ships appended (crippled first, then most-damaged).
+  const damaged: RepairRow[] = (() => {
+    const dmg = ships
+      .filter(s => s.max_hp != null && s.current_hp != null && s.current_hp < s.max_hp)
+      .map(s => {
+        const cur = s.current_hp ?? 0;
+        const max = s.max_hp ?? cur;
+        return {
+          ship_id: s.id,
+          ship_name: s.ship_name || "Ship",
+          ship_display_id: s.ship_display_id || "",
+          hull_class: s.hull_class || "",
+          current_hp: cur,
+          max_hp: max,
+          missing: Math.max(0, max - cur),
+          crippled: !!s.crippled,
+          amount: 0,
+        } as RepairRow;
+      });
+
+    const byId = new Map(dmg.map(r => [r.ship_id, r]));
+    const ordered: RepairRow[] = [];
+    for (const a of existingAssignments) {
+      const r = byId.get(a.ship_id);
+      if (r) {
+        r.amount = Math.max(0, Math.min(a.amount, r.missing));
+        ordered.push(r);
+        byId.delete(a.ship_id);
+      }
+    }
+    const rest = Array.from(byId.values()).sort((a, b) => {
+      if (a.crippled !== b.crippled) return a.crippled ? -1 : 1;
+      return b.missing - a.missing;
+    });
+    return [...ordered, ...rest];
+  })();
+
+  const [rows, setRows] = useState<RepairRow[]>(damaged);
+
+  const cap = Math.min(availableRepair, availableSupply);
+  const totalAssigned = rows.reduce((s, r) => s + r.amount, 0);
+  const remaining = Math.max(0, cap - totalAssigned);
+
+  function move(index: number, dir: -1 | 1) {
+    const j = index + dir;
+    if (j < 0 || j >= rows.length) return;
+    const next = rows.slice();
+    [next[index], next[j]] = [next[j], next[index]];
+    setRows(next);
+  }
+
+  function setAmount(index: number, raw: number) {
+    const next = rows.slice();
+    const row = next[index];
+    const others = totalAssigned - row.amount;
+    const maxForRow = Math.min(row.missing, Math.max(0, cap - others));
+    row.amount = Math.max(0, Math.min(raw, maxForRow));
+    setRows(next);
+  }
+
+  function maxRow(index: number) {
+    const row = rows[index];
+    const others = totalAssigned - row.amount;
+    setAmount(index, Math.min(row.missing, Math.max(0, cap - others)));
+  }
+
+  function clearAll() {
+    setRows(rows.map(r => ({ ...r, amount: 0 })));
+  }
+
+  function autoFill() {
+    // Walk in priority order; greedily fill each ship up to its missing HP.
+    let pool = cap;
+    const next = rows.map(r => {
+      const give = Math.max(0, Math.min(r.missing, pool));
+      pool -= give;
+      return { ...r, amount: give };
+    });
+    setRows(next);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-senate-dark/60 backdrop-blur-sm p-3"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-[480px] max-w-[96vw] max-h-[92vh] flex flex-col bg-marble border-2 border-bronze rounded-sm shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-2 border-b border-bronze/40 bg-marble-dark shrink-0">
+          <h3 className="text-sm font-heading font-bold uppercase tracking-wider text-bronze-dark">
+            Fleet Repair
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-bronze-dark hover:text-crimson font-bold text-lg leading-none px-1"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="px-4 py-3 border-b border-bronze/30 bg-marble-dark/50 shrink-0">
+          <div className="grid grid-cols-3 gap-2 text-xs font-bold text-[hsl(20_25%_10%)]">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-bronze-dark">Available Repair</div>
+              <div>{availableRepair}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-bronze-dark">Available Supply</div>
+              <div>{availableSupply}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-bronze-dark">Assigned / Cap</div>
+              <div className={totalAssigned > cap ? "text-crimson" : ""}>
+                {totalAssigned} / {cap}
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-1.5 mt-2.5">
+            <button
+              onClick={autoFill}
+              disabled={cap <= 0 || rows.length === 0}
+              className="flex-1 h-7 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Auto-fill in priority
+            </button>
+            <button
+              onClick={clearAll}
+              disabled={totalAssigned === 0}
+              className="flex-1 h-7 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto p-3 space-y-2 grow">
+          {rows.length === 0 && (
+            <p className="text-xs text-bronze-dark italic">No damaged ships in this fleet.</p>
+          )}
+          {rows.map((r, i) => {
+            const projected = r.current_hp + r.amount;
+            return (
+              <div
+                key={r.ship_id}
+                className={`border border-bronze/40 rounded-sm p-2 ${
+                  r.crippled ? "bg-crimson/10" : "bg-yellow-200/30"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <button
+                      onClick={() => move(i, -1)}
+                      disabled={i === 0}
+                      aria-label="Move up"
+                      className="w-7 h-7 rounded-sm border border-bronze/50 bg-marble text-bronze-dark font-bold text-sm leading-none disabled:opacity-30"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => move(i, 1)}
+                      disabled={i === rows.length - 1}
+                      aria-label="Move down"
+                      className="w-7 h-7 rounded-sm border border-bronze/50 bg-marble text-bronze-dark font-bold text-sm leading-none disabled:opacity-30"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                  <div className="grow min-w-0">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="text-xs font-bold text-[hsl(20_25%_10%)] truncate">
+                        <span className="text-bronze-dark mr-1">#{i + 1}</span>
+                        {r.ship_name}
+                        {r.ship_display_id && (
+                          <span className="text-bronze-dark font-normal ml-1">
+                            [{r.ship_display_id}]
+                          </span>
+                        )}
+                        {r.crippled && (
+                          <span className="text-crimson font-bold ml-1">⚠</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-bronze-dark shrink-0">{r.hull_class}</div>
+                    </div>
+                    <div className="text-[11px] font-semibold text-[hsl(20_25%_10%)] mt-0.5">
+                      Hull: {r.current_hp} / {r.max_hp}
+                      {r.amount > 0 && (
+                        <span className="text-crimson ml-1">→ {projected}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <button
+                        onClick={() => setAmount(i, r.amount - 1)}
+                        disabled={r.amount <= 0}
+                        className="w-7 h-7 rounded-sm border border-bronze/50 bg-marble text-bronze-dark font-bold text-sm leading-none disabled:opacity-30"
+                        aria-label="Decrease"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={r.missing}
+                        value={r.amount}
+                        onChange={(e) => setAmount(i, Number(e.target.value) || 0)}
+                        className="w-14 h-7 rounded-sm border border-bronze/50 bg-background px-1 text-center text-xs font-bold text-foreground"
+                      />
+                      <button
+                        onClick={() => setAmount(i, r.amount + 1)}
+                        disabled={r.amount >= r.missing || remaining <= 0}
+                        className="w-7 h-7 rounded-sm border border-bronze/50 bg-marble text-bronze-dark font-bold text-sm leading-none disabled:opacity-30"
+                        aria-label="Increase"
+                      >
+                        +
+                      </button>
+                      <button
+                        onClick={() => maxRow(i)}
+                        disabled={r.amount >= r.missing || (cap - totalAssigned + r.amount) <= r.amount}
+                        className="h-7 px-2 rounded-sm border border-bronze/50 bg-marble text-bronze-dark font-bold text-[10px] uppercase tracking-wider disabled:opacity-30"
+                      >
+                        Max
+                      </button>
+                      <div className="ml-auto text-[10px] text-bronze-dark">
+                        missing {r.missing}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-2 px-4 py-3 border-t border-bronze/40 bg-marble-dark shrink-0">
+          <button
+            onClick={onClose}
+            className="flex-1 h-9 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave(rows.map(r => ({ ship_id: r.ship_id, amount: r.amount })))}
+            disabled={totalAssigned > cap}
+            className="flex-1 h-9 rounded-sm border-2 border-bronze bg-bronze/20 px-2 text-xs text-bronze-dark font-heading font-bold uppercase tracking-wider hover:bg-bronze/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Save Order
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
