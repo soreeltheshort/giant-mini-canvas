@@ -1284,16 +1284,21 @@ function RepairPopup({
               <div className="font-bold text-sm text-[#272d34]">{availableSupply}</div>
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-bronze-dark font-semibold">Assigned / Cap</div>
-              <div className={`font-bold text-sm ${totalAssigned > cap ? "text-crimson" : "text-[#272d34]"}`}>
-                {totalAssigned} / {cap}
+              <div className="text-[10px] uppercase tracking-wider text-bronze-dark font-semibold">Supply Used</div>
+              <div className={`font-bold text-sm ${supplyOver ? "text-crimson" : "text-[#272d34]"}`}>
+                {repairAndBuildSupply} / {availableSupply}
               </div>
+              {buildSupplyCost > 0 && (
+                <div className="text-[9px] font-semibold text-bronze-dark mt-0.5">
+                  repair {totalAssigned} + build {buildSupplyCost}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex gap-1.5 mt-2.5">
             <button
               onClick={autoFill}
-              disabled={cap <= 0 || rows.length === 0}
+              disabled={repairCap <= 0 || rows.length === 0}
               className="flex-1 h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed text-[#272d34]"
             >
               Auto-fill in priority
