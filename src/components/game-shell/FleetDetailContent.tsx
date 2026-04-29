@@ -175,6 +175,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           ship_name: st?.name || r.ship_type_id,
           ship_display_id: st?.ship_id || "",
           hull_class: st?.hull_class || "",
+          max_hp: (st as any)?.hull ?? null,
+          current_hp: r.current_hp ?? null,
+          crippled: !!r.crippled,
         };
       });
       setShips(rows);
