@@ -436,24 +436,14 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
             valueClassName={readinessChanged ? "text-crimson" : undefined}
           />
           <Row label="Repair" value={`${availableRepair} / ${totalRepair}`} />
-          {(() => {
-            const repairOrder = pendingOrders.find(
-              o => o.order_type === "other" && o.order_json?.kind === "repair_fleet",
-            );
-            const repairCost = (repairOrder?.order_json?.assignments as RepairAssignment[] | undefined)
-              ?.reduce((sum, a) => sum + (Number(a.amount) || 0), 0) ?? 0;
-            const projectedSupply = Math.max(0, currentSupply - repairCost);
-            return (
-              <Row
-                label="Supply"
-                value={
-                  repairCost > 0
-                    ? `${currentSupply} (${projectedSupply}) / ${maxSupply}`
-                    : `${currentSupply} / ${maxSupply}`
-                }
-              />
-            );
-          })()}
+          <Row
+            label="Supply"
+            value={
+              pendingRepairCost > 0
+                ? `${currentSupply} (${projectedSupply}) / ${maxSupply}`
+                : `${currentSupply} / ${maxSupply}`
+            }
+          />
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
           <Row label="Ships" value={`${totalShips}`} />
           
