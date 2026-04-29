@@ -106,6 +106,7 @@ async function applyLosses(
     const survivors = survivorCounts.get(key) || 0;
     const lost = row.quantity - survivors;
     totalAfter += survivors;
+    totalRemaining += survivors;
     if (lost > 0) {
       losses[`${row.ship_type_id}:${row.tactical_group}`] = lost;
     }
