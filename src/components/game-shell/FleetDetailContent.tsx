@@ -620,7 +620,6 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                 <button
                   onClick={() => {
                     if (canRepair || canBuild) setRepairOpen(true);
-                    if (canReplenish) setReplenishOpen(true);
                   }}
                   disabled={disabled}
                   className="w-full h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-input"
@@ -633,9 +632,6 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         </ImperialCard>
       )}
 
-      {replenishOpen && (
-        <FleetActionPopup title="Fleet Replenish" onClose={() => setReplenishOpen(false)} />
-      )}
       {repairOpen && (
         <RepairPopup
           ships={ships}
