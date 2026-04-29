@@ -49,6 +49,7 @@ export interface BattleConfigBundle {
   combatConsts: CombatConstants | undefined;
   weaponPrefs: WeaponTargetPref[] | undefined;
   groundOutcomes: GroundCombatOutcome[] | undefined;
+  weaponStats: WeaponStatsMap | undefined;
 }
 
 /**
