@@ -1066,8 +1066,10 @@ function RepairPopup({
             return (
               <div
                 key={r.ship_id}
-                className={`border border-bronze/40 rounded-sm p-2 ${
-                  r.crippled ? "bg-crimson/10" : "bg-yellow-200/30"
+                className={`border rounded-sm p-2 ${
+                  r.crippled
+                    ? "bg-[hsl(25_85%_55%)]/30 border-[hsl(15_70%_35%)]"
+                    : "bg-[hsl(210_85%_88%)] border-[hsl(210_60%_45%)]"
                 }`}
               >
                 <div className="flex items-start gap-2">
