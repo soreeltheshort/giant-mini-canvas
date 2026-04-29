@@ -537,6 +537,15 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
               .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
             setPendingOrders(((po as any[]) || []) as PendingOrder[]);
+
+            // Auto-fill replenish slider to top off supply (post-repair).
+            // Each HP repaired costs 1 supply; refill back to maxSupply.
+            const repairCost = filtered.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+            const newProjected = Math.max(0, currentSupply - repairCost);
+            const newDelta = Math.max(0, maxSupply - newProjected);
+            setReplenishAmount(newDelta);
+            await persistReplenishAmount(newDelta);
+
             onOrdersChanged?.();
             setRepairOpen(false);
           }}
