@@ -1091,6 +1091,12 @@ function RepairPopup({
   availableRepair,
   availableSupply,
   existingAssignments,
+  existingBuildItems,
+  strikecraftCatalog,
+  fighterCap,
+  fighterUsed,
+  gunshipCap,
+  gunshipUsed,
   onClose,
   onSave,
 }: RepairPopupProps) {
@@ -1133,10 +1139,39 @@ function RepairPopup({
   })();
 
   const [rows, setRows] = useState<RepairRow[]>(damaged);
+  // Build queue: array of { ship_type_id, quantity } seeded from any existing order.
+  const [buildRows, setBuildRows] = useState<BuildItem[]>(
+    existingBuildItems.length > 0
+      ? existingBuildItems.map(b => ({ ship_type_id: b.ship_type_id, quantity: b.quantity }))
+      : [],
+  );
 
-  const cap = Math.min(availableRepair, availableSupply);
+  const repairCap = Math.min(availableRepair, availableSupply);
   const totalAssigned = rows.reduce((s, r) => s + r.amount, 0);
-  const remaining = Math.max(0, cap - totalAssigned);
+
+  // Build queue cost (1 supply per point_cost) and slot consumption.
+  const catalogById = new Map(strikecraftCatalog.map(c => [c.id, c]));
+  const buildSupplyCost = buildRows.reduce((sum, b) => {
+    const c = catalogById.get(b.ship_type_id);
+    return sum + (c?.point_cost ?? 0) * (Number(b.quantity) || 0);
+  }, 0);
+  const buildFighterSlots = buildRows.reduce((sum, b) => {
+    const c = catalogById.get(b.ship_type_id);
+    return c && c.bucket === "fighter" ? sum + c.slots * b.quantity : sum;
+  }, 0);
+  const buildGunshipSlots = buildRows.reduce((sum, b) => {
+    const c = catalogById.get(b.ship_type_id);
+    return c && c.bucket === "gunship" ? sum + c.slots * b.quantity : sum;
+  }, 0);
+
+  // Supply must cover BOTH the repair queue AND the build queue.
+  const repairAndBuildSupply = totalAssigned + buildSupplyCost;
+  const supplyOver = repairAndBuildSupply > availableSupply;
+  const remaining = Math.max(0, repairCap - totalAssigned);
+
+  // Available remaining capacity for new builds.
+  const fighterFree = Math.max(0, fighterCap - fighterUsed - buildFighterSlots);
+  const gunshipFree = Math.max(0, gunshipCap - gunshipUsed - buildGunshipSlots);
 
   function move(index: number, dir: -1 | 1) {
     const j = index + dir;
@@ -1150,7 +1185,7 @@ function RepairPopup({
     const next = rows.slice();
     const row = next[index];
     const others = totalAssigned - row.amount;
-    const maxForRow = Math.min(row.missing, Math.max(0, cap - others));
+    const maxForRow = Math.min(row.missing, Math.max(0, repairCap - others));
     row.amount = Math.max(0, Math.min(raw, maxForRow));
     setRows(next);
   }
@@ -1158,7 +1193,7 @@ function RepairPopup({
   function maxRow(index: number) {
     const row = rows[index];
     const others = totalAssigned - row.amount;
-    setAmount(index, Math.min(row.missing, Math.max(0, cap - others)));
+    setAmount(index, Math.min(row.missing, Math.max(0, repairCap - others)));
   }
 
   function clearAll() {
@@ -1167,13 +1202,53 @@ function RepairPopup({
 
   function autoFill() {
     // Walk in priority order; greedily fill each ship up to its missing HP.
-    let pool = cap;
+    let pool = repairCap;
     const next = rows.map(r => {
       const give = Math.max(0, Math.min(r.missing, pool));
       pool -= give;
       return { ...r, amount: give };
     });
     setRows(next);
+  }
+
+  // ── Build queue helpers ──
+  function addBuildRow() {
+    // Default to the cheapest catalog entry whose bucket still has capacity.
+    const candidate = strikecraftCatalog.find(c =>
+      c.bucket === "fighter" ? fighterFree >= c.slots : gunshipFree >= c.slots,
+    ) ?? strikecraftCatalog[0];
+    if (!candidate) return;
+    setBuildRows([...buildRows, { ship_type_id: candidate.id, quantity: 1 }]);
+  }
+  function removeBuildRow(index: number) {
+    const next = buildRows.slice();
+    next.splice(index, 1);
+    setBuildRows(next);
+  }
+  function setBuildShipType(index: number, shipTypeId: string) {
+    const next = buildRows.slice();
+    // Reset quantity to 1 when changing class so we don't accidentally over-cap.
+    next[index] = { ship_type_id: shipTypeId, quantity: 1 };
+    setBuildRows(next);
+  }
+  function setBuildQty(index: number, raw: number) {
+    const next = buildRows.slice();
+    const item = next[index];
+    const c = catalogById.get(item.ship_type_id);
+    if (!c) return;
+    // Determine free slots in the relevant bucket *excluding this row*.
+    const otherSlots = next.reduce((sum, b, i) => {
+      if (i === index) return sum;
+      const oc = catalogById.get(b.ship_type_id);
+      if (!oc || oc.bucket !== c.bucket) return sum;
+      return sum + oc.slots * b.quantity;
+    }, 0);
+    const free = c.bucket === "fighter"
+      ? Math.max(0, fighterCap - fighterUsed - otherSlots)
+      : Math.max(0, gunshipCap - gunshipUsed - otherSlots);
+    const maxQty = Math.floor(free / c.slots);
+    item.quantity = Math.max(0, Math.min(raw, maxQty));
+    setBuildRows(next);
   }
 
   return (
