@@ -420,7 +420,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
             valueClassName={readinessChanged ? "text-crimson" : undefined}
           />
           <Row label="Repair" value={`${totalRepair}`} />
-          <Row label="Supply" value={`${totalSupply}`} />
+          <Row label="Supply" value={`${currentSupply} / ${maxSupply}`} />
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
           <Row label="Ships" value={`${totalShips}`} />
           
