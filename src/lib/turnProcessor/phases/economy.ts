@@ -243,6 +243,126 @@ export const economyPhase: Phase = {
       }
     }
 
+    // 4b. Apply queued repair_fleet orders.
+    //     Each unit of "amount" restores 1 HP and consumes 1 supply. Repairs are
+    //     additionally capped by the fleet's available repair-pod pool, which is
+    //     contributed by non-crippled ships in the Rear tactical group.
+    const repairOrders = ctx.orders.filter(
+      o => o.order_type === "other" && o.order_json?.kind === "repair_fleet",
+    );
+    if (repairOrders.length > 0) {
+      // Cache hull and repair_pod from ship_types.
+      const { data: stData } = await (supabase as any)
+        .from("ship_types").select("id, hull, repair_pod");
+      const hullMap = new Map<string, number>();
+      const repairPodMap = new Map<string, number>();
+      for (const r of (stData || [])) {
+        hullMap.set(r.id, Number(r.hull) || 0);
+        repairPodMap.set(r.id, Number(r.repair_pod) || 0);
+      }
+
+      let repairsApplied = 0;
+      for (const order of repairOrders) {
+        const gameFleetId = order.order_json?.fleet_id;
+        const assignments = (order.order_json?.assignments as Array<{ ship_id: string; amount: number }>) || [];
+        if (!gameFleetId || assignments.length === 0) continue;
+
+        const { data: gf } = await (supabase as any)
+          .from("game_fleets").select("id, fleet_id, fleet_name").eq("id", gameFleetId).maybeSingle();
+        if (!gf?.fleet_id) continue;
+
+        const { data: fl } = await (supabase as any)
+          .from("fleets").select("id, current_supply").eq("id", gf.fleet_id).maybeSingle();
+        if (!fl) continue;
+
+        // Compute repair-pod pool from Rear, non-crippled ships.
+        const { data: gfShips } = await (supabase as any)
+          .from("game_fleet_ships")
+          .select("id, ship_type_id, quantity, current_hp, crippled, tactical_group")
+          .eq("game_fleet_id", gameFleetId);
+        let repairPool = 0;
+        for (const r of (gfShips || [])) {
+          if (r.crippled) continue;
+          if (r.tactical_group !== "Rear") continue;
+          repairPool += (repairPodMap.get(r.ship_type_id) || 0) * (Number(r.quantity) || 0);
+        }
+        const shipById = new Map<string, any>();
+        for (const r of (gfShips || [])) shipById.set(r.id, r);
+
+        let supplyAvail = Number(fl.current_supply) || 0;
+        const repaired: Array<{ ship_id: string; granted: number; new_hp: number; max_hp: number }> = [];
+        const dropped: Array<{ ship_id: string; reason: string; requested: number }> = [];
+
+        for (const a of assignments) {
+          const requested = Math.max(0, Math.floor(Number(a.amount) || 0));
+          if (requested <= 0) continue;
+          const row = shipById.get(a.ship_id);
+          if (!row) {
+            dropped.push({ ship_id: a.ship_id, reason: "ship not found", requested });
+            continue;
+          }
+          const maxHp = hullMap.get(row.ship_type_id) || 0;
+          const curHp = row.current_hp == null ? maxHp : Number(row.current_hp);
+          const hpMissing = Math.max(0, maxHp - curHp);
+          const granted = Math.max(0, Math.min(requested, hpMissing, repairPool, supplyAvail));
+          if (granted < requested) {
+            dropped.push({
+              ship_id: a.ship_id,
+              reason: granted === 0
+                ? (hpMissing === 0 ? "already full" : repairPool === 0 ? "no repair pods" : "no supply")
+                : "partial (cap, pods, or supply limited)",
+              requested: requested - granted,
+            });
+          }
+          if (granted <= 0) continue;
+
+          const newHp = curHp + granted;
+          await (supabase as any).from("game_fleet_ships")
+            .update({
+              current_hp: newHp >= maxHp ? null : newHp,
+              crippled: false,
+            })
+            .eq("id", row.id);
+
+          repairPool -= granted;
+          supplyAvail -= granted;
+          repaired.push({ ship_id: row.id, granted, new_hp: newHp, max_hp: maxHp });
+        }
+
+        // Persist new supply balance.
+        await (supabase as any).from("fleets")
+          .update({ current_supply: Math.max(0, supplyAvail) })
+          .eq("id", fl.id);
+        repairsApplied++;
+
+        const totalHpRestored = repaired.reduce((s, r) => s + r.granted, 0);
+        ctx.logs.push({
+          game_id: gameId,
+          turn_number: currentTurn,
+          phase: "economy",
+          log_type: "fleet_repaired",
+          message: `${gf.fleet_name || "Fleet"}: repaired ${totalHpRestored} HP across ${repaired.length} ship(s)`,
+          details_json: {
+            fleet_id: fl.id,
+            game_fleet_id: gameFleetId,
+            repaired,
+            dropped,
+            supply_remaining: Math.max(0, supplyAvail),
+          },
+        });
+      }
+
+      if (repairsApplied > 0) {
+        ctx.logs.push({
+          game_id: gameId,
+          turn_number: currentTurn,
+          phase: "economy",
+          log_type: "repair_summary",
+          message: `Applied ${repairsApplied} repair order(s).`,
+        });
+      }
+    }
+
     // 5. Apply queued build_strikecraft orders.
     //    Co-mingled with repair orders in the Repair & Replenish UI. Each unit
     //    costs `point_cost` in fleet supply. Capacity is re-checked at process
