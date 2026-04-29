@@ -293,6 +293,8 @@ export interface CombatConstants {
   critical_hit_chance: number;
   critical_hit_multiplier: number;
   speed_hit_modifier: number;
+  /** Fraction of maxHull at/below which a ship becomes crippled (e.g. 0.25 = <=25%). */
+  cripple_hp_threshold: number;
 }
 
 // Fallback defaults (used if DB data not provided)
@@ -325,6 +327,7 @@ const DEFAULT_COMBAT_CONSTANTS: CombatConstants = {
   critical_hit_chance: 0.05,
   critical_hit_multiplier: 2.0,
   speed_hit_modifier: 0.02,
+  cripple_hp_threshold: 0.25,
 };
 
 function getGroupModifier(group: string, type: "attack" | "defense", modifiers: GroupModConfig[]): number {
@@ -493,7 +496,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           const armorReduction = isCrit ? 0 : Math.max(target.armor - mount.armorPenetration, 0);
           const actualDmg = Math.max(0, rawDmg - armorReduction);
           target.currentHull -= actualDmg;
-          const wouldCripple = target.currentHull <= 0;
+          const crippleAt = Math.floor(target.maxHull * cc.cripple_hp_threshold);
+          const wouldCripple = target.currentHull <= crippleAt;
 
           const critTag = isCrit ? " CRITICAL!" : "";
           emit("fire_hit", {
@@ -504,8 +508,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
              attackerVirtualSpeed: atkBreakdown.finalSpeed, defenderVirtualSpeed: defBreakdown.finalSpeed, targetSource, attackerTargetPref: attacker.target_preference,
              attackerReadiness: attackerReadiness, defenderReadiness: defenderReadiness,
           },
-            `${attacker.name} (${attacker.fleet}, pref: ${attacker.target_preference}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage. (rolled ${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% to hit)${critTag}${wouldCripple ? " DESTROYED!" : ""}`,
-            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! ${targetExplain} ${speedExplain}${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${Math.max(0, target.currentHull)}/${target.maxHull}.${wouldCripple ? " Ship crippled." : ""}`
+            `${attacker.name} (${attacker.fleet}, pref: ${attacker.target_preference}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage. (rolled ${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% to hit)${critTag}${wouldCripple ? " CRIPPLED!" : ""}`,
+            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! ${targetExplain} ${speedExplain}${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${Math.max(0, target.currentHull)}/${target.maxHull} (cripple at <=${crippleAt}, threshold ${(cc.cripple_hp_threshold * 100).toFixed(0)}%).${wouldCripple ? " Ship crippled." : ""}`
           );
         } else {
           emit("fire_miss", {
@@ -585,10 +589,14 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         fireWeaponsOfType(order.attacker, order.enemies, weaponType, order.attackMod, 0);
       }
 
-      // Now apply deferred crippling: any ship at 0 hull that wasn't already crippled
+      // Now apply deferred crippling: any ship at/below the cripple threshold
+      // (fraction of maxHull) that wasn't already crippled. HP is preserved
+      // (clamped to >= 0) so post-battle UI can show how badly damaged it is.
       for (const ship of [...aInPhase, ...bInPhase]) {
-        if (!ship.crippled && ship.currentHull <= 0) {
-          ship.currentHull = 0;
+        if (ship.crippled) continue;
+        const crippleAt = Math.floor(ship.maxHull * cc.cripple_hp_threshold);
+        if (ship.currentHull <= crippleAt) {
+          if (ship.currentHull < 0) ship.currentHull = 0;
           ship.crippled = true;
         }
       }

@@ -43,10 +43,11 @@ async function applyLosses(
   supabase: any,
   rows: FleetCompositionRow[],
   finalShips: Array<{ typeId: string; tacticalGroup: string; crippled: boolean; sourceRowId?: string; currentHull: number; maxHull: number }>,
-): Promise<{ losses: Record<string, number>; totalBefore: number; totalAfter: number }> {
+): Promise<{ losses: Record<string, number>; totalBefore: number; totalAfter: number; totalRemaining: number }> {
   const losses: Record<string, number> = {};
   let totalBefore = 0;
   let totalAfter = 0;
+  let totalRemaining = 0; // active + crippled (rows still in the fleet)
 
   // Detect per-game roster mode by presence of sourceRowId on any survivor.
   const isPerInstance = rows.length > 0 && rows[0].source === "game_fleet_ships";
@@ -61,15 +62,26 @@ async function applyLosses(
     for (const row of rows) {
       totalBefore += 1; // one DB row = one ship in per-instance mode
       const final = byRow.get(row.id);
-      if (!final || final.crippled) {
-        // Crippled = removed from the fleet permanently.
+      if (!final) {
+        // No final state means the ship was somehow not represented in the
+        // engine — destroy the row to stay safe.
         await supabase.from("game_fleet_ships").delete().eq("id", row.id);
         losses[`${row.ship_type_id}:${row.tactical_group}`] =
           (losses[`${row.ship_type_id}:${row.tactical_group}`] || 0) + 1;
+        continue;
+      }
+      const newHp = Math.max(0, Math.min(final.currentHull, final.maxHull));
+      if (final.crippled) {
+        // Crippled ships persist in the fleet but are flagged. They count
+        // as a loss for combat purposes (can't fight) but the row stays so
+        // the player can repair/scrap them later.
+        await supabase.from("game_fleet_ships").update({ current_hp: newHp, crippled: true }).eq("id", row.id);
+        losses[`${row.ship_type_id}:${row.tactical_group}`] =
+          (losses[`${row.ship_type_id}:${row.tactical_group}`] || 0) + 1;
+        totalRemaining += 1;
       } else {
         totalAfter += 1;
-        const newHp = Math.max(0, Math.min(final.currentHull, final.maxHull));
-        // Only update if HP changed to avoid noisy writes.
+        totalRemaining += 1;
         if (newHp < final.maxHull) {
           await supabase.from("game_fleet_ships").update({ current_hp: newHp, crippled: false }).eq("id", row.id);
         } else {
@@ -78,7 +90,7 @@ async function applyLosses(
         }
       }
     }
-    return { losses, totalBefore, totalAfter };
+    return { losses, totalBefore, totalAfter, totalRemaining };
   }
 
   // Legacy aggregate-row path (simulator only).
@@ -94,6 +106,7 @@ async function applyLosses(
     const survivors = survivorCounts.get(key) || 0;
     const lost = row.quantity - survivors;
     totalAfter += survivors;
+    totalRemaining += survivors;
     if (lost > 0) {
       losses[`${row.ship_type_id}:${row.tactical_group}`] = lost;
     }
@@ -104,7 +117,7 @@ async function applyLosses(
       await supabase.from(table).update({ quantity: survivors }).eq("id", row.id);
     }
   }
-  return { losses, totalBefore, totalAfter };
+  return { losses, totalBefore, totalAfter, totalRemaining };
 }
 
 export const combatPhase: Phase = {
@@ -266,9 +279,10 @@ export const combatPhase: Phase = {
       const lossesA = await applyLosses(supabase as any, snapA.rows, aFinal);
       const lossesB = await applyLosses(supabase as any, snapB.rows, bFinal);
 
-      // If a fleet is wiped, fully remove it from the game via the shared
-      // cleanup helper (single entry point for fleet destruction).
-      if (lossesA.totalAfter <= 0) {
+      // If a fleet has zero rows left at all (no survivors AND no crippled),
+      // remove it from the map. Crippled-only fleets persist so the player
+      // can repair/scrap them.
+      if (lossesA.totalRemaining <= 0) {
         await destroyFleet({
           ctx,
           gameFleetId: attackerMF.fleet_id,
@@ -277,7 +291,7 @@ export const combatPhase: Phase = {
           reason: "combat_wiped",
         });
       }
-      if (lossesB.totalAfter <= 0) {
+      if (lossesB.totalRemaining <= 0) {
         await destroyFleet({
           ctx,
           gameFleetId: targetMF.fleet_id,
