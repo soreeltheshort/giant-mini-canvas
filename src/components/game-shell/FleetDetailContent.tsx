@@ -1157,10 +1157,10 @@ function RepairPopup({
           })}
         </div>
 
-        <div className="flex gap-2 px-4 py-3 border-t border-bronze/40 bg-marble-dark shrink-0">
+        <div className="flex gap-2 px-4 py-3 border-t border-bronze/40 bg-ivory-dark shrink-0">
           <button
             onClick={onClose}
-            className="flex-1 h-9 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60"
+            className="flex-1 h-9 rounded-sm border border-bronze/50 bg-ivory px-2 text-xs text-foreground font-semibold hover:border-bronze"
           >
             Cancel
           </button>
