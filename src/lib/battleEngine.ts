@@ -508,8 +508,8 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
              attackerVirtualSpeed: atkBreakdown.finalSpeed, defenderVirtualSpeed: defBreakdown.finalSpeed, targetSource, attackerTargetPref: attacker.target_preference,
              attackerReadiness: attackerReadiness, defenderReadiness: defenderReadiness,
           },
-            `${attacker.name} (${attacker.fleet}, pref: ${attacker.target_preference}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage. (rolled ${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% to hit)${critTag}${wouldCripple ? " DESTROYED!" : ""}`,
-            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! ${targetExplain} ${speedExplain}${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${Math.max(0, target.currentHull)}/${target.maxHull}.${wouldCripple ? " Ship crippled." : ""}`
+            `${attacker.name} (${attacker.fleet}, pref: ${attacker.target_preference}) hits ${target.name} (${target.fleet}) with ${mount.name} #${gun + 1} for ${actualDmg} damage. (rolled ${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% to hit)${critTag}${wouldCripple ? " CRIPPLED!" : ""}`,
+            `${mount.name} #${gun + 1}/${mount.count}: roll=${roll.toFixed(3)} vs ${(hitChance * 100).toFixed(0)}% chance. Hit! ${targetExplain} ${speedExplain}${isCrit ? ` CRIT(roll=${critRoll.toFixed(3)} vs ${(cc.critical_hit_chance * 100).toFixed(0)}%, x${cc.critical_hit_multiplier})` : ""} Raw dmg=${rawDmg}, armor=${target.armor}, AP=${mount.armorPenetration}, reduction=${armorReduction}, actual=${actualDmg}. Hull: ${Math.max(0, target.currentHull)}/${target.maxHull} (cripple at <=${crippleAt}, threshold ${(cc.cripple_hp_threshold * 100).toFixed(0)}%).${wouldCripple ? " Ship crippled." : ""}`
           );
         } else {
           emit("fire_miss", {
