@@ -495,9 +495,12 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           const rawDmg = isCrit ? Math.round(baseDmg * cc.critical_hit_multiplier) : baseDmg;
           const armorReduction = isCrit ? 0 : Math.max(target.armor - mount.armorPenetration, 0);
           const actualDmg = Math.max(0, rawDmg - armorReduction);
+          const hullBefore = target.currentHull;
           target.currentHull -= actualDmg;
           const crippleAt = Math.floor(target.maxHull * cc.cripple_hp_threshold);
-          const wouldCripple = target.currentHull <= crippleAt;
+          // Only flag CRIPPLED on the exact hit that crosses the threshold,
+          // and not if the same hit destroys the ship (hull <= 0).
+          const wouldCripple = hullBefore > crippleAt && target.currentHull <= crippleAt && target.currentHull > 0;
 
           const critTag = isCrit ? " CRITICAL!" : "";
           emit("fire_hit", {
