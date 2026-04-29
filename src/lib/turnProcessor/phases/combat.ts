@@ -260,8 +260,8 @@ export const combatPhase: Phase = {
       }
 
       // Apply losses to both fleets
-      const aFinal = battleResult.finalState.fleetA.map(s => ({ typeId: s.typeId, tacticalGroup: s.tacticalGroup, crippled: s.crippled }));
-      const bFinal = battleResult.finalState.fleetB.map(s => ({ typeId: s.typeId, tacticalGroup: s.tacticalGroup, crippled: s.crippled }));
+      const aFinal = battleResult.finalState.fleetA.map((s: any) => ({ typeId: s.typeId, tacticalGroup: s.tacticalGroup, crippled: s.crippled, sourceRowId: s.sourceRowId, currentHull: s.currentHull, maxHull: s.maxHull }));
+      const bFinal = battleResult.finalState.fleetB.map((s: any) => ({ typeId: s.typeId, tacticalGroup: s.tacticalGroup, crippled: s.crippled, sourceRowId: s.sourceRowId, currentHull: s.currentHull, maxHull: s.maxHull }));
       const lossesA = await applyLosses(supabase as any, snapA.rows, aFinal);
       const lossesB = await applyLosses(supabase as any, snapB.rows, bFinal);
 
