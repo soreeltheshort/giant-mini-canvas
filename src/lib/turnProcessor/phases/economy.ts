@@ -149,5 +149,76 @@ export const economyPhase: Phase = {
         message: `Applied ${readinessApplied} readiness order(s).`,
       });
     }
+
+    // 4. Apply queued replenish_supply orders.
+    //    Max_Supplies = sum(ship.supply_pod * quantity) * supply_capacity_coefficient.
+    //    Add the requested amount, capped at (Max - Current); never exceed Max.
+    const replenishOrders = ctx.orders.filter(
+      o => o.order_type === "other" && o.order_json?.kind === "replenish_supply",
+    );
+    if (replenishOrders.length > 0) {
+      const { data: coeffRow } = await (supabase as any)
+        .from("combat_constants").select("value").eq("key", "supply_capacity_coefficient").maybeSingle();
+      const supplyCoefficient = Number(coeffRow?.value) || 10;
+
+      const { data: allShipTypes } = await (supabase as any)
+        .from("ship_types").select("id, supply_pod");
+      const supplyPodMap = new Map<string, number>();
+      for (const st of (allShipTypes || [])) supplyPodMap.set(st.id, Number(st.supply_pod) || 0);
+
+      let supplyApplied = 0;
+      for (const order of replenishOrders) {
+        const gameFleetId = order.order_json?.fleet_id;
+        const requested = Math.max(0, Math.floor(Number(order.order_json?.amount) || 0));
+        if (!gameFleetId || requested <= 0) continue;
+
+        // Resolve game_fleet -> source fleet (which holds current_supply)
+        const { data: gf } = await (supabase as any)
+          .from("game_fleets").select("id, fleet_id, fleet_name").eq("id", gameFleetId).maybeSingle();
+        if (!gf?.fleet_id) continue;
+
+        const { data: fl } = await (supabase as any)
+          .from("fleets").select("id, current_supply").eq("id", gf.fleet_id).maybeSingle();
+        if (!fl) continue;
+
+        // Compute Max_Supplies from this game fleet's roster
+        const { data: gfShips } = await (supabase as any)
+          .from("game_fleet_ships").select("ship_type_id, quantity").eq("game_fleet_id", gameFleetId);
+        const totalSupplyPods = (gfShips || []).reduce(
+          (sum: number, r: any) => sum + (supplyPodMap.get(r.ship_type_id) || 0) * (Number(r.quantity) || 0),
+          0,
+        );
+        const maxSupplies = totalSupplyPods * supplyCoefficient;
+        const current = Math.min(Number(fl.current_supply) || 0, maxSupplies);
+        const delta = Math.max(0, maxSupplies - current);
+        const granted = Math.min(requested, delta);
+        const next = current + granted;
+
+        await (supabase as any).from("fleets").update({ current_supply: next }).eq("id", fl.id);
+        supplyApplied++;
+
+        ctx.logs.push({
+          game_id: gameId,
+          turn_number: currentTurn,
+          phase: "economy",
+          log_type: "supply_replenished",
+          message: `${gf.fleet_name || "Fleet"}: supply ${current} → ${next} / ${maxSupplies} (requested ${requested})`,
+          details_json: {
+            fleet_id: fl.id, game_fleet_id: gameFleetId,
+            current, granted, next, max: maxSupplies, requested,
+          },
+        });
+      }
+
+      if (supplyApplied > 0) {
+        ctx.logs.push({
+          game_id: gameId,
+          turn_number: currentTurn,
+          phase: "economy",
+          log_type: "supply_summary",
+          message: `Applied ${supplyApplied} supply replenishment order(s).`,
+        });
+      }
+    }
   },
 };
