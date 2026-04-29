@@ -1237,6 +1237,7 @@ export type Database = {
           special_notes: string | null
           type: string
           updated_at: string
+          weapon_key: string | null
         }
         Insert: {
           armor_penetration?: number
@@ -1251,6 +1252,7 @@ export type Database = {
           special_notes?: string | null
           type?: string
           updated_at?: string
+          weapon_key?: string | null
         }
         Update: {
           armor_penetration?: number
@@ -1265,6 +1267,7 @@ export type Database = {
           special_notes?: string | null
           type?: string
           updated_at?: string
+          weapon_key?: string | null
         }
         Relationships: []
       }

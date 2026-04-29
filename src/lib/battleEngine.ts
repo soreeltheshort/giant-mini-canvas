@@ -83,8 +83,14 @@ interface WeaponMount {
   armorPenetration: number;
 }
 
-// Weapon stats lookup: damage per mount and base hit chance
-const WEAPON_STATS: Record<string, { type: "laser" | "missile"; damage: number; hitChance: number; armorPenetration: number }> = {
+// Weapon stats lookup: damage per mount and base hit chance.
+// These are FALLBACK values used only if no DB-loaded stats are passed to
+// runBattle(). The authoritative values live in the `weapons` table and are
+// loaded via loadBattleConfig() in battleSetup.ts.
+export type WeaponStat = { type: "laser" | "missile"; damage: number; hitChance: number; armorPenetration: number };
+export type WeaponStatsMap = Record<string, WeaponStat>;
+
+const WEAPON_STATS: WeaponStatsMap = {
   laser_2_5cm:    { type: "laser",   damage: 1,  hitChance: 0.75, armorPenetration: 0 },
   laser_4_5cm:    { type: "laser",   damage: 2,  hitChance: 0.70, armorPenetration: 0 },
   laser_6_5cm:    { type: "laser",   damage: 3,  hitChance: 0.68, armorPenetration: 1 },
@@ -114,13 +120,13 @@ const WEAPON_DISPLAY_NAMES: Record<string, string> = {
   missile_half_kt: "½kt Missile",
 };
 
-function getWeaponMounts(shipType: ShipTypeData): WeaponMount[] {
+function getWeaponMounts(shipType: ShipTypeData, statsMap: WeaponStatsMap): WeaponMount[] {
   const mounts: WeaponMount[] = [];
-  for (const [key, stats] of Object.entries(WEAPON_STATS)) {
+  for (const [key, stats] of Object.entries(statsMap)) {
     const count = (shipType as any)[key] as number;
     if (count > 0) {
       mounts.push({
-        name: WEAPON_DISPLAY_NAMES[key],
+        name: WEAPON_DISPLAY_NAMES[key] ?? key,
         key,
         type: stats.type,
         count,
@@ -327,11 +333,13 @@ function getGroupModifier(group: string, type: "attack" | "defense", modifiers: 
   return type === "attack" ? mod.attack_mod : mod.defense_mod;
 }
 
-export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants, weaponTargetPrefs?: WeaponTargetPref[], admiralRatingA: number = 4, admiralRatingB: number = 4, groundOutcomes?: GroundCombatOutcome[], groundDefense: number = 0, groundUnitsA: number = 0, groundUnitsB: number = 0): BattleResult {
+export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr: string, phases?: PhaseConfig[], groupModifiers?: GroupModConfig[], combatConsts?: CombatConstants, weaponTargetPrefs?: WeaponTargetPref[], admiralRatingA: number = 4, admiralRatingB: number = 4, groundOutcomes?: GroundCombatOutcome[], groundDefense: number = 0, groundUnitsA: number = 0, groundUnitsB: number = 0, weaponStats?: WeaponStatsMap): BattleResult {
   const activePhases = phases && phases.length > 0 ? phases : DEFAULT_PHASES;
   const activeMods = groupModifiers && groupModifiers.length > 0 ? groupModifiers : DEFAULT_GROUP_MODS;
   const cc = combatConsts ?? DEFAULT_COMBAT_CONSTANTS;
   const weaponPrefs = weaponTargetPrefs ?? [];
+  // Merge DB-loaded weapon stats over the hardcoded fallback so any keys not yet in the DB still resolve.
+  const activeWeaponStats: WeaponStatsMap = { ...WEAPON_STATS, ...(weaponStats ?? {}) };
   const activeGroundOutcomes = groundOutcomes ?? [];
   let currentGroundA = groundUnitsA;
   let currentGroundB = groundUnitsB + groundDefense;
@@ -369,7 +377,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
           maxHull: fs.ship_type.hull,
           currentHull: startHull,
           armor: fs.ship_type.armor,
-          weapons: getWeaponMounts(fs.ship_type),
+          weapons: getWeaponMounts(fs.ship_type, activeWeaponStats),
           sensor_rating: fs.ship_type.sensor_rating,
           cbt_speed: fs.ship_type.cbt_speed,
           tacticalGroup: fs.tactical_group,
