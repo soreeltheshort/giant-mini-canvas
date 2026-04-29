@@ -12,6 +12,10 @@ export interface FleetShipRow {
   ship_name: string;
   ship_display_id: string;
   hull_class: string;
+  /** Per-ship HP fields (per-game roster only). max_hp comes from ship type. */
+  max_hp?: number | null;
+  current_hp?: number | null;
+  crippled?: boolean;
 }
 
 interface Props {
