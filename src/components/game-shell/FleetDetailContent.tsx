@@ -1411,6 +1411,113 @@ function RepairPopup({
               </div>
             );
           })}
+
+          {(fighterCap > 0 || gunshipCap > 0) && (
+            <div className="pt-2 mt-2 border-t border-bronze/40 space-y-2">
+              <div className="flex items-baseline justify-between">
+                <h4 className="text-[11px] font-heading font-bold uppercase tracking-wider text-bronze-dark">
+                  Build Strikecraft
+                </h4>
+                <div className="text-[10px] font-semibold text-bronze-dark space-x-2">
+                  {fighterCap > 0 && (
+                    <span className={fighterFree < 0 ? "text-crimson" : ""}>
+                      Fighters {fighterUsed + buildFighterSlots}/{fighterCap}
+                    </span>
+                  )}
+                  {gunshipCap > 0 && (
+                    <span className={gunshipFree < 0 ? "text-crimson" : ""}>
+                      Gunships {gunshipUsed + buildGunshipSlots}/{gunshipCap}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {buildRows.length === 0 && (
+                <p className="text-[11px] text-bronze-dark italic">
+                  No builds queued. Empty fighter or gunship capacity can be filled here at a cost of the ship's point value in supply.
+                </p>
+              )}
+
+              {buildRows.map((b, i) => {
+                const c = catalogById.get(b.ship_type_id);
+                const cost = (c?.point_cost ?? 0) * b.quantity;
+                // Per-row max: free slots in this bucket (excluding self), divided by slots-per-ship.
+                const otherSlots = buildRows.reduce((sum, x, j) => {
+                  if (j === i || !c) return sum;
+                  const xc = catalogById.get(x.ship_type_id);
+                  if (!xc || xc.bucket !== c.bucket) return sum;
+                  return sum + xc.slots * x.quantity;
+                }, 0);
+                const bucketCap = c?.bucket === "fighter" ? fighterCap : gunshipCap;
+                const bucketUsed = c?.bucket === "fighter" ? fighterUsed : gunshipUsed;
+                const free = c ? Math.max(0, bucketCap - bucketUsed - otherSlots) : 0;
+                const maxQty = c ? Math.floor(free / c.slots) : 0;
+                return (
+                  <div
+                    key={i}
+                    className="border border-bronze/40 rounded-sm p-2 bg-bronze/5"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        value={b.ship_type_id}
+                        onChange={(e) => setBuildShipType(i, e.target.value)}
+                        className="grow min-w-0 h-7 rounded-sm border border-bronze/60 bg-ivory px-1 text-[11px] font-semibold text-[#272d34]"
+                      >
+                        {strikecraftCatalog.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} [{s.class}] · ₡{s.point_cost}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => setBuildQty(i, b.quantity - 1)}
+                        disabled={b.quantity <= 0}
+                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                        aria-label="Decrease"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={maxQty}
+                        value={b.quantity}
+                        onChange={(e) => setBuildQty(i, Number(e.target.value) || 0)}
+                        className="w-12 h-7 rounded-sm border border-bronze/60 bg-ivory px-1 text-center text-xs font-bold text-[#272d34]"
+                      />
+                      <button
+                        onClick={() => setBuildQty(i, b.quantity + 1)}
+                        disabled={b.quantity >= maxQty}
+                        className="w-7 h-7 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                        aria-label="Increase"
+                      >
+                        +
+                      </button>
+                      <button
+                        onClick={() => removeBuildRow(i)}
+                        className="w-7 h-7 rounded-sm border border-crimson/50 bg-ivory font-bold text-sm leading-none hover:border-crimson text-crimson"
+                        aria-label="Remove"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="text-[10px] font-semibold text-bronze-dark mt-1">
+                      {c?.bucket === "fighter" ? "fighter" : "gunship"} · slots {(c?.slots ?? 0) * b.quantity} · supply ₡{cost}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <button
+                onClick={addBuildRow}
+                disabled={(fighterFree <= 0 && gunshipFree <= 0) || strikecraftCatalog.length === 0}
+                className="w-full h-7 rounded-sm border border-bronze/50 bg-ivory px-2 text-[11px] font-semibold hover:border-bronze disabled:opacity-50 disabled:cursor-not-allowed text-[#272d34]"
+              >
+                + Add Build Order
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 px-4 py-3 border-t border-bronze/40 bg-ivory-dark shrink-0">
@@ -1421,8 +1528,11 @@ function RepairPopup({
             Cancel
           </button>
           <button
-            onClick={() => onSave(rows.map(r => ({ ship_id: r.ship_id, amount: r.amount })))}
-            disabled={totalAssigned > cap}
+            onClick={() => onSave(
+              rows.map(r => ({ ship_id: r.ship_id, amount: r.amount })),
+              buildRows.filter(b => b.quantity > 0),
+            )}
+            disabled={totalAssigned > repairCap || supplyOver}
             className="flex-1 h-9 rounded-sm border-2 border-bronze bg-bronze/20 px-2 text-xs text-bronze-dark font-heading font-bold uppercase tracking-wider hover:bg-bronze/30 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save Order
