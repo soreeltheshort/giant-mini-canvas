@@ -12,6 +12,10 @@ export interface FleetShipRow {
   ship_name: string;
   ship_display_id: string;
   hull_class: string;
+  /** Per-ship HP fields (per-game roster only). max_hp comes from ship type. */
+  max_hp?: number | null;
+  current_hp?: number | null;
+  crippled?: boolean;
 }
 
 interface Props {
@@ -187,8 +191,27 @@ export default function FleetCompositionEditor({
                       {s.ship_display_id ? `${s.ship_display_id} ` : ""}
                       {s.ship_name}
                     </div>
-                    <div className="text-[9px] text-foreground/85 uppercase tracking-wider font-semibold">
-                      {s.hull_class}
+                    <div className="text-[9px] text-foreground/85 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                      <span>{s.hull_class}</span>
+                      {(() => {
+                        const max = s.max_hp ?? null;
+                        const cur = s.current_hp ?? null;
+                        if (s.crippled) {
+                          return (
+                            <span className="text-crimson/70 normal-case tracking-normal font-semibold">
+                              {max != null ? `0/${max} · ` : ""}Crippled
+                            </span>
+                          );
+                        }
+                        if (max != null && cur != null && cur < max) {
+                          return (
+                            <span className="text-amber-700/70 normal-case tracking-normal font-semibold">
+                              {cur}/{max}
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                   {!listEachShip && (canEdit ? (

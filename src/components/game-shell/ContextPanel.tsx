@@ -85,6 +85,7 @@ export interface ShipTypeLookup {
   map_speed?: number;
   repair_pod?: number;
   supply_pod?: number;
+  hull?: number;
 }
 
 export interface FacilityTypeFull {

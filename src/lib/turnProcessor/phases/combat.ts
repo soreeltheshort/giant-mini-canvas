@@ -28,31 +28,66 @@ import { loadFleetSnapshot, loadBattleConfig, calcGroundUnits, type FleetComposi
 import { destroyFleet } from "../fleetCleanup";
 
 /**
- * Apply battle losses back to the composition table the rows were loaded from
- * (game_fleet_ships for in-game battles; fleet_ships only if the loader was
- * called without a gameFleetId, e.g. simulator). Compares pre-battle quantity
- * per (ship_type_id, tactical_group) row with post-battle survivors.
+ * Apply battle losses back to the composition table the rows were loaded from.
  *
- * NOTE: combat must NEVER write to `fleet_ships` for in-game battles — that
- * destroys the player's saved Fleet Builder design. Always pass gameFleetId
- * when loading the snapshot upstream.
+ * - For per-game rosters (`game_fleet_ships`, one DB row = one ship), each
+ *   surviving ShipInstance carries its `sourceRowId`. We update that row's
+ *   `current_hp` / `crippled` in-place; rows with no surviving instance are
+ *   destroyed (DELETE).
+ * - For simulator runs (`fleet_ships`, aggregated by quantity) we fall back to
+ *   the legacy survivor-count behaviour. Combat must NEVER actually run this
+ *   branch in-game because that would mutate the player's saved Fleet Builder
+ *   design.
  */
 async function applyLosses(
   supabase: any,
   rows: FleetCompositionRow[],
-  finalShips: Array<{ typeId: string; tacticalGroup: string; crippled: boolean }>,
+  finalShips: Array<{ typeId: string; tacticalGroup: string; crippled: boolean; sourceRowId?: string; currentHull: number; maxHull: number }>,
 ): Promise<{ losses: Record<string, number>; totalBefore: number; totalAfter: number }> {
+  const losses: Record<string, number> = {};
+  let totalBefore = 0;
+  let totalAfter = 0;
+
+  // Detect per-game roster mode by presence of sourceRowId on any survivor.
+  const isPerInstance = rows.length > 0 && rows[0].source === "game_fleet_ships";
+
+  if (isPerInstance) {
+    // Map sourceRowId → final state (engine instance, possibly crippled).
+    const byRow = new Map<string, { crippled: boolean; currentHull: number; maxHull: number; typeId: string; tacticalGroup: string }>();
+    for (const s of finalShips) {
+      if (!s.sourceRowId) continue;
+      byRow.set(s.sourceRowId, s);
+    }
+    for (const row of rows) {
+      totalBefore += 1; // one DB row = one ship in per-instance mode
+      const final = byRow.get(row.id);
+      if (!final || final.crippled) {
+        // Crippled = removed from the fleet permanently.
+        await supabase.from("game_fleet_ships").delete().eq("id", row.id);
+        losses[`${row.ship_type_id}:${row.tactical_group}`] =
+          (losses[`${row.ship_type_id}:${row.tactical_group}`] || 0) + 1;
+      } else {
+        totalAfter += 1;
+        const newHp = Math.max(0, Math.min(final.currentHull, final.maxHull));
+        // Only update if HP changed to avoid noisy writes.
+        if (newHp < final.maxHull) {
+          await supabase.from("game_fleet_ships").update({ current_hp: newHp, crippled: false }).eq("id", row.id);
+        } else {
+          // Fully healed survivors: clear current_hp (NULL = full).
+          await supabase.from("game_fleet_ships").update({ current_hp: null, crippled: false }).eq("id", row.id);
+        }
+      }
+    }
+    return { losses, totalBefore, totalAfter };
+  }
+
+  // Legacy aggregate-row path (simulator only).
   const survivorCounts = new Map<string, number>();
   for (const s of finalShips) {
     if (s.crippled) continue;
     const key = `${s.typeId}|${s.tacticalGroup}`;
     survivorCounts.set(key, (survivorCounts.get(key) || 0) + 1);
   }
-
-  const losses: Record<string, number> = {};
-  let totalBefore = 0;
-  let totalAfter = 0;
-
   for (const row of rows) {
     totalBefore += row.quantity;
     const key = `${row.ship_type_id}|${row.tactical_group}`;
@@ -62,14 +97,13 @@ async function applyLosses(
     if (lost > 0) {
       losses[`${row.ship_type_id}:${row.tactical_group}`] = lost;
     }
-    const table = row.source; // "game_fleet_ships" or "fleet_ships"
+    const table = row.source;
     if (survivors <= 0) {
       await supabase.from(table).delete().eq("id", row.id);
     } else if (survivors !== row.quantity) {
       await supabase.from(table).update({ quantity: survivors }).eq("id", row.id);
     }
   }
-
   return { losses, totalBefore, totalAfter };
 }
 
@@ -226,8 +260,8 @@ export const combatPhase: Phase = {
       }
 
       // Apply losses to both fleets
-      const aFinal = battleResult.finalState.fleetA.map(s => ({ typeId: s.typeId, tacticalGroup: s.tacticalGroup, crippled: s.crippled }));
-      const bFinal = battleResult.finalState.fleetB.map(s => ({ typeId: s.typeId, tacticalGroup: s.tacticalGroup, crippled: s.crippled }));
+      const aFinal = battleResult.finalState.fleetA.map((s: any) => ({ typeId: s.typeId, tacticalGroup: s.tacticalGroup, crippled: s.crippled, sourceRowId: s.sourceRowId, currentHull: s.currentHull, maxHull: s.maxHull }));
+      const bFinal = battleResult.finalState.fleetB.map((s: any) => ({ typeId: s.typeId, tacticalGroup: s.tacticalGroup, crippled: s.crippled, sourceRowId: s.sourceRowId, currentHull: s.currentHull, maxHull: s.maxHull }));
       const lossesA = await applyLosses(supabase as any, snapA.rows, aFinal);
       const lossesB = await applyLosses(supabase as any, snapB.rows, bFinal);
 

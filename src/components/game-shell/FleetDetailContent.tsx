@@ -140,7 +140,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           .maybeSingle(),
         supabase
           .from("game_fleet_ships")
-          .select("id, ship_type_id, quantity, tactical_group")
+          .select("id, ship_type_id, quantity, tactical_group, current_hp, crippled")
           .eq("game_fleet_id", fleet.fleet_id),
         ordersPromise,
       ]);
@@ -175,6 +175,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           ship_name: st?.name || r.ship_type_id,
           ship_display_id: st?.ship_id || "",
           hull_class: st?.hull_class || "",
+          max_hp: (st as any)?.hull ?? null,
+          current_hp: r.current_hp ?? null,
+          crippled: !!r.crippled,
         };
       });
       setShips(rows);

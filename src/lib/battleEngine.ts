@@ -137,6 +137,17 @@ export interface FleetShipData {
   ship_type: ShipTypeData;
   quantity: number;
   tactical_group: string;
+  /**
+   * Optional per-instance starting state. When provided, length must equal
+   * `quantity` and each entry initialises one ShipInstance (used by in-game
+   * combat to carry over wounded HP / sourceRowId across turns). The Battle
+   * Simulator omits this so every ship starts at full HP.
+   */
+  instances?: Array<{
+    sourceRowId?: string;
+    currentHull?: number;
+    crippled?: boolean;
+  }>;
 }
 
 // Readiness effectiveness multipliers (matches FleetBuilder READINESS_LEVELS)
@@ -156,6 +167,10 @@ export interface FleetSnapshot {
 
 interface ShipInstance {
   instanceId: string;
+  /** When the snapshot was loaded from a per-game roster, this is the
+   *  game_fleet_ships.id this ship represents. Used by combat persistence to
+   *  write back per-ship damage. Undefined for simulator runs. */
+  sourceRowId?: string;
   typeId: string;
   name: string;
   class: string;
@@ -342,21 +357,24 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     const instances: ShipInstance[] = [];
     for (const fs of snapshot.ships) {
       for (let i = 0; i < fs.quantity; i++) {
+        const inst = fs.instances?.[i];
+        const startHull = inst?.currentHull ?? fs.ship_type.hull;
         instances.push({
           instanceId: `${fleet}-${idCounter++}`,
+          sourceRowId: inst?.sourceRowId,
           typeId: fs.ship_type.id,
           name: `${fs.ship_type.name} #${i + 1}`,
           class: fs.ship_type.class,
           hull_class: fs.ship_type.class,
           maxHull: fs.ship_type.hull,
-          currentHull: fs.ship_type.hull,
+          currentHull: startHull,
           armor: fs.ship_type.armor,
           weapons: getWeaponMounts(fs.ship_type),
           sensor_rating: fs.ship_type.sensor_rating,
           cbt_speed: fs.ship_type.cbt_speed,
           tacticalGroup: fs.tactical_group,
           fleet,
-          crippled: false,
+          crippled: !!inst?.crippled,
           target_preference: fs.ship_type.target_preference || fs.ship_type.class,
           shipTypeData: fs.ship_type,
         });
