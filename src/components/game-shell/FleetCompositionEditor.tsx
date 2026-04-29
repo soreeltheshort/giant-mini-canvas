@@ -159,12 +159,12 @@ export default function FleetCompositionEditor({
               </h4>
             </div>
             <div className="space-y-1">
-              {groupShips.length === 0 && canEdit && (
+              {displayShips.length === 0 && canEdit && !listEachShip && (
                 <p className="text-[9px] text-foreground/60 italic px-1">
                   Drop ships here
                 </p>
               )}
-              {groupShips.map((s) => (
+              {displayShips.map((s) => (
                 <div
                   key={s.id}
                   draggable={canEdit}
