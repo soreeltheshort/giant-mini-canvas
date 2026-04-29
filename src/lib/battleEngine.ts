@@ -293,6 +293,8 @@ export interface CombatConstants {
   critical_hit_chance: number;
   critical_hit_multiplier: number;
   speed_hit_modifier: number;
+  /** Fraction of maxHull at/below which a ship becomes crippled (e.g. 0.25 = <=25%). */
+  cripple_hp_threshold: number;
 }
 
 // Fallback defaults (used if DB data not provided)
