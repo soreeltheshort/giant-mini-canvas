@@ -1,0 +1,1 @@
+ALTER TABLE public.fleets ADD COLUMN IF NOT EXISTS current_ground_invasion integer NOT NULL DEFAULT 0;
