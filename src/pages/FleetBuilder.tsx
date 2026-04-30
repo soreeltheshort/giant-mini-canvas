@@ -244,8 +244,12 @@ const FleetBuilder = () => {
     let ships = shipTypes;
     if (filterClass !== "all") ships = ships.filter(s => s.class === filterClass);
     if (searchTerm) ships = ships.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (filterGI) ships = ships.filter(s => (s.ground_invasion || 0) > 0);
+    if (filterSupply) ships = ships.filter(s => (s.supply_pod || 0) > 0);
+    if (filterRepair) ships = ships.filter(s => (s.repair_pod || 0) > 0);
+    if (filterScout) ships = ships.filter(s => (s.scout_sensors || 0) > 0);
     return ships;
-  }, [shipTypes, filterClass, searchTerm]);
+  }, [shipTypes, filterClass, searchTerm, filterGI, filterSupply, filterRepair, filterScout]);
 
   const groupedShips = useMemo(() => {
     const groups: Record<string, ShipType[]> = {};
