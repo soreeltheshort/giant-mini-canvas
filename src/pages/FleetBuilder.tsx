@@ -93,6 +93,10 @@ const FleetBuilder = () => {
   const [special2Role, setSpecial2Role] = useState("Flank");
   const [filterClass, setFilterClass] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterGI, setFilterGI] = useState(false);
+  const [filterSupply, setFilterSupply] = useState(false);
+  const [filterRepair, setFilterRepair] = useState(false);
+  const [filterScout, setFilterScout] = useState(false);
   const [expandedHull, setExpandedHull] = useState<string | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
@@ -240,8 +244,12 @@ const FleetBuilder = () => {
     let ships = shipTypes;
     if (filterClass !== "all") ships = ships.filter(s => s.class === filterClass);
     if (searchTerm) ships = ships.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (filterGI) ships = ships.filter(s => (s.ground_invasion || 0) > 0);
+    if (filterSupply) ships = ships.filter(s => (s.supply_pod || 0) > 0);
+    if (filterRepair) ships = ships.filter(s => (s.repair_pod || 0) > 0);
+    if (filterScout) ships = ships.filter(s => (s.scout_sensors || 0) > 0);
     return ships;
-  }, [shipTypes, filterClass, searchTerm]);
+  }, [shipTypes, filterClass, searchTerm, filterGI, filterSupply, filterRepair, filterScout]);
 
   const groupedShips = useMemo(() => {
     const groups: Record<string, ShipType[]> = {};
@@ -555,6 +563,20 @@ const FleetBuilder = () => {
                   >{hc}</button>
                 ))}
               </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {([
+                  ["GI", filterGI, setFilterGI],
+                  ["Supply", filterSupply, setFilterSupply],
+                  ["Repair", filterRepair, setFilterRepair],
+                  ["Scout", filterScout, setFilterScout],
+                ] as const).map(([label, val, setter]) => (
+                  <button
+                    key={label}
+                    className={`px-2 py-0.5 text-xs rounded ${val ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                    onClick={() => setter(!val)}
+                  >{label}</button>
+                ))}
+              </div>
             </div>
             <ScrollArea className="h-[600px]">
               <div className="p-2">
@@ -567,7 +589,7 @@ const FleetBuilder = () => {
                       <span>{HULL_LABELS[hc] || hc} ({groupedShips[hc].length})</span>
                       <ChevronDown className={`h-3 w-3 transition-transform ${expandedHull === hc ? "rotate-180" : ""}`} />
                     </button>
-                    {(expandedHull === hc || filterClass !== "all" || searchTerm) && (
+                    {(expandedHull === hc || filterClass !== "all" || searchTerm || filterGI || filterSupply || filterRepair || filterScout) && (
                       <div className="space-y-1 mb-2">
                         {groupedShips[hc].map(st => (
                           <button
