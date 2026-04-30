@@ -410,6 +410,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   // Crippled ships also move at half map_speed.
   let fighterCap = 0, fighterUsed = 0, gunshipCap = 0, gunshipUsed = 0;
   let fighterStorage = 0, gunshipStorage = 0;
+  let maxGroundInvasion = 0;
   for (const s of ships) {
     const st = shipTypes.find(t => t.id === s.ship_type_id);
     if (!st) continue;
@@ -433,6 +434,8 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       if (!isCrippled) {
         fighterCap += ext.fighter_bay * s.quantity;
         gunshipCap += ext.gun_ship_link * s.quantity;
+        // Ground invasion capacity contributed only by non-crippled ships.
+        maxGroundInvasion += ext.ground_invasion * s.quantity;
       }
       fighterStorage += ext.fighter_storage * s.quantity;
       gunshipStorage += ext.gunship_storage * s.quantity;
