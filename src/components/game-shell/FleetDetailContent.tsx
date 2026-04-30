@@ -1383,6 +1383,7 @@ function RepairPopup({
       )
       .filter(q => q.kind !== "build" || q.build.quantity > 0); // drop emptied builds
     setQueue(next);
+    setGroundInvasionAmount(0);
   }
 
   // ── Auto-fill: walk the unified queue in priority order ──
@@ -1423,6 +1424,9 @@ function RepairPopup({
       return { kind: "build", build: { ship_type_id: q.build.ship_type_id, quantity: finalQty } };
     });
     setQueue(next);
+    // Top up ground invasion last, with whatever supply remains.
+    const giFill = Math.max(0, Math.min(groundInvasionDelta, supplyPool));
+    setGroundInvasionAmount(giFill);
   }
 
   // ── Save handler ──
