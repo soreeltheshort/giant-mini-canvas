@@ -366,6 +366,7 @@ export type Database = {
       fleets: {
         Row: {
           created_at: string
+          current_ground_invasion: number
           current_supply: number
           id: string
           name: string
@@ -381,6 +382,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          current_ground_invasion?: number
           current_supply?: number
           id?: string
           name: string
@@ -396,6 +398,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          current_ground_invasion?: number
           current_supply?: number
           id?: string
           name?: string

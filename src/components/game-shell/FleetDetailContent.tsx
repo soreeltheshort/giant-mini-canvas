@@ -47,6 +47,7 @@ interface FleetDetail {
   special1_role: string;
   special2_role: string;
   current_supply: number;
+  current_ground_invasion: number;
 }
 
 /** Per-ship-type capacity + cost data needed for strikecraft build orders. */
@@ -55,6 +56,7 @@ interface ShipTypeExtra {
   fighter_storage: number;
   gun_ship_link: number;
   gunship_storage: number;
+  ground_invasion: number;
   point_cost: number;
   hull: number;
   /** Class designator: FL, FH, GS, etc. */
@@ -160,7 +162,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     (async () => {
       const { data } = await (supabase as any)
         .from("ship_types")
-        .select("id, name, ship_id, class, hull_class, hull, point_cost, fighter_bay, fighter_storage, gun_ship_link, gunship_storage");
+        .select("id, name, ship_id, class, hull_class, hull, point_cost, fighter_bay, fighter_storage, gun_ship_link, gunship_storage, ground_invasion");
       if (cancelled || !data) return;
       const extras = new Map<string, ShipTypeExtra>();
       const catalog: StrikecraftCatalogEntry[] = [];
@@ -170,6 +172,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           fighter_storage: Number(r.fighter_storage) || 0,
           gun_ship_link: Number(r.gun_ship_link) || 0,
           gunship_storage: Number(r.gunship_storage) || 0,
+          ground_invasion: Number(r.ground_invasion) || 0,
           point_cost: Number(r.point_cost) || 0,
           hull: Number(r.hull) || 0,
           class: r.class || "",
@@ -217,7 +220,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       const [{ data: f }, { data: fs }, { data: po }] = await Promise.all([
         supabase
           .from("fleets")
-          .select("id, name, readiness, next_readiness, special1_role, special2_role, current_supply")
+          .select("id, name, readiness, next_readiness, special1_role, special2_role, current_supply, current_ground_invasion")
           .eq("id", sourceId)
           .maybeSingle(),
         supabase
@@ -245,6 +248,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           special1_role: f.special1_role || "Flank",
           special2_role: f.special2_role || "Flank",
           current_supply: (f as any).current_supply ?? 0,
+          current_ground_invasion: (f as any).current_ground_invasion ?? 0,
         });
       } else {
         setDetail(null);
@@ -406,6 +410,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   // Crippled ships also move at half map_speed.
   let fighterCap = 0, fighterUsed = 0, gunshipCap = 0, gunshipUsed = 0;
   let fighterStorage = 0, gunshipStorage = 0;
+  let maxGroundInvasion = 0;
   for (const s of ships) {
     const st = shipTypes.find(t => t.id === s.ship_type_id);
     if (!st) continue;
@@ -429,6 +434,8 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       if (!isCrippled) {
         fighterCap += ext.fighter_bay * s.quantity;
         gunshipCap += ext.gun_ship_link * s.quantity;
+        // Ground invasion capacity contributed only by non-crippled ships.
+        maxGroundInvasion += ext.ground_invasion * s.quantity;
       }
       fighterStorage += ext.fighter_storage * s.quantity;
       gunshipStorage += ext.gunship_storage * s.quantity;
@@ -465,7 +472,23 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     return sum + (ext?.point_cost ?? 0) * (Number(it.quantity) || 0);
   }, 0);
 
-  const pendingTotalCost = pendingRepairCost + pendingBuildCost;
+  // Build-ground-invasion orders consume supply 1:1 (1 supply per GI unit).
+  const pendingGroundInvasionOrder = pendingOrders.find(
+    o => o.order_type === "other" && o.order_json?.kind === "build_ground_invasion",
+  );
+  const pendingGroundInvasionAmount = Math.max(
+    0,
+    Math.floor(Number(pendingGroundInvasionOrder?.order_json?.amount) || 0),
+  );
+
+  // ── Ground invasion (max = sum of ship.ground_invasion across non-crippled ships) ──
+  const currentGroundInvasion = Math.min(detail.current_ground_invasion, maxGroundInvasion);
+  const projectedGroundInvasion = Math.min(
+    maxGroundInvasion,
+    currentGroundInvasion + pendingGroundInvasionAmount,
+  );
+
+  const pendingTotalCost = pendingRepairCost + pendingBuildCost + pendingGroundInvasionAmount;
   const projectedSupply = Math.max(0, currentSupply - pendingTotalCost);
   const supplyDelta = Math.max(0, maxSupply - projectedSupply);
 
@@ -575,6 +598,16 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               {gunshipStorage > 0 && <Row label="Gunship Storage" value={`${gunshipStorage}`} />}
             </>
           )}
+          {maxGroundInvasion > 0 && (
+            <Row
+              label="Ground Invasion"
+              value={
+                pendingGroundInvasionAmount > 0
+                  ? `${currentGroundInvasion} (${projectedGroundInvasion}) / ${maxGroundInvasion}`
+                  : `${currentGroundInvasion} / ${maxGroundInvasion}`
+              }
+            />
+          )}
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
           <Row label="Ships" value={`${totalShips}`} />
           
@@ -619,11 +652,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               const canBuild =
                 strikecraftCatalog.length > 0 &&
                 (fighterCap - fighterUsed > 0 || gunshipCap - gunshipUsed > 0);
-              const disabled = !canReplenish && !canRepair && !canBuild;
+              const canBuildGroundInvasion = maxGroundInvasion > currentGroundInvasion;
+              const disabled = !canReplenish && !canRepair && !canBuild && !canBuildGroundInvasion;
               return (
                 <button
                   onClick={() => {
-                    if (canRepair || canBuild) setRepairOpen(true);
+                    if (canRepair || canBuild || canBuildGroundInvasion) setRepairOpen(true);
                   }}
                   disabled={disabled}
                   className="w-full h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-input"
@@ -645,17 +679,20 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
             o => o.order_type === "other" && o.order_json?.kind === "repair_fleet",
           )?.order_json?.assignments as RepairAssignment[] | undefined) ?? []}
           existingBuildItems={pendingBuildItems}
+          existingGroundInvasionAmount={pendingGroundInvasionAmount}
           strikecraftCatalog={strikecraftCatalog}
           fighterCap={fighterCap}
           fighterUsed={fighterUsed}
           gunshipCap={gunshipCap}
           gunshipUsed={gunshipUsed}
+          maxGroundInvasion={maxGroundInvasion}
+          currentGroundInvasion={currentGroundInvasion}
           onClose={() => setRepairOpen(false)}
-          onSave={async (assignments, buildItems) => {
+          onSave={async (assignments, buildItems, groundInvasionAmount) => {
             if (!orderContext) return;
             const { gameId, playerId, turnNumber } = orderContext;
-            // Clear both repair and build orders for this fleet+turn, then re-insert
-            // any non-empty queues.
+            // Clear repair, build, and ground-invasion orders for this fleet+turn,
+            // then re-insert any non-empty queues.
             await (supabase as any).from("player_orders")
               .delete()
               .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
@@ -668,6 +705,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               .eq("order_type", "other")
               .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
               .filter("order_json->>kind", "eq", "build_strikecraft");
+            await (supabase as any).from("player_orders")
+              .delete()
+              .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+              .eq("order_type", "other")
+              .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
+              .filter("order_json->>kind", "eq", "build_ground_invasion");
 
             const filteredRepairs = assignments.filter(a => a.amount > 0);
             if (filteredRepairs.length > 0) {
@@ -693,7 +736,19 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                 },
               });
             }
-            if (filteredRepairs.length > 0 || filteredBuilds.length > 0) {
+            const giAmount = Math.max(0, Math.floor(groundInvasionAmount || 0));
+            if (giAmount > 0) {
+              await (supabase as any).from("player_orders").insert({
+                game_id: gameId, player_id: playerId, turn_number: turnNumber,
+                order_type: "other",
+                order_json: {
+                  fleet_id: fleet.fleet_id,
+                  kind: "build_ground_invasion",
+                  amount: giAmount,
+                },
+              });
+            }
+            if (filteredRepairs.length > 0 || filteredBuilds.length > 0 || giAmount > 0) {
               playOrderPlaced();
             }
             // Refresh local pending orders
@@ -703,14 +758,13 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
             setPendingOrders(((po as any[]) || []) as PendingOrder[]);
 
-            // Auto-fill replenish slider to top off supply (post-repair AND post-build).
-            // Repairs cost 1 supply per HP; builds cost point_cost per ship.
+            // Auto-fill replenish slider to top off supply (post-repair, post-build, post-GI).
             const repairCost = filteredRepairs.reduce((s, a) => s + (Number(a.amount) || 0), 0);
             const buildCost = filteredBuilds.reduce((s, b) => {
               const ext = shipTypeExtras.get(b.ship_type_id);
               return s + (ext?.point_cost ?? 0) * (Number(b.quantity) || 0);
             }, 0);
-            const newProjected = Math.max(0, currentSupply - repairCost - buildCost);
+            const newProjected = Math.max(0, currentSupply - repairCost - buildCost - giAmount);
             const newDelta = Math.max(0, maxSupply - newProjected);
             setReplenishAmount(newDelta);
             await persistReplenishAmount(newDelta);
@@ -1084,14 +1138,24 @@ interface RepairPopupProps {
   existingAssignments: RepairAssignment[];
   /** Build-strikecraft items already queued (to seed the popup). */
   existingBuildItems: BuildItem[];
+  /** Ground-invasion units already queued (to seed the popup). */
+  existingGroundInvasionAmount: number;
   /** Selectable strikecraft (FL/FH/GS) for new build orders. */
   strikecraftCatalog: StrikecraftCatalogEntry[];
   fighterCap: number;
   fighterUsed: number;
   gunshipCap: number;
   gunshipUsed: number;
+  /** Maximum ground-invasion units this fleet can carry. */
+  maxGroundInvasion: number;
+  /** Current ground-invasion units already loaded on this fleet. */
+  currentGroundInvasion: number;
   onClose: () => void;
-  onSave: (assignments: RepairAssignment[], buildItems: BuildItem[]) => void | Promise<void>;
+  onSave: (
+    assignments: RepairAssignment[],
+    buildItems: BuildItem[],
+    groundInvasionAmount: number,
+  ) => void | Promise<void>;
 }
 
 interface RepairRow {
@@ -1112,11 +1176,14 @@ function RepairPopup({
   availableSupply,
   existingAssignments,
   existingBuildItems,
+  existingGroundInvasionAmount,
   strikecraftCatalog,
   fighterCap,
   fighterUsed,
   gunshipCap,
   gunshipUsed,
+  maxGroundInvasion,
+  currentGroundInvasion,
   onClose,
   onSave,
 }: RepairPopupProps) {
@@ -1175,6 +1242,12 @@ function RepairPopup({
   })();
 
   const [queue, setQueue] = useState<QueueItem[]>(initialQueue);
+  // Ground-invasion units to load this turn (1 supply per unit). Capped at
+  // (maxGroundInvasion - currentGroundInvasion).
+  const groundInvasionDelta = Math.max(0, maxGroundInvasion - currentGroundInvasion);
+  const [groundInvasionAmount, setGroundInvasionAmount] = useState<number>(
+    Math.max(0, Math.min(existingGroundInvasionAmount || 0, groundInvasionDelta)),
+  );
 
   // ── Derived totals ──
   const catalogById = new Map(strikecraftCatalog.map(c => [c.id, c]));
@@ -1199,13 +1272,20 @@ function RepairPopup({
     return c && c.bucket === "gunship" ? s + c.slots * q.build.quantity : s;
   }, 0);
 
-  const repairAndBuildSupply = repairTotal + buildSupplyCost;
+  const repairAndBuildSupply = repairTotal + buildSupplyCost + groundInvasionAmount;
   const supplyOver = repairAndBuildSupply > availableSupply;
   // Repair is capped by the smaller of available repair pods and remaining supply.
   const repairCap = Math.min(availableRepair, availableSupply);
 
   const fighterFree = Math.max(0, fighterCap - fighterUsed - buildFighterSlots);
   const gunshipFree = Math.max(0, gunshipCap - gunshipUsed - buildGunshipSlots);
+
+  // Clamp GI input to min(remaining capacity, remaining supply after repair+build).
+  function setGroundInvasion(raw: number) {
+    const supplyForGI = Math.max(0, availableSupply - repairTotal - buildSupplyCost);
+    const cap = Math.min(groundInvasionDelta, supplyForGI);
+    setGroundInvasionAmount(Math.max(0, Math.min(Math.floor(raw || 0), cap)));
+  }
 
   // ── Reordering (works across kinds) ──
   function move(index: number, dir: -1 | 1) {
@@ -1303,6 +1383,7 @@ function RepairPopup({
       )
       .filter(q => q.kind !== "build" || q.build.quantity > 0); // drop emptied builds
     setQueue(next);
+    setGroundInvasionAmount(0);
   }
 
   // ── Auto-fill: walk the unified queue in priority order ──
@@ -1343,6 +1424,9 @@ function RepairPopup({
       return { kind: "build", build: { ship_type_id: q.build.ship_type_id, quantity: finalQty } };
     });
     setQueue(next);
+    // Top up ground invasion last, with whatever supply remains.
+    const giFill = Math.max(0, Math.min(groundInvasionDelta, supplyPool));
+    setGroundInvasionAmount(giFill);
   }
 
   // ── Save handler ──
@@ -1353,11 +1437,11 @@ function RepairPopup({
     const buildItems: BuildItem[] = queue
       .filter((q): q is { kind: "build"; build: BuildItem } => q.kind === "build")
       .map(q => ({ ship_type_id: q.build.ship_type_id, quantity: q.build.quantity }));
-    onSave(assignments, buildItems);
+    onSave(assignments, buildItems, groundInvasionAmount);
   }
 
-  const hasAnyAssigned = repairTotal > 0 || buildSupplyCost > 0;
-  const canAutoFill = repairCap > 0 || (fighterCap > fighterUsed) || (gunshipCap > gunshipUsed);
+  const hasAnyAssigned = repairTotal > 0 || buildSupplyCost > 0 || groundInvasionAmount > 0;
+  const canAutoFill = repairCap > 0 || (fighterCap > fighterUsed) || (gunshipCap > gunshipUsed) || groundInvasionDelta > 0;
 
   return (
     <div
@@ -1396,9 +1480,9 @@ function RepairPopup({
               <div className={`font-bold text-sm ${supplyOver ? "text-crimson" : "text-[#272d34]"}`}>
                 {repairAndBuildSupply} / {availableSupply}
               </div>
-              {(repairTotal > 0 || buildSupplyCost > 0) && (
+              {(repairTotal > 0 || buildSupplyCost > 0 || groundInvasionAmount > 0) && (
                 <div className="text-[9px] font-semibold text-bronze-dark mt-0.5">
-                  repair {repairTotal} + build {buildSupplyCost}
+                  repair {repairTotal} + build {buildSupplyCost} + GI {groundInvasionAmount}
                 </div>
               )}
             </div>
@@ -1415,6 +1499,49 @@ function RepairPopup({
                   Gunships {gunshipUsed + buildGunshipSlots}/{gunshipCap}
                 </span>
               )}
+            </div>
+          )}
+          {maxGroundInvasion > 0 && (
+            <div className="mt-2 flex items-center gap-2 text-[11px]">
+              <span className="font-bold text-bronze-dark uppercase tracking-wider text-[10px]">
+                Ground Invasion
+              </span>
+              <span className="font-semibold text-[#272d34]">
+                {currentGroundInvasion + groundInvasionAmount} / {maxGroundInvasion}
+              </span>
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  onClick={() => setGroundInvasion(groundInvasionAmount - 1)}
+                  disabled={groundInvasionAmount <= 0}
+                  className="w-6 h-6 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                  aria-label="Decrease ground invasion"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={groundInvasionDelta}
+                  value={groundInvasionAmount}
+                  onChange={(e) => setGroundInvasion(Number(e.target.value) || 0)}
+                  className="w-12 h-6 rounded-sm border border-bronze/60 bg-ivory px-1 text-center text-xs font-bold text-[#272d34]"
+                />
+                <button
+                  onClick={() => setGroundInvasion(groundInvasionAmount + 1)}
+                  className="w-6 h-6 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze text-[#272d34]"
+                  aria-label="Increase ground invasion"
+                >
+                  +
+                </button>
+                <button
+                  onClick={() => setGroundInvasion(groundInvasionDelta)}
+                  disabled={groundInvasionDelta <= 0}
+                  className="h-6 px-1.5 rounded-sm border border-bronze/60 bg-ivory font-bold text-[10px] uppercase tracking-wider hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                >
+                  Max
+                </button>
+              </div>
             </div>
           )}
           <div className="flex gap-1.5 mt-2.5">

@@ -498,5 +498,81 @@ export const economyPhase: Phase = {
         });
       }
     }
+
+    // 6. Apply queued build_ground_invasion orders.
+    //    Each unit costs 1 fleet supply and adds 1 to current_ground_invasion,
+    //    capped at the fleet's max ground_invasion capacity (sum of
+    //    ship.ground_invasion across non-crippled ships).
+    const giOrders = ctx.orders.filter(
+      o => o.order_type === "other" && o.order_json?.kind === "build_ground_invasion",
+    );
+    if (giOrders.length > 0) {
+      const { data: giShipTypes } = await (supabase as any)
+        .from("ship_types").select("id, ground_invasion");
+      const giMap = new Map<string, number>();
+      for (const r of (giShipTypes || [])) giMap.set(r.id, Number(r.ground_invasion) || 0);
+
+      let giApplied = 0;
+      for (const order of giOrders) {
+        const gameFleetId = order.order_json?.fleet_id;
+        const requested = Math.max(0, Math.floor(Number(order.order_json?.amount) || 0));
+        if (!gameFleetId || requested <= 0) continue;
+
+        const { data: gf } = await (supabase as any)
+          .from("game_fleets").select("id, fleet_id, fleet_name").eq("id", gameFleetId).maybeSingle();
+        if (!gf?.fleet_id) continue;
+
+        const { data: fl } = await (supabase as any)
+          .from("fleets").select("id, current_supply, current_ground_invasion").eq("id", gf.fleet_id).maybeSingle();
+        if (!fl) continue;
+
+        const { data: gfShips } = await (supabase as any)
+          .from("game_fleet_ships").select("ship_type_id, quantity, crippled").eq("game_fleet_id", gameFleetId);
+        const maxGI = (gfShips || []).reduce(
+          (sum: number, r: any) => sum + (r.crippled ? 0 : (giMap.get(r.ship_type_id) || 0) * (Number(r.quantity) || 0)),
+          0,
+        );
+
+        const supplyAvail = Number((fl as any).current_supply) || 0;
+        const currentGI = Number((fl as any).current_ground_invasion) || 0;
+        const capRoom = Math.max(0, maxGI - currentGI);
+        const granted = Math.max(0, Math.min(requested, capRoom, supplyAvail));
+        if (granted <= 0) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "economy",
+            log_type: "ground_invasion_loaded",
+            message: `${gf.fleet_name || "Fleet"}: ground invasion request dropped (requested ${requested}, room ${capRoom}, supply ${supplyAvail})`,
+            details_json: { fleet_id: fl.id, game_fleet_id: gameFleetId, requested, granted: 0, max: maxGI, current: currentGI },
+          });
+          continue;
+        }
+
+        await (supabase as any).from("fleets").update({
+          current_ground_invasion: currentGI + granted,
+          current_supply: Math.max(0, supplyAvail - granted),
+        }).eq("id", fl.id);
+        giApplied++;
+
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "ground_invasion_loaded",
+          message: `${gf.fleet_name || "Fleet"}: loaded ${granted} ground invasion troop(s) (${currentGI} → ${currentGI + granted} / ${maxGI})`,
+          details_json: {
+            fleet_id: fl.id, game_fleet_id: gameFleetId,
+            requested, granted, max: maxGI,
+            current_before: currentGI, current_after: currentGI + granted,
+            supply_remaining: Math.max(0, supplyAvail - granted),
+          },
+        });
+      }
+
+      if (giApplied > 0) {
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "ground_invasion_summary",
+          message: `Applied ${giApplied} ground-invasion load order(s).`,
+        });
+      }
+    }
   },
 };
