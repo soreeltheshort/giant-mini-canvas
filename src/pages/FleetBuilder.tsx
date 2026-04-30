@@ -93,6 +93,10 @@ const FleetBuilder = () => {
   const [special2Role, setSpecial2Role] = useState("Flank");
   const [filterClass, setFilterClass] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterGI, setFilterGI] = useState(false);
+  const [filterSupply, setFilterSupply] = useState(false);
+  const [filterRepair, setFilterRepair] = useState(false);
+  const [filterScout, setFilterScout] = useState(false);
   const [expandedHull, setExpandedHull] = useState<string | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
