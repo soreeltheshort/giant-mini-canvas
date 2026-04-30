@@ -598,6 +598,16 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               {gunshipStorage > 0 && <Row label="Gunship Storage" value={`${gunshipStorage}`} />}
             </>
           )}
+          {maxGroundInvasion > 0 && (
+            <Row
+              label="Ground Invasion"
+              value={
+                pendingGroundInvasionAmount > 0
+                  ? `${currentGroundInvasion} (${projectedGroundInvasion}) / ${maxGroundInvasion}`
+                  : `${currentGroundInvasion} / ${maxGroundInvasion}`
+              }
+            />
+          )}
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
           <Row label="Ships" value={`${totalShips}`} />
           
