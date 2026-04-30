@@ -220,7 +220,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       const [{ data: f }, { data: fs }, { data: po }] = await Promise.all([
         supabase
           .from("fleets")
-          .select("id, name, readiness, next_readiness, special1_role, special2_role, current_supply")
+          .select("id, name, readiness, next_readiness, special1_role, special2_role, current_supply, current_ground_invasion")
           .eq("id", sourceId)
           .maybeSingle(),
         supabase
