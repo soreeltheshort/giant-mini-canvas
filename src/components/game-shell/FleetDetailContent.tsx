@@ -162,7 +162,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     (async () => {
       const { data } = await (supabase as any)
         .from("ship_types")
-        .select("id, name, ship_id, class, hull_class, hull, point_cost, fighter_bay, fighter_storage, gun_ship_link, gunship_storage");
+        .select("id, name, ship_id, class, hull_class, hull, point_cost, fighter_bay, fighter_storage, gun_ship_link, gunship_storage, ground_invasion");
       if (cancelled || !data) return;
       const extras = new Map<string, ShipTypeExtra>();
       const catalog: StrikecraftCatalogEntry[] = [];
@@ -172,6 +172,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           fighter_storage: Number(r.fighter_storage) || 0,
           gun_ship_link: Number(r.gun_ship_link) || 0,
           gunship_storage: Number(r.gunship_storage) || 0,
+          ground_invasion: Number(r.ground_invasion) || 0,
           point_cost: Number(r.point_cost) || 0,
           hull: Number(r.hull) || 0,
           class: r.class || "",
