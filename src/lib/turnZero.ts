@@ -22,6 +22,7 @@ interface TurnZeroResult {
   systemsSeeded: number;
   playersUpdated: number;
   intelRowsWritten: number;
+  fleetsSupplied: number;
 }
 
 /**
@@ -118,17 +119,55 @@ export async function runTurnZero(
       .upsert(intelRows.slice(i, i + CHUNK), { onConflict: "observer_player_id,system_id" });
   }
 
-  // 5. Log it for auditability.
+  // 5. Seed every fleet in the game with full supply (free of charge).
+  //    Max supply = sum(ship.supply_pod * quantity) * supply_capacity_coefficient.
+  const { data: capRow } = await (supabase as any)
+    .from("combat_constants")
+    .select("value")
+    .eq("key", "supply_capacity_coefficient")
+    .maybeSingle();
+  const supplyCoefficient = Number(capRow?.value) || 10;
+
+  const { data: gameFleets } = await (supabase as any)
+    .from("game_fleets")
+    .select("id, fleet_id, fleet_name")
+    .eq("game_id", gameId);
+
+  const { data: allShipTypes } = await (supabase as any)
+    .from("ship_types").select("id, supply_pod");
+  const supplyPodMap = new Map<string, number>();
+  for (const st of (allShipTypes || [])) supplyPodMap.set(st.id, Number(st.supply_pod) || 0);
+
+  let fleetsSupplied = 0;
+  for (const gf of (gameFleets || [])) {
+    const { data: ships } = await (supabase as any)
+      .from("game_fleet_ships")
+      .select("ship_type_id, quantity")
+      .eq("game_fleet_id", gf.id);
+    const totalSupplyPods = (ships || []).reduce(
+      (sum: number, r: any) => sum + (supplyPodMap.get(r.ship_type_id) || 0) * (Number(r.quantity) || 0),
+      0,
+    );
+    const maxSupplies = totalSupplyPods * supplyCoefficient;
+    if (maxSupplies <= 0) continue;
+    await (supabase as any).from("fleets")
+      .update({ current_supply: maxSupplies })
+      .eq("id", gf.fleet_id);
+    fleetsSupplied++;
+  }
+
+  // 6. Log it for auditability.
   await (supabase as any).from("game_logs").insert({
     game_id: gameId,
     turn_number: 0,
     phase: "turn_zero",
     log_type: "turn_zero_complete",
-    message: `Turn 0 complete: ${visibleIds.length} systems seeded for ${players.length} player(s).`,
+    message: `Turn 0 complete: ${visibleIds.length} systems seeded for ${players.length} player(s); ${fleetsSupplied} fleet(s) supplied.`,
     details_json: {
       systems_seeded: visibleIds.length,
       players_updated: players.length,
       intel_rows: intelRows.length,
+      fleets_supplied: fleetsSupplied,
     },
   });
 
@@ -136,5 +175,6 @@ export async function runTurnZero(
     systemsSeeded: visibleIds.length,
     playersUpdated: players.length,
     intelRowsWritten: intelRows.length,
+    fleetsSupplied,
   };
 }
