@@ -1433,11 +1433,11 @@ function RepairPopup({
     const buildItems: BuildItem[] = queue
       .filter((q): q is { kind: "build"; build: BuildItem } => q.kind === "build")
       .map(q => ({ ship_type_id: q.build.ship_type_id, quantity: q.build.quantity }));
-    onSave(assignments, buildItems);
+    onSave(assignments, buildItems, groundInvasionAmount);
   }
 
-  const hasAnyAssigned = repairTotal > 0 || buildSupplyCost > 0;
-  const canAutoFill = repairCap > 0 || (fighterCap > fighterUsed) || (gunshipCap > gunshipUsed);
+  const hasAnyAssigned = repairTotal > 0 || buildSupplyCost > 0 || groundInvasionAmount > 0;
+  const canAutoFill = repairCap > 0 || (fighterCap > fighterUsed) || (gunshipCap > gunshipUsed) || groundInvasionDelta > 0;
 
   return (
     <div
