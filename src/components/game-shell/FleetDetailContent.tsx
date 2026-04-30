@@ -1138,14 +1138,24 @@ interface RepairPopupProps {
   existingAssignments: RepairAssignment[];
   /** Build-strikecraft items already queued (to seed the popup). */
   existingBuildItems: BuildItem[];
+  /** Ground-invasion units already queued (to seed the popup). */
+  existingGroundInvasionAmount: number;
   /** Selectable strikecraft (FL/FH/GS) for new build orders. */
   strikecraftCatalog: StrikecraftCatalogEntry[];
   fighterCap: number;
   fighterUsed: number;
   gunshipCap: number;
   gunshipUsed: number;
+  /** Maximum ground-invasion units this fleet can carry. */
+  maxGroundInvasion: number;
+  /** Current ground-invasion units already loaded on this fleet. */
+  currentGroundInvasion: number;
   onClose: () => void;
-  onSave: (assignments: RepairAssignment[], buildItems: BuildItem[]) => void | Promise<void>;
+  onSave: (
+    assignments: RepairAssignment[],
+    buildItems: BuildItem[],
+    groundInvasionAmount: number,
+  ) => void | Promise<void>;
 }
 
 interface RepairRow {
@@ -1166,11 +1176,14 @@ function RepairPopup({
   availableSupply,
   existingAssignments,
   existingBuildItems,
+  existingGroundInvasionAmount,
   strikecraftCatalog,
   fighterCap,
   fighterUsed,
   gunshipCap,
   gunshipUsed,
+  maxGroundInvasion,
+  currentGroundInvasion,
   onClose,
   onSave,
 }: RepairPopupProps) {
