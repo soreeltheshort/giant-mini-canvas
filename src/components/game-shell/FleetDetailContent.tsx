@@ -1476,9 +1476,9 @@ function RepairPopup({
               <div className={`font-bold text-sm ${supplyOver ? "text-crimson" : "text-[#272d34]"}`}>
                 {repairAndBuildSupply} / {availableSupply}
               </div>
-              {(repairTotal > 0 || buildSupplyCost > 0) && (
+              {(repairTotal > 0 || buildSupplyCost > 0 || groundInvasionAmount > 0) && (
                 <div className="text-[9px] font-semibold text-bronze-dark mt-0.5">
-                  repair {repairTotal} + build {buildSupplyCost}
+                  repair {repairTotal} + build {buildSupplyCost} + GI {groundInvasionAmount}
                 </div>
               )}
             </div>
@@ -1495,6 +1495,49 @@ function RepairPopup({
                   Gunships {gunshipUsed + buildGunshipSlots}/{gunshipCap}
                 </span>
               )}
+            </div>
+          )}
+          {maxGroundInvasion > 0 && (
+            <div className="mt-2 flex items-center gap-2 text-[11px]">
+              <span className="font-bold text-bronze-dark uppercase tracking-wider text-[10px]">
+                Ground Invasion
+              </span>
+              <span className="font-semibold text-[#272d34]">
+                {currentGroundInvasion + groundInvasionAmount} / {maxGroundInvasion}
+              </span>
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  onClick={() => setGroundInvasion(groundInvasionAmount - 1)}
+                  disabled={groundInvasionAmount <= 0}
+                  className="w-6 h-6 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                  aria-label="Decrease ground invasion"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={groundInvasionDelta}
+                  value={groundInvasionAmount}
+                  onChange={(e) => setGroundInvasion(Number(e.target.value) || 0)}
+                  className="w-12 h-6 rounded-sm border border-bronze/60 bg-ivory px-1 text-center text-xs font-bold text-[#272d34]"
+                />
+                <button
+                  onClick={() => setGroundInvasion(groundInvasionAmount + 1)}
+                  className="w-6 h-6 rounded-sm border border-bronze/60 bg-ivory font-bold text-sm leading-none hover:border-bronze text-[#272d34]"
+                  aria-label="Increase ground invasion"
+                >
+                  +
+                </button>
+                <button
+                  onClick={() => setGroundInvasion(groundInvasionDelta)}
+                  disabled={groundInvasionDelta <= 0}
+                  className="h-6 px-1.5 rounded-sm border border-bronze/60 bg-ivory font-bold text-[10px] uppercase tracking-wider hover:border-bronze disabled:opacity-30 text-[#272d34]"
+                >
+                  Max
+                </button>
+              </div>
             </div>
           )}
           <div className="flex gap-1.5 mt-2.5">
