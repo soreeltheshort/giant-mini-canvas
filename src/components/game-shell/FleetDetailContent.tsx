@@ -1242,6 +1242,12 @@ function RepairPopup({
   })();
 
   const [queue, setQueue] = useState<QueueItem[]>(initialQueue);
+  // Ground-invasion units to load this turn (1 supply per unit). Capped at
+  // (maxGroundInvasion - currentGroundInvasion).
+  const groundInvasionDelta = Math.max(0, maxGroundInvasion - currentGroundInvasion);
+  const [groundInvasionAmount, setGroundInvasionAmount] = useState<number>(
+    Math.max(0, Math.min(existingGroundInvasionAmount || 0, groundInvasionDelta)),
+  );
 
   // ── Derived totals ──
   const catalogById = new Map(strikecraftCatalog.map(c => [c.id, c]));
@@ -1266,13 +1272,20 @@ function RepairPopup({
     return c && c.bucket === "gunship" ? s + c.slots * q.build.quantity : s;
   }, 0);
 
-  const repairAndBuildSupply = repairTotal + buildSupplyCost;
+  const repairAndBuildSupply = repairTotal + buildSupplyCost + groundInvasionAmount;
   const supplyOver = repairAndBuildSupply > availableSupply;
   // Repair is capped by the smaller of available repair pods and remaining supply.
   const repairCap = Math.min(availableRepair, availableSupply);
 
   const fighterFree = Math.max(0, fighterCap - fighterUsed - buildFighterSlots);
   const gunshipFree = Math.max(0, gunshipCap - gunshipUsed - buildGunshipSlots);
+
+  // Clamp GI input to min(remaining capacity, remaining supply after repair+build).
+  function setGroundInvasion(raw: number) {
+    const supplyForGI = Math.max(0, availableSupply - repairTotal - buildSupplyCost);
+    const cap = Math.min(groundInvasionDelta, supplyForGI);
+    setGroundInvasionAmount(Math.max(0, Math.min(Math.floor(raw || 0), cap)));
+  }
 
   // ── Reordering (works across kinds) ──
   function move(index: number, dir: -1 | 1) {
