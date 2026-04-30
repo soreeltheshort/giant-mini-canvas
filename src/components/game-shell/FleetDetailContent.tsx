@@ -248,6 +248,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           special1_role: f.special1_role || "Flank",
           special2_role: f.special2_role || "Flank",
           current_supply: (f as any).current_supply ?? 0,
+          current_ground_invasion: (f as any).current_ground_invasion ?? 0,
         });
       } else {
         setDetail(null);
