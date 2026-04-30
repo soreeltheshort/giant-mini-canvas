@@ -47,6 +47,7 @@ interface FleetDetail {
   special1_role: string;
   special2_role: string;
   current_supply: number;
+  current_ground_invasion: number;
 }
 
 /** Per-ship-type capacity + cost data needed for strikecraft build orders. */
@@ -55,6 +56,7 @@ interface ShipTypeExtra {
   fighter_storage: number;
   gun_ship_link: number;
   gunship_storage: number;
+  ground_invasion: number;
   point_cost: number;
   hull: number;
   /** Class designator: FL, FH, GS, etc. */
