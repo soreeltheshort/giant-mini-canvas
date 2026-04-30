@@ -589,7 +589,7 @@ const FleetBuilder = () => {
                       <span>{HULL_LABELS[hc] || hc} ({groupedShips[hc].length})</span>
                       <ChevronDown className={`h-3 w-3 transition-transform ${expandedHull === hc ? "rotate-180" : ""}`} />
                     </button>
-                    {(expandedHull === hc || filterClass !== "all" || searchTerm) && (
+                    {(expandedHull === hc || filterClass !== "all" || searchTerm || filterGI || filterSupply || filterRepair || filterScout) && (
                       <div className="space-y-1 mb-2">
                         {groupedShips[hc].map(st => (
                           <button
