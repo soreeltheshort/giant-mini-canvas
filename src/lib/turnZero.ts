@@ -134,25 +134,35 @@ export async function runTurnZero(
     .eq("game_id", gameId);
 
   const { data: allShipTypes } = await (supabase as any)
-    .from("ship_types").select("id, supply_pod");
+    .from("ship_types").select("id, supply_pod, ground_invasion");
   const supplyPodMap = new Map<string, number>();
-  for (const st of (allShipTypes || [])) supplyPodMap.set(st.id, Number(st.supply_pod) || 0);
+  const groundInvasionMap = new Map<string, number>();
+  for (const st of (allShipTypes || [])) {
+    supplyPodMap.set(st.id, Number(st.supply_pod) || 0);
+    groundInvasionMap.set(st.id, Number(st.ground_invasion) || 0);
+  }
 
   let fleetsSupplied = 0;
   for (const gf of (gameFleets || [])) {
     const { data: ships } = await (supabase as any)
       .from("game_fleet_ships")
-      .select("ship_type_id, quantity")
+      .select("ship_type_id, quantity, crippled")
       .eq("game_fleet_id", gf.id);
     const totalSupplyPods = (ships || []).reduce(
       (sum: number, r: any) => sum + (supplyPodMap.get(r.ship_type_id) || 0) * (Number(r.quantity) || 0),
       0,
     );
     const maxSupplies = totalSupplyPods * supplyCoefficient;
-    if (maxSupplies <= 0) continue;
-    await (supabase as any).from("fleets")
-      .update({ current_supply: maxSupplies })
-      .eq("id", gf.fleet_id);
+    // Max ground invasion = sum(ground_invasion * quantity) over non-crippled ships.
+    const maxGroundInvasion = (ships || []).reduce(
+      (sum: number, r: any) => sum + (r.crippled ? 0 : (groundInvasionMap.get(r.ship_type_id) || 0) * (Number(r.quantity) || 0)),
+      0,
+    );
+    const update: any = {};
+    if (maxSupplies > 0) update.current_supply = maxSupplies;
+    if (maxGroundInvasion > 0) update.current_ground_invasion = maxGroundInvasion;
+    if (Object.keys(update).length === 0) continue;
+    await (supabase as any).from("fleets").update(update).eq("id", gf.fleet_id);
     fleetsSupplied++;
   }
 
