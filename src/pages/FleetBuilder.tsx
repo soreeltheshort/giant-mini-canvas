@@ -563,6 +563,20 @@ const FleetBuilder = () => {
                   >{hc}</button>
                 ))}
               </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {([
+                  ["GI", filterGI, setFilterGI],
+                  ["Supply", filterSupply, setFilterSupply],
+                  ["Repair", filterRepair, setFilterRepair],
+                  ["Scout", filterScout, setFilterScout],
+                ] as const).map(([label, val, setter]) => (
+                  <button
+                    key={label}
+                    className={`px-2 py-0.5 text-xs rounded ${val ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                    onClick={() => setter(!val)}
+                  >{label}</button>
+                ))}
+              </div>
             </div>
             <ScrollArea className="h-[600px]">
               <div className="p-2">
