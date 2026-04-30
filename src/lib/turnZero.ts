@@ -22,6 +22,7 @@ interface TurnZeroResult {
   systemsSeeded: number;
   playersUpdated: number;
   intelRowsWritten: number;
+  fleetsSupplied: number;
 }
 
 /**
