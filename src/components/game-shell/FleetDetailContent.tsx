@@ -679,17 +679,20 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
             o => o.order_type === "other" && o.order_json?.kind === "repair_fleet",
           )?.order_json?.assignments as RepairAssignment[] | undefined) ?? []}
           existingBuildItems={pendingBuildItems}
+          existingGroundInvasionAmount={pendingGroundInvasionAmount}
           strikecraftCatalog={strikecraftCatalog}
           fighterCap={fighterCap}
           fighterUsed={fighterUsed}
           gunshipCap={gunshipCap}
           gunshipUsed={gunshipUsed}
+          maxGroundInvasion={maxGroundInvasion}
+          currentGroundInvasion={currentGroundInvasion}
           onClose={() => setRepairOpen(false)}
-          onSave={async (assignments, buildItems) => {
+          onSave={async (assignments, buildItems, groundInvasionAmount) => {
             if (!orderContext) return;
             const { gameId, playerId, turnNumber } = orderContext;
-            // Clear both repair and build orders for this fleet+turn, then re-insert
-            // any non-empty queues.
+            // Clear repair, build, and ground-invasion orders for this fleet+turn,
+            // then re-insert any non-empty queues.
             await (supabase as any).from("player_orders")
               .delete()
               .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
@@ -702,6 +705,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               .eq("order_type", "other")
               .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
               .filter("order_json->>kind", "eq", "build_strikecraft");
+            await (supabase as any).from("player_orders")
+              .delete()
+              .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+              .eq("order_type", "other")
+              .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
+              .filter("order_json->>kind", "eq", "build_ground_invasion");
 
             const filteredRepairs = assignments.filter(a => a.amount > 0);
             if (filteredRepairs.length > 0) {
@@ -727,7 +736,19 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                 },
               });
             }
-            if (filteredRepairs.length > 0 || filteredBuilds.length > 0) {
+            const giAmount = Math.max(0, Math.floor(groundInvasionAmount || 0));
+            if (giAmount > 0) {
+              await (supabase as any).from("player_orders").insert({
+                game_id: gameId, player_id: playerId, turn_number: turnNumber,
+                order_type: "other",
+                order_json: {
+                  fleet_id: fleet.fleet_id,
+                  kind: "build_ground_invasion",
+                  amount: giAmount,
+                },
+              });
+            }
+            if (filteredRepairs.length > 0 || filteredBuilds.length > 0 || giAmount > 0) {
               playOrderPlaced();
             }
             // Refresh local pending orders
@@ -737,14 +758,13 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               .filter("order_json->>fleet_id", "eq", fleet.fleet_id);
             setPendingOrders(((po as any[]) || []) as PendingOrder[]);
 
-            // Auto-fill replenish slider to top off supply (post-repair AND post-build).
-            // Repairs cost 1 supply per HP; builds cost point_cost per ship.
+            // Auto-fill replenish slider to top off supply (post-repair, post-build, post-GI).
             const repairCost = filteredRepairs.reduce((s, a) => s + (Number(a.amount) || 0), 0);
             const buildCost = filteredBuilds.reduce((s, b) => {
               const ext = shipTypeExtras.get(b.ship_type_id);
               return s + (ext?.point_cost ?? 0) * (Number(b.quantity) || 0);
             }, 0);
-            const newProjected = Math.max(0, currentSupply - repairCost - buildCost);
+            const newProjected = Math.max(0, currentSupply - repairCost - buildCost - giAmount);
             const newDelta = Math.max(0, maxSupply - newProjected);
             setReplenishAmount(newDelta);
             await persistReplenishAmount(newDelta);
