@@ -652,11 +652,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               const canBuild =
                 strikecraftCatalog.length > 0 &&
                 (fighterCap - fighterUsed > 0 || gunshipCap - gunshipUsed > 0);
-              const disabled = !canReplenish && !canRepair && !canBuild;
+              const canBuildGroundInvasion = maxGroundInvasion > currentGroundInvasion;
+              const disabled = !canReplenish && !canRepair && !canBuild && !canBuildGroundInvasion;
               return (
                 <button
                   onClick={() => {
-                    if (canRepair || canBuild) setRepairOpen(true);
+                    if (canRepair || canBuild || canBuildGroundInvasion) setRepairOpen(true);
                   }}
                   disabled={disabled}
                   className="w-full h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-input"
