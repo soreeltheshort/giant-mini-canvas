@@ -472,7 +472,23 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     return sum + (ext?.point_cost ?? 0) * (Number(it.quantity) || 0);
   }, 0);
 
-  const pendingTotalCost = pendingRepairCost + pendingBuildCost;
+  // Build-ground-invasion orders consume supply 1:1 (1 supply per GI unit).
+  const pendingGroundInvasionOrder = pendingOrders.find(
+    o => o.order_type === "other" && o.order_json?.kind === "build_ground_invasion",
+  );
+  const pendingGroundInvasionAmount = Math.max(
+    0,
+    Math.floor(Number(pendingGroundInvasionOrder?.order_json?.amount) || 0),
+  );
+
+  // ── Ground invasion (max = sum of ship.ground_invasion across non-crippled ships) ──
+  const currentGroundInvasion = Math.min(detail.current_ground_invasion, maxGroundInvasion);
+  const projectedGroundInvasion = Math.min(
+    maxGroundInvasion,
+    currentGroundInvasion + pendingGroundInvasionAmount,
+  );
+
+  const pendingTotalCost = pendingRepairCost + pendingBuildCost + pendingGroundInvasionAmount;
   const projectedSupply = Math.max(0, currentSupply - pendingTotalCost);
   const supplyDelta = Math.max(0, maxSupply - projectedSupply);
 
