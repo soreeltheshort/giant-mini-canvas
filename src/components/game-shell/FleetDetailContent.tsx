@@ -258,6 +258,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         // Joined ship_types row from the DB query — authoritative source for hull.
         const stJoined = r.ship_types || null;
         const maxHp = (stJoined?.hull ?? (st as any)?.hull ?? null);
+        const ext = shipTypeExtras.get(r.ship_type_id);
         return {
           id: r.id,
           ship_type_id: r.ship_type_id,
@@ -269,6 +270,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           max_hp: maxHp,
           current_hp: r.current_hp ?? null,
           crippled: !!r.crippled,
+          ship_class: ext?.class || (st as any)?.class || "",
+          fighter_bay: ext?.fighter_bay ?? 0,
+          gun_ship_link: ext?.gun_ship_link ?? 0,
         };
       });
       setShips(rows);
