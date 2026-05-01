@@ -150,12 +150,14 @@ export const combatPhase: Phase = {
     const orderByPair = new Map<string, typeof attackOrders[number]>();
     for (const o of attackOrders) {
       const oj = o.order_json as any;
+      if (!oj.target_fleet_id) continue; // Planet-only attacks don't pair.
       orderByPair.set(`${oj.fleet_id}->${oj.target_fleet_id}`, o);
     }
     const droppedOrderIds = new Set<string>();
     const handledPairs = new Set<string>();
     for (const o of attackOrders) {
       const oj = o.order_json as any;
+      if (!oj.target_fleet_id) continue;
       const a: string = oj.fleet_id;
       const b: string = oj.target_fleet_id;
       const pairKey = [a, b].sort().join("|");
