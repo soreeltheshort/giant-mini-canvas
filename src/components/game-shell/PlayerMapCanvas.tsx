@@ -562,7 +562,12 @@ const PlayerMapCanvas: React.FC<Props> = ({
         }
         if (targetingMode === "fleet") {
           const fleet = hexKeyToFleet.get(hk);
-          if (fleet) onFleetTargetPicked?.(fleet);
+          if (fleet) { onFleetTargetPicked?.(fleet); return; }
+          // No fleet at the clicked hex — fall back to picking a planet/system as target.
+          if (hex && hex.has_system) {
+            const sys = hexIdToSystem.get(hex.hex_id);
+            if (sys) { onSystemTargetPicked?.(sys); return; }
+          }
           return;
         }
 
