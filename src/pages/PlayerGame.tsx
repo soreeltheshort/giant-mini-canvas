@@ -342,6 +342,8 @@ const PlayerGame = () => {
     Map<string, { kind: "move" | "attack"; targetFleetId?: string; targetSystemId?: number; destX?: number; destY?: number }>
   >(new Map());
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
+  /** Open issues that block turn submission (e.g. fleet group overcapacity). */
+  const [submissionIssues, setSubmissionIssues] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
