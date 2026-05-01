@@ -442,7 +442,7 @@ const PlayerGame = () => {
         .eq("turn_number", game.turn_number)
         .in("order_type", ["fleet_move", "other", "set_readiness"]);
       if (cancelled) return;
-      const map = new Map<string, { kind: "move" | "attack"; targetFleetId?: string; destX?: number; destY?: number }>();
+      const map = new Map<string, { kind: "move" | "attack"; targetFleetId?: string; targetSystemId?: number; destX?: number; destY?: number }>();
       let pointsSpent = 0;
       for (const o of (orders ?? []) as any[]) {
         if (o.order_type === "fleet_move" && o.order_json?.fleet_id) {
@@ -460,6 +460,7 @@ const PlayerGame = () => {
           map.set(o.order_json.fleet_id, {
             kind: "attack",
             targetFleetId: o.order_json.target_fleet_id,
+            targetSystemId: o.order_json.target_system_id,
           });
           pointsSpent += 1;
         } else if (o.order_type === "set_readiness") {
