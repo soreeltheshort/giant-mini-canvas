@@ -549,12 +549,20 @@ const PlayerGame = () => {
   const submitOrders = useCallback(async () => {
     if (!player) return;
     const next = !player.orders_locked;
+    if (next && submissionIssues.length > 0) {
+      toast({
+        title: "Cannot submit",
+        description: `Resolve ${submissionIssues.length} open issue${submissionIssues.length === 1 ? "" : "s"} first.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const { error } = await (supabase as any).from("game_players").update({ orders_locked: next }).eq("id", player.id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setPlayer(p => (p ? { ...p, orders_locked: next } : p));
     if (next) playOrdersSubmitted();
     toast({ title: next ? "Orders Submitted" : "Orders Withdrawn", description: next ? "Your orders are marked submitted." : "Your orders are no longer marked submitted." });
-  }, [player, toast]);
+  }, [player, toast, submissionIssues]);
 
   const combatPointsAvailable = Math.max(0, (player?.combat_points_remaining ?? 0) - pendingFleetOrderCount);
 
