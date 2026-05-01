@@ -338,7 +338,7 @@ const PlayerGame = () => {
   const [pendingFleetOrderCount, setPendingFleetOrderCount] = useState(0);
   // Active fleet orders this turn, keyed by fleet_id, used to render arrows on the map
   const [pendingFleetOrders, setPendingFleetOrders] = useState<
-    Map<string, { kind: "move" | "attack"; targetFleetId?: string; destX?: number; destY?: number }>
+    Map<string, { kind: "move" | "attack"; targetFleetId?: string; targetSystemId?: number; destX?: number; destY?: number }>
   >(new Map());
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
 
