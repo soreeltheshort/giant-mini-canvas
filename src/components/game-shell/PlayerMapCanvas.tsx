@@ -65,6 +65,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   targetingMode = null,
   onHexTargetPicked,
   onFleetTargetPicked,
+  onSystemTargetPicked,
   onCancelTargeting,
   debugVisibleHexKeys,
   everSeenHexKeys,
