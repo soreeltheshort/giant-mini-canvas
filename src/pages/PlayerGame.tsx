@@ -732,6 +732,13 @@ const PlayerGame = () => {
       if (!target) return null;
       return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: target.hex_x, toY: target.hex_y, kind: "attack" as const };
     }
+    if (order.kind === "attack" && typeof order.targetSystemId === "number") {
+      const sys = mapState.systems.get(order.targetSystemId);
+      if (!sys) return null;
+      const hex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+      if (!hex) return null;
+      return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: hex.x, toY: hex.y, kind: "attack" as const };
+    }
     return null;
   })();
 
