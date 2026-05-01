@@ -670,7 +670,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
           <span className="font-heading text-[10px] uppercase tracking-wider font-bold">
             {targetingMode === "hex"
               ? "Click a hex to set destination"
-              : "Click an enemy fleet to target"}
+              : "Click an enemy fleet or planet to target"}
           </span>
           <button
             onClick={onCancelTargeting}
