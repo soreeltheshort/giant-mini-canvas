@@ -16,6 +16,49 @@ export interface FleetShipRow {
   max_hp?: number | null;
   current_hp?: number | null;
   crippled?: boolean;
+  /** Class designator (FL/FH/GS/etc.) — used for strikecraft capacity math. */
+  ship_class?: string;
+  /** Fighter bay slots provided by this ship type (per ship). */
+  fighter_bay?: number;
+  /** Gunship link slots provided by this ship type (per ship). */
+  gun_ship_link?: number;
+}
+
+/** Slots a single strikecraft consumes in its bucket (FL=1, FH=2, GS=1). */
+function strikecraftSlots(cls: string): { bucket: "fighter" | "gunship"; slots: number } | null {
+  if (cls === "FL") return { bucket: "fighter", slots: 1 };
+  if (cls === "FH") return { bucket: "fighter", slots: 2 };
+  if (cls === "GS") return { bucket: "gunship", slots: 1 };
+  return null;
+}
+
+/**
+ * Compute per-tactical-group fighter/gunship capacity & usage from a flat
+ * list of FleetShipRow. Capacity comes from host ships' fighter_bay /
+ * gun_ship_link fields; usage comes from FL/FH/GS ships in the same group.
+ *
+ * Exported so other components (e.g. PlayerGame's issues list) can reuse the
+ * exact same logic without duplicating it.
+ */
+export function computeGroupStrikecraftCapacity(ships: FleetShipRow[]) {
+  const map = new Map<
+    string,
+    { fighterCap: number; fighterUsed: number; gunshipCap: number; gunshipUsed: number }
+  >();
+  for (const s of ships) {
+    const entry =
+      map.get(s.tactical_group) ??
+      { fighterCap: 0, fighterUsed: 0, gunshipCap: 0, gunshipUsed: 0 };
+    entry.fighterCap += (s.fighter_bay || 0) * s.quantity;
+    entry.gunshipCap += (s.gun_ship_link || 0) * s.quantity;
+    const sc = strikecraftSlots(s.ship_class || "");
+    if (sc) {
+      if (sc.bucket === "fighter") entry.fighterUsed += sc.slots * s.quantity;
+      else entry.gunshipUsed += sc.slots * s.quantity;
+    }
+    map.set(s.tactical_group, entry);
+  }
+  return map;
 }
 
 interface Props {
