@@ -16,6 +16,49 @@ export interface FleetShipRow {
   max_hp?: number | null;
   current_hp?: number | null;
   crippled?: boolean;
+  /** Class designator (FL/FH/GS/etc.) — used for strikecraft capacity math. */
+  ship_class?: string;
+  /** Fighter bay slots provided by this ship type (per ship). */
+  fighter_bay?: number;
+  /** Gunship link slots provided by this ship type (per ship). */
+  gun_ship_link?: number;
+}
+
+/** Slots a single strikecraft consumes in its bucket (FL=1, FH=2, GS=1). */
+function strikecraftSlots(cls: string): { bucket: "fighter" | "gunship"; slots: number } | null {
+  if (cls === "FL") return { bucket: "fighter", slots: 1 };
+  if (cls === "FH") return { bucket: "fighter", slots: 2 };
+  if (cls === "GS") return { bucket: "gunship", slots: 1 };
+  return null;
+}
+
+/**
+ * Compute per-tactical-group fighter/gunship capacity & usage from a flat
+ * list of FleetShipRow. Capacity comes from host ships' fighter_bay /
+ * gun_ship_link fields; usage comes from FL/FH/GS ships in the same group.
+ *
+ * Exported so other components (e.g. PlayerGame's issues list) can reuse the
+ * exact same logic without duplicating it.
+ */
+export function computeGroupStrikecraftCapacity(ships: FleetShipRow[]) {
+  const map = new Map<
+    string,
+    { fighterCap: number; fighterUsed: number; gunshipCap: number; gunshipUsed: number }
+  >();
+  for (const s of ships) {
+    const entry =
+      map.get(s.tactical_group) ??
+      { fighterCap: 0, fighterUsed: 0, gunshipCap: 0, gunshipUsed: 0 };
+    entry.fighterCap += (s.fighter_bay || 0) * s.quantity;
+    entry.gunshipCap += (s.gun_ship_link || 0) * s.quantity;
+    const sc = strikecraftSlots(s.ship_class || "");
+    if (sc) {
+      if (sc.bucket === "fighter") entry.fighterUsed += sc.slots * s.quantity;
+      else entry.gunshipUsed += sc.slots * s.quantity;
+    }
+    map.set(s.tactical_group, entry);
+  }
+  return map;
 }
 
 interface Props {
@@ -116,12 +159,19 @@ export default function FleetCompositionEditor({
     );
   }
 
+  const groupCapacity = useMemo(() => computeGroupStrikecraftCapacity(ships), [ships]);
+
   return (
     <div className="space-y-2">
       {GROUPS.map((group) => {
         const groupShips = ships.filter((s) => s.tactical_group === group);
         const isOver = dragOverGroup === group;
         const totalQty = groupShips.reduce((sum, s) => sum + s.quantity, 0);
+        const cap = groupCapacity.get(group) ?? { fighterCap: 0, fighterUsed: 0, gunshipCap: 0, gunshipUsed: 0 };
+        const fighterOver = cap.fighterUsed > cap.fighterCap;
+        const gunshipOver = cap.gunshipUsed > cap.gunshipCap;
+        const showFighter = cap.fighterCap > 0 || cap.fighterUsed > 0;
+        const showGunship = cap.gunshipCap > 0 || cap.gunshipUsed > 0;
         const displayShips: FleetShipRow[] = listEachShip
           ? groupShips.flatMap((s) =>
               Array.from({ length: s.quantity }, (_, i) => ({
@@ -152,7 +202,7 @@ export default function FleetCompositionEditor({
                 : "border-border bg-background/40"
             }`}
           >
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-1 gap-2">
               <h4 className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold">
                 {group}
                 {totalQty > 0 && (
@@ -161,6 +211,26 @@ export default function FleetCompositionEditor({
                   </span>
                 )}
               </h4>
+              {(showFighter || showGunship) && (
+                <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-wider">
+                  {showFighter && (
+                    <span
+                      className={fighterOver ? "text-crimson" : "text-foreground/70"}
+                      title="Fighter slots used / capacity in this group"
+                    >
+                      FI {cap.fighterUsed}/{cap.fighterCap}
+                    </span>
+                  )}
+                  {showGunship && (
+                    <span
+                      className={gunshipOver ? "text-crimson" : "text-foreground/70"}
+                      title="Gunship slots used / capacity in this group"
+                    >
+                      GS {cap.gunshipUsed}/{cap.gunshipCap}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               {displayShips.length === 0 && canEdit && (

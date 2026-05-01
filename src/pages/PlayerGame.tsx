@@ -22,6 +22,7 @@ import { useIsTablet } from "@/hooks/useIsTablet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useGameMusic } from "@/hooks/useGameMusic";
 import { playOrderPlaced, playOrdersSubmitted } from "@/lib/uiSounds";
+import { computeGroupStrikecraftCapacity, type FleetShipRow } from "@/components/game-shell/FleetCompositionEditor";
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
@@ -341,6 +342,8 @@ const PlayerGame = () => {
     Map<string, { kind: "move" | "attack"; targetFleetId?: string; targetSystemId?: number; destX?: number; destY?: number }>
   >(new Map());
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
+  /** Open issues that block turn submission (e.g. fleet group overcapacity). */
+  const [submissionIssues, setSubmissionIssues] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
@@ -474,6 +477,64 @@ const PlayerGame = () => {
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number, orderRefreshTick]);
 
+  // ─── Submission-blocking issues ───
+  // Currently checks: per-fleet, per-tactical-group strikecraft overcapacity
+  // (more fighters/gunships in a group than its host capacity). Computed from
+  // game_fleet_ships joined with ship_types so the math matches what the
+  // FleetCompositionEditor shows in fleet detail.
+  useEffect(() => {
+    if (!player || !game || !mapState) return;
+    const ownClass = `PROVINCE_${player.player_slot}`;
+    const myFleets = mapState.fleets.filter(f => f.owner_classification === ownClass);
+    if (myFleets.length === 0) {
+      setSubmissionIssues([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const fleetIds = myFleets.map(f => f.fleet_id);
+      const { data: rows } = await (supabase as any)
+        .from("game_fleet_ships")
+        .select("game_fleet_id, ship_type_id, quantity, tactical_group, ship_types(class, fighter_bay, gun_ship_link)")
+        .in("game_fleet_id", fleetIds);
+      if (cancelled) return;
+      const byFleet = new Map<string, FleetShipRow[]>();
+      for (const r of (rows || []) as any[]) {
+        const st = r.ship_types || {};
+        const row: FleetShipRow = {
+          id: `${r.game_fleet_id}:${r.ship_type_id}`,
+          ship_type_id: r.ship_type_id,
+          quantity: r.quantity,
+          tactical_group: r.tactical_group,
+          ship_name: "",
+          ship_display_id: "",
+          hull_class: "",
+          ship_class: st.class || "",
+          fighter_bay: Number(st.fighter_bay) || 0,
+          gun_ship_link: Number(st.gun_ship_link) || 0,
+        };
+        const arr = byFleet.get(r.game_fleet_id) ?? [];
+        arr.push(row);
+        byFleet.set(r.game_fleet_id, arr);
+      }
+      const issues: string[] = [];
+      for (const f of myFleets) {
+        const ships = byFleet.get(f.fleet_id) ?? [];
+        const caps = computeGroupStrikecraftCapacity(ships);
+        for (const [group, c] of caps.entries()) {
+          if (c.fighterUsed > c.fighterCap) {
+            issues.push(`${f.fleet_name} · ${group}: fighters ${c.fighterUsed}/${c.fighterCap}`);
+          }
+          if (c.gunshipUsed > c.gunshipCap) {
+            issues.push(`${f.fleet_name} · ${group}: gunships ${c.gunshipUsed}/${c.gunshipCap}`);
+          }
+        }
+      }
+      setSubmissionIssues(issues);
+    })();
+    return () => { cancelled = true; };
+  }, [player?.id, player?.player_slot, game?.id, game?.turn_number, mapState, orderRefreshTick]);
+
   // Any change to a player's orders auto-clears the "Submitted" flag — the player
   // can keep editing freely after submitting; the admin sees "Not Submitted" again
   // until they click Submit Orders.
@@ -488,12 +549,20 @@ const PlayerGame = () => {
   const submitOrders = useCallback(async () => {
     if (!player) return;
     const next = !player.orders_locked;
+    if (next && submissionIssues.length > 0) {
+      toast({
+        title: "Cannot submit",
+        description: `Resolve ${submissionIssues.length} open issue${submissionIssues.length === 1 ? "" : "s"} first.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const { error } = await (supabase as any).from("game_players").update({ orders_locked: next }).eq("id", player.id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setPlayer(p => (p ? { ...p, orders_locked: next } : p));
     if (next) playOrdersSubmitted();
     toast({ title: next ? "Orders Submitted" : "Orders Withdrawn", description: next ? "Your orders are marked submitted." : "Your orders are no longer marked submitted." });
-  }, [player, toast]);
+  }, [player, toast, submissionIssues]);
 
   const combatPointsAvailable = Math.max(0, (player?.combat_points_remaining ?? 0) - pendingFleetOrderCount);
 
@@ -785,6 +854,7 @@ const PlayerGame = () => {
           onViewNews={handleViewNews}
           ordersSubmitted={!!player?.orders_locked}
           onSubmitOrders={submitOrders}
+          submissionIssues={submissionIssues}
           inlineContext={{
             mode: activeMode,
             selection,

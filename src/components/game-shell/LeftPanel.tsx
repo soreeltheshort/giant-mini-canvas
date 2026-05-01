@@ -33,6 +33,8 @@ interface LeftPanelProps {
   ordersSubmitted?: boolean;
   /** Toggle order submission. */
   onSubmitOrders?: () => void;
+  /** Open issues that block turn submission. Empty array = ready to submit. */
+  submissionIssues?: string[];
   /** When true, render full-width (mobile stacked layout) instead of fixed 14rem rail. */
   fullWidth?: boolean;
   /** Inline context (used on tablet where right panel is hidden) */
@@ -86,6 +88,7 @@ export default function LeftPanel({
   inlineContext,
   ordersSubmitted = false,
   onSubmitOrders,
+  submissionIssues = [],
   fullWidth = false,
 }: LeftPanelProps) {
   const unreadCount = news.filter((n) => !n.read).length;
@@ -180,9 +183,24 @@ export default function LeftPanel({
 
       {/* ── Bottom: Submit Orders ── */}
       <div className="p-3 border-t border-border shrink-0 space-y-1.5">
+        {submissionIssues.length > 0 && !ordersSubmitted && (
+          <div className="rounded-sm border border-crimson/60 bg-crimson/5 p-2 space-y-1 max-h-40 overflow-y-auto">
+            <div className="text-[9px] font-heading uppercase tracking-widest text-crimson font-bold">
+              {submissionIssues.length} issue{submissionIssues.length === 1 ? "" : "s"} block submission
+            </div>
+            <ul className="space-y-0.5">
+              {submissionIssues.map((msg, i) => (
+                <li key={i} className="text-[10px] text-crimson-dark leading-tight flex gap-1">
+                  <span className="text-crimson">•</span>
+                  <span>{msg}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <button
           onClick={onSubmitOrders}
-          disabled={!onSubmitOrders}
+          disabled={!onSubmitOrders || (!ordersSubmitted && submissionIssues.length > 0)}
           className={`w-full py-2 rounded-sm font-heading text-xs font-semibold uppercase tracking-wider transition-colors bronze-glow-hover ${
             ordersSubmitted
               ? "bg-ivory border border-bronze/60 text-bronze-dark hover:bg-ivory-dark"
