@@ -338,7 +338,7 @@ const PlayerGame = () => {
   const [pendingFleetOrderCount, setPendingFleetOrderCount] = useState(0);
   // Active fleet orders this turn, keyed by fleet_id, used to render arrows on the map
   const [pendingFleetOrders, setPendingFleetOrders] = useState<
-    Map<string, { kind: "move" | "attack"; targetFleetId?: string; destX?: number; destY?: number }>
+    Map<string, { kind: "move" | "attack"; targetFleetId?: string; targetSystemId?: number; destX?: number; destY?: number }>
   >(new Map());
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
 
@@ -442,7 +442,7 @@ const PlayerGame = () => {
         .eq("turn_number", game.turn_number)
         .in("order_type", ["fleet_move", "other", "set_readiness"]);
       if (cancelled) return;
-      const map = new Map<string, { kind: "move" | "attack"; targetFleetId?: string; destX?: number; destY?: number }>();
+      const map = new Map<string, { kind: "move" | "attack"; targetFleetId?: string; targetSystemId?: number; destX?: number; destY?: number }>();
       let pointsSpent = 0;
       for (const o of (orders ?? []) as any[]) {
         if (o.order_type === "fleet_move" && o.order_json?.fleet_id) {
@@ -460,6 +460,7 @@ const PlayerGame = () => {
           map.set(o.order_json.fleet_id, {
             kind: "attack",
             targetFleetId: o.order_json.target_fleet_id,
+            targetSystemId: o.order_json.target_system_id,
           });
           pointsSpent += 1;
         } else if (o.order_type === "set_readiness") {
@@ -632,6 +633,45 @@ const PlayerGame = () => {
     }
   };
 
+  const handleSystemTargetPicked = async (system: import("@/lib/mapTypes").SystemData) => {
+    if (!player || !game || !targeting || targeting.mode !== "fleet") return;
+    // Look up the source fleet to validate ownership rule (don't attack own planet).
+    const sourceFleet = mapState?.fleets.find(f => f.fleet_id === targeting.fleetId);
+    if (sourceFleet && (system.owner || "").trim().toLowerCase() === (sourceFleet.owner_classification || "").trim().toLowerCase() && (system.owner || "").trim() !== "") {
+      toast({ title: "Invalid target", description: "Cannot invade your own planet.", variant: "destructive" });
+      setTargeting(null);
+      return;
+    }
+    if (combatPointsAvailable <= 0) {
+      toast({ title: "No combat points", description: "Cancel another fleet order first.", variant: "destructive" });
+      setTargeting(null);
+      return;
+    }
+    try {
+      await (supabase as any).from("player_orders")
+        .delete()
+        .eq("game_id", game.id).eq("player_id", player.id).eq("turn_number", game.turn_number)
+        .eq("order_type", "other")
+        .filter("order_json->>fleet_id", "eq", targeting.fleetId)
+        .filter("order_json->>kind", "eq", "fleet_attack");
+      await (supabase as any).from("player_orders").insert({
+        game_id: game.id,
+        player_id: player.id,
+        turn_number: game.turn_number,
+        order_type: "other",
+        order_json: { kind: "fleet_attack", fleet_id: targeting.fleetId, target_system_id: system.system_id },
+        notes: "",
+      });
+      playOrderPlaced();
+      toast({ title: "Attack Order Set", description: `Target planet: ${system.system_name}` });
+      refreshOrders();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setTargeting(null);
+    }
+  };
+
 
   // Hooks MUST be called before any early returns (Rules of Hooks)
   const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
@@ -691,6 +731,13 @@ const PlayerGame = () => {
       const target = mapState.fleets.find(f => f.fleet_id === order.targetFleetId);
       if (!target) return null;
       return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: target.hex_x, toY: target.hex_y, kind: "attack" as const };
+    }
+    if (order.kind === "attack" && typeof order.targetSystemId === "number") {
+      const sys = mapState.systems.get(order.targetSystemId);
+      if (!sys) return null;
+      const hex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+      if (!hex) return null;
+      return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: hex.x, toY: hex.y, kind: "attack" as const };
     }
     return null;
   })();
@@ -775,6 +822,7 @@ const PlayerGame = () => {
               targetingMode={targeting?.mode ?? null}
               onHexTargetPicked={handleHexTargetPicked}
               onFleetTargetPicked={handleFleetTargetPicked}
+              onSystemTargetPicked={handleSystemTargetPicked}
               onCancelTargeting={() => setTargeting(null)}
               debugVisibleHexKeys={liveHexKeys}
               everSeenHexKeys={everSeenHexKeys}

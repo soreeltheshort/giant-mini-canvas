@@ -3,10 +3,16 @@
  *
  * Runs after Movement (so fleet positions are final) and before Visibility.
  *
- * Trigger:
- *   Any fleet with current_ground_invasion > 0 ending the turn on a hex
- *   containing a system whose owner != the fleet's owner is treated as an
- *   automatic ground invasion. No explicit order is required.
+ * Trigger (all three must be true for a fleet to launch a ground invasion):
+ *   1. The fleet has a `fleet_attack` order this turn whose target is on the
+ *      same hex as a planet/system (either via `target_system_id` directly,
+ *      or via `target_fleet_id` whose target fleet sits on a system hex).
+ *   2. At least one of the fleet's two strategy slots
+ *      (`special1_role` / `special2_role`) is `Attack Planet`.
+ *   3. The fleet's effective ground-invasion force is
+ *      MAX(`fleets.current_ground_invasion`, sum of `ground_invasion`
+ *      capacity across game-fleet-ships in the `Attack Planet` tactical
+ *      group). The larger of the two values is what fights.
  *
  * Resolution per planet (single round, deterministic):
  *   1. Phase A — Inter-invader attrition.
@@ -16,15 +22,15 @@
  *      destroying one enemy unit. Both sides apply losses simultaneously.
  *      An odd unpaired invader sits Phase A out.
  *   2. Phase B — Planet assault.
- *      The surviving invader with the highest remaining
- *      current_ground_invasion (ties broken deterministically) makes ONE
- *      simultaneous round vs the planet's current_ground_defenses using the
- *      same kill chance. Other surviving invaders do not attack this turn.
- *   3. If current_ground_defenses reaches 0, the planet's owner changes to
- *      the attacking fleet's owner. If the planet had 0 population it's
+ *      The surviving invader with the highest remaining effective GI (ties
+ *      broken deterministically) makes ONE simultaneous round vs the
+ *      planet's `current_ground_defenses` using the same kill chance.
+ *      Other surviving invaders do not attack this turn.
+ *   3. If `current_ground_defenses` reaches 0, the planet's owner changes
+ *      to the attacking fleet's owner. If the planet had 0 population it's
  *      logged as "colonize"; otherwise "capture". Surviving GI stays in the
- *      fleet, defenses remain at 0 — population/condition recover via the
- *      normal economy phase next turn.
+ *      fleet (write-back to `fleets.current_ground_invasion` only — ship
+ *      ground-invasion capacity is a derived stat from the fleet's roster).
  */
 import type { Phase, TurnContext } from "../types";
 
@@ -78,14 +84,17 @@ interface InvaderEntry {
   source_fleet_id: string;
   fleet_name: string;
   owner_classification: string;
+  /** Effective GI for this engagement = MAX(fleet GI, capacity in "Attack Planet" group). */
   gi: number;
+  /** Original starting GI before any attrition this turn. */
+  starting_gi: number;
 }
 
 export const groundCombatPhase: Phase = {
   name: "ground_combat",
   label: "Ground Combat",
   async run(ctx: TurnContext) {
-    const { supabase, gameId, currentTurn, mapState } = ctx;
+    const { supabase, gameId, currentTurn, mapState, orders } = ctx;
 
     // 1. Load the kill chance from combat_constants (fallback 0.8).
     const { data: kcRow } = await (supabase as any)
@@ -95,77 +104,184 @@ export const groundCombatPhase: Phase = {
       .maybeSingle();
     const killChance = kcRow ? Number(kcRow.value) : 0.8;
 
-    // 2. Build a map of hex (x,y) -> system at that hex (only ones we can invade).
+    // 2. Map hex (x,y) -> system on that hex (only ones we can invade).
     const systemsByHex = new Map<string, any>();
     for (const sys of mapState.systems.values()) {
-      // Look up the hex this system sits on via hex_id.
       const hex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
       if (!hex) continue;
       systemsByHex.set(`${hex.x},${hex.y}`, sys);
     }
 
-    // 3. Find candidate invading fleets — those with current_ground_invasion > 0
-    //    sitting on a hex with a system whose owner differs from the fleet owner.
-    const fleetsOnTargets: Array<{ mf: any; sys: any }> = [];
-    for (const mf of mapState.fleets) {
-      const sys = systemsByHex.get(`${mf.hex_x},${mf.hex_y}`);
-      if (!sys) continue;
-      const fleetOwner = (mf.owner_classification || "").trim();
-      const planetOwner = (sys.owner || "").trim();
-      // Same-owner garrison movement isn't an invasion.
-      if (fleetOwner && planetOwner && fleetOwner.toLowerCase() === planetOwner.toLowerCase()) continue;
-      fleetsOnTargets.push({ mf, sys });
-    }
+    // 3. Find all fleet_attack orders for this turn and resolve each into a
+    //    candidate (attacker fleet, target system) pair.
+    const attackOrders = orders.filter(
+      (o) => o.order_type === "other" && (o.order_json as any)?.kind === "fleet_attack",
+    );
 
-    if (fleetsOnTargets.length === 0) {
+    if (attackOrders.length === 0) {
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
-        log_type: "noop", message: "No ground invasions this turn.",
+        log_type: "noop", message: "No attack orders this turn — no ground invasions.",
       });
       return;
     }
 
-    // 4. Fetch current_ground_invasion for those fleets.
-    const fleetIds = Array.from(new Set(fleetsOnTargets.map(f => f.mf.fleet_id)));
-    const { data: gfRows } = await (supabase as any)
-      .from("game_fleets").select("id, fleet_id").in("id", fleetIds);
-    const sourceFleetIdByGameFleet = new Map<string, string>();
-    for (const r of (gfRows || [])) sourceFleetIdByGameFleet.set(r.id, r.fleet_id);
+    // Helper: find the system on a given hex coord (returns undefined if none).
+    const sysOnHex = (x: number, y: number) => systemsByHex.get(`${x},${y}`);
 
-    const sourceIds = Array.from(new Set(Array.from(sourceFleetIdByGameFleet.values())));
-    const { data: flRows } = await (supabase as any)
-      .from("fleets").select("id, current_ground_invasion").in("id", sourceIds);
-    const giBySource = new Map<string, number>();
-    for (const r of (flRows || [])) giBySource.set(r.id, Number(r.current_ground_invasion) || 0);
+    // Build (attackerGameFleetId -> targetSystem) candidates.
+    interface Candidate { mf: any; sys: any; reason: "direct_planet" | "fleet_on_planet"; }
+    const candidates: Candidate[] = [];
+    for (const o of attackOrders) {
+      const oj = o.order_json as any;
+      const attackerGameFleetId: string = oj.fleet_id;
+      const attacker = mapState.fleets.find(f => f.fleet_id === attackerGameFleetId);
+      if (!attacker) continue;
 
-    // 5. Group invaders by target system.
-    const bySystem = new Map<number, { sys: any; invaders: InvaderEntry[] }>();
-    for (const { mf, sys } of fleetsOnTargets) {
-      const sourceId = sourceFleetIdByGameFleet.get(mf.fleet_id);
-      if (!sourceId) continue;
-      const gi = giBySource.get(sourceId) || 0;
-      if (gi <= 0) continue;
-      const bucket = bySystem.get(sys.system_id) || { sys, invaders: [] };
-      bucket.invaders.push({
-        game_fleet_id: mf.fleet_id,
-        source_fleet_id: sourceId,
-        fleet_name: mf.fleet_name || `Fleet ${String(mf.fleet_id).slice(0,8)}`,
-        owner_classification: mf.owner_classification || "",
-        gi,
+      // (a) Direct planet target.
+      if (oj.target_system_id != null) {
+        const sys = mapState.systems.get(Number(oj.target_system_id));
+        if (!sys) continue;
+        // Attacker must be on the same hex as the targeted planet.
+        const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+        if (!sysHex || sysHex.x !== attacker.hex_x || sysHex.y !== attacker.hex_y) continue;
+        candidates.push({ mf: attacker, sys, reason: "direct_planet" });
+        continue;
+      }
+
+      // (b) Fleet target — only counts if that target fleet sits on a system hex
+      //     and the attacker is co-located with it.
+      if (oj.target_fleet_id) {
+        const tgtFleet = mapState.fleets.find(f => f.fleet_id === oj.target_fleet_id);
+        if (!tgtFleet) continue;
+        if (tgtFleet.hex_x !== attacker.hex_x || tgtFleet.hex_y !== attacker.hex_y) continue;
+        const sys = sysOnHex(attacker.hex_x, attacker.hex_y);
+        if (!sys) continue;
+        candidates.push({ mf: attacker, sys, reason: "fleet_on_planet" });
+      }
+    }
+
+    if (candidates.length === 0) {
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+        log_type: "noop", message: "No fleet_attack orders resolved to a planetary invasion.",
       });
-      bySystem.set(sys.system_id, bucket);
+      return;
+    }
+
+    // 4. Filter candidates: skip same-owner (garrison), then enforce strategy + capacity rules.
+    const sourceFleetIdByGameFleet = new Map<string, string>();
+    {
+      const gameFleetIds = Array.from(new Set(candidates.map(c => c.mf.fleet_id)));
+      const { data: gfRows } = await (supabase as any)
+        .from("game_fleets").select("id, fleet_id").in("id", gameFleetIds);
+      for (const r of (gfRows || [])) sourceFleetIdByGameFleet.set(r.id, r.fleet_id);
+    }
+    const sourceIds = Array.from(new Set(Array.from(sourceFleetIdByGameFleet.values())));
+
+    // Pull strategy roles + current GI for each source fleet.
+    const fleetMetaBySource = new Map<string, { gi: number; special1: string; special2: string }>();
+    if (sourceIds.length > 0) {
+      const { data: flRows } = await (supabase as any)
+        .from("fleets")
+        .select("id, current_ground_invasion, special1_role, special2_role")
+        .in("id", sourceIds);
+      for (const r of (flRows || [])) {
+        fleetMetaBySource.set(r.id, {
+          gi: Number(r.current_ground_invasion) || 0,
+          special1: r.special1_role || "",
+          special2: r.special2_role || "",
+        });
+      }
+    }
+
+    // Compute "Attack Planet" tactical-group ground-invasion capacity per
+    // game-fleet from the per-game roster (`game_fleet_ships`).
+    const capacityByGameFleet = new Map<string, number>();
+    {
+      const gameFleetIds = Array.from(new Set(candidates.map(c => c.mf.fleet_id)));
+      if (gameFleetIds.length > 0) {
+        const { data: rows } = await (supabase as any)
+          .from("game_fleet_ships")
+          .select("game_fleet_id, quantity, tactical_group, ship_types(ground_invasion)")
+          .in("game_fleet_id", gameFleetIds);
+        for (const r of (rows || [])) {
+          if ((r.tactical_group || "") !== "Attack Planet") continue;
+          const cap = Number(r.ship_types?.ground_invasion) || 0;
+          const qty = Number(r.quantity) || 0;
+          capacityByGameFleet.set(
+            r.game_fleet_id,
+            (capacityByGameFleet.get(r.game_fleet_id) || 0) + cap * qty,
+          );
+        }
+      }
+    }
+
+    const skipLogs: string[] = [];
+
+    // 5. Group qualified invaders by target system.
+    const bySystem = new Map<number, { sys: any; invaders: InvaderEntry[] }>();
+    for (const c of candidates) {
+      const sourceId = sourceFleetIdByGameFleet.get(c.mf.fleet_id);
+      if (!sourceId) continue;
+
+      // Same-owner garrison movement isn't an invasion.
+      const fleetOwner = (c.mf.owner_classification || "").trim();
+      const planetOwner = (c.sys.owner || "").trim();
+      if (fleetOwner && planetOwner && fleetOwner.toLowerCase() === planetOwner.toLowerCase()) {
+        skipLogs.push(`${c.mf.fleet_name}: target planet ${c.sys.system_name} is already owned by attacker.`);
+        continue;
+      }
+
+      const meta = fleetMetaBySource.get(sourceId);
+      if (!meta) continue;
+
+      // Rule (2): one of the two strategies must be "Attack Planet".
+      const hasAttackPlanetStrategy =
+        meta.special1 === "Attack Planet" || meta.special2 === "Attack Planet";
+      if (!hasAttackPlanetStrategy) {
+        skipLogs.push(`${c.mf.fleet_name}: cannot invade ${c.sys.system_name} — no "Attack Planet" strategy assigned.`);
+        continue;
+      }
+
+      // Rule (3): effective GI = MAX(fleet GI, ship "Attack Planet" capacity).
+      const fleetGi = meta.gi;
+      const capGi = capacityByGameFleet.get(c.mf.fleet_id) || 0;
+      const effectiveGi = Math.max(fleetGi, capGi);
+      if (effectiveGi <= 0) {
+        skipLogs.push(`${c.mf.fleet_name}: zero ground-invasion force — invasion of ${c.sys.system_name} aborted.`);
+        continue;
+      }
+
+      const bucket = bySystem.get(c.sys.system_id) || { sys: c.sys, invaders: [] };
+      bucket.invaders.push({
+        game_fleet_id: c.mf.fleet_id,
+        source_fleet_id: sourceId,
+        fleet_name: c.mf.fleet_name || `Fleet ${String(c.mf.fleet_id).slice(0, 8)}`,
+        owner_classification: c.mf.owner_classification || "",
+        gi: effectiveGi,
+        starting_gi: effectiveGi,
+      });
+      bySystem.set(c.sys.system_id, bucket);
+    }
+
+    for (const m of skipLogs) {
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+        log_type: "ground_invasion_skipped", message: m,
+      });
     }
 
     if (bySystem.size === 0) {
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
-        log_type: "noop", message: "No fleets with ground forces are positioned to invade.",
+        log_type: "noop", message: "No qualifying ground invasions this turn.",
       });
       return;
     }
 
-    // Track GI changes to write back at the end.
-    const giDelta = new Map<string, number>(); // source_fleet_id -> new GI value
+    // Track GI changes to write back at the end (source_fleet_id -> new GI).
+    const giDelta = new Map<string, number>();
 
     let resolved = 0;
     // Process systems in deterministic order (by system_id).
@@ -203,9 +319,21 @@ export const groundCombatPhase: Phase = {
       // Drop any invaders that were wiped out in Phase A.
       const survivors = invaders.filter(inv => inv.gi > 0);
 
+      // Apply effective-GI losses back to the fleet's stored current_ground_invasion.
+      // Each invader's stored GI is reduced by the same number of casualties
+      // taken in this engagement (capped at 0).
+      const writeBackGi = (inv: InvaderEntry) => {
+        const casualties = inv.starting_gi - inv.gi;
+        // Use the stored fleet GI as the basis (not effective GI), so capacity
+        // never inflates the stored value above what was there before combat.
+        const meta = fleetMetaBySource.get(inv.source_fleet_id);
+        const baseStored = meta ? meta.gi : inv.starting_gi;
+        const next = Math.max(0, baseStored - casualties);
+        giDelta.set(inv.source_fleet_id, next);
+      };
+
       if (survivors.length === 0) {
-        // All invaders annihilated each other — no planet assault.
-        for (const inv of invaders) giDelta.set(inv.source_fleet_id, 0);
+        for (const inv of invaders) writeBackGi(inv);
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
           log_type: "ground_combat_resolved",
@@ -221,7 +349,6 @@ export const groundCombatPhase: Phase = {
       }
 
       // ── Phase B: champion attacks the planet ──
-      // Highest remaining GI; ties broken deterministically via the RNG.
       survivors.sort((a, b) => {
         if (b.gi !== a.gi) return b.gi - a.gi;
         return rng() < 0.5 ? -1 : 1;
@@ -238,7 +365,6 @@ export const groundCombatPhase: Phase = {
 
       let outcome: "capture" | "colonize" | "repulsed" | "stalemate" = "stalemate";
       if (newDefenses <= 0) {
-        // Planet falls — change owner to the attacker's classification.
         sys.owner = champion.owner_classification;
         outcome = planetWasUnpopulated ? "colonize" : "capture";
       } else if (champion.gi <= 0) {
@@ -246,9 +372,9 @@ export const groundCombatPhase: Phase = {
       }
 
       // Write back surviving GI for every invader involved at this system.
-      for (const inv of invaders) giDelta.set(inv.source_fleet_id, inv.gi);
+      for (const inv of invaders) writeBackGi(inv);
 
-      // Persist the system update via mapState (will be serialized by AdminGames runTurn).
+      // Persist the system update via mapState.
       mapState.systems.set(sys.system_id, sys);
 
       const msg =
@@ -274,8 +400,7 @@ export const groundCombatPhase: Phase = {
           ending_defenses: newDefenses,
           champion_fleet: champion.fleet_name,
           champion_owner: champion.owner_classification,
-          champion_starting_gi: invaders.find(i => i.game_fleet_id === champion.game_fleet_id)?.gi !== champion.gi
-            ? undefined : champion.gi, // reference only
+          champion_starting_gi: champion.starting_gi,
           champion_ending_gi: champion.gi,
           population_at_start: Number(sys.current_population) || 0,
           phase_a: phaseAEvents,

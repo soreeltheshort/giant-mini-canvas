@@ -22,6 +22,8 @@ interface Props {
   targetingMode?: "hex" | "fleet" | null;
   onHexTargetPicked?: (hex: { x: number; y: number }) => void;
   onFleetTargetPicked?: (fleet: MapFleet) => void;
+  /** In "fleet" targeting mode, called when the user clicks a system hex with no fleet on it. */
+  onSystemTargetPicked?: (system: SystemData) => void;
   onCancelTargeting?: () => void;
   /** Hex keys (e.g. "3,-2") currently in live sensor view (bright). */
   debugVisibleHexKeys?: Set<string>;
@@ -63,6 +65,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   targetingMode = null,
   onHexTargetPicked,
   onFleetTargetPicked,
+  onSystemTargetPicked,
   onCancelTargeting,
   debugVisibleHexKeys,
   everSeenHexKeys,
@@ -559,7 +562,12 @@ const PlayerMapCanvas: React.FC<Props> = ({
         }
         if (targetingMode === "fleet") {
           const fleet = hexKeyToFleet.get(hk);
-          if (fleet) onFleetTargetPicked?.(fleet);
+          if (fleet) { onFleetTargetPicked?.(fleet); return; }
+          // No fleet at the clicked hex — fall back to picking a planet/system as target.
+          if (hex && hex.has_system) {
+            const sys = hexIdToSystem.get(hex.hex_id);
+            if (sys) { onSystemTargetPicked?.(sys); return; }
+          }
           return;
         }
 
@@ -577,7 +585,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
         }
       }
     },
-    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, onSystemClick, onFleetClick, targetingMode, onHexTargetPicked, onFleetTargetPicked]
+    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, onSystemClick, onFleetClick, targetingMode, onHexTargetPicked, onFleetTargetPicked, onSystemTargetPicked]
   );
 
   const handleMouseLeave = useCallback(() => {
@@ -662,7 +670,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
           <span className="font-heading text-[10px] uppercase tracking-wider font-bold">
             {targetingMode === "hex"
               ? "Click a hex to set destination"
-              : "Click an enemy fleet to target"}
+              : "Click an enemy fleet or planet to target"}
           </span>
           <button
             onClick={onCancelTargeting}

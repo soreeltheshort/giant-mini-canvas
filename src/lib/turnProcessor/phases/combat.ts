@@ -150,12 +150,14 @@ export const combatPhase: Phase = {
     const orderByPair = new Map<string, typeof attackOrders[number]>();
     for (const o of attackOrders) {
       const oj = o.order_json as any;
+      if (!oj.target_fleet_id) continue; // Planet-only attacks don't pair.
       orderByPair.set(`${oj.fleet_id}->${oj.target_fleet_id}`, o);
     }
     const droppedOrderIds = new Set<string>();
     const handledPairs = new Set<string>();
     for (const o of attackOrders) {
       const oj = o.order_json as any;
+      if (!oj.target_fleet_id) continue;
       const a: string = oj.fleet_id;
       const b: string = oj.target_fleet_id;
       const pairKey = [a, b].sort().join("|");
@@ -195,7 +197,11 @@ export const combatPhase: Phase = {
     for (const order of effectiveAttackOrders) {
       const oj = order.order_json as any;
       const attackerGameFleetId: string = oj.fleet_id;
-      const targetGameFleetId: string = oj.target_fleet_id;
+      const targetGameFleetId: string | undefined = oj.target_fleet_id;
+
+      // Planet-only attack orders (target_system_id without target_fleet_id)
+      // are resolved by the ground_combat phase, not space combat. Skip silently.
+      if (!targetGameFleetId && oj.target_system_id != null) continue;
 
       const attackerMF = ctx.mapState.fleets.find(f => f.fleet_id === attackerGameFleetId);
       const targetMF = ctx.mapState.fleets.find(f => f.fleet_id === targetGameFleetId);
