@@ -293,7 +293,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     }
     load();
     return () => { cancelled = true; };
-  }, [sourceId, shipTypes, orderContext, fleet.fleet_id]);
+  }, [sourceId, shipTypes, orderContext, fleet.fleet_id, shipTypeExtras]);
 
   if (loading) {
     return (
