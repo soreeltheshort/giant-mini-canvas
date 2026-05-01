@@ -22,6 +22,8 @@ interface Props {
   targetingMode?: "hex" | "fleet" | null;
   onHexTargetPicked?: (hex: { x: number; y: number }) => void;
   onFleetTargetPicked?: (fleet: MapFleet) => void;
+  /** In "fleet" targeting mode, called when the user clicks a system hex with no fleet on it. */
+  onSystemTargetPicked?: (system: SystemData) => void;
   onCancelTargeting?: () => void;
   /** Hex keys (e.g. "3,-2") currently in live sensor view (bright). */
   debugVisibleHexKeys?: Set<string>;
