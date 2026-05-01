@@ -82,7 +82,7 @@ interface InvaderEntry {
 }
 
 export const groundCombatPhase: Phase = {
-  name: "ground_combat" as any,
+  name: "ground_combat",
   label: "Ground Combat",
   async run(ctx: TurnContext) {
     const { supabase, gameId, currentTurn, mapState } = ctx;
@@ -119,7 +119,7 @@ export const groundCombatPhase: Phase = {
 
     if (fleetsOnTargets.length === 0) {
       ctx.logs.push({
-        game_id: gameId, turn_number: currentTurn, phase: "ground_combat" as any,
+        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
         log_type: "noop", message: "No ground invasions this turn.",
       });
       return;
@@ -158,7 +158,7 @@ export const groundCombatPhase: Phase = {
 
     if (bySystem.size === 0) {
       ctx.logs.push({
-        game_id: gameId, turn_number: currentTurn, phase: "ground_combat" as any,
+        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
         log_type: "noop", message: "No fleets with ground forces are positioned to invade.",
       });
       return;
@@ -207,7 +207,7 @@ export const groundCombatPhase: Phase = {
         // All invaders annihilated each other — no planet assault.
         for (const inv of invaders) giDelta.set(inv.source_fleet_id, 0);
         ctx.logs.push({
-          game_id: gameId, turn_number: currentTurn, phase: "ground_combat" as any,
+          game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
           log_type: "ground_combat_resolved",
           message: `Ground combat at ${sys.system_name}: all invaders destroyed each other in inter-fleet skirmishes.`,
           details_json: {
@@ -258,7 +258,7 @@ export const groundCombatPhase: Phase = {
         : `Inconclusive ground combat at ${sys.system_name} — defenses ${newDefenses} vs invaders ${champion.gi}.`;
 
       ctx.logs.push({
-        game_id: gameId, turn_number: currentTurn, phase: "ground_combat" as any,
+        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
         log_type: outcome === "colonize" ? "planet_colonized"
                  : outcome === "capture" ? "planet_captured"
                  : outcome === "repulsed" ? "ground_invasion_repulsed"
@@ -302,7 +302,7 @@ export const groundCombatPhase: Phase = {
     }
 
     ctx.logs.push({
-      game_id: gameId, turn_number: currentTurn, phase: "ground_combat" as any,
+      game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
       log_type: "ground_combat_summary",
       message: `Ground combat phase complete — resolved ${resolved} planetary engagement(s).`,
     });
