@@ -585,7 +585,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
         }
       }
     },
-    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, onSystemClick, onFleetClick, targetingMode, onHexTargetPicked, onFleetTargetPicked]
+    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, onSystemClick, onFleetClick, targetingMode, onHexTargetPicked, onFleetTargetPicked, onSystemTargetPicked]
   );
 
   const handleMouseLeave = useCallback(() => {
