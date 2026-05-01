@@ -775,6 +775,7 @@ const PlayerGame = () => {
               targetingMode={targeting?.mode ?? null}
               onHexTargetPicked={handleHexTargetPicked}
               onFleetTargetPicked={handleFleetTargetPicked}
+              onSystemTargetPicked={handleSystemTargetPicked}
               onCancelTargeting={() => setTargeting(null)}
               debugVisibleHexKeys={liveHexKeys}
               everSeenHexKeys={everSeenHexKeys}
