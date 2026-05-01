@@ -88,6 +88,7 @@ export default function LeftPanel({
   inlineContext,
   ordersSubmitted = false,
   onSubmitOrders,
+  submissionIssues = [],
   fullWidth = false,
 }: LeftPanelProps) {
   const unreadCount = news.filter((n) => !n.read).length;
