@@ -477,6 +477,64 @@ const PlayerGame = () => {
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number, orderRefreshTick]);
 
+  // ─── Submission-blocking issues ───
+  // Currently checks: per-fleet, per-tactical-group strikecraft overcapacity
+  // (more fighters/gunships in a group than its host capacity). Computed from
+  // game_fleet_ships joined with ship_types so the math matches what the
+  // FleetCompositionEditor shows in fleet detail.
+  useEffect(() => {
+    if (!player || !game || !mapState) return;
+    const ownClass = `PROVINCE_${player.player_slot}`;
+    const myFleets = mapState.fleets.filter(f => f.owner_classification === ownClass);
+    if (myFleets.length === 0) {
+      setSubmissionIssues([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const fleetIds = myFleets.map(f => f.fleet_id);
+      const { data: rows } = await (supabase as any)
+        .from("game_fleet_ships")
+        .select("game_fleet_id, ship_type_id, quantity, tactical_group, ship_types(class, fighter_bay, gun_ship_link)")
+        .in("game_fleet_id", fleetIds);
+      if (cancelled) return;
+      const byFleet = new Map<string, FleetShipRow[]>();
+      for (const r of (rows || []) as any[]) {
+        const st = r.ship_types || {};
+        const row: FleetShipRow = {
+          id: `${r.game_fleet_id}:${r.ship_type_id}`,
+          ship_type_id: r.ship_type_id,
+          quantity: r.quantity,
+          tactical_group: r.tactical_group,
+          ship_name: "",
+          ship_display_id: "",
+          hull_class: "",
+          ship_class: st.class || "",
+          fighter_bay: Number(st.fighter_bay) || 0,
+          gun_ship_link: Number(st.gun_ship_link) || 0,
+        };
+        const arr = byFleet.get(r.game_fleet_id) ?? [];
+        arr.push(row);
+        byFleet.set(r.game_fleet_id, arr);
+      }
+      const issues: string[] = [];
+      for (const f of myFleets) {
+        const ships = byFleet.get(f.fleet_id) ?? [];
+        const caps = computeGroupStrikecraftCapacity(ships);
+        for (const [group, c] of caps.entries()) {
+          if (c.fighterUsed > c.fighterCap) {
+            issues.push(`${f.fleet_name} · ${group}: fighters ${c.fighterUsed}/${c.fighterCap}`);
+          }
+          if (c.gunshipUsed > c.gunshipCap) {
+            issues.push(`${f.fleet_name} · ${group}: gunships ${c.gunshipUsed}/${c.gunshipCap}`);
+          }
+        }
+      }
+      setSubmissionIssues(issues);
+    })();
+    return () => { cancelled = true; };
+  }, [player?.id, player?.player_slot, game?.id, game?.turn_number, mapState, orderRefreshTick]);
+
   // Any change to a player's orders auto-clears the "Submitted" flag — the player
   // can keep editing freely after submitting; the admin sees "Not Submitted" again
   // until they click Submit Orders.
