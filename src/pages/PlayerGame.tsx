@@ -854,6 +854,7 @@ const PlayerGame = () => {
           onViewNews={handleViewNews}
           ordersSubmitted={!!player?.orders_locked}
           onSubmitOrders={submitOrders}
+          submissionIssues={submissionIssues}
           inlineContext={{
             mode: activeMode,
             selection,
