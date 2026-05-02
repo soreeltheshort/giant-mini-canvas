@@ -806,7 +806,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           )}
           {attackOrder && (
             <div className="text-xs text-bronze-dark font-bold">
-              Attack → {targetFleetName}
+              {attackOrderLabel}
             </div>
           )}
 
