@@ -826,9 +826,8 @@ const PlayerGame = () => {
 
 
 
-  // Hooks MUST be called before any early returns (Rules of Hooks)
-  const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
-  const { live: liveHexKeys, everSeen: everSeenHexKeys } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+  // (visibility hooks moved above — needed by the submission-issues effect)
+
 
   // Ambient game music — loops quietly while in this view
   useGameMusic(true, 0.15);
