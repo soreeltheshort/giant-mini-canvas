@@ -572,6 +572,8 @@ function InlineArmyDetail({
         fleet={realFleet}
         shipTypes={gameData?.shipTypes}
         allFleets={gameData?.fleets}
+        allSystems={gameData ? Array.from(gameData.systems.values()) : []}
+        allHexes={gameData?.hexes}
         canEdit={canEdit}
         orderContext={fleetOrderContext}
         onStartTargeting={onStartTargeting}
