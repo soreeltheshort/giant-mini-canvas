@@ -666,6 +666,49 @@ const PlayerGame = () => {
     }
   };
 
+  /**
+   * Compute the attack-range cap for a given source fleet:
+   * floor(effective slowest map_speed / 2). Mirrors the movement-phase rule
+   * so the UI accepts only attack targets the engine can actually reach.
+   */
+  const computeAttackRange = async (sourceFleetId: string, gameFleetId: string): Promise<number> => {
+    try {
+      const { data: composition } = await (supabase as any)
+        .from("game_fleet_ships")
+        .select("ship_type_id, crippled")
+        .eq("game_fleet_id", gameFleetId);
+      const typeIds = (composition || []).map((c: any) => c.ship_type_id).filter(Boolean);
+      if (typeIds.length === 0) return 0;
+      const { data: typeRows } = await (supabase as any)
+        .from("ship_types")
+        .select("id, map_speed")
+        .in("id", typeIds);
+      const speedById = new Map<string, number>();
+      for (const t of (typeRows || [])) speedById.set(t.id, Number(t.map_speed) || 0);
+      const speeds: number[] = [];
+      for (const c of (composition || [])) {
+        const raw = speedById.get(c.ship_type_id) || 0;
+        if (raw <= 0) continue;
+        const eff = c.crippled ? Math.max(1, Math.ceil(raw / 2)) : raw;
+        speeds.push(eff);
+      }
+      if (speeds.length === 0) return 0;
+      const slowest = Math.min(...speeds);
+      return Math.floor(slowest / 2);
+    } catch {
+      return 0;
+    }
+    // sourceFleetId is reserved for future per-template lookups.
+    void sourceFleetId;
+  };
+
+  /** Hex distance (cube) between two odd-r offset coords. */
+  const hexDist = (ax: number, ay: number, bx: number, by: number): number => {
+    const [acx, acy, acz] = offsetToCube(ax, ay);
+    const [bcx, bcy, bcz] = offsetToCube(bx, by);
+    return cubeDistance(acx, acy, acz, bcx, bcy, bcz);
+  };
+
   const handleFleetTargetPicked = async (target: MapFleet) => {
     if (!player || !game || !targeting || targeting.mode !== "fleet") return;
     if (target.fleet_id === targeting.fleetId) {
@@ -676,6 +719,24 @@ const PlayerGame = () => {
       toast({ title: "No combat points", description: "Cancel another fleet order first.", variant: "destructive" });
       setTargeting(null);
       return;
+    }
+    // Range + visibility validation (target hex must be visible AND within
+    // floor(map_speed / 2) of the source fleet).
+    const sourceFleet = mapState?.fleets.find(f => f.fleet_id === targeting.fleetId);
+    if (sourceFleet) {
+      const distance = hexDist(sourceFleet.hex_x, sourceFleet.hex_y, target.hex_x, target.hex_y);
+      const range = await computeAttackRange(sourceFleet.source_fleet_id, sourceFleet.fleet_id);
+      if (distance > range) {
+        toast({ title: "Out of range", description: `Target is ${distance} hex(es) away — fleet can attack within ${range}.`, variant: "destructive" });
+        setTargeting(null);
+        return;
+      }
+      const hexKey = `${target.hex_x},${target.hex_y}`;
+      if (!liveHexKeys.has(hexKey)) {
+        toast({ title: "Not visible", description: "You can only attack hexes currently in sensor range.", variant: "destructive" });
+        setTargeting(null);
+        return;
+      }
     }
     try {
       await (supabase as any).from("player_orders")
@@ -715,6 +776,27 @@ const PlayerGame = () => {
       toast({ title: "No combat points", description: "Cancel another fleet order first.", variant: "destructive" });
       setTargeting(null);
       return;
+    }
+    // Range + visibility validation against the planet's hex.
+    if (sourceFleet && mapState) {
+      const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === system.hex_id);
+      if (!sysHex) {
+        toast({ title: "Invalid target", description: "Cannot locate that planet's hex.", variant: "destructive" });
+        setTargeting(null);
+        return;
+      }
+      if (!liveVisibleIds.includes(system.system_id)) {
+        toast({ title: "Not visible", description: "You can only attack planets currently in sensor range.", variant: "destructive" });
+        setTargeting(null);
+        return;
+      }
+      const distance = hexDist(sourceFleet.hex_x, sourceFleet.hex_y, sysHex.x, sysHex.y);
+      const range = await computeAttackRange(sourceFleet.source_fleet_id, sourceFleet.fleet_id);
+      if (distance > range) {
+        toast({ title: "Out of range", description: `Planet is ${distance} hex(es) away — fleet can attack within ${range}.`, variant: "destructive" });
+        setTargeting(null);
+        return;
+      }
     }
     try {
       await (supabase as any).from("player_orders")
