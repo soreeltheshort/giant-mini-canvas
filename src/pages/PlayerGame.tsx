@@ -496,10 +496,12 @@ const PlayerGame = () => {
       const fleetIds = myFleets.map(f => f.fleet_id);
       const { data: rows } = await (supabase as any)
         .from("game_fleet_ships")
-        .select("game_fleet_id, ship_type_id, quantity, tactical_group, ship_types(class, fighter_bay, gun_ship_link)")
+        .select("game_fleet_id, ship_type_id, quantity, crippled, tactical_group, ship_types(class, fighter_bay, gun_ship_link, map_speed)")
         .in("game_fleet_id", fleetIds);
       if (cancelled) return;
       const byFleet = new Map<string, FleetShipRow[]>();
+      // Per-fleet effective map speed (slowest non-strikecraft host, cripple-aware).
+      const speedByFleet = new Map<string, number>();
       for (const r of (rows || []) as any[]) {
         const st = r.ship_types || {};
         const row: FleetShipRow = {
@@ -517,6 +519,12 @@ const PlayerGame = () => {
         const arr = byFleet.get(r.game_fleet_id) ?? [];
         arr.push(row);
         byFleet.set(r.game_fleet_id, arr);
+        const raw = Number(st.map_speed) || 0;
+        if (raw > 0) {
+          const eff = r.crippled ? Math.max(1, Math.ceil(raw / 2)) : raw;
+          const cur = speedByFleet.get(r.game_fleet_id);
+          if (cur === undefined || eff < cur) speedByFleet.set(r.game_fleet_id, eff);
+        }
       }
       const issues: string[] = [];
       for (const f of myFleets) {
@@ -531,10 +539,48 @@ const PlayerGame = () => {
           }
         }
       }
+
+      // ── Attack-order range + visibility validation ──
+      // For each pending fleet_attack order (from pendingFleetOrders), confirm
+      // the target is currently visible AND within attack range
+      // (= floor(map_speed / 2)) of the attacker's current hex.
+      for (const f of myFleets) {
+        const order = pendingFleetOrders.get(f.fleet_id);
+        if (!order || order.kind !== "attack") continue;
+        const speed = speedByFleet.get(f.fleet_id) ?? 0;
+        const range = Math.max(0, Math.floor(speed / 2));
+
+        let tgtX: number | null = null;
+        let tgtY: number | null = null;
+        let tgtLabel = "target";
+        if (order.targetFleetId) {
+          const tf = mapState.fleets.find(x => x.fleet_id === order.targetFleetId);
+          if (tf) { tgtX = tf.hex_x; tgtY = tf.hex_y; tgtLabel = tf.fleet_name; }
+        } else if (order.targetSystemId != null) {
+          const sys = mapState.systems.get(Number(order.targetSystemId));
+          if (sys) {
+            const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+            if (sysHex) { tgtX = sysHex.x; tgtY = sysHex.y; tgtLabel = sys.system_name; }
+          }
+        }
+        if (tgtX === null || tgtY === null) {
+          issues.push(`${f.fleet_name}: attack target no longer exists`);
+          continue;
+        }
+        const dist = hexDistance(f.hex_x, f.hex_y, tgtX, tgtY);
+        if (dist > range) {
+          issues.push(`${f.fleet_name}: ${tgtLabel} is ${dist} hex(es) away — exceeds attack range ${range}`);
+        }
+        if (!liveHexKeys.has(hexKey(tgtX, tgtY))) {
+          issues.push(`${f.fleet_name}: ${tgtLabel} is not currently visible`);
+        }
+      }
+
       setSubmissionIssues(issues);
     })();
     return () => { cancelled = true; };
-  }, [player?.id, player?.player_slot, game?.id, game?.turn_number, mapState, orderRefreshTick]);
+  }, [player?.id, player?.player_slot, game?.id, game?.turn_number, mapState, orderRefreshTick, pendingFleetOrders, liveHexKeys]);
+
 
   // Any change to a player's orders auto-clears the "Submitted" flag — the player
   // can keep editing freely after submitting; the admin sees "Not Submitted" again
