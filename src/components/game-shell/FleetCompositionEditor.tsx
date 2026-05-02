@@ -130,11 +130,12 @@ export default function FleetCompositionEditor({
           )
         );
         persistGroup(dragId, targetGroup);
+        onCompositionChanged?.();
       }
       setDragId(null);
       setDragOverGroup(null);
     },
-    [dragId, setShips]
+    [dragId, setShips, onCompositionChanged]
   );
 
   const handleQtyChange = async (rowId: string, qty: number) => {
@@ -148,11 +149,13 @@ export default function FleetCompositionEditor({
     } else {
       await supabase.from("game_fleet_ships").update({ quantity: safe }).eq("id", rowId);
     }
+    onCompositionChanged?.();
   };
 
   const removeRow = async (rowId: string) => {
     await supabase.from("game_fleet_ships").delete().eq("id", rowId);
     setShips((prev) => prev.filter((s) => s.id !== rowId));
+    onCompositionChanged?.();
   };
 
   if (ships.length === 0) {
