@@ -135,36 +135,64 @@ export const groundCombatPhase: Phase = {
     const sysOnHex = (x: number, y: number) => systemsByHex.get(`${x},${y}`);
 
     // Build (attackerGameFleetId -> targetSystem) candidates.
-    interface Candidate { mf: any; sys: any; reason: "direct_planet" | "fleet_on_planet"; }
+    interface Candidate { mf: any; sys: any; reason: "direct_planet" | "fleet_on_planet"; distance: number; range: number; }
     const candidates: Candidate[] = [];
+    const outOfRangeLogs: string[] = [];
+    // Cache attacker map-speed lookups so we hit the DB at most once per fleet.
+    const speedCache = new Map<string, number>();
+    const speedFor = async (gameFleetId: string) => {
+      if (speedCache.has(gameFleetId)) return speedCache.get(gameFleetId)!;
+      const sp = await fetchFleetMapSpeed(supabase as any, gameFleetId);
+      speedCache.set(gameFleetId, sp);
+      return sp;
+    };
+
     for (const o of attackOrders) {
       const oj = o.order_json as any;
       const attackerGameFleetId: string = oj.fleet_id;
       const attacker = mapState.fleets.find(f => f.fleet_id === attackerGameFleetId);
       if (!attacker) continue;
 
-      // (a) Direct planet target.
+      // Resolve target system (and the hex it sits on).
+      let sys: any | undefined;
+      let reason: "direct_planet" | "fleet_on_planet" | undefined;
       if (oj.target_system_id != null) {
-        const sys = mapState.systems.get(Number(oj.target_system_id));
-        if (!sys) continue;
-        // Attacker must be on the same hex as the targeted planet.
-        const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
-        if (!sysHex || sysHex.x !== attacker.hex_x || sysHex.y !== attacker.hex_y) continue;
-        candidates.push({ mf: attacker, sys, reason: "direct_planet" });
+        sys = mapState.systems.get(Number(oj.target_system_id));
+        reason = "direct_planet";
+      } else if (oj.target_fleet_id) {
+        const tgtFleet = mapState.fleets.find(f => f.fleet_id === oj.target_fleet_id);
+        if (tgtFleet) {
+          sys = sysOnHex(tgtFleet.hex_x, tgtFleet.hex_y);
+          reason = "fleet_on_planet";
+        }
+      }
+      if (!sys || !reason) continue;
+
+      const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+      if (!sysHex) continue;
+
+      // Range rule: target hex must be within floor(map_speed / 2) of the
+      // attacker's CURRENT (post-movement) position. Attacking does not move.
+      const speed = await speedFor(attackerGameFleetId);
+      const range = attackRangeFromMapSpeed(speed);
+      const distance = hexDistance(attacker.hex_x, attacker.hex_y, sysHex.x, sysHex.y);
+      if (distance > range) {
+        outOfRangeLogs.push(
+          `${attacker.fleet_name}: planet ${sys.system_name} is ${distance} hex(es) away — exceeds attack range ${range} (map speed ${speed}).`,
+        );
         continue;
       }
 
-      // (b) Fleet target — only counts if that target fleet sits on a system hex
-      //     and the attacker is co-located with it.
-      if (oj.target_fleet_id) {
-        const tgtFleet = mapState.fleets.find(f => f.fleet_id === oj.target_fleet_id);
-        if (!tgtFleet) continue;
-        if (tgtFleet.hex_x !== attacker.hex_x || tgtFleet.hex_y !== attacker.hex_y) continue;
-        const sys = sysOnHex(attacker.hex_x, attacker.hex_y);
-        if (!sys) continue;
-        candidates.push({ mf: attacker, sys, reason: "fleet_on_planet" });
-      }
+      candidates.push({ mf: attacker, sys, reason, distance, range });
     }
+
+    for (const m of outOfRangeLogs) {
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+        log_type: "ground_invasion_out_of_range", message: m,
+      });
+    }
+
 
     if (candidates.length === 0) {
       ctx.logs.push({
