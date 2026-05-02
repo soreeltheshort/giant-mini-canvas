@@ -216,6 +216,23 @@ export const combatPhase: Phase = {
         continue;
       }
 
+      // Range check: target fleet must be within floor(attacker_map_speed / 2)
+      // hexes of the attacker's CURRENT (post-movement) position. Attacking
+      // does not move the attacker.
+      const attackerSpeed = await fetchFleetMapSpeed(supabase as any, attackerGameFleetId);
+      const range = attackRangeFromMapSpeed(attackerSpeed);
+      const dist = hexDistance(attackerMF.hex_x, attackerMF.hex_y, targetMF.hex_x, targetMF.hex_y);
+      if (dist > range) {
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "combat",
+          log_type: "combat_out_of_range",
+          message: `${attackerMF.fleet_name}: target ${targetMF.fleet_name} is ${dist} hex(es) away — exceeds attack range ${range} (map speed ${attackerSpeed}). Engagement skipped.`,
+          details_json: { attacker_fleet_id: attackerGameFleetId, target_fleet_id: targetGameFleetId, distance: dist, range, map_speed: attackerSpeed },
+        });
+        continue;
+      }
+
+
       // Pass game_fleet_id so the snapshot is loaded from per-game roster
       // (`game_fleet_ships`) and combat losses write back to that table — never
       // the player's saved fleet rows.
