@@ -56,8 +56,48 @@ export const movementPhase: Phase = {
 
     const moveOrders = ctx.orders.filter(o => o.order_type === "fleet_move");
     const strategyOrders = ctx.orders.filter(o => o.order_type === "set_strategy");
+    /**
+     * Auto-derived "intercept" moves: a fleet_attack order targeting a planet
+     * (or a fleet whose current hex we know) implicitly moves the attacker
+     * toward that hex, capped at floor(map_speed/2). Players can issue an
+     * attack on any visible hex within half-speed range; the engine closes
+     * the distance here so ground combat can resolve at the target hex.
+     * Skipped when the same fleet already has an explicit fleet_move order
+     * (explicit movement always wins).
+     */
+    const explicitMoveFleetIds = new Set<string>(
+      moveOrders.map(o => (o.order_json as any)?.fleet_id).filter(Boolean),
+    );
+    const autoMoveOrders: Array<{ order_json: any; auto: true }> = [];
+    for (const o of ctx.orders) {
+      if (o.order_type !== "other") continue;
+      const oj = (o.order_json || {}) as any;
+      if (oj.kind !== "fleet_attack") continue;
+      const fleetId: string | undefined = oj.fleet_id;
+      if (!fleetId || explicitMoveFleetIds.has(fleetId)) continue;
+      const attacker = ctx.mapState.fleets.find(f => f.fleet_id === fleetId);
+      if (!attacker) continue;
 
-    for (const order of moveOrders) {
+      let destHex: { x: number; y: number } | null = null;
+      if (oj.target_system_id != null) {
+        const sys = ctx.mapState.systems.get(Number(oj.target_system_id));
+        if (sys) {
+          const h = Array.from(ctx.mapState.hexes.values()).find(hh => hh.hex_id === sys.hex_id);
+          if (h) destHex = { x: h.x, y: h.y };
+        }
+      } else if (oj.target_fleet_id) {
+        const tgt = ctx.mapState.fleets.find(f => f.fleet_id === oj.target_fleet_id);
+        if (tgt) destHex = { x: tgt.hex_x, y: tgt.hex_y };
+      }
+      if (!destHex) continue;
+      if (destHex.x === attacker.hex_x && destHex.y === attacker.hex_y) continue;
+      autoMoveOrders.push({
+        order_json: { fleet_id: fleetId, dest_x: destHex.x, dest_y: destHex.y, auto_intercept: true },
+        auto: true,
+      });
+    }
+
+    for (const order of [...moveOrders, ...autoMoveOrders] as any[]) {
       const oj = order.order_json || {};
       const fleetId: string | undefined = oj.fleet_id;
       const destX: number | undefined =
