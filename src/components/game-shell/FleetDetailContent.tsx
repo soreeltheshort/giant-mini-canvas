@@ -628,6 +628,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
             />
           )}
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
+          <Row label="Attack Range" value={`${Math.floor(mapSpeedDisplay / 2)}`} />
           <Row label="Ships" value={`${totalShips}`} />
           
         </div>
