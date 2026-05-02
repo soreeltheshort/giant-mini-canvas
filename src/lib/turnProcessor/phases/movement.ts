@@ -56,48 +56,8 @@ export const movementPhase: Phase = {
 
     const moveOrders = ctx.orders.filter(o => o.order_type === "fleet_move");
     const strategyOrders = ctx.orders.filter(o => o.order_type === "set_strategy");
-    /**
-     * Auto-derived "intercept" moves: a fleet_attack order targeting a planet
-     * (or a fleet whose current hex we know) implicitly moves the attacker
-     * toward that hex, capped at floor(map_speed/2). Players can issue an
-     * attack on any visible hex within half-speed range; the engine closes
-     * the distance here so ground combat can resolve at the target hex.
-     * Skipped when the same fleet already has an explicit fleet_move order
-     * (explicit movement always wins).
-     */
-    const explicitMoveFleetIds = new Set<string>(
-      moveOrders.map(o => (o.order_json as any)?.fleet_id).filter(Boolean),
-    );
-    const autoMoveOrders: Array<{ order_json: any; auto: true }> = [];
-    for (const o of ctx.orders) {
-      if (o.order_type !== "other") continue;
-      const oj = (o.order_json || {}) as any;
-      if (oj.kind !== "fleet_attack") continue;
-      const fleetId: string | undefined = oj.fleet_id;
-      if (!fleetId || explicitMoveFleetIds.has(fleetId)) continue;
-      const attacker = ctx.mapState.fleets.find(f => f.fleet_id === fleetId);
-      if (!attacker) continue;
 
-      let destHex: { x: number; y: number } | null = null;
-      if (oj.target_system_id != null) {
-        const sys = ctx.mapState.systems.get(Number(oj.target_system_id));
-        if (sys) {
-          const h = Array.from(ctx.mapState.hexes.values()).find(hh => hh.hex_id === sys.hex_id);
-          if (h) destHex = { x: h.x, y: h.y };
-        }
-      } else if (oj.target_fleet_id) {
-        const tgt = ctx.mapState.fleets.find(f => f.fleet_id === oj.target_fleet_id);
-        if (tgt) destHex = { x: tgt.hex_x, y: tgt.hex_y };
-      }
-      if (!destHex) continue;
-      if (destHex.x === attacker.hex_x && destHex.y === attacker.hex_y) continue;
-      autoMoveOrders.push({
-        order_json: { fleet_id: fleetId, dest_x: destHex.x, dest_y: destHex.y, auto_intercept: true },
-        auto: true,
-      });
-    }
-
-    for (const order of [...moveOrders, ...autoMoveOrders] as any[]) {
+    for (const order of moveOrders) {
       const oj = order.order_json || {};
       const fleetId: string | undefined = oj.fleet_id;
       const destX: number | undefined =
@@ -157,18 +117,10 @@ export const movementPhase: Phase = {
         // fall through with default speed
       }
 
-      // Auto-intercept moves (derived from fleet_attack orders) are capped at
-      // floor(map_speed / 2) — players can only attack hexes within half their
-      // movement range.
-      const isAutoIntercept = !!oj.auto_intercept;
-      const movementBudget = isAutoIntercept
-        ? Math.floor(effectiveSpeed / 2)
-        : effectiveSpeed;
-
       const [ax, ay, az] = offsetToCube(fleet.hex_x, fleet.hex_y);
       const [bx, by, bz] = offsetToCube(destX, destY);
       const totalDistance = cubeDistance(ax, ay, az, bx, by, bz);
-      const stepsToTake = Math.min(movementBudget, totalDistance);
+      const stepsToTake = Math.min(effectiveSpeed, totalDistance);
 
       let curX = fleet.hex_x;
       let curY = fleet.hex_y;
@@ -191,29 +143,20 @@ export const movementPhase: Phase = {
         fleet.hex_y = curY;
       }
 
-      const fname = fleet.fleet_name || String(fleetId).slice(0, 8);
-      const messageBase = isAutoIntercept
-        ? (reachedDestination
-            ? `Fleet ${fname} closed on attack target at (${destX}, ${destY}).`
-            : `Fleet ${fname} advanced ${stepsToTake} hex(es) toward attack target (${destX}, ${destY}); now at (${curX}, ${curY}).`)
-        : (reachedDestination
-            ? `Fleet ${fname} arrived at (${destX}, ${destY}).`
-            : `Fleet ${fname} moved ${stepsToTake} hex(es) toward (${destX}, ${destY}); now at (${curX}, ${curY}).`);
-
       ctx.logs.push({
         game_id: gameId,
         turn_number: currentTurn,
         phase: "movement",
-        log_type: isAutoIntercept ? "fleet_intercept_move" : "fleet_move",
-        message: messageBase,
+        log_type: "fleet_move",
+        message: reachedDestination
+          ? `Fleet ${fleet.fleet_name || String(fleetId).slice(0, 8)} arrived at (${destX}, ${destY}).`
+          : `Fleet ${fleet.fleet_name || String(fleetId).slice(0, 8)} moved ${stepsToTake} hex(es) toward (${destX}, ${destY}); now at (${curX}, ${curY}).`,
         details_json: {
           fleet_id: fleetId,
           from: { x: fleet.hex_x, y: fleet.hex_y },
           dest: { x: destX, y: destY },
           steps: stepsToTake,
           map_speed: effectiveSpeed,
-          movement_budget: movementBudget,
-          auto_intercept: isAutoIntercept,
           reached: reachedDestination,
         },
       });
@@ -238,7 +181,7 @@ export const movementPhase: Phase = {
       });
     }
 
-    if (moveOrders.length === 0 && strategyOrders.length === 0 && autoMoveOrders.length === 0) {
+    if (moveOrders.length === 0 && strategyOrders.length === 0) {
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "movement",
         log_type: "noop", message: "No movement or strategy orders this turn.",
