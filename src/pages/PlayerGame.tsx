@@ -8,6 +8,7 @@ import type { MapState, SystemData, MapFleet, FacilityType, HexData } from "@/li
 import { hexKey } from "@/lib/mapTypes";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 import { isHexBlockedForPlayer } from "@/lib/hexAccess";
+import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
 
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
