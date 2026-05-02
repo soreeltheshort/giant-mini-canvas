@@ -71,6 +71,9 @@ interface Props {
   special2Role: string;
   /** When true, each ship is listed individually (no quantity, no remove button). */
   listEachShip?: boolean;
+  /** Called after any composition mutation (group move, qty change, removal)
+   *  so the parent can re-validate submission issues (e.g. strikecraft over-capacity). */
+  onCompositionChanged?: () => void;
 }
 
 const BASE_GROUPS = ["Core", "Attack"];
