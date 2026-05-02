@@ -478,6 +478,13 @@ const PlayerGame = () => {
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number, orderRefreshTick]);
 
+  // Visibility hooks must run before the submission-issues effect (which
+  // checks attack targets against currently visible hexes). Rules of Hooks:
+  // these still execute unconditionally on every render and before any early
+  // return below.
+  const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
+  const { live: liveHexKeys, everSeen: everSeenHexKeys } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+
   // ─── Submission-blocking issues ───
   // Currently checks: per-fleet, per-tactical-group strikecraft overcapacity
   // (more fighters/gunships in a group than its host capacity). Computed from
