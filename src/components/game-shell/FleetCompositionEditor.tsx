@@ -71,6 +71,9 @@ interface Props {
   special2Role: string;
   /** When true, each ship is listed individually (no quantity, no remove button). */
   listEachShip?: boolean;
+  /** Called after any composition mutation (group move, qty change, removal)
+   *  so the parent can re-validate submission issues (e.g. strikecraft over-capacity). */
+  onCompositionChanged?: () => void;
 }
 
 const BASE_GROUPS = ["Core", "Attack"];
@@ -84,6 +87,7 @@ export default function FleetCompositionEditor({
   special1Role,
   special2Role,
   listEachShip = false,
+  onCompositionChanged,
 }: Props) {
   const { toast } = useToast();
   const [dragId, setDragId] = useState<string | null>(null);
@@ -126,11 +130,12 @@ export default function FleetCompositionEditor({
           )
         );
         persistGroup(dragId, targetGroup);
+        onCompositionChanged?.();
       }
       setDragId(null);
       setDragOverGroup(null);
     },
-    [dragId, setShips]
+    [dragId, setShips, onCompositionChanged]
   );
 
   const handleQtyChange = async (rowId: string, qty: number) => {
@@ -144,11 +149,13 @@ export default function FleetCompositionEditor({
     } else {
       await supabase.from("game_fleet_ships").update({ quantity: safe }).eq("id", rowId);
     }
+    onCompositionChanged?.();
   };
 
   const removeRow = async (rowId: string) => {
     await supabase.from("game_fleet_ships").delete().eq("id", rowId);
     setShips((prev) => prev.filter((s) => s.id !== rowId));
+    onCompositionChanged?.();
   };
 
   if (ships.length === 0) {
