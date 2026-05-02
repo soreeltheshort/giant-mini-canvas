@@ -671,7 +671,7 @@ const PlayerGame = () => {
    * floor(effective slowest map_speed / 2). Mirrors the movement-phase rule
    * so the UI accepts only attack targets the engine can actually reach.
    */
-  const computeAttackRange = async (sourceFleetId: string, gameFleetId: string): Promise<number> => {
+  const computeAttackRange = async (gameFleetId: string): Promise<number> => {
     try {
       const { data: composition } = await (supabase as any)
         .from("game_fleet_ships")
@@ -698,8 +698,6 @@ const PlayerGame = () => {
     } catch {
       return 0;
     }
-    // sourceFleetId is reserved for future per-template lookups.
-    void sourceFleetId;
   };
 
   /** Hex distance (cube) between two odd-r offset coords. */
