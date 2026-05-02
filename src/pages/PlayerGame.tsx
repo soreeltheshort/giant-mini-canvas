@@ -723,7 +723,7 @@ const PlayerGame = () => {
     const sourceFleet = mapState?.fleets.find(f => f.fleet_id === targeting.fleetId);
     if (sourceFleet) {
       const distance = hexDist(sourceFleet.hex_x, sourceFleet.hex_y, target.hex_x, target.hex_y);
-      const range = await computeAttackRange(sourceFleet.source_fleet_id, sourceFleet.fleet_id);
+      const range = await computeAttackRange(sourceFleet.fleet_id);
       if (distance > range) {
         toast({ title: "Out of range", description: `Target is ${distance} hex(es) away — fleet can attack within ${range}.`, variant: "destructive" });
         setTargeting(null);
@@ -789,7 +789,7 @@ const PlayerGame = () => {
         return;
       }
       const distance = hexDist(sourceFleet.hex_x, sourceFleet.hex_y, sysHex.x, sysHex.y);
-      const range = await computeAttackRange(sourceFleet.source_fleet_id, sourceFleet.fleet_id);
+      const range = await computeAttackRange(sourceFleet.fleet_id);
       if (distance > range) {
         toast({ title: "Out of range", description: `Planet is ${distance} hex(es) away — fleet can attack within ${range}.`, variant: "destructive" });
         setTargeting(null);
