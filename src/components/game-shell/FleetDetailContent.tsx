@@ -536,11 +536,26 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     onOrdersChanged?.();
   };
 
-  const targetFleetName = attackOrder
-    ? (allFleets.find(f => f.fleet_id === attackOrder.order_json?.target_fleet_id)?.fleet_name
-        ?? attackOrder.order_json?.target_fleet_id
-        ?? "Unknown")
-    : null;
+  const attackOrderLabel = (() => {
+    if (!attackOrder) return null;
+    const oj = attackOrder.order_json || {};
+    // Planet-targeted attack
+    if (oj.target_system_id != null) {
+      const sys = allSystems.find(s => s.system_id === Number(oj.target_system_id));
+      const planetName = sys?.system_name ?? "Unknown";
+      if (!sys) return `Attack → ${planetName}`;
+      const pop = sys.current_population ?? 0;
+      if (pop <= 0) return `Colonize → ${planetName}`;
+      if (sys.owner === fleet.owner_classification) return `Defend → ${planetName}`;
+      return `Invade → ${planetName}`;
+    }
+    // Fleet-targeted attack
+    const targetName =
+      allFleets.find(f => f.fleet_id === oj.target_fleet_id)?.fleet_name
+      ?? oj.target_fleet_id
+      ?? "Unknown";
+    return `Attack → ${targetName}`;
+  })();
 
   // Only one active order per fleet
   const activeOrder: "move" | "attack" | null = moveOrder ? "move" : attackOrder ? "attack" : null;
@@ -791,7 +806,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           )}
           {attackOrder && (
             <div className="text-xs text-bronze-dark font-bold">
-              Attack → {targetFleetName}
+              {attackOrderLabel}
             </div>
           )}
 
