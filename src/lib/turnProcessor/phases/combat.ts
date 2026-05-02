@@ -26,6 +26,7 @@ import type { Phase, TurnContext } from "../types";
 import { runBattle } from "@/lib/battleEngine";
 import { loadFleetSnapshot, loadBattleConfig, calcGroundUnits, type FleetCompositionRow } from "@/lib/battleSetup";
 import { destroyFleet } from "../fleetCleanup";
+import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
 
 /**
  * Apply battle losses back to the composition table the rows were loaded from.
