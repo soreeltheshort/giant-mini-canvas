@@ -794,61 +794,6 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         />
       )}
 
-      <ImperialCard title="Orders">
-        <div className="space-y-2.5">
-          {!activeOrder && (
-            <p className="text-xs text-bronze-dark font-semibold">No active order.</p>
-          )}
-          {moveOrder && (
-            <div className="text-xs text-bronze-dark font-bold">
-              Move → ({moveOrder.order_json?.dest_x}, {moveOrder.order_json?.dest_y})
-            </div>
-          )}
-          {attackOrder && (
-            <div className="text-xs text-bronze-dark font-bold">
-              {attackOrderLabel}
-            </div>
-          )}
-
-          {canEdit && onStartTargeting && (
-            <div className="pt-2 border-t border-border space-y-1.5">
-              {activeOrder ? (
-                <button
-                  onClick={activeOrder === "move" ? cancelMoveOrder : cancelAttackOrder}
-                  className="w-full h-8 rounded-sm border border-crimson/60 bg-background px-2 text-xs text-crimson font-heading font-bold uppercase tracking-wider hover:bg-crimson/10"
-                >
-                  Cancel Order
-                </button>
-              ) : (
-                <>
-                  {noPointsLeft && (
-                    <label className="text-[10px] font-heading uppercase tracking-wider text-crimson font-bold block">
-                      No combat points
-                    </label>
-                  )}
-                  <div className="flex gap-1.5">
-                    <button
-                      disabled={noPointsLeft}
-                      onClick={() => onStartTargeting({ mode: "hex", orderType: "fleet_move", fleetId: fleet.fleet_id })}
-                      className="flex-1 h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-input"
-                    >
-                      Move
-                    </button>
-                    <button
-                      disabled={noPointsLeft}
-                      onClick={() => onStartTargeting({ mode: "fleet", orderType: "attack", fleetId: fleet.fleet_id })}
-                      className="flex-1 h-8 rounded-sm border border-input bg-background px-2 text-xs text-foreground font-semibold hover:border-bronze/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-input"
-                    >
-                      Attack
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </ImperialCard>
-
       <ImperialCard title="Readiness">
         <div className="space-y-2.5">
           <div className="text-xs font-bold text-bronze-dark">{readinessLabel(detail.readiness)}</div>
