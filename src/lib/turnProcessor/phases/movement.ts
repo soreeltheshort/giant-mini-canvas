@@ -157,10 +157,18 @@ export const movementPhase: Phase = {
         // fall through with default speed
       }
 
+      // Auto-intercept moves (derived from fleet_attack orders) are capped at
+      // floor(map_speed / 2) — players can only attack hexes within half their
+      // movement range.
+      const isAutoIntercept = !!oj.auto_intercept;
+      const movementBudget = isAutoIntercept
+        ? Math.floor(effectiveSpeed / 2)
+        : effectiveSpeed;
+
       const [ax, ay, az] = offsetToCube(fleet.hex_x, fleet.hex_y);
       const [bx, by, bz] = offsetToCube(destX, destY);
       const totalDistance = cubeDistance(ax, ay, az, bx, by, bz);
-      const stepsToTake = Math.min(effectiveSpeed, totalDistance);
+      const stepsToTake = Math.min(movementBudget, totalDistance);
 
       let curX = fleet.hex_x;
       let curY = fleet.hex_y;
@@ -183,20 +191,29 @@ export const movementPhase: Phase = {
         fleet.hex_y = curY;
       }
 
+      const fname = fleet.fleet_name || String(fleetId).slice(0, 8);
+      const messageBase = isAutoIntercept
+        ? (reachedDestination
+            ? `Fleet ${fname} closed on attack target at (${destX}, ${destY}).`
+            : `Fleet ${fname} advanced ${stepsToTake} hex(es) toward attack target (${destX}, ${destY}); now at (${curX}, ${curY}).`)
+        : (reachedDestination
+            ? `Fleet ${fname} arrived at (${destX}, ${destY}).`
+            : `Fleet ${fname} moved ${stepsToTake} hex(es) toward (${destX}, ${destY}); now at (${curX}, ${curY}).`);
+
       ctx.logs.push({
         game_id: gameId,
         turn_number: currentTurn,
         phase: "movement",
-        log_type: "fleet_move",
-        message: reachedDestination
-          ? `Fleet ${fleet.fleet_name || String(fleetId).slice(0, 8)} arrived at (${destX}, ${destY}).`
-          : `Fleet ${fleet.fleet_name || String(fleetId).slice(0, 8)} moved ${stepsToTake} hex(es) toward (${destX}, ${destY}); now at (${curX}, ${curY}).`,
+        log_type: isAutoIntercept ? "fleet_intercept_move" : "fleet_move",
+        message: messageBase,
         details_json: {
           fleet_id: fleetId,
           from: { x: fleet.hex_x, y: fleet.hex_y },
           dest: { x: destX, y: destY },
           steps: stepsToTake,
           map_speed: effectiveSpeed,
+          movement_budget: movementBudget,
+          auto_intercept: isAutoIntercept,
           reached: reachedDestination,
         },
       });
