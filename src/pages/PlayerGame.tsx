@@ -677,6 +677,23 @@ const PlayerGame = () => {
       setTargeting(null);
       return;
     }
+    // Range + visibility check.
+    const sourceFleet = mapState?.fleets.find(f => f.fleet_id === targeting.fleetId);
+    if (sourceFleet) {
+      const speed = await fetchFleetMapSpeed(supabase as any, sourceFleet.fleet_id);
+      const range = attackRangeFromMapSpeed(speed);
+      const dist = hexDistance(sourceFleet.hex_x, sourceFleet.hex_y, target.hex_x, target.hex_y);
+      if (dist > range) {
+        toast({ title: "Out of range", description: `Target is ${dist} hex(es) away. Attack range is ${range} (map speed ${speed}).`, variant: "destructive" });
+        setTargeting(null);
+        return;
+      }
+      if (!liveHexKeys.has(hexKey(target.hex_x, target.hex_y))) {
+        toast({ title: "Target not visible", description: "You can only attack targets currently within sensor range.", variant: "destructive" });
+        setTargeting(null);
+        return;
+      }
+    }
     try {
       await (supabase as any).from("player_orders")
         .delete()
@@ -716,6 +733,25 @@ const PlayerGame = () => {
       setTargeting(null);
       return;
     }
+    // Range + visibility check.
+    if (sourceFleet && mapState) {
+      const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === system.hex_id);
+      if (sysHex) {
+        const speed = await fetchFleetMapSpeed(supabase as any, sourceFleet.fleet_id);
+        const range = attackRangeFromMapSpeed(speed);
+        const dist = hexDistance(sourceFleet.hex_x, sourceFleet.hex_y, sysHex.x, sysHex.y);
+        if (dist > range) {
+          toast({ title: "Out of range", description: `Target planet is ${dist} hex(es) away. Attack range is ${range} (map speed ${speed}).`, variant: "destructive" });
+          setTargeting(null);
+          return;
+        }
+        if (!liveHexKeys.has(hexKey(sysHex.x, sysHex.y))) {
+          toast({ title: "Target not visible", description: "You can only attack targets currently within sensor range.", variant: "destructive" });
+          setTargeting(null);
+          return;
+        }
+      }
+    }
     try {
       await (supabase as any).from("player_orders")
         .delete()
@@ -740,6 +776,7 @@ const PlayerGame = () => {
       setTargeting(null);
     }
   };
+
 
 
   // Hooks MUST be called before any early returns (Rules of Hooks)
