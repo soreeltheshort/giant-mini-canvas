@@ -937,6 +937,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           special1Role={detail.special1_role}
           special2Role={detail.special2_role}
           listEachShip
+          onCompositionChanged={onOrdersChanged}
         />
       </ImperialCard>
     </>
