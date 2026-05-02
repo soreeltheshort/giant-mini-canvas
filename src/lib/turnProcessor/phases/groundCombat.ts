@@ -4,9 +4,12 @@
  * Runs after Movement (so fleet positions are final) and before Visibility.
  *
  * Trigger (all three must be true for a fleet to launch a ground invasion):
- *   1. The fleet has a `fleet_attack` order this turn whose target is on the
- *      same hex as a planet/system (either via `target_system_id` directly,
- *      or via `target_fleet_id` whose target fleet sits on a system hex).
+ *   1. The fleet has a `fleet_attack` order this turn whose target is a
+ *      planet/system — either via `target_system_id` directly, or via
+ *      `target_fleet_id` whose target fleet sits on a system hex. The target
+ *      hex must be within the attacker's ATTACK RANGE
+ *      (= floor(attacker_map_speed / 2)) of the attacker's CURRENT position.
+ *      Attacking does NOT move the fleet.
  *   2. At least one of the fleet's two strategy slots
  *      (`special1_role` / `special2_role`) is `Attack Planet`.
  *   3. The fleet's effective ground-invasion force is
@@ -33,6 +36,8 @@
  *      ground-invasion capacity is a derived stat from the fleet's roster).
  */
 import type { Phase, TurnContext } from "../types";
+import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
+
 
 // Inline mulberry32 RNG (kept in sync with battleEngine.ts so ground combat
 // is fully deterministic per game/turn).
