@@ -238,7 +238,7 @@ export const movementPhase: Phase = {
       });
     }
 
-    if (moveOrders.length === 0 && strategyOrders.length === 0) {
+    if (moveOrders.length === 0 && strategyOrders.length === 0 && autoMoveOrders.length === 0) {
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "movement",
         log_type: "noop", message: "No movement or strategy orders this turn.",
