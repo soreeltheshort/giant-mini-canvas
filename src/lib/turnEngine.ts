@@ -25,6 +25,37 @@ export const DEFAULT_TURN_CONSTANTS: TurnConstants = {
   ground_force_replacement_cost: 2,
 };
 
+/**
+ * Population change process — single-step input/output.
+ *
+ * Input: planet condition, morale, and current_population.
+ * Output: updated morale and current_population for one tick.
+ *
+ * Step A (morale): morale moves 1/4 of the way toward condition.
+ * Step B (population): population moves 1/4 of the way toward the new morale.
+ *
+ * This is the canonical population tick used by both the economy phase and
+ * the colonization seed (so a freshly colonized planet immediately runs one
+ * tick on the same turn it falls).
+ */
+export interface PopulationStepInput {
+  condition: number;
+  morale: number;
+  current_population: number;
+}
+export interface PopulationStepOutput {
+  morale: number;
+  current_population: number;
+}
+export function applyPopulationStep(input: PopulationStepInput): PopulationStepOutput {
+  const condition = Number(input.condition) || 0;
+  const morale0 = Number(input.morale) || 0;
+  const pop0 = Number(input.current_population) || 0;
+  const morale = Math.round(morale0 + (condition - morale0) / 4);
+  const current_population = Math.round(pop0 + (morale - pop0) / 4);
+  return { morale, current_population };
+}
+
 export interface TurnResult {
   planet: SystemData;
   income: number;
