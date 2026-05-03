@@ -109,6 +109,34 @@ const BattleReplay = () => {
     });
   };
 
+  const runNarration = () => {
+    if (!run) return;
+    setNarrating(true);
+    try {
+      const snapA = run.fleet_a_snapshot_json as FleetSnapshot;
+      const snapB = run.fleet_b_snapshot_json as FleetSnapshot;
+      const winner = ((run.result_json as any)?.winner ?? "draw") as "A" | "B" | "draw";
+      const compressed = compressBattle({ seed: run.seed, winner, snapA, snapB, events });
+      const original = eventsToJSON(
+        { seed: run.seed, winner, events, finalState: { fleetA: [], fleetB: [] } } as any,
+        snapA,
+        snapB,
+      );
+      const compressedStr = JSON.stringify(compressed);
+      setNarration({
+        compressed,
+        originalTokens: estimateTokens(original),
+        compressedTokens: estimateTokens(compressedStr),
+        message: "Compressed. No AI hook yet",
+      });
+      toast.success("Compressed. No AI hook yet");
+    } catch (e: any) {
+      toast.error(`Compression failed: ${e?.message || e}`);
+    } finally {
+      setNarrating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
