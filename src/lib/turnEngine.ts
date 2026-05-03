@@ -25,6 +25,37 @@ export const DEFAULT_TURN_CONSTANTS: TurnConstants = {
   ground_force_replacement_cost: 2,
 };
 
+/**
+ * Population change process — single-step input/output.
+ *
+ * Input: planet condition, morale, and current_population.
+ * Output: updated morale and current_population for one tick.
+ *
+ * Step A (morale): morale moves 1/4 of the way toward condition.
+ * Step B (population): population moves 1/4 of the way toward the new morale.
+ *
+ * This is the canonical population tick used by both the economy phase and
+ * the colonization seed (so a freshly colonized planet immediately runs one
+ * tick on the same turn it falls).
+ */
+export interface PopulationStepInput {
+  condition: number;
+  morale: number;
+  current_population: number;
+}
+export interface PopulationStepOutput {
+  morale: number;
+  current_population: number;
+}
+export function applyPopulationStep(input: PopulationStepInput): PopulationStepOutput {
+  const condition = Number(input.condition) || 0;
+  const morale0 = Number(input.morale) || 0;
+  const pop0 = Number(input.current_population) || 0;
+  const morale = Math.round(morale0 + (condition - morale0) / 4);
+  const current_population = Math.round(pop0 + (morale - pop0) / 4);
+  return { morale, current_population };
+}
+
 export interface TurnResult {
   planet: SystemData;
   income: number;
@@ -162,13 +193,14 @@ export function processNextTurn(
   // --- Step 4: Simulated events (placeholder) ---
   // TODO: apply one-time planet events here
 
-  // --- Step 5: Morale adjustment ---
-  p.morale = Math.round(p.morale + (p.condition - p.morale) / 4);
-
-  // --- Step 6: Population moves toward Morale ---
-  p.current_population = Math.round(
-    p.current_population + (p.morale - p.current_population) / 4
-  );
+  // --- Steps 5-6: Population change process (morale → population) ---
+  const popStep = applyPopulationStep({
+    condition: p.condition,
+    morale: p.morale,
+    current_population: p.current_population,
+  });
+  p.morale = popStep.morale;
+  p.current_population = popStep.current_population;
 
   // --- Step 7: Tribute calculation ---
   // 7a: Base tribute
