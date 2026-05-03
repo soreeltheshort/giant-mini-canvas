@@ -901,12 +901,17 @@ const PlayerGame = () => {
     return null;
   })();
 
-  // Rebase dummy dispatch turn numbers so the latest dispatch matches the current game turn.
+  // Real dispatches sourced from game_logs (currently: planet capture / colonize
+  // events involving this player's province). Falls back to dummy story flavor
+  // for everything else.
   const rebasedNews = (() => {
     const currentTurn = game.turn_number;
     const maxDummyTurn = Math.max(...DUMMY_NEWS.map(n => n.turn));
     const offset = currentTurn - maxDummyTurn;
-    return DUMMY_NEWS.map(n => ({ ...n, turn: Math.max(1, n.turn + offset) }));
+    const dummy = DUMMY_NEWS.map(n => ({ ...n, turn: Math.max(1, n.turn + offset) }));
+    const real = realDispatches;
+    // Real first, then dummy — most recent first within each.
+    return [...real, ...dummy];
   })();
 
   if (!player.initialized && initStep > 0) {
