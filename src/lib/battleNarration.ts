@@ -75,8 +75,12 @@ export function compressBattle(args: {
   snapA: FleetSnapshot | undefined;
   snapB: FleetSnapshot | undefined;
   events: BattleEvent[];
+  /** Display name for the Player A / attacker side (e.g. faction or user). */
+  playerAName?: string;
+  /** Display name for the Player B / defender side. */
+  playerBName?: string;
 }): CompressedBattle {
-  const { seed, winner, snapA, snapB, events } = args;
+  const { seed, winner, snapA, snapB, events, playerAName, playerBName } = args;
   const shipsA = buildRoster(snapA, "A", 0);
   const shipsB = buildRoster(snapB, "B", shipsA.length);
 
@@ -114,7 +118,14 @@ export function compressBattle(args: {
     }
   }
 
-  return {
+  // Resolve display names: prefer caller-supplied player/faction name, then
+  // the fleet name from the snapshot, then the side label. Then sweep the
+  // entire compressed payload to replace any literal "Player A"/"Player B"
+  // (or fleet placeholder) strings with the resolved names.
+  const nameA = playerAName || snapA?.name || "Attacker";
+  const nameB = playerBName || snapB?.name || "Defender";
+
+  const result: CompressedBattle = {
     meta: {
       seed,
       winner,
@@ -122,12 +133,32 @@ export function compressBattle(args: {
       tickCount: ticks.size,
     },
     fleets: {
-      A: { name: snapA?.name ?? "Attacker", ships: shipsA },
-      B: { name: snapB?.name ?? "Defender", ships: shipsB },
+      A: { name: nameA, ships: shipsA },
+      B: { name: nameB, ships: shipsB },
     },
     exchanges: Array.from(exchangeMap.values()),
     timeline,
   };
+
+  return replacePlayerLabels(result, nameA, nameB);
+}
+
+/** Walks the compressed payload and replaces "Player A"/"Player B" literals. */
+function replacePlayerLabels<T>(obj: T, nameA: string, nameB: string): T {
+  const sub = (s: string) =>
+    s
+      .replace(/\bPlayer\s*A\b/gi, nameA)
+      .replace(/\bPlayer\s*B\b/gi, nameB)
+      .replace(/\bFleet\s*A\b/g, nameA)
+      .replace(/\bFleet\s*B\b/g, nameB);
+  if (typeof obj === "string") return sub(obj) as any;
+  if (Array.isArray(obj)) return obj.map(v => replacePlayerLabels(v, nameA, nameB)) as any;
+  if (obj && typeof obj === "object") {
+    const out: any = {};
+    for (const [k, v] of Object.entries(obj)) out[k] = replacePlayerLabels(v, nameA, nameB);
+    return out;
+  }
+  return obj;
 }
 
 /** Rough token-savings estimate (chars / 4). Cheap and good enough for UI. */

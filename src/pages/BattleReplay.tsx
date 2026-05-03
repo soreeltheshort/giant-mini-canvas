@@ -116,7 +116,18 @@ const BattleReplay = () => {
       const snapA = run.fleet_a_snapshot_json as FleetSnapshot;
       const snapB = run.fleet_b_snapshot_json as FleetSnapshot;
       const winner = ((run.result_json as any)?.winner ?? "draw") as "A" | "B" | "draw";
-      const compressed = compressBattle({ seed: run.seed, winner, snapA, snapB, events });
+      const r = (run.result_json as any) || {};
+      const PROVINCE_NAMES: Record<string, string> = {
+        PROVINCE_1: "Valerian", PROVINCE_2: "Aurelian", PROVINCE_3: "Cassian",
+        PROVINCE_4: "Dravian", PROVINCE_5: "Marcellan", PROVINCE_6: "Octavian",
+      };
+      const friendly = (owner?: string | null) =>
+        (owner && PROVINCE_NAMES[owner]) || owner || undefined;
+      const playerAName = friendly(r.attacker_owner) || snapA?.name;
+      const playerBName = friendly(r.defender_owner) || snapB?.name;
+      const compressed = compressBattle({
+        seed: run.seed, winner, snapA, snapB, events, playerAName, playerBName,
+      });
       const original = eventsToJSON(
         { seed: run.seed, winner, events, finalState: { fleetA: [], fleetB: [] } } as any,
         snapA,
