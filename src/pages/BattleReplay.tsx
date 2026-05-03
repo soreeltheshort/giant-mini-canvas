@@ -23,6 +23,8 @@ import {
   type BattleResult,
   type FleetSnapshot,
 } from "@/lib/battleEngine";
+import { compressBattle, estimateTokens } from "@/lib/battleNarration";
+import { toast } from "sonner";
 
 interface BattleRunRow {
   id: string;
@@ -52,6 +54,13 @@ const BattleReplay = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [narrating, setNarrating] = useState(false);
+  const [narration, setNarration] = useState<{
+    compressed: any;
+    originalTokens: number;
+    compressedTokens: number;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +107,34 @@ const BattleReplay = () => {
       next.has(seq) ? next.delete(seq) : next.add(seq);
       return next;
     });
+  };
+
+  const runNarration = () => {
+    if (!run) return;
+    setNarrating(true);
+    try {
+      const snapA = run.fleet_a_snapshot_json as FleetSnapshot;
+      const snapB = run.fleet_b_snapshot_json as FleetSnapshot;
+      const winner = ((run.result_json as any)?.winner ?? "draw") as "A" | "B" | "draw";
+      const compressed = compressBattle({ seed: run.seed, winner, snapA, snapB, events });
+      const original = eventsToJSON(
+        { seed: run.seed, winner, events, finalState: { fleetA: [], fleetB: [] } } as any,
+        snapA,
+        snapB,
+      );
+      const compressedStr = JSON.stringify(compressed);
+      setNarration({
+        compressed,
+        originalTokens: estimateTokens(original),
+        compressedTokens: estimateTokens(compressedStr),
+        message: "Compressed. No AI hook yet",
+      });
+      toast.success("Compressed. No AI hook yet");
+    } catch (e: any) {
+      toast.error(`Compression failed: ${e?.message || e}`);
+    } finally {
+      setNarrating(false);
+    }
   };
 
   if (loading) {
@@ -214,6 +251,31 @@ const BattleReplay = () => {
           {turnNumber !== undefined && <> · Turn {turnNumber}</>}
           {" · "}Seed: {run.seed}
         </p>
+
+        <div className="mt-3">
+          <button
+            onClick={runNarration}
+            disabled={narrating}
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline disabled:opacity-50"
+          >
+            {narrating ? "Compressing…" : "⚙ Run Battle Narration (compress log)"}
+          </button>
+          {narration && (
+            <div className="mt-3 border border-border rounded p-3 bg-muted/30">
+              <p className="text-sm font-medium text-foreground">{narration.message}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Estimated tokens: {narration.originalTokens.toLocaleString()} → {narration.compressedTokens.toLocaleString()}
+                {" "}({Math.max(0, Math.round((1 - narration.compressedTokens / Math.max(1, narration.originalTokens)) * 100))}% smaller)
+              </p>
+              <details className="mt-2">
+                <summary className="text-xs text-muted-foreground cursor-pointer">View compressed JSON</summary>
+                <pre className="mt-2 text-[10px] bg-background border border-border rounded p-2 max-h-64 overflow-auto">
+{JSON.stringify(narration.compressed, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </div>
 
         <div className="mt-6 border border-border p-4 rounded">
           <h2 className="font-heading text-lg font-bold text-foreground">
