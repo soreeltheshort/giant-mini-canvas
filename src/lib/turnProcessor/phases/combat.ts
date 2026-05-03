@@ -268,7 +268,15 @@ export const combatPhase: Phase = {
         fleet_a_snapshot_json: snapA.snapshot as any,
         fleet_b_snapshot_json: snapB.snapshot as any,
         seed: seedStr,
-        result_json: { winner: battleResult.winner, game_id: gameId, turn_number: currentTurn } as any,
+        result_json: {
+          winner: battleResult.winner,
+          game_id: gameId,
+          turn_number: currentTurn,
+          attacker_owner: attackerMF.owner_classification || null,
+          defender_owner: targetMF.owner_classification || null,
+          attacker_fleet_name: attackerMF.fleet_name || null,
+          defender_fleet_name: targetMF.fleet_name || null,
+        } as any,
         created_by_user_id: runnerUserId,
       }).select().maybeSingle();
 
