@@ -162,13 +162,14 @@ export function processNextTurn(
   // --- Step 4: Simulated events (placeholder) ---
   // TODO: apply one-time planet events here
 
-  // --- Step 5: Morale adjustment ---
-  p.morale = Math.round(p.morale + (p.condition - p.morale) / 4);
-
-  // --- Step 6: Population moves toward Morale ---
-  p.current_population = Math.round(
-    p.current_population + (p.morale - p.current_population) / 4
-  );
+  // --- Steps 5-6: Population change process (morale → population) ---
+  const popStep = applyPopulationStep({
+    condition: p.condition,
+    morale: p.morale,
+    current_population: p.current_population,
+  });
+  p.morale = popStep.morale;
+  p.current_population = popStep.current_population;
 
   // --- Step 7: Tribute calculation ---
   // 7a: Base tribute
