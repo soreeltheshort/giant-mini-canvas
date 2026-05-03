@@ -402,13 +402,18 @@ export const groundCombatPhase: Phase = {
         sys.owner = champion.owner_classification;
         outcome = planetWasUnpopulated ? "colonize" : "capture";
         if (outcome === "colonize") {
-          // Seed a starting population so the economy phase begins growing the
-          // colony toward its morale/condition ceiling on the next turn.
-          // Without this, current_population stays at 0 forever and the system
-          // is skipped by economy.ts.
-          sys.current_population = Math.max(1, Number(sys.current_population) || 0);
-          if (!Number(sys.morale) || sys.morale <= 0) sys.morale = 5;
+          // Seed baseline values, then immediately run one population-change
+          // tick so the colony shows growth on the same turn it falls.
           if (!Number(sys.condition) || sys.condition <= 0) sys.condition = 5;
+          if (!Number(sys.morale) || sys.morale <= 0) sys.morale = 5;
+          sys.current_population = 1;
+          const step = applyPopulationStep({
+            condition: sys.condition,
+            morale: sys.morale,
+            current_population: sys.current_population,
+          });
+          sys.morale = step.morale;
+          sys.current_population = Math.max(1, step.current_population);
         }
       } else if (champion.gi <= 0) {
         outcome = "repulsed";
