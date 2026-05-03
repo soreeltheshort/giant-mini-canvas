@@ -252,6 +252,31 @@ const BattleReplay = () => {
           {" · "}Seed: {run.seed}
         </p>
 
+        <div className="mt-3">
+          <button
+            onClick={runNarration}
+            disabled={narrating}
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline disabled:opacity-50"
+          >
+            {narrating ? "Compressing…" : "⚙ Run Battle Narration (compress log)"}
+          </button>
+          {narration && (
+            <div className="mt-3 border border-border rounded p-3 bg-muted/30">
+              <p className="text-sm font-medium text-foreground">{narration.message}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Estimated tokens: {narration.originalTokens.toLocaleString()} → {narration.compressedTokens.toLocaleString()}
+                {" "}({Math.max(0, Math.round((1 - narration.compressedTokens / Math.max(1, narration.originalTokens)) * 100))}% smaller)
+              </p>
+              <details className="mt-2">
+                <summary className="text-xs text-muted-foreground cursor-pointer">View compressed JSON</summary>
+                <pre className="mt-2 text-[10px] bg-background border border-border rounded p-2 max-h-64 overflow-auto">
+{JSON.stringify(narration.compressed, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </div>
+
         <div className="mt-6 border border-border p-4 rounded">
           <h2 className="font-heading text-lg font-bold text-foreground">
             {winner === "draw" ? "Draw" : `${winner === "A" ? "Attacker" : "Defender"} wins`}
