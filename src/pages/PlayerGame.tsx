@@ -487,6 +487,55 @@ const PlayerGame = () => {
   const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
   const { live: liveHexKeys, everSeen: everSeenHexKeys } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
 
+  // ─── Real dispatches from game_logs ───
+  // Pull recent capture/colonize events affecting this player's province
+  // (either as the new owner or as the previous owner) and turn them into
+  // dispatches in the news feed.
+  useEffect(() => {
+    if (!player || !game) return;
+    const ownClass = `PROVINCE_${player.player_slot}`;
+    const factionLc = (PROVINCE_NAMES[player.player_slot] || "").toLowerCase();
+    let cancelled = false;
+    (async () => {
+      const { data: logs } = await (supabase as any)
+        .from("game_logs")
+        .select("id, turn_number, log_type, message, details_json")
+        .eq("game_id", game.id)
+        .in("log_type", ["planet_colonized", "planet_captured"])
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (cancelled) return;
+      const matches = (s?: string) => {
+        if (!s) return false;
+        const lc = s.toLowerCase();
+        return s === ownClass || lc === factionLc;
+      };
+      const stories = (logs || [])
+        .filter((l: any) =>
+          matches(l.details_json?.new_owner) || matches(l.details_json?.previous_owner)
+        )
+        .map((l: any) => {
+          const isColonize = l.log_type === "planet_colonized";
+          const newOwner = l.details_json?.new_owner || "";
+          const sysName = l.details_json?.system_name || "an unknown world";
+          const ours = matches(newOwner);
+          const headline = isColonize
+            ? (ours ? `Colony established at ${sysName}` : `${newOwner} colonizes ${sysName}`)
+            : (ours ? `${sysName} captured` : `${sysName} lost to ${newOwner}`);
+          return {
+            id: `log-${l.id}`,
+            headline,
+            summary: l.message || headline,
+            turn: l.turn_number,
+            read: false,
+            category: "military" as const,
+          };
+        });
+      setRealDispatches(stories);
+    })();
+    return () => { cancelled = true; };
+  }, [player?.id, game?.id, game?.turn_number]);
+
   // ─── Submission-blocking issues ───
   // Currently checks: per-fleet, per-tactical-group strikecraft overcapacity
   // (more fighters/gunships in a group than its host capacity). Computed from
