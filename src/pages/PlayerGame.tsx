@@ -345,6 +345,8 @@ const PlayerGame = () => {
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
   /** Open issues that block turn submission (e.g. fleet group overcapacity). */
   const [submissionIssues, setSubmissionIssues] = useState<string[]>([]);
+  /** Player-facing dispatches sourced from game_logs (capture/colonize, etc.) */
+  const [realDispatches, setRealDispatches] = useState<import("@/components/game-shell/gameShellTypes").NewsStory[]>([]);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
