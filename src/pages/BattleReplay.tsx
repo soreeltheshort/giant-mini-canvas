@@ -54,6 +54,13 @@ const BattleReplay = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [narrating, setNarrating] = useState(false);
+  const [narration, setNarration] = useState<{
+    compressed: any;
+    originalTokens: number;
+    compressedTokens: number;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
