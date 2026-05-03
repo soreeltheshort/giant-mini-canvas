@@ -23,6 +23,8 @@ import {
   type BattleResult,
   type FleetSnapshot,
 } from "@/lib/battleEngine";
+import { compressBattle, estimateTokens } from "@/lib/battleNarration";
+import { toast } from "sonner";
 
 interface BattleRunRow {
   id: string;
