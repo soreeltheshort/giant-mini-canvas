@@ -345,6 +345,8 @@ const PlayerGame = () => {
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
   /** Open issues that block turn submission (e.g. fleet group overcapacity). */
   const [submissionIssues, setSubmissionIssues] = useState<string[]>([]);
+  /** Player-facing dispatches sourced from game_logs (capture/colonize, etc.) */
+  const [realDispatches, setRealDispatches] = useState<import("@/components/game-shell/gameShellTypes").NewsStory[]>([]);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
@@ -484,6 +486,55 @@ const PlayerGame = () => {
   // return below.
   const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
   const { live: liveHexKeys, everSeen: everSeenHexKeys } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+
+  // ─── Real dispatches from game_logs ───
+  // Pull recent capture/colonize events affecting this player's province
+  // (either as the new owner or as the previous owner) and turn them into
+  // dispatches in the news feed.
+  useEffect(() => {
+    if (!player || !game) return;
+    const ownClass = `PROVINCE_${player.player_slot}`;
+    const factionLc = (PROVINCE_NAMES[player.player_slot] || "").toLowerCase();
+    let cancelled = false;
+    (async () => {
+      const { data: logs } = await (supabase as any)
+        .from("game_logs")
+        .select("id, turn_number, log_type, message, details_json")
+        .eq("game_id", game.id)
+        .in("log_type", ["planet_colonized", "planet_captured"])
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (cancelled) return;
+      const matches = (s?: string) => {
+        if (!s) return false;
+        const lc = s.toLowerCase();
+        return s === ownClass || lc === factionLc;
+      };
+      const stories = (logs || [])
+        .filter((l: any) =>
+          matches(l.details_json?.new_owner) || matches(l.details_json?.previous_owner)
+        )
+        .map((l: any) => {
+          const isColonize = l.log_type === "planet_colonized";
+          const newOwner = l.details_json?.new_owner || "";
+          const sysName = l.details_json?.system_name || "an unknown world";
+          const ours = matches(newOwner);
+          const headline = isColonize
+            ? (ours ? `Colony established at ${sysName}` : `${newOwner} colonizes ${sysName}`)
+            : (ours ? `${sysName} captured` : `${sysName} lost to ${newOwner}`);
+          return {
+            id: `log-${l.id}`,
+            headline,
+            summary: l.message || headline,
+            turn: l.turn_number,
+            read: false,
+            category: "military" as const,
+          };
+        });
+      setRealDispatches(stories);
+    })();
+    return () => { cancelled = true; };
+  }, [player?.id, game?.id, game?.turn_number]);
 
   // ─── Submission-blocking issues ───
   // Currently checks: per-fleet, per-tactical-group strikecraft overcapacity
@@ -901,12 +952,17 @@ const PlayerGame = () => {
     return null;
   })();
 
-  // Rebase dummy dispatch turn numbers so the latest dispatch matches the current game turn.
+  // Real dispatches sourced from game_logs (currently: planet capture / colonize
+  // events involving this player's province). Falls back to dummy story flavor
+  // for everything else.
   const rebasedNews = (() => {
     const currentTurn = game.turn_number;
     const maxDummyTurn = Math.max(...DUMMY_NEWS.map(n => n.turn));
     const offset = currentTurn - maxDummyTurn;
-    return DUMMY_NEWS.map(n => ({ ...n, turn: Math.max(1, n.turn + offset) }));
+    const dummy = DUMMY_NEWS.map(n => ({ ...n, turn: Math.max(1, n.turn + offset) }));
+    const real = realDispatches;
+    // Real first, then dummy — most recent first within each.
+    return [...real, ...dummy];
   })();
 
   if (!player.initialized && initStep > 0) {
