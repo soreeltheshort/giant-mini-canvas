@@ -25,6 +25,10 @@ export interface GlobalStats {
   combatPointsRemaining: number;
   /** Combat points already spent on pending fleet orders this turn (shown as -N indicator). */
   combatPointsPending?: number;
+  /** Admin points already spent on pending admin orders (e.g. facility builds) this turn. */
+  adminPointsPending?: number;
+  /** Additional maintenance ₡ that will start next turn from pending facility build orders. */
+  costsPending?: number;
 }
 
 export interface NewsStory {
