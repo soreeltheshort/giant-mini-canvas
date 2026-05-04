@@ -55,6 +55,12 @@ interface LeftPanelProps {
     onOrdersChanged?: () => void;
     /** Selection setter so the empty Military Overview can list-select planets/fleets/news. */
     onSelect?: (selection: MapSelection) => void;
+    /** Submit a build_facility order for the selected system. */
+    onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
+    /** Player's current treasury, used to gate the Commission button. */
+    playerTreasury?: number;
+    /** Player's admin points still available this turn (gates Commission). */
+    adminPointsAvailable?: number;
   };
 }
 
