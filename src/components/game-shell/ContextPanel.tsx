@@ -496,11 +496,18 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
           </ImperialCard>
         )}
 
-        {mode === "production" && buildableFacilities.length > 0 && (
+        {buildableFacilities.length > 0 ? (
           <ImperialCard title="Build New Facility">
             <div className="space-y-1.5">
               {buildableFacilities.map((bf) => {
                 const canAfford = (playerTreasury ?? 0) >= bf.cost;
+                const hasAdminPoint = adminPointsLeft > 0;
+                const canCommission = canAfford && hasAdminPoint;
+                const label = !canAfford
+                  ? "Insufficient Funds"
+                  : !hasAdminPoint
+                    ? "No Admin Points"
+                    : "Commission (1 Admin pt)";
                 return (
                   <div key={bf.facility_type_id} className="border border-border rounded-sm p-2 space-y-1">
                     <div className="flex items-center justify-between">
@@ -514,23 +521,21 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
                     )}
                     <button
                       onClick={() => onBuildFacility?.(realSys.system_id, bf.facility_type_id)}
-                      disabled={!canAfford}
+                      disabled={!canCommission}
                       className={`w-full mt-1 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
-                        ${canAfford
+                        ${canCommission
                           ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
                           : "bg-muted text-muted-foreground cursor-not-allowed"
                         }`}
                     >
-                      {canAfford ? "Commission" : "Insufficient Funds"}
+                      {label}
                     </button>
                   </div>
                 );
               })}
             </div>
           </ImperialCard>
-        )}
-
-        {mode === "production" && buildableFacilities.length === 0 && (
+        ) : (
           <ImperialCard title="Build New Facility">
             <p className="text-[10px] text-muted-foreground italic">No eligible facilities to build at this system.</p>
           </ImperialCard>
