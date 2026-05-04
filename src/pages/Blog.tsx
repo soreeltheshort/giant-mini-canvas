@@ -74,7 +74,7 @@ const Blog = () => {
                         year: "numeric", month: "long", day: "numeric",
                       })}
                     </p>
-                    <h2 className="mt-2 font-heading text-xl font-semibold text-foreground group-hover:text-primary">
+                    <h2 className="mt-2 font-heading text-xl font-semibold text-accent group-hover:text-primary">
                       {post.title}
                     </h2>
                     {post.excerpt && (

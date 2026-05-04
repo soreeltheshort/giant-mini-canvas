@@ -20,7 +20,7 @@ const GameCard = ({ id, title, description, image, compact }: GameCardProps) => 
         />
       </div>
       <div className="p-5">
-        <h3 className="font-heading text-lg font-semibold text-foreground">{title}</h3>
+        <h3 className="font-heading text-lg font-semibold text-accent">{title}</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
         {!compact && (
           <Link

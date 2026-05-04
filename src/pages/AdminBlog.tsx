@@ -165,7 +165,7 @@ const AdminBlog = () => {
           {/* List */}
           <div className="border border-border">
             <div className="px-4 py-3 border-b border-border bg-muted/40">
-              <h2 className="text-sm font-semibold text-foreground">All Posts</h2>
+              <h2 className="text-sm font-semibold text-accent">All Posts</h2>
             </div>
             <div className="divide-y divide-border max-h-[70vh] overflow-y-auto">
               {loading ? (
@@ -205,7 +205,7 @@ const AdminBlog = () => {
           {/* Editor */}
           <div className="border border-border">
             <div className="px-4 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">
+              <h2 className="text-sm font-semibold text-accent">
                 {editing ? (editing.id ? "Edit Post" : "New Post") : "Editor"}
               </h2>
               {editing && (

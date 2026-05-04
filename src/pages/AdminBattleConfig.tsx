@@ -290,7 +290,7 @@ const AdminBattleConfig = () => {
         {/* PHASES */}
         <div className="mb-10">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Battle Phases (order of engagement)</h2>
+            <h2 className="font-heading text-lg font-semibold text-accent">Battle Phases (order of engagement)</h2>
             <Button size="sm" variant="outline" onClick={addPhase}><Plus className="mr-1 h-4 w-4" /> Add Phase</Button>
           </div>
           <div className="overflow-x-auto border border-border rounded">
@@ -365,7 +365,7 @@ const AdminBattleConfig = () => {
         {/* GROUP MODIFIERS */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Group Modifiers (per-group attack/defense bonuses)</h2>
+            <h2 className="font-heading text-lg font-semibold text-accent">Group Modifiers (per-group attack/defense bonuses)</h2>
             <Button size="sm" variant="outline" onClick={addGroupMod}><Plus className="mr-1 h-4 w-4" /> Add Group</Button>
           </div>
           <div className="overflow-x-auto border border-border rounded">
@@ -405,7 +405,7 @@ const AdminBattleConfig = () => {
         {/* COMBAT CONSTANTS */}
         <div className="mt-10">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Combat Constants (hit chance & critical formula)</h2>
+            <h2 className="font-heading text-lg font-semibold text-accent">Combat Constants (hit chance & critical formula)</h2>
             <Button size="sm" variant="outline" onClick={addConst}><Plus className="mr-1 h-4 w-4" /> Add Constant</Button>
           </div>
           <div className="overflow-x-auto border border-border rounded">
@@ -445,7 +445,7 @@ const AdminBattleConfig = () => {
         {/* WEAPON TARGET PREFERENCES */}
         <div className="mt-10">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Weapon Target Preferences</h2>
+            <h2 className="font-heading text-lg font-semibold text-accent">Weapon Target Preferences</h2>
             <Button size="sm" variant="outline" onClick={addWeaponPref}><Plus className="mr-1 h-4 w-4" /> Add Preference</Button>
           </div>
           <p className="text-xs text-muted-foreground mb-3">Configure per-weapon targeting priority. Lower priority number = higher preference. Weapons without entries default to the ship's target preference.</p>
@@ -492,7 +492,7 @@ const AdminBattleConfig = () => {
         {/* GROUND COMBAT OUTCOMES */}
         <div className="mt-10">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Ground Combat Outcomes (per unit)</h2>
+            <h2 className="font-heading text-lg font-semibold text-accent">Ground Combat Outcomes (per unit)</h2>
             <Button size="sm" variant="outline" onClick={addGroundOutcome}><Plus className="mr-1 h-4 w-4" /> Add Outcome</Button>
           </div>
           <p className="text-xs text-muted-foreground mb-3">Each ground unit rolls against this table per phase. Probabilities should sum to ≤1.0 (remainder = miss/no damage). Example: 0.5 probability / 0.1 damage = 50% chance each unit deals 0.1 damage.</p>

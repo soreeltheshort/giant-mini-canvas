@@ -442,7 +442,7 @@ function Row({ label, value, children }: { label: string; value?: string; childr
   return (
     <div className="flex justify-between items-center text-xs">
       <span className="text-muted-foreground">{label}</span>
-      {children || <span className="font-semibold text-foreground">{value}</span>}
+      {children || <span className="font-semibold text-accent">{value}</span>}
     </div>
   );
 }

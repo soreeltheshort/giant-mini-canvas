@@ -129,7 +129,7 @@ const Dashboard = () => {
               return (
                 <div key={fleet.id} className="flex items-center justify-between border border-border p-4">
                   <div>
-                    <p className="font-heading font-semibold text-foreground">
+                    <p className="font-heading font-semibold text-accent">
                       {fleet.name}
                       {canSeeAll && (
                         <span className="ml-2 text-xs font-normal text-muted-foreground">

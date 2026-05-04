@@ -39,9 +39,9 @@ export default function GameHeader({
           </span>
         </Link>
         <span className="text-bronze/40">|</span>
-        <span className="font-heading text-sm font-semibold text-foreground">{gameName}</span>
+        <span className="font-heading text-sm font-semibold text-accent">{gameName}</span>
         <span className="text-bronze/40">|</span>
-        <span className="font-heading text-sm font-semibold text-foreground">
+        <span className="font-heading text-sm font-semibold text-accent">
           Turn {turnNumber}
         </span>
       </div>

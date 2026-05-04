@@ -1122,7 +1122,7 @@ function EnemyFleetView({
                   key={s.id}
                   className="flex items-center justify-between text-xs border-b border-border/50 py-1"
                 >
-                  <span className="font-semibold text-foreground truncate">
+                  <span className="font-semibold text-accent truncate">
                     {s.name}
                     {s.hull_class && (
                       <span className="ml-1 text-[10px] text-muted-foreground">
@@ -1644,7 +1644,7 @@ function RepairPopup({
                             <span className="text-crimson/80 normal-case font-semibold ml-1">· Crippled</span>
                           )}
                         </div>
-                        <div className="text-[10px] font-semibold text-foreground/85 uppercase tracking-wider shrink-0">{r.hull_class}</div>
+                        <div className="text-[10px] font-semibold text-accent/85 uppercase tracking-wider shrink-0">{r.hull_class}</div>
                       </div>
                       <div className={`text-[11px] font-bold mt-0.5 ${r.crippled ? "text-crimson/80" : "text-amber-800"}`}>
                         Hull: {r.current_hp} / {r.max_hp}

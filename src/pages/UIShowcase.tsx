@@ -79,7 +79,7 @@ const UIShowcase = () => {
                     <span className="font-heading font-bold text-sm tracking-wide uppercase">Third Republic</span>
                   </div>
                   <span className="text-bronze/40">|</span>
-                  <span className="font-heading text-sm font-semibold text-foreground">Campaign Alpha</span>
+                  <span className="font-heading text-sm font-semibold text-accent">Campaign Alpha</span>
                   <span className="text-[10px] text-muted-foreground font-medium bg-ivory-dark px-2 py-0.5 rounded-sm border border-border">Turn 4</span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -103,7 +103,7 @@ const UIShowcase = () => {
                     <span className="font-heading font-bold text-sm tracking-wide uppercase">Third Republic</span>
                   </div>
                   <span className="text-crimson/40">|</span>
-                  <span className="font-heading text-sm font-semibold text-foreground">Campaign Alpha</span>
+                  <span className="font-heading text-sm font-semibold text-accent">Campaign Alpha</span>
                   <span className="text-[10px] text-crimson font-semibold bg-red-50 px-2 py-0.5 rounded-sm border border-crimson/30">⚠ Alert</span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -236,7 +236,7 @@ const UIShowcase = () => {
               <div key={label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 bg-ivory border border-border rounded-sm bronze-glow-hover ${cls}`}>
                 <span className="text-bronze text-sm">{icon}</span>
                 <div>
-                  <p className="text-xs font-semibold text-foreground leading-none">{value}</p>
+                  <p className="text-xs font-semibold text-accent leading-none">{value}</p>
                   <p className="text-[8px] text-muted-foreground uppercase tracking-wider">{label}</p>
                 </div>
               </div>
@@ -354,7 +354,7 @@ const UIShowcase = () => {
                     <span className="text-[9px] text-muted-foreground">T{story.turn}</span>
                   </div>
                 </div>
-                <p className="text-xs font-semibold text-foreground leading-tight">{story.headline}</p>
+                <p className="text-xs font-semibold text-accent leading-tight">{story.headline}</p>
               </div>
             ))}
           </div>

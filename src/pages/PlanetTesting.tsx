@@ -411,7 +411,7 @@ const PlanetTesting = () => {
         {showLoadDialog && (
           <div className="mb-6 border border-border rounded p-4 bg-card">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-foreground">Select a Planet from Map</h3>
+              <h3 className="text-sm font-semibold text-accent">Select a Planet from Map</h3>
               <Button variant="ghost" size="sm" onClick={() => setShowLoadDialog(false)}>✕</Button>
             </div>
             {availablePlanets.length === 0 ? (
@@ -440,7 +440,7 @@ const PlanetTesting = () => {
         {showSavedDialog && (
           <div className="mb-6 border border-border rounded p-4 bg-card">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-foreground">Load Saved Planet</h3>
+              <h3 className="text-sm font-semibold text-accent">Load Saved Planet</h3>
               <Button variant="ghost" size="sm" onClick={() => setShowSavedDialog(false)}>✕</Button>
             </div>
             {savedPlanets.length === 0 ? (
@@ -547,7 +547,7 @@ const PlanetTesting = () => {
               <div className="mb-3 p-2 rounded bg-accent/30 border border-border">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] text-muted-foreground">Condition (calculated)</label>
-                  <span className="text-xs font-semibold text-foreground">{calculatedCondition}</span>
+                  <span className="text-xs font-semibold text-accent">{calculatedCondition}</span>
                 </div>
                 <div className="text-[9px] text-muted-foreground mt-0.5">
                   Base {planet.initial_condition} + facility bonuses {calculatedCondition - planet.initial_condition}
@@ -571,7 +571,7 @@ const PlanetTesting = () => {
               <div className="mb-3 p-2 rounded bg-accent/30 border border-border">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] text-muted-foreground">Max Ground Def. (calculated)</label>
-                  <span className="text-xs font-semibold text-foreground">{calculatedMaxGroundDefenses}</span>
+                  <span className="text-xs font-semibold text-accent">{calculatedMaxGroundDefenses}</span>
                 </div>
                 <div className="text-[9px] text-muted-foreground mt-0.5">
                   From facilities: {calculatedMaxGroundDefenses}
@@ -610,7 +610,7 @@ const PlanetTesting = () => {
               <div className="mt-3 p-2 rounded bg-accent/30 border border-border">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] text-muted-foreground">Tribute</label>
-                  <span className="text-xs font-semibold text-foreground">{planet.tribute}</span>
+                  <span className="text-xs font-semibold text-accent">{planet.tribute}</span>
                 </div>
                 {lastTurnResult && (
                   <div className="text-[9px] text-muted-foreground mt-0.5 space-y-0.5">
@@ -629,7 +629,7 @@ const PlanetTesting = () => {
               <div className="mt-2 p-2 rounded bg-accent/30 border border-border">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] text-muted-foreground">Upkeep</label>
-                  <span className="text-xs font-semibold text-foreground">{planet.upkeep}</span>
+                  <span className="text-xs font-semibold text-accent">{planet.upkeep}</span>
                 </div>
                 {lastTurnResult && (
                   <div className="text-[9px] text-muted-foreground mt-0.5 space-y-0.5">

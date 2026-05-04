@@ -17,7 +17,7 @@ export function ProgressBar({ label, value, max, color = "bronze" }: ProgressBar
     <div className="space-y-0.5">
       <div className="flex justify-between text-[10px]">
         <span className="text-muted-foreground uppercase tracking-wider">{label}</span>
-        <span className="font-semibold text-foreground">{value}/{max}</span>
+        <span className="font-semibold text-accent">{value}/{max}</span>
       </div>
       <div className="h-1.5 bg-muted rounded-sm overflow-hidden">
         <div

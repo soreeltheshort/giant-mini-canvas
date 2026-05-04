@@ -111,7 +111,7 @@ export default function LeftPanel({
                       <Icon className="w-3 h-3 text-bronze" />
                       <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
                     </div>
-                    <span className="text-xs font-semibold text-foreground font-heading">
+                    <span className="text-xs font-semibold text-accent font-heading">
                       {format ? format(val) : val}
                     </span>
                   </div>
@@ -680,7 +680,7 @@ function Row({ label, value, children }: { label: string; value?: string; childr
   return (
     <div className="flex justify-between items-center text-xs">
       <span className="text-muted-foreground">{label}</span>
-      {children || <span className="font-semibold text-foreground">{value}</span>}
+      {children || <span className="font-semibold text-accent">{value}</span>}
     </div>
   );
 }

@@ -250,7 +250,7 @@ function EmptyState({
 
       <div className="text-center py-4 space-y-2">
         <c.icon className="w-8 h-8 text-bronze/40 mx-auto" />
-        <h3 className="font-heading text-sm font-semibold text-foreground">{c.title}</h3>
+        <h3 className="font-heading text-sm font-semibold text-accent">{c.title}</h3>
         {c.lines.map((l, i) => (
           <p key={i} className="text-[11px] text-muted-foreground leading-relaxed">{l}</p>
         ))}
@@ -456,7 +456,7 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
                 return (
                   <div key={bf.facility_type_id} className="border border-border rounded-sm p-2 space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-foreground">{bf.icon} {bf.name}</span>
+                      <span className="text-xs font-semibold text-accent">{bf.icon} {bf.name}</span>
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                       <span>₡{bf.cost} · {bf.turns_to_build}T · ₡{bf.maintenance}/turn</span>
@@ -751,13 +751,13 @@ function StrikecraftDisplay({ system, gameData }: { system: SystemData; gameData
           {heavyFighters.map(f => (
             <div key={f.ship_type_id} className="flex justify-between text-[11px] pl-2">
               <span className="text-muted-foreground">↳ {getShipName(f.ship_type_id)}</span>
-              <span className="font-semibold text-foreground">×{f.quantity}</span>
+              <span className="font-semibold text-accent">×{f.quantity}</span>
             </div>
           ))}
           {lightFighters.map(f => (
             <div key={f.ship_type_id} className="flex justify-between text-[11px] pl-2">
               <span className="text-muted-foreground">↳ {getShipName(f.ship_type_id)}</span>
-              <span className="font-semibold text-foreground">×{f.quantity}</span>
+              <span className="font-semibold text-accent">×{f.quantity}</span>
             </div>
           ))}
         </>
@@ -768,7 +768,7 @@ function StrikecraftDisplay({ system, gameData }: { system: SystemData; gameData
           {gunships.map(f => (
             <div key={f.ship_type_id} className="flex justify-between text-[11px] pl-2">
               <span className="text-muted-foreground">↳ {getShipName(f.ship_type_id)}</span>
-              <span className="font-semibold text-foreground">×{f.quantity}</span>
+              <span className="font-semibold text-accent">×{f.quantity}</span>
             </div>
           ))}
         </>
@@ -785,7 +785,7 @@ function Row({ label, value, children, figured }: { label: string; value?: strin
       {children || (
         <span className={figured
           ? "font-bold text-senate-dark font-heading"
-          : "font-semibold text-foreground"
+          : "font-semibold text-accent"
         }>{value}</span>
       )}
     </div>
