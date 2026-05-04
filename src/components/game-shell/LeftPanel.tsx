@@ -484,7 +484,13 @@ function InlineEmptyState({
   );
 }
 
-function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapData }) {
+function InlineRegionDetail({ id, gameData, onBuildFacility, playerTreasury, adminPointsAvailable }: {
+  id: string;
+  gameData?: GameMapData;
+  onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
+  playerTreasury?: number;
+  adminPointsAvailable?: number;
+}) {
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
   const realSys =
     !isNaN(sysId) && gameData ? Array.from(gameData.systems.values()).find((s) => s.system_id === sysId) : undefined;
@@ -496,6 +502,8 @@ function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapDa
     });
     const conditionVariant = realSys.condition >= 70 ? "success" : realSys.condition >= 40 ? "warning" : "danger";
     const classLabel = CLASSIFICATION_LABELS[realSys.classification as HexClassification] || realSys.classification;
+    const buildable = gameData ? getBuildableFacilitiesForSystem(realSys, gameData) : [];
+    const adminPointsLeft = adminPointsAvailable ?? 0;
     return (
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
@@ -526,6 +534,74 @@ function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapDa
                 </div>
               ))}
             </div>
+          </ImperialCard>
+        )}
+
+        {(realSys.facilities_in_production || []).length > 0 && (
+          <ImperialCard title="Under Construction">
+            <div className="space-y-1.5">
+              {realSys.facilities_in_production.map((p, i) => {
+                const ft = gameData!.facilityTypes.find((t) => t.facility_type_id === p.facility_type_id);
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0"
+                  >
+                    <span>
+                      {ft?.icon || "🏭"} {ft?.name || p.facility_type_id}
+                    </span>
+                    <span className="text-muted-foreground">{p.turns_remaining}T</span>
+                  </div>
+                );
+              })}
+            </div>
+          </ImperialCard>
+        )}
+
+        {buildable.length > 0 ? (
+          <ImperialCard title="Build New Facility">
+            <div className="space-y-1.5">
+              {buildable.map((bf) => {
+                const canAfford = (playerTreasury ?? 0) >= bf.cost;
+                const hasAdminPoint = adminPointsLeft > 0;
+                const canCommission = canAfford && hasAdminPoint;
+                const label = !canAfford
+                  ? "Insufficient Funds"
+                  : !hasAdminPoint
+                    ? "No Admin Points"
+                    : "Commission (1 Admin pt)";
+                return (
+                  <div key={bf.facility_type_id} className="border border-border rounded-sm p-2 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-accent">
+                        {bf.icon} {bf.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span>₡{bf.cost} · {bf.turns_to_build}T · ₡{bf.maintenance}/turn</span>
+                    </div>
+                    {bf.consumesName && (
+                      <p className="text-[9px] text-muted-foreground italic">Upgrades {bf.consumesName}</p>
+                    )}
+                    <button
+                      onClick={() => onBuildFacility?.(realSys.system_id, bf.facility_type_id)}
+                      disabled={!canCommission}
+                      className={`w-full mt-1 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
+                        ${canCommission
+                          ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+                          : "bg-muted text-muted-foreground cursor-not-allowed"
+                        }`}
+                    >
+                      {label}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </ImperialCard>
+        ) : (
+          <ImperialCard title="Build New Facility">
+            <p className="text-[10px] text-muted-foreground italic">No eligible facilities to build at this system.</p>
           </ImperialCard>
         )}
       </>
@@ -570,6 +646,51 @@ function InlineRegionDetail({ id, gameData }: { id: string; gameData?: GameMapDa
       </ImperialCard>
     </>
   );
+}
+
+/** Local copy of buildable-facility logic from ContextPanel — kept inline to avoid cross-import. */
+interface InlineBuildable {
+  facility_type_id: string;
+  name: string;
+  icon: string;
+  cost: number;
+  turns_to_build: number;
+  maintenance: number;
+  consumesName?: string;
+}
+function getBuildableFacilitiesForSystem(
+  system: import("@/lib/mapTypes").SystemData,
+  gameData: GameMapData,
+): InlineBuildable[] {
+  const ftFull = gameData.facilityTypesFull || [];
+  const builtFacilities = system.facilities || [];
+  const inProduction = system.facilities_in_production || [];
+  const builtMap = new Map<string, number>();
+  for (const f of builtFacilities) builtMap.set(f.facility_type_id, (builtMap.get(f.facility_type_id) || 0) + f.quantity);
+  const prodMap = new Map<string, number>();
+  for (const p of inProduction) prodMap.set(p.facility_type_id, (prodMap.get(p.facility_type_id) || 0) + 1);
+  const result: InlineBuildable[] = [];
+  for (const ft of ftFull) {
+    const builtCount = (builtMap.get(ft.facility_type_id) || 0) + (prodMap.get(ft.facility_type_id) || 0);
+    if (ft.max_per_system > 0 && builtCount >= ft.max_per_system) continue;
+    if (ft.consumed_facility_id) {
+      const prereqCount = builtMap.get(ft.consumed_facility_id) || 0;
+      if (prereqCount <= 0) continue;
+    }
+    const consumedFt = ft.consumed_facility_id
+      ? ftFull.find((f) => f.facility_type_id === ft.consumed_facility_id)
+      : null;
+    result.push({
+      facility_type_id: ft.facility_type_id,
+      name: ft.name,
+      icon: ft.icon,
+      cost: ft.cost,
+      turns_to_build: ft.turns_to_build,
+      maintenance: ft.maintenance,
+      consumesName: consumedFt?.name,
+    });
+  }
+  return result;
 }
 
 function InlineArmyDetail({
