@@ -227,10 +227,10 @@ const UIShowcase = () => {
         <Section title="Resource Chips">
           <div className="flex items-center gap-3 flex-wrap">
             {([
-              { icon: "₡", label: "Credits", value: "12,450", cls: "" },
-              { icon: "◆", label: "Materials", value: "3,200", cls: "" },
-              { icon: "★", label: "Influence", value: "87", cls: "" },
-              { icon: "⚡", label: "Cinders", value: "18,740", cls: "" },
+              { icon: "₡", label: "Credits", value: "12,450", cls: "text-accent" },
+              { icon: "◆", label: "Materials", value: "3,200", cls: "text-accent" },
+              { icon: "★", label: "Influence", value: "87", cls: "text-accent" },
+              { icon: "⚡", label: "Cinders", value: "18,740", cls: "text-accent" },
               { icon: "⚠", label: "Low Supply", value: "12%", cls: "border-crimson/40 text-crimson" },
             ]).map(({ icon, label, value, cls }) => (
               <div key={label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 bg-ivory border border-border rounded-sm bronze-glow-hover ${cls}`}>
