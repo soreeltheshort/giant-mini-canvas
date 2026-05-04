@@ -104,6 +104,7 @@ export default function LeftPanel({
           <div className="space-y-1.5">
             {STAT_ITEMS.map(({ key, label, icon: Icon, format }) => {
               const val = stats[key];
+              const showCostsPending = key === "maintenance" && (stats.costsPending ?? 0) > 0;
               return (
                 <div key={key}>
                   <div className="flex items-center justify-between">
@@ -111,9 +112,16 @@ export default function LeftPanel({
                       <Icon className="w-3 h-3 text-bronze" />
                       <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
                     </div>
-                    <span className="text-xs font-semibold text-accent font-heading">
-                      {format ? format(val) : val}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-semibold text-accent font-heading">
+                        {format ? format(val) : val}
+                      </span>
+                      {showCostsPending && (
+                        <span className="text-[10px] text-crimson font-bold">
+                          (-₡{(stats.costsPending ?? 0).toLocaleString()})
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
