@@ -265,7 +265,7 @@ function InlineContextContent({
     const titles = {
       diplomacy: "Diplomatic Overview",
       military: "MILITARY OVERVIEW",
-      production: "Economy Overview",
+      production: "ECONOMY OVERVIEW",
     };
     return titles[mode];
   };

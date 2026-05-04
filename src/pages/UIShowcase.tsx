@@ -130,7 +130,7 @@ const UIShowcase = () => {
                 <StateLabel>{label}</StateLabel>
                 <div className={`relative w-12 h-12 flex flex-col items-center justify-center rounded-sm border transition-all ${cls}`}>
                   <Icon className="w-4 h-4" />
-                  <span className="text-[7px] font-medium mt-0.5 leading-none uppercase tracking-wider">{Icon === Map ? "Map" : Icon === Swords ? "Military" : Icon === Landmark ? "Diplomacy" : Icon === Hammer ? "Production" : "Messages"}</span>
+                  <span className="text-[7px] font-medium mt-0.5 leading-none uppercase tracking-wider">{Icon === Map ? "Map" : Icon === Swords ? "Military" : Icon === Landmark ? "Diplomacy" : Icon === Hammer ? "Economy" : "Messages"}</span>
                   {badge > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-crimson text-primary-foreground text-[9px] font-bold flex items-center justify-center rounded-sm">{badge}</span>
                   )}
@@ -256,7 +256,7 @@ const UIShowcase = () => {
             <div>
               <StateLabel>Segmented Control (Mode Selector)</StateLabel>
               <div className="flex border-2 border-bronze/40 rounded-sm overflow-hidden bg-ivory w-fit">
-                {["Diplomacy", "Military", "Production"].map((seg) => (
+                {["Diplomacy", "Military", "Economy"].map((seg) => (
                   <button
                     key={seg}
                     onClick={() => setActiveSegment(seg)}
@@ -372,7 +372,7 @@ const UIShowcase = () => {
               { label: "Fleet (idle)", size: "w-4 h-4", shape: "rotate-45", cls: "bg-crimson/30 border-crimson/60" },
               { label: "Fleet (selected)", size: "w-4 h-4", shape: "rotate-45", cls: "bg-crimson/50 border-crimson shadow-md shadow-crimson/20 scale-125" },
               { label: "Capital", size: "w-6 h-6", shape: "rounded-sm", cls: "bg-bronze/40 border-bronze" },
-              { label: "Production", size: "w-4 h-4", shape: "rounded-sm", cls: "bg-amber-500/25 border-amber-600/50" },
+              { label: "Economy", size: "w-4 h-4", shape: "rounded-sm", cls: "bg-amber-500/25 border-amber-600/50" },
             ]).map(({ label, size, shape, cls }) => (
               <div key={label} className="text-center">
                 <StateLabel>{label}</StateLabel>
