@@ -273,7 +273,7 @@ function InlineContextContent({
   return (
     <div className="border-t-2 border-bronze/40">
       <div className="h-10 flex items-center px-3 border-b border-border bronze-border-b">
-        <h3 className="font-heading text-[10px] font-semibold uppercase tracking-[0.15em] text-bronze-dark flex items-center gap-1.5">
+        <h3 className="font-heading text-[10px] font-semibold uppercase tracking-[0.15em] flex items-center gap-1.5 text-destructive-foreground">
           {getModeIcon()}
           {getTitle()}
         </h3>
