@@ -121,6 +121,8 @@ interface ContextPanelProps {
   gameData?: GameMapData;
   onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
   playerTreasury?: number;
+  /** Admin points the player still has available for new orders this turn. */
+  adminPointsAvailable?: number;
   /** Province classification owned by the current player, e.g. "PROVINCE_2" */
   playerOwnerClassification?: string;
   fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
@@ -134,7 +136,7 @@ interface ContextPanelProps {
   onSelect?: (selection: MapSelection) => void;
 }
 
-export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect }: ContextPanelProps) {
+export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect }: ContextPanelProps) {
   return (
     <aside className="w-72 bg-marble border-l-2 border-bronze/40 flex flex-col relative z-20 shrink-0 animate-fade-in">
       {/* Content — header bar removed; first card sits flush at the top. */}
@@ -142,7 +144,7 @@ export default function ContextPanel({ mode, selection, news, onClose, onClearSe
         {selection.type === "news" ? (
           <NewsDetail story={news.find((n) => n.id === selection.id)} />
         ) : selection.type === "region" ? (
-          <RegionDetail id={selection.id} gameData={gameData} mode={mode} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} />
+          <RegionDetail id={selection.id} gameData={gameData} mode={mode} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} adminPointsAvailable={adminPointsAvailable} />
         ) : selection.type === "army" ? (
           <ArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />
         ) : selection.type === "production-center" ? (
@@ -417,12 +419,13 @@ function ProductionOverviewEmpty({
     </>
   );
 }
-function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
+function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adminPointsAvailable }: {
   id: string;
   gameData?: GameMapData;
   mode?: GameMode;
   onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
   playerTreasury?: number;
+  adminPointsAvailable?: number;
 }) {
   // Try real data first (selection id = "sys-{system_id}")
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
@@ -438,8 +441,9 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
     const conditionVariant = realSys.condition >= 70 ? "success" : realSys.condition >= 40 ? "warning" : "danger";
     const classLabel = CLASSIFICATION_LABELS[realSys.classification as HexClassification] || realSys.classification;
 
-    // Calculate buildable facilities
-    const buildableFacilities = mode === "production" ? getBuildableFacilities(realSys, gameData!) : [];
+    // Calculate buildable facilities (always available — facility commissioning costs 1 admin point)
+    const buildableFacilities = getBuildableFacilities(realSys, gameData!);
+    const adminPointsLeft = adminPointsAvailable ?? 0;
 
     return (
       <>
@@ -492,11 +496,18 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
           </ImperialCard>
         )}
 
-        {mode === "production" && buildableFacilities.length > 0 && (
+        {buildableFacilities.length > 0 ? (
           <ImperialCard title="Build New Facility">
             <div className="space-y-1.5">
               {buildableFacilities.map((bf) => {
                 const canAfford = (playerTreasury ?? 0) >= bf.cost;
+                const hasAdminPoint = adminPointsLeft > 0;
+                const canCommission = canAfford && hasAdminPoint;
+                const label = !canAfford
+                  ? "Insufficient Funds"
+                  : !hasAdminPoint
+                    ? "No Admin Points"
+                    : "Commission (1 Admin pt)";
                 return (
                   <div key={bf.facility_type_id} className="border border-border rounded-sm p-2 space-y-1">
                     <div className="flex items-center justify-between">
@@ -510,23 +521,21 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
                     )}
                     <button
                       onClick={() => onBuildFacility?.(realSys.system_id, bf.facility_type_id)}
-                      disabled={!canAfford}
+                      disabled={!canCommission}
                       className={`w-full mt-1 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
-                        ${canAfford
+                        ${canCommission
                           ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
                           : "bg-muted text-muted-foreground cursor-not-allowed"
                         }`}
                     >
-                      {canAfford ? "Commission" : "Insufficient Funds"}
+                      {label}
                     </button>
                   </div>
                 );
               })}
             </div>
           </ImperialCard>
-        )}
-
-        {mode === "production" && buildableFacilities.length === 0 && (
+        ) : (
           <ImperialCard title="Build New Facility">
             <p className="text-[10px] text-muted-foreground italic">No eligible facilities to build at this system.</p>
           </ImperialCard>
