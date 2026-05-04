@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { id: "map", icon: Map, label: "Map" },
   { id: "fleets", icon: Sword, label: "Fleets" },
   { id: "systems", icon: Building2, label: "Systems" },
-  { id: "diplomacy", icon: Users, label: "Diplomacy" },
+  { id: "diplomacy", icon: Users, label: "Politics" },
   { id: "orders", icon: ScrollText, label: "Orders" },
   { id: "reports", icon: BarChart3, label: "Reports" },
   { id: "messages", icon: MessageSquare, label: "Messages", badge: 3 },

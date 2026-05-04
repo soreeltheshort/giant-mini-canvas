@@ -67,7 +67,7 @@ const STAT_ITEMS: { key: keyof GlobalStats; label: string; icon: React.ElementTy
   ];
 
 const MODE_ITEMS: { id: GameMode; label: string; icon: React.ElementType }[] = [
-  { id: "diplomacy", label: "Diplomacy", icon: Landmark },
+  { id: "diplomacy", label: "Politics", icon: Landmark },
   { id: "military", label: "Military", icon: Swords },
   { id: "production", label: "Economy", icon: Hammer },
 ];

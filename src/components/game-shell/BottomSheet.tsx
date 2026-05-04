@@ -62,7 +62,7 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <OrderCard title="Fleet Movement" count={3} status="pending" />
           <OrderCard title="Construction" count={5} status="confirmed" />
-          <OrderCard title="Diplomacy" count={1} status="warning" />
+          <OrderCard title="Politics" count={1} status="warning" />
         </div>
       </div>
     </div>
