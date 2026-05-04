@@ -1059,19 +1059,6 @@ const PlayerGame = () => {
 
         {/* Right Context Panel removed — content now rendered inline in LeftPanel */}
       </div>
-
-      <AiTestPanel
-        playerId={player.id}
-        turnNumber={game.turn_number}
-        gameContext={{
-          gameName: game.name,
-          factionName,
-          treasury: player.treasury,
-          adminPoints: player.admin_points_remaining,
-          combatPoints: player.combat_points_remaining,
-          visibleSystems: player.visible_system_ids?.length ?? 0,
-        }}
-      />
     </div>
   );
 };
