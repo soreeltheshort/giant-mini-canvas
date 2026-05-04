@@ -543,7 +543,7 @@ const UIShowcase = () => {
             </div>
             <div>
               <StateLabel>Subheading</StateLabel>
-              <h3 className="font-heading text-sm font-semibold text-bronze-dark uppercase tracking-[0.15em]">Strategic Overview</h3>
+              <h3 className="font-heading text-sm font-semibold text-bronze-dark uppercase tracking-[0.15em]">MILITARY OVERVIEW</h3>
             </div>
             <div>
               <StateLabel>Body — Inter</StateLabel>

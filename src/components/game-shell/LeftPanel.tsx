@@ -53,7 +53,7 @@ interface LeftPanelProps {
     ) => void;
     combatPointsAvailable?: number;
     onOrdersChanged?: () => void;
-    /** Selection setter so the empty Strategic Overview can list-select planets/fleets/news. */
+    /** Selection setter so the empty Military Overview can list-select planets/fleets/news. */
     onSelect?: (selection: MapSelection) => void;
   };
 }
@@ -264,7 +264,7 @@ function InlineContextContent({
     if (selection.type === "faction") return "Faction Intel";
     const titles = {
       diplomacy: "Diplomatic Overview",
-      military: "Strategic Overview",
+      military: "MILITARY OVERVIEW",
       production: "Production Overview",
     };
     return titles[mode];

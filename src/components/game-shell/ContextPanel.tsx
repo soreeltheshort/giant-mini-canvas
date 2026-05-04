@@ -130,7 +130,7 @@ interface ContextPanelProps {
   ) => void;
   combatPointsAvailable?: number;
   onOrdersChanged?: () => void;
-  /** Selection setter so the empty Strategic Overview can list-select planets/fleets/news. */
+  /** Selection setter so the empty Military Overview can list-select planets/fleets/news. */
   onSelect?: (selection: MapSelection) => void;
 }
 
@@ -182,7 +182,7 @@ function getPanelTitle(mode: GameMode, selection: MapSelection): string {
   if (selection.type === "army") return "Fleet Detail";
   if (selection.type === "production-center") return "Production";
   if (selection.type === "faction") return "Faction Intel";
-  const titles = { diplomacy: "Diplomatic Overview", military: "Strategic Overview", production: "Production Overview" };
+  const titles = { diplomacy: "Diplomatic Overview", military: "MILITARY OVERVIEW", production: "Production Overview" };
   return titles[mode];
 }
 
@@ -200,7 +200,7 @@ function EmptyState({
   playerOwnerClassification?: string;
   onSelect?: (selection: MapSelection) => void;
 }) {
-  // Strategic Overview (military mode) — Dispatches + scrollable fleets.
+  // Military Overview (military mode) — Dispatches + scrollable fleets.
   if (mode === "military") {
     return (
       <StrategicOverviewEmpty
@@ -282,7 +282,7 @@ function EmptyState({
 }
 
 /**
- * Strategic Overview default panel content:
+ * Military Overview default panel content:
  *   1. Dispatches (latest unread, then click into the news detail)
  *   2. Scrollable list of player-owned planets — click to open RegionDetail
  *   3. Scrollable list of player-owned fleets   — click to open ArmyDetail
