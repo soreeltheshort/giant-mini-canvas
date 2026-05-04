@@ -140,6 +140,9 @@ export default function LeftPanel({
               <span className="text-xs font-bold text-senate-dark font-heading">{stats.adminCapability}</span>
               <span className="text-[9px] text-muted-foreground">·</span>
               <span className="text-[10px] text-bronze font-semibold">{stats.adminPointsRemaining}pt</span>
+              {(stats.adminPointsPending ?? 0) > 0 && (
+                <span className="text-[10px] text-crimson font-bold">(-{stats.adminPointsPending})</span>
+              )}
             </div>
           </div>
           <div className="flex items-center justify-between">
