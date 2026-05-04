@@ -441,8 +441,9 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
     const conditionVariant = realSys.condition >= 70 ? "success" : realSys.condition >= 40 ? "warning" : "danger";
     const classLabel = CLASSIFICATION_LABELS[realSys.classification as HexClassification] || realSys.classification;
 
-    // Calculate buildable facilities
-    const buildableFacilities = mode === "production" ? getBuildableFacilities(realSys, gameData!) : [];
+    // Calculate buildable facilities (always available — facility commissioning costs 1 admin point)
+    const buildableFacilities = getBuildableFacilities(realSys, gameData!);
+    const adminPointsLeft = adminPointsAvailable ?? 0;
 
     return (
       <>
