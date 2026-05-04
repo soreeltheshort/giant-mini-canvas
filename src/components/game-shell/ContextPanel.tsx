@@ -121,6 +121,8 @@ interface ContextPanelProps {
   gameData?: GameMapData;
   onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
   playerTreasury?: number;
+  /** Admin points the player still has available for new orders this turn. */
+  adminPointsAvailable?: number;
   /** Province classification owned by the current player, e.g. "PROVINCE_2" */
   playerOwnerClassification?: string;
   fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
