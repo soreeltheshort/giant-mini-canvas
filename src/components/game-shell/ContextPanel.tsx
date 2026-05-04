@@ -200,10 +200,22 @@ function EmptyState({
   playerOwnerClassification?: string;
   onSelect?: (selection: MapSelection) => void;
 }) {
-  // Strategic Overview (military mode) — Dispatches + scrollable planets/fleets.
+  // Strategic Overview (military mode) — Dispatches + scrollable fleets.
   if (mode === "military") {
     return (
       <StrategicOverviewEmpty
+        news={news ?? []}
+        gameData={gameData}
+        playerOwnerClassification={playerOwnerClassification}
+        onSelect={onSelect}
+      />
+    );
+  }
+
+  // Production Overview — Economy Dispatches + scrollable planets.
+  if (mode === "production") {
+    return (
+      <ProductionOverviewEmpty
         news={news ?? []}
         gameData={gameData}
         playerOwnerClassification={playerOwnerClassification}
