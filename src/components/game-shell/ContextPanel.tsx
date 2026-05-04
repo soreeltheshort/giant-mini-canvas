@@ -182,7 +182,7 @@ function getPanelTitle(mode: GameMode, selection: MapSelection): string {
   if (selection.type === "army") return "Fleet Detail";
   if (selection.type === "production-center") return "Economy";
   if (selection.type === "faction") return "Faction Intel";
-  const titles = { diplomacy: "Diplomatic Overview", military: "MILITARY OVERVIEW", production: "ECONOMY OVERVIEW" };
+  const titles = { diplomacy: "POLITICAL OVERVIEW", military: "MILITARY OVERVIEW", production: "ECONOMY OVERVIEW" };
   return titles[mode];
 }
 
@@ -227,7 +227,7 @@ function EmptyState({
   const content = {
     diplomacy: {
       icon: Landmark,
-      title: "Diplomatic Overview",
+      title: "POLITICAL OVERVIEW",
       lines: [
         "Select a faction capital on the map to view relations.",
         "Active treaties and pending proposals will appear here.",

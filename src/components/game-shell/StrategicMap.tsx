@@ -9,7 +9,7 @@ interface StrategicMapProps {
 }
 
 const MODE_OVERLAYS: Record<GameMode, { gridColor: string; label: string }> = {
-  diplomacy: { gridColor: "hsl(35 55% 45% / 0.08)", label: "Diplomatic View" },
+  diplomacy: { gridColor: "hsl(35 55% 45% / 0.08)", label: "Political View" },
   military: { gridColor: "hsl(0 65% 38% / 0.06)", label: "Strategic View" },
   production: { gridColor: "hsl(35 55% 45% / 0.1)", label: "Economy View" },
 };

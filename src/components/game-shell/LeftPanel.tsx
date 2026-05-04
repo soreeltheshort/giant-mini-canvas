@@ -67,7 +67,7 @@ const STAT_ITEMS: { key: keyof GlobalStats; label: string; icon: React.ElementTy
   ];
 
 const MODE_ITEMS: { id: GameMode; label: string; icon: React.ElementType }[] = [
-  { id: "diplomacy", label: "Diplomacy", icon: Landmark },
+  { id: "diplomacy", label: "Politics", icon: Landmark },
   { id: "military", label: "Military", icon: Swords },
   { id: "production", label: "Economy", icon: Hammer },
 ];
@@ -263,7 +263,7 @@ function InlineContextContent({
     if (selection.type === "production-center") return "Economy";
     if (selection.type === "faction") return "Faction Intel";
     const titles = {
-      diplomacy: "Diplomatic Overview",
+      diplomacy: "POLITICAL OVERVIEW",
       military: "MILITARY OVERVIEW",
       production: "ECONOMY OVERVIEW",
     };

@@ -8,7 +8,7 @@ interface BottomStripProps {
 
 export default function BottomStrip({ mode, turnNumber, factionName }: BottomStripProps) {
   const modeLabels: Record<GameMode, string> = {
-    diplomacy: "Diplomatic Mode",
+    diplomacy: "Political Mode",
     military: "Strategic Mode",
     production: "Economy Mode",
   };
