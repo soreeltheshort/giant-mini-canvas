@@ -200,10 +200,22 @@ function EmptyState({
   playerOwnerClassification?: string;
   onSelect?: (selection: MapSelection) => void;
 }) {
-  // Strategic Overview (military mode) — Dispatches + scrollable planets/fleets.
+  // Strategic Overview (military mode) — Dispatches + scrollable fleets.
   if (mode === "military") {
     return (
       <StrategicOverviewEmpty
+        news={news ?? []}
+        gameData={gameData}
+        playerOwnerClassification={playerOwnerClassification}
+        onSelect={onSelect}
+      />
+    );
+  }
+
+  // Production Overview — Economy Dispatches + scrollable planets.
+  if (mode === "production") {
+    return (
+      <ProductionOverviewEmpty
         news={news ?? []}
         gameData={gameData}
         playerOwnerClassification={playerOwnerClassification}
@@ -310,7 +322,67 @@ function StrategicOverviewEmpty({
       {/* 1 ─ Dispatches (military category) */}
       <DispatchesCard mode="military" news={news} onSelect={onSelect} />
 
-      {/* 2 ─ Planets */}
+      {/* 2 ─ Fleets */}
+      <ImperialCard title={`Fleets (${ownedFleets.length})`}>
+        {ownedFleets.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground italic">No fleets in service.</p>
+        ) : (
+          <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+            {ownedFleets.map((f) => (
+              <button
+                key={f.fleet_id}
+                onClick={() => onSelect?.({ type: "army", id: `fleet-${f.fleet_id}` })}
+                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm border border-border bg-ivory hover:border-bronze/60 bronze-glow-hover transition-colors text-left"
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Sword className="w-3 h-3 text-bronze shrink-0" />
+                  <span className="text-[11px] font-semibold text-senate-dark truncate">{f.fleet_name}</span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-[9px] text-senate-dark/70">{f.hex_x},{f.hex_y}</span>
+                  <ChevronRight className="w-3 h-3 text-senate-dark/60" />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </ImperialCard>
+    </>
+  );
+}
+
+/**
+ * Production Overview default panel content:
+ *   1. Dispatches (economic category)
+ *   2. Scrollable list of player-owned planets — click to open RegionDetail
+ */
+function ProductionOverviewEmpty({
+  news,
+  gameData,
+  playerOwnerClassification,
+  onSelect,
+}: {
+  news: NewsStory[];
+  gameData?: GameMapData;
+  playerOwnerClassification?: string;
+  onSelect?: (selection: MapSelection) => void;
+}) {
+  const playerFactionName = playerOwnerClassification
+    ? CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null
+    : null;
+  const matchesOwner = (owner: string | undefined | null) => {
+    if (!owner || !playerOwnerClassification) return false;
+    return owner === playerOwnerClassification || (!!playerFactionName && owner === playerFactionName);
+  };
+  const ownedSystems = gameData
+    ? Array.from(gameData.systems.values())
+        .filter((s) => matchesOwner(s.owner))
+        .sort((a, b) => a.system_name.localeCompare(b.system_name))
+    : [];
+
+  return (
+    <>
+      <DispatchesCard mode="production" news={news} onSelect={onSelect} />
       <ImperialCard title={`Planets (${ownedSystems.length})`}>
         {ownedSystems.length === 0 ? (
           <p className="text-[10px] text-muted-foreground italic">No systems under your control.</p>
@@ -342,37 +414,9 @@ function StrategicOverviewEmpty({
           </div>
         )}
       </ImperialCard>
-
-      {/* 3 ─ Fleets */}
-      <ImperialCard title={`Fleets (${ownedFleets.length})`}>
-        {ownedFleets.length === 0 ? (
-          <p className="text-[10px] text-muted-foreground italic">No fleets in service.</p>
-        ) : (
-          <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
-            {ownedFleets.map((f) => (
-              <button
-                key={f.fleet_id}
-                onClick={() => onSelect?.({ type: "army", id: `fleet-${f.fleet_id}` })}
-                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm border border-border bg-ivory hover:border-bronze/60 bronze-glow-hover transition-colors text-left"
-              >
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Sword className="w-3 h-3 text-bronze shrink-0" />
-                  <span className="text-[11px] font-semibold text-senate-dark truncate">{f.fleet_name}</span>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-[9px] text-senate-dark/70">{f.hex_x},{f.hex_y}</span>
-                  <ChevronRight className="w-3 h-3 text-senate-dark/60" />
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </ImperialCard>
     </>
   );
 }
-
-/* ── Detail Views ── */
 function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
   id: string;
   gameData?: GameMapData;

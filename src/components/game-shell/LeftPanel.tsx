@@ -364,30 +364,6 @@ function InlineEmptyState({
     return (
       <>
         <DispatchesCard mode="military" news={news ?? []} onSelect={onSelect} />
-        <ImperialCard title={`Planets (${ownedSystems.length})`}>
-          {ownedSystems.length === 0 ? (
-            <p className="text-[10px] text-muted-foreground italic">No systems under your control.</p>
-          ) : (
-            <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
-              {ownedSystems.map((s) => (
-                <button
-                  key={s.system_id}
-                  onClick={() => onSelect?.({ type: "region", id: `sys-${s.system_id}` })}
-                  className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm border border-border bg-ivory hover:border-bronze/60 bronze-glow-hover transition-colors text-left"
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Globe2 className="w-3 h-3 text-bronze shrink-0" />
-                    <span className="text-[11px] font-semibold text-senate-dark truncate">{s.system_name}</span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[9px] text-senate-dark/70">Cnd {s.condition}</span>
-                    <ChevronRight className="w-3 h-3 text-senate-dark/60" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </ImperialCard>
 
         <ImperialCard title={`Fleets (${ownedFleets.length})`}>
           {ownedFleets.length === 0 ? (
@@ -408,6 +384,50 @@ function InlineEmptyState({
                     <span className="text-[9px] text-senate-dark/70">
                       {f.hex_x},{f.hex_y}
                     </span>
+                    <ChevronRight className="w-3 h-3 text-senate-dark/60" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </ImperialCard>
+      </>
+    );
+  }
+
+  if (mode === "production") {
+    const playerFactionName = playerOwnerClassification
+      ? (CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null)
+      : null;
+    const matchesOwner = (owner: string | undefined | null) => {
+      if (!owner || !playerOwnerClassification) return false;
+      return owner === playerOwnerClassification || (!!playerFactionName && owner === playerFactionName);
+    };
+    const ownedSystems = gameData
+      ? Array.from(gameData.systems.values())
+          .filter((s) => matchesOwner(s.owner))
+          .sort((a, b) => a.system_name.localeCompare(b.system_name))
+      : [];
+    return (
+      <>
+        <DispatchesCard mode="production" news={news ?? []} onSelect={onSelect} />
+        <ImperialCard title={`Planets (${ownedSystems.length})`}>
+          {ownedSystems.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground italic">No systems under your control.</p>
+          ) : (
+            <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+              {ownedSystems.map((s) => (
+                <button
+                  key={s.system_id}
+                  onClick={() => onSelect?.({ type: "region", id: `sys-${s.system_id}` })}
+                  className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm border border-border bg-ivory hover:border-bronze/60 bronze-glow-hover transition-colors text-left"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Globe2 className="w-3 h-3 text-bronze shrink-0" />
+                    <span className="text-[11px] font-semibold text-senate-dark truncate">{s.system_name}</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[9px] text-senate-dark/70">Cnd {s.condition}</span>
                     <ChevronRight className="w-3 h-3 text-senate-dark/60" />
                   </div>
                 </button>
