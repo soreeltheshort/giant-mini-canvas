@@ -351,7 +351,72 @@ function StrategicOverviewEmpty({
   );
 }
 
-/* ── Detail Views ── */
+/**
+ * Production Overview default panel content:
+ *   1. Dispatches (economic category)
+ *   2. Scrollable list of player-owned planets — click to open RegionDetail
+ */
+function ProductionOverviewEmpty({
+  news,
+  gameData,
+  playerOwnerClassification,
+  onSelect,
+}: {
+  news: NewsStory[];
+  gameData?: GameMapData;
+  playerOwnerClassification?: string;
+  onSelect?: (selection: MapSelection) => void;
+}) {
+  const playerFactionName = playerOwnerClassification
+    ? CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null
+    : null;
+  const matchesOwner = (owner: string | undefined | null) => {
+    if (!owner || !playerOwnerClassification) return false;
+    return owner === playerOwnerClassification || (!!playerFactionName && owner === playerFactionName);
+  };
+  const ownedSystems = gameData
+    ? Array.from(gameData.systems.values())
+        .filter((s) => matchesOwner(s.owner))
+        .sort((a, b) => a.system_name.localeCompare(b.system_name))
+    : [];
+
+  return (
+    <>
+      <DispatchesCard mode="production" news={news} onSelect={onSelect} />
+      <ImperialCard title={`Planets (${ownedSystems.length})`}>
+        {ownedSystems.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground italic">No systems under your control.</p>
+        ) : (
+          <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+            {ownedSystems.map((s) => {
+              const fighters = (s.stationed_fighters ?? []).reduce((sum, sc) => sum + (sc.quantity || 0), 0);
+              const gunships = (s.stationed_gunships ?? []).reduce((sum, sc) => sum + (sc.quantity || 0), 0);
+              const garrison = s.current_ground_defenses ?? 0;
+              return (
+                <button
+                  key={s.system_id}
+                  onClick={() => onSelect?.({ type: "region", id: `sys-${s.system_id}` })}
+                  className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm border border-border bg-ivory hover:border-bronze/60 bronze-glow-hover transition-colors text-left"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Globe2 className="w-3 h-3 text-bronze shrink-0" />
+                    <span className="text-[11px] font-semibold text-senate-dark truncate">{s.system_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 text-[9px] text-senate-dark/80 font-mono">
+                    <span title="Fighters">F {fighters}</span>
+                    <span title="Gunships">G {gunships}</span>
+                    <span title="Garrison">⚔ {garrison}</span>
+                    <ChevronRight className="w-3 h-3 text-senate-dark/60" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </ImperialCard>
+    </>
+  );
+}
 function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury }: {
   id: string;
   gameData?: GameMapData;
