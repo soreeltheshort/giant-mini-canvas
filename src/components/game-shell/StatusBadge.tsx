@@ -6,17 +6,17 @@ interface StatusBadgeProps {
 }
 
 const VARIANTS: Record<StatusBadgeProps["variant"], string> = {
-  success: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  warning: "bg-amber-100 text-amber-800 border-amber-300",
-  danger: "border-red-300 text-accent bg-transparent border-0 px-0 py-0 text-xs",
-  info: "bg-sky-100 text-sky-800 border-sky-300",
-  neutral: "bg-stone-100 text-stone-600 border-stone-300",
+  success: "text-muted-foreground",
+  warning: "text-muted-foreground",
+  danger: "text-accent",
+  info: "text-muted-foreground",
+  neutral: "text-muted-foreground",
 };
 
 export function StatusBadge({ variant, children }: StatusBadgeProps) {
   return (
     <span
-      className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider border rounded-sm ${VARIANTS[variant]}`}
+      className={`inline-flex items-center font-semibold uppercase tracking-wider rounded-sm text-sm px-0 py-0 border-0 border-transparent bg-transparent ${VARIANTS[variant]}`}
     >
       {children}
     </span>
