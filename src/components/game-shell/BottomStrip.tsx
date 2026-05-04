@@ -10,7 +10,7 @@ export default function BottomStrip({ mode, turnNumber, factionName }: BottomStr
   const modeLabels: Record<GameMode, string> = {
     diplomacy: "Diplomatic Mode",
     military: "Strategic Mode",
-    production: "Production Mode",
+    production: "Economy Mode",
   };
 
   return (

@@ -69,7 +69,7 @@ const STAT_ITEMS: { key: keyof GlobalStats; label: string; icon: React.ElementTy
 const MODE_ITEMS: { id: GameMode; label: string; icon: React.ElementType }[] = [
   { id: "diplomacy", label: "Diplomacy", icon: Landmark },
   { id: "military", label: "Military", icon: Swords },
-  { id: "production", label: "Production", icon: Hammer },
+  { id: "production", label: "Economy", icon: Hammer },
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -260,12 +260,12 @@ function InlineContextContent({
     if (selection.type === "news") return "Dispatch";
     if (selection.type === "region") return "System Detail";
     if (selection.type === "army") return "Fleet Detail";
-    if (selection.type === "production-center") return "Production";
+    if (selection.type === "production-center") return "Economy";
     if (selection.type === "faction") return "Faction Intel";
     const titles = {
       diplomacy: "Diplomatic Overview",
       military: "MILITARY OVERVIEW",
-      production: "Production Overview",
+      production: "Economy Overview",
     };
     return titles[mode];
   };
