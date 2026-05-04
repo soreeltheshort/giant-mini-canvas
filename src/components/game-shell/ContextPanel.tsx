@@ -136,7 +136,7 @@ interface ContextPanelProps {
   onSelect?: (selection: MapSelection) => void;
 }
 
-export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect }: ContextPanelProps) {
+export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect }: ContextPanelProps) {
   return (
     <aside className="w-72 bg-marble border-l-2 border-bronze/40 flex flex-col relative z-20 shrink-0 animate-fade-in">
       {/* Content — header bar removed; first card sits flush at the top. */}
