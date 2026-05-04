@@ -77,7 +77,7 @@ const MapTestingConfig = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <div className="container max-w-2xl py-8 space-y-10">
-        <h1 className="text-xl font-semibold text-foreground">Map Testing Configuration</h1>
+        <h1 className="text-xl font-semibold text-accent">Map Testing Configuration</h1>
 
         {/* ── Factions ── */}
         <ConfigSection title="Factions" desc="Define the factions that can own systems. These are shared across all maps.">

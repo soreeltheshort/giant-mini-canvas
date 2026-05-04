@@ -82,7 +82,7 @@ const GameDetail = () => {
 
           {/* Features */}
           <div className="mt-10">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Features</h2>
+            <h2 className="font-heading text-lg font-semibold text-accent">Features</h2>
             <ul className="mt-4 space-y-2">
               {game.features.map((feature, i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
@@ -102,7 +102,7 @@ const GameDetail = () => {
 
           {/* Dev Updates */}
           <div className="mt-16 border-t border-border pt-10">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Development Updates</h2>
+            <h2 className="font-heading text-lg font-semibold text-accent">Development Updates</h2>
             <div className="mt-6 space-y-6">
               <div className="border-l-2 border-primary pl-4">
                 <p className="text-xs text-muted-foreground">February 2026</p>
@@ -123,7 +123,7 @@ const GameDetail = () => {
 
           {/* Newsletter */}
           <div className="mt-16 border-t border-border pt-10">
-            <h2 className="font-heading text-lg font-semibold text-foreground">Follow Development</h2>
+            <h2 className="font-heading text-lg font-semibold text-accent">Follow Development</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Get notified about {game.title} updates and release information.
             </p>

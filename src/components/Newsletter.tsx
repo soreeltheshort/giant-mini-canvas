@@ -15,7 +15,7 @@ const Newsletter = () => {
   if (submitted) {
     return (
       <div className="border border-border bg-card p-8 text-center">
-        <p className="font-heading text-lg font-semibold text-foreground">You're in.</p>
+        <p className="font-heading text-lg font-semibold text-accent">You're in.</p>
         <p className="mt-2 text-sm text-muted-foreground">We'll keep you posted on development updates.</p>
       </div>
     );

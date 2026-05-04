@@ -60,7 +60,7 @@ const Index = () => {
       <section id="newsletter">
         <div className="container py-20">
           <div className="max-w-lg">
-            <h2 className="font-heading text-2xl font-semibold text-foreground">Stay Updated</h2>
+            <h2 className="font-heading text-2xl font-semibold text-accent">Stay Updated</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Development logs, release dates, and behind-the-scenes updates. No spam.
             </p>

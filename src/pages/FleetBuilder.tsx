@@ -380,7 +380,7 @@ const FleetBuilder = () => {
           </div>
           <div>
             <div className="flex items-center gap-2 h-10">
-              <span className="text-sm font-semibold text-foreground">{totalCost} pts</span>
+              <span className="text-sm font-semibold text-accent">{totalCost} pts</span>
             </div>
             <p className="mt-1 text-[10px] text-muted-foreground">
               Maintenance: {totalMaintenance} ({baseMaintenance} base × {readinessData.maintenance})
@@ -420,7 +420,7 @@ const FleetBuilder = () => {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_380px]">
           {/* Left: Fleet Composition - Group Lanes */}
           <div>
-            <h2 className="font-heading text-lg font-semibold text-foreground mb-2">Fleet Composition</h2>
+            <h2 className="font-heading text-lg font-semibold text-accent mb-2">Fleet Composition</h2>
             {/* Capacity bars */}
             <div className="flex flex-wrap gap-4 mb-4 p-3 rounded border border-border bg-card">
               <div className={`text-xs ${fighterOver ? "text-destructive font-bold" : "text-foreground"}`}>
@@ -504,7 +504,7 @@ const FleetBuilder = () => {
                             className={`flex items-center gap-2 rounded px-2 py-1.5 cursor-grab active:cursor-grabbing transition-opacity ${dragIdx === entry._idx ? "opacity-40" : "hover:bg-muted/50"}`}
                           >
                             <GripVertical className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            <span className="text-xs font-semibold text-foreground flex-1 min-w-0 truncate">{st.name}</span>
+                            <span className="text-xs font-semibold text-accent flex-1 min-w-0 truncate">{st.name}</span>
                             <span className="text-[10px] text-muted-foreground">{st.class}</span>
                             <span className="text-[10px] text-primary font-semibold">{st.point_cost * entry.quantity}pts</span>
                             <div className="flex items-center gap-0.5">
@@ -543,7 +543,7 @@ const FleetBuilder = () => {
           {/* Right: Ship Catalog (scrolling) */}
           <div className="border border-border rounded bg-card">
             <div className="border-b border-border p-3">
-              <h2 className="font-heading text-sm font-semibold text-foreground mb-2">Ship Catalog</h2>
+              <h2 className="font-heading text-sm font-semibold text-accent mb-2">Ship Catalog</h2>
               <Input
                 placeholder="Search ships..."
                 className="h-8 text-xs mb-2"
@@ -598,7 +598,7 @@ const FleetBuilder = () => {
                             className="w-full border border-border rounded p-2 text-left transition-colors hover:border-primary hover:bg-muted/50 group"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-semibold text-foreground">{st.ship_id} {st.name}</span>
+                              <span className="text-xs font-semibold text-accent">{st.ship_id} {st.name}</span>
                               <span className="text-xs font-bold text-primary">{st.point_cost}pts</span>
                             </div>
                             <div className="text-[10px] text-muted-foreground mt-0.5">

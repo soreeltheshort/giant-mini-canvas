@@ -98,7 +98,7 @@ const AdminBattleDebug = () => {
             {battles.length === 0 && <p className="text-muted-foreground">No battles yet.</p>}
             {battles.map(b => (
               <button key={b.id} onClick={() => loadBattle(b)} className="block w-full border border-border p-3 text-left hover:border-primary">
-                <p className="text-sm font-semibold text-foreground">
+                <p className="text-sm font-semibold text-accent">
                   {(b.fleet_a_snapshot_json as any)?.name} vs {(b.fleet_b_snapshot_json as any)?.name}
                 </p>
                 <p className="text-xs text-muted-foreground">Seed: {b.seed} · {new Date(b.created_at).toLocaleString()}</p>
@@ -138,7 +138,7 @@ const AdminBattleDebug = () => {
             <div className="mt-6 grid gap-4 lg:grid-cols-2">
               {/* Timeline */}
               <div className="max-h-[600px] overflow-y-auto border border-border p-3">
-                <h3 className="font-heading text-sm font-semibold text-foreground mb-2">Timeline ({filteredEvents.length} events)</h3>
+                <h3 className="font-heading text-sm font-semibold text-accent mb-2">Timeline ({filteredEvents.length} events)</h3>
                 <div className="space-y-1">
                   {filteredEvents.map(event => {
                     const { summary } = redact(event);
@@ -164,11 +164,11 @@ const AdminBattleDebug = () => {
                   const { summary, detail } = redact(selectedEvent);
                   return (
                     <>
-                      <h3 className="font-heading text-sm font-semibold text-foreground">What happened</h3>
+                      <h3 className="font-heading text-sm font-semibold text-accent">What happened</h3>
                       <p className="mt-1 text-sm text-foreground">{summary}</p>
-                      <h3 className="mt-4 font-heading text-sm font-semibold text-foreground">Why it happened</h3>
+                      <h3 className="mt-4 font-heading text-sm font-semibold text-accent">Why it happened</h3>
                       <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
-                      <h3 className="mt-4 font-heading text-sm font-semibold text-foreground">Raw Payload</h3>
+                      <h3 className="mt-4 font-heading text-sm font-semibold text-accent">Raw Payload</h3>
                       <pre className="mt-1 max-h-48 overflow-auto rounded bg-muted p-2 text-xs text-foreground">
                         {JSON.stringify(selectedEvent.payload_json, null, 2)}
                       </pre>
