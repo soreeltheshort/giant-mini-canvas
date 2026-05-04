@@ -249,6 +249,9 @@ function InlineContextContent({
   combatPointsAvailable,
   onOrdersChanged,
   onSelect,
+  onBuildFacility,
+  playerTreasury,
+  adminPointsAvailable,
 }: {
   mode: GameMode;
   selection: MapSelection;
@@ -265,6 +268,9 @@ function InlineContextContent({
   combatPointsAvailable?: number;
   onOrdersChanged?: () => void;
   onSelect?: (selection: MapSelection) => void;
+  onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
+  playerTreasury?: number;
+  adminPointsAvailable?: number;
 }) {
   const getModeIcon = () => {
     if (selection.type === "news") return <Scroll className="w-3.5 h-3.5" />;
@@ -299,7 +305,13 @@ function InlineContextContent({
         {selection.type === "news" ? (
           <InlineNewsDetail story={news.find((n) => n.id === selection.id)} />
         ) : selection.type === "region" ? (
-          <InlineRegionDetail id={selection.id} gameData={gameData} />
+          <InlineRegionDetail
+            id={selection.id}
+            gameData={gameData}
+            onBuildFacility={onBuildFacility}
+            playerTreasury={playerTreasury}
+            adminPointsAvailable={adminPointsAvailable}
+          />
         ) : selection.type === "army" ? (
           <InlineArmyDetail
             id={selection.id}
