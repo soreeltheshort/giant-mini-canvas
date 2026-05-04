@@ -180,9 +180,9 @@ function getPanelTitle(mode: GameMode, selection: MapSelection): string {
   if (selection.type === "news") return "Dispatch";
   if (selection.type === "region") return "System Detail";
   if (selection.type === "army") return "Fleet Detail";
-  if (selection.type === "production-center") return "Production";
+  if (selection.type === "production-center") return "Economy";
   if (selection.type === "faction") return "Faction Intel";
-  const titles = { diplomacy: "Diplomatic Overview", military: "MILITARY OVERVIEW", production: "Production Overview" };
+  const titles = { diplomacy: "Diplomatic Overview", military: "MILITARY OVERVIEW", production: "ECONOMY OVERVIEW" };
   return titles[mode];
 }
 
@@ -240,7 +240,7 @@ function EmptyState({
     },
     production: {
       icon: Hammer,
-      title: "Production Overview",
+      title: "ECONOMY OVERVIEW",
       lines: [
         "Select a forge or shipyard on the map to manage output.",
         "Construction queues and efficiency reports appear here.",

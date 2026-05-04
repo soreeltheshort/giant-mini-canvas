@@ -262,7 +262,7 @@ export function ProductionOverlay({ open, onClose }: { open: boolean; onClose: (
     <ImperialOverlay
       open={open}
       onClose={onClose}
-      title="Production Management"
+      title="Economy Management"
       subtitle="Imperial Forge · Aurelia Prime Orbit"
       size="standard"
       twoColumn

@@ -11,7 +11,7 @@ interface StrategicMapProps {
 const MODE_OVERLAYS: Record<GameMode, { gridColor: string; label: string }> = {
   diplomacy: { gridColor: "hsl(35 55% 45% / 0.08)", label: "Diplomatic View" },
   military: { gridColor: "hsl(0 65% 38% / 0.06)", label: "Strategic View" },
-  production: { gridColor: "hsl(35 55% 45% / 0.1)", label: "Production View" },
+  production: { gridColor: "hsl(35 55% 45% / 0.1)", label: "Economy View" },
 };
 
 const MARKER_STYLES: Record<MapMarker["type"], { base: string; size: string; shape: string }> = {
