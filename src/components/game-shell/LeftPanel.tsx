@@ -263,7 +263,7 @@ function InlineContextContent({
     if (selection.type === "production-center") return "Economy";
     if (selection.type === "faction") return "Faction Intel";
     const titles = {
-      diplomacy: "Diplomatic Overview",
+      diplomacy: "POLITICAL OVERVIEW",
       military: "MILITARY OVERVIEW",
       production: "ECONOMY OVERVIEW",
     };
