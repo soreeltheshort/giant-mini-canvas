@@ -55,10 +55,11 @@ const PHASE_LABELS: Record<string, string> = {
   movement: "Movement",
   visibility: "Visibility",
   combat: "Combat",
+  ground_combat: "Ground Combat",
   "": "Other",
 };
 
-const PHASE_ORDER = ["summary", "economy", "movement", "visibility", "combat", ""];
+const PHASE_ORDER = ["summary", "economy", "movement", "visibility", "combat", "ground_combat", ""];
 
 const isObjectRecord = (value: unknown): value is Record<string, any> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
