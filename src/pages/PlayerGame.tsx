@@ -685,6 +685,7 @@ const PlayerGame = () => {
   }, [player, toast, submissionIssues]);
 
   const combatPointsAvailable = Math.max(0, (player?.combat_points_remaining ?? 0) - pendingFleetOrderCount);
+  const adminPointsAvailable = Math.max(0, (player?.admin_points_remaining ?? 0) - pendingBuildAdminPoints);
 
   const advanceInit = async () => {
     if (initStep < 3) {
