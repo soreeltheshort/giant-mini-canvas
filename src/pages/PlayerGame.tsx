@@ -774,7 +774,66 @@ const PlayerGame = () => {
     }
   };
 
-  const handleHexTargetPicked = async (hex: { x: number; y: number }) => {
+  /** Undo a build_facility order placed this turn (deletes the player_orders row). */
+  const handleUndoBuildOrder = async (orderId: string) => {
+    if (!player || !game) return;
+    try {
+      await (supabase as any)
+        .from("player_orders")
+        .delete()
+        .eq("id", orderId)
+        .eq("player_id", player.id);
+      toast({ title: "Order Undone", description: "Construction order removed." });
+      refreshOrders();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  /** Queue a cancel-without-refund for an in-progress facility from a previous turn. */
+  const handleCancelInProduction = async (systemId: number, facilityTypeId: string) => {
+    if (!player || !game) return;
+    try {
+      await (supabase as any).from("player_orders").insert({
+        game_id: game.id,
+        player_id: player.id,
+        turn_number: game.turn_number,
+        order_type: "other",
+        order_json: { kind: "cancel_build", system_id: systemId, facility_type_id: facilityTypeId },
+        notes: "",
+      });
+      toast({ title: "Cancellation Queued", description: "Construction will be halted next turn (no refund)." });
+      refreshOrders();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  /** Undo a queued cancel-build order placed this turn. */
+  const handleUndoCancelBuild = async (systemId: number, facilityTypeId: string) => {
+    if (!player || !game) return;
+    try {
+      const { data: rows } = await (supabase as any)
+        .from("player_orders")
+        .select("id, order_json")
+        .eq("game_id", game.id)
+        .eq("player_id", player.id)
+        .eq("turn_number", game.turn_number)
+        .eq("order_type", "other");
+      const target = (rows || []).find(
+        (r: any) =>
+          r.order_json?.kind === "cancel_build" &&
+          Number(r.order_json?.system_id) === systemId &&
+          String(r.order_json?.facility_type_id) === String(facilityTypeId),
+      );
+      if (target) {
+        await (supabase as any).from("player_orders").delete().eq("id", target.id);
+        refreshOrders();
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
     if (!player || !game || !targeting || targeting.mode !== "hex") return;
     if (combatPointsAvailable <= 0) {
       toast({ title: "No combat points", description: "Cancel another fleet order first.", variant: "destructive" });
