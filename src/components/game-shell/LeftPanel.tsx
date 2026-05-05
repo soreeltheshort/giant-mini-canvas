@@ -734,6 +734,17 @@ function InlineRegionDetail({
             <p className="text-[10px] text-muted-foreground italic">No eligible facilities to build at this system.</p>
           </ImperialCard>
         )}
+
+        <Dialog open={shipDialogOpen} onOpenChange={setShipDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Build Ships — {realSys.system_name}</DialogTitle>
+            </DialogHeader>
+            <div className="text-xs text-muted-foreground italic py-8 text-center">
+              Shipyard production interface coming soon.
+            </div>
+          </DialogContent>
+        </Dialog>
       </>
     );
   }
