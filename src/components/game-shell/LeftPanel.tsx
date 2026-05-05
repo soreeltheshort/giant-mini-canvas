@@ -57,6 +57,16 @@ interface LeftPanelProps {
     onSelect?: (selection: MapSelection) => void;
     /** Submit a build_facility order for the selected system. */
     onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
+    /** Undo a build_facility order placed this turn. */
+    onUndoBuildOrder?: (orderId: string) => void;
+    /** Queue a cancel-without-refund for an in-progress facility from a previous turn. */
+    onCancelInProduction?: (systemId: number, facilityTypeId: string) => void;
+    /** Undo a queued cancel-build order placed this turn. */
+    onUndoCancelBuild?: (systemId: number, facilityTypeId: string) => void;
+    /** Pending build orders this turn keyed by system_id. */
+    pendingBuildOrders?: Map<number, Array<{ orderId: string; facilityTypeId: string; cost: number; maintenance: number }>>;
+    /** Pending cancel-build orders this turn keyed by system_id. */
+    pendingCancelBuildOrders?: Map<number, Set<string>>;
     /** Player's current treasury, used to gate the Commission button. */
     playerTreasury?: number;
     /** Player's admin points still available this turn (gates Commission). */
