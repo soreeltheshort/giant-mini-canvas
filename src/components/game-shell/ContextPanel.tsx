@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { X, Landmark, Swords, Hammer, Scroll, Globe2, Sword, ChevronRight } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { GameMode, MapSelection, NewsStory } from "./gameShellTypes";
 import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTypes";
 import { ImperialCard } from "./ImperialCard";
