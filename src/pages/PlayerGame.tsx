@@ -1009,6 +1009,8 @@ const PlayerGame = () => {
             adminPointsRemaining: player?.admin_points_remaining ?? 3,
             combatPointsRemaining: player?.combat_points_remaining ?? 3,
             combatPointsPending: pendingFleetOrderCount,
+            adminPointsPending: pendingBuildAdminPoints,
+            costsPending: pendingBuildMaintenance,
           }}
           news={rebasedNews}
           activeMode={activeMode}
@@ -1017,6 +1019,9 @@ const PlayerGame = () => {
           ordersSubmitted={!!player?.orders_locked}
           onSubmitOrders={submitOrders}
           submissionIssues={submissionIssues}
+          onBuildFacility={handleBuildFacility}
+          playerTreasury={player?.treasury ?? 0}
+          adminPointsAvailable={adminPointsAvailable}
           inlineContext={{
             mode: activeMode,
             selection,
@@ -1036,6 +1041,9 @@ const PlayerGame = () => {
             combatPointsAvailable,
             onOrdersChanged: refreshOrders,
             onSelect: setSelection,
+            onBuildFacility: handleBuildFacility,
+            playerTreasury: player?.treasury ?? 0,
+            adminPointsAvailable,
           }}
           fullWidth={isMobile}
         />
