@@ -138,10 +138,11 @@ export function processNextTurn(
 
   // --- Step 0: Cost of new production is deducted when items are added (handled in UI) ---
 
-  // --- Step 1: Decrement turns_remaining ---
-  let inProd = (p.facilities_in_production || []).map((fip) => ({
+  // --- Step 1: Decrement turns_remaining for the head of the build queue only.
+  // Builds are sequential: subsequent items wait until the one ahead completes.
+  let inProd = (p.facilities_in_production || []).map((fip, idx) => ({
     ...fip,
-    turns_remaining: fip.turns_remaining - 1,
+    turns_remaining: idx === 0 ? fip.turns_remaining - 1 : fip.turns_remaining,
   }));
 
   // --- Step 2: Complete facilities at 0 turns ---
