@@ -1132,6 +1132,11 @@ const PlayerGame = () => {
             onOrdersChanged: refreshOrders,
             onSelect: setSelection,
             onBuildFacility: handleBuildFacility,
+            onUndoBuildOrder: handleUndoBuildOrder,
+            onCancelInProduction: handleCancelInProduction,
+            onUndoCancelBuild: handleUndoCancelBuild,
+            pendingBuildOrders,
+            pendingCancelBuildOrders,
             playerTreasury: player?.treasury ?? 0,
             adminPointsAvailable,
           }}
