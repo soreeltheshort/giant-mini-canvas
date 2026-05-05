@@ -673,6 +673,21 @@ function InlineRegionDetail({
           </ImperialCard>
         )}
 
+        <ImperialCard title="Shipyard">
+          <button
+            onClick={() => setShipDialogOpen(true)}
+            disabled={!hasShipyard}
+            className={`w-full py-1.5 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
+              ${hasShipyard
+                ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+              }`}
+            title={hasShipyard ? "Build ships at this shipyard" : "Requires a shipyard facility"}
+          >
+            {hasShipyard ? "Build Ships" : "No Shipyard"}
+          </button>
+        </ImperialCard>
+
         {buildable.length > 0 ? (
           <ImperialCard title="Build New Facility">
             <div className="space-y-1.5">
