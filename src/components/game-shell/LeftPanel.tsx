@@ -590,8 +590,8 @@ function InlineRegionDetail({
             <Row label="Resources" value={`${realSys.resources}`} />
           </div>
         </ImperialCard>
-        {facilityNames.length > 0 && (
-          <ImperialCard title="Facilities">
+        <ImperialCard title="Facilities">
+          {facilityNames.length > 0 ? (
             <div className="space-y-1.5">
               {facilityNames.map((f, i) => (
                 <div
@@ -605,8 +605,11 @@ function InlineRegionDetail({
                 </div>
               ))}
             </div>
-          </ImperialCard>
-        )}
+          ) : (
+            <p className="text-[10px] text-muted-foreground italic">No facilities built at this system.</p>
+          )}
+        </ImperialCard>
+
 
         {((realSys.facilities_in_production || []).length > 0 || sysPending.length > 0) && (
           <ImperialCard title="Production Queue">
