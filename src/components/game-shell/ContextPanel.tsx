@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { X, Landmark, Swords, Hammer, Scroll, Globe2, Sword, ChevronRight } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { GameMode, MapSelection, NewsStory } from "./gameShellTypes";
 import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTypes";
 import { ImperialCard } from "./ImperialCard";
@@ -444,6 +446,11 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
     // Calculate buildable facilities (always available — facility commissioning costs 1 admin point)
     const buildableFacilities = getBuildableFacilities(realSys, gameData!);
     const adminPointsLeft = adminPointsAvailable ?? 0;
+    const hasShipyard = (realSys.facilities || []).some(f => {
+      const ft = gameData!.facilityTypes.find(t => t.facility_type_id === f.facility_type_id);
+      return (ft?.name || "").toLowerCase().includes("shipyard");
+    });
+    const [shipDialogOpen, setShipDialogOpen] = useState(false);
 
     return (
       <>
@@ -496,6 +503,21 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
           </ImperialCard>
         )}
 
+        <ImperialCard title="Shipyard">
+          <button
+            onClick={() => setShipDialogOpen(true)}
+            disabled={!hasShipyard}
+            className={`w-full py-1.5 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
+              ${hasShipyard
+                ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+              }`}
+            title={hasShipyard ? "Build ships at this shipyard" : "Requires a shipyard facility"}
+          >
+            {hasShipyard ? "Build Ships" : "No Shipyard"}
+          </button>
+        </ImperialCard>
+
         {buildableFacilities.length > 0 ? (
           <ImperialCard title="Build New Facility">
             <div className="space-y-1.5">
@@ -547,6 +569,17 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
             <StrikecraftDisplay system={realSys} gameData={gameData!} />
           </div>
         </ImperialCard>
+
+        <Dialog open={shipDialogOpen} onOpenChange={setShipDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Build Ships — {realSys.system_name}</DialogTitle>
+            </DialogHeader>
+            <div className="text-xs text-muted-foreground italic py-8 text-center">
+              Shipyard production interface coming soon.
+            </div>
+          </DialogContent>
+        </Dialog>
       </>
     );
   }

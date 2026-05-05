@@ -13,6 +13,8 @@ import {
   Globe2,
   Sword,
 } from "lucide-react";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { GameMode, GlobalStats, NewsStory, MapSelection } from "./gameShellTypes";
 import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTypes";
 import { ProgressBar } from "./ProgressBar";
@@ -568,6 +570,11 @@ function InlineRegionDetail({
       : [];
     const adminPointsLeft = adminPointsAvailable ?? 0;
     const ftFull = gameData?.facilityTypesFull || [];
+    const hasShipyard = (realSys.facilities || []).some((f) => {
+      const ft = gameData?.facilityTypes.find((t) => t.facility_type_id === f.facility_type_id);
+      return (ft?.name || "").toLowerCase().includes("shipyard");
+    });
+    const [shipDialogOpen, setShipDialogOpen] = useState(false);
     return (
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
@@ -666,6 +673,21 @@ function InlineRegionDetail({
           </ImperialCard>
         )}
 
+        <ImperialCard title="Shipyard">
+          <button
+            onClick={() => setShipDialogOpen(true)}
+            disabled={!hasShipyard}
+            className={`w-full py-1.5 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
+              ${hasShipyard
+                ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+              }`}
+            title={hasShipyard ? "Build ships at this shipyard" : "Requires a shipyard facility"}
+          >
+            {hasShipyard ? "Build Ships" : "No Shipyard"}
+          </button>
+        </ImperialCard>
+
         {buildable.length > 0 ? (
           <ImperialCard title="Build New Facility">
             <div className="space-y-1.5">
@@ -712,6 +734,17 @@ function InlineRegionDetail({
             <p className="text-[10px] text-muted-foreground italic">No eligible facilities to build at this system.</p>
           </ImperialCard>
         )}
+
+        <Dialog open={shipDialogOpen} onOpenChange={setShipDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Build Ships — {realSys.system_name}</DialogTitle>
+            </DialogHeader>
+            <div className="text-xs text-muted-foreground italic py-8 text-center">
+              Shipyard production interface coming soon.
+            </div>
+          </DialogContent>
+        </Dialog>
       </>
     );
   }
