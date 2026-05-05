@@ -35,6 +35,63 @@ export const economyPhase: Phase = {
   async run(ctx: TurnContext) {
     const { supabase, mapState, facilityTypes, shipTypes, gameId, currentTurn } = ctx;
 
+    // 0. Apply queued cancel_build orders (no refund) — strip the matching
+    //    facility from facilities_in_production BEFORE production advances.
+    const cancelBuildOrders = ctx.orders.filter(o => o.order_type === "other" && o.order_json?.kind === "cancel_build");
+    for (const order of cancelBuildOrders) {
+      const sysId = Number(order.order_json?.system_id);
+      const ftId = order.order_json?.facility_type_id;
+      if (!Number.isFinite(sysId) || !ftId) continue;
+      const sys = mapState.systems.get(sysId);
+      if (!sys) continue;
+      const list = [...(sys.facilities_in_production || [])];
+      const idx = list.findIndex(f => String(f.facility_type_id) === String(ftId));
+      if (idx >= 0) {
+        const removed = list.splice(idx, 1)[0];
+        mapState.systems.set(sysId, { ...sys, facilities_in_production: list });
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "facility_build_cancelled",
+          message: `${sys.system_name}: cancelled in-production facility (no refund)`,
+          details_json: { system_id: sysId, facility_type_id: ftId, turns_remaining_at_cancel: removed.turns_remaining },
+        });
+      }
+    }
+
+    // 0b. Apply queued build_facility orders — append to facilities_in_production
+    //     with the facility type's full turns_to_build. Upfront ₡ cost is added
+    //     to the owning player's maintenance accumulator (charged this turn).
+    const buildFacilityOrders = ctx.orders.filter(o => o.order_type === "build_facility");
+    for (const order of buildFacilityOrders) {
+      const sysId = Number(order.order_json?.system_id);
+      const ftId = order.order_json?.facility_type_id;
+      if (!Number.isFinite(sysId) || !ftId) continue;
+      const sys = mapState.systems.get(sysId);
+      if (!sys) continue;
+      const ft = facilityTypes.find(t => String(t.id) === String(ftId));
+      if (!ft) continue;
+      const turns = Math.max(1, Number(ft.turns_to_build) || 1);
+      const list = [...(sys.facilities_in_production || []), {
+        facility_type_id: ftId,
+        turns_remaining: turns,
+      }];
+      mapState.systems.set(sysId, { ...sys, facilities_in_production: list });
+
+      const slot = ownerToSlot(sys.owner);
+      const upfront = Math.max(0, Number(ft.cost) || 0);
+      if (slot !== undefined && upfront > 0) {
+        const econ = ctx.playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+        econ.maintenance += upfront;
+        ctx.playerEcon.set(slot, econ);
+      }
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "economy",
+        log_type: "facility_build_started",
+        message: `${sys.system_name}: started building ${ft.name} (${turns}T, ₡${upfront})`,
+        details_json: { system_id: sysId, facility_type_id: ftId, turns_to_build: turns, cost: upfront },
+      });
+    }
+
     // 1. Per-system economics
     const systems = Array.from(mapState.systems.values());
     const eligible = systems.filter(
