@@ -1019,9 +1019,6 @@ const PlayerGame = () => {
           ordersSubmitted={!!player?.orders_locked}
           onSubmitOrders={submitOrders}
           submissionIssues={submissionIssues}
-          onBuildFacility={handleBuildFacility}
-          playerTreasury={player?.treasury ?? 0}
-          adminPointsAvailable={adminPointsAvailable}
           inlineContext={{
             mode: activeMode,
             selection,
