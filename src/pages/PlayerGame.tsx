@@ -343,9 +343,17 @@ const PlayerGame = () => {
   const [pendingFleetOrders, setPendingFleetOrders] = useState<
     Map<string, { kind: "move" | "attack"; targetFleetId?: string; targetSystemId?: number; destX?: number; destY?: number }>
   >(new Map());
-  // Pending build_facility orders (each costs 1 admin point + adds maintenance to upcoming costs)
+  // Pending build_facility orders (each costs 1 admin point + upfront cost ₡)
   const [pendingBuildAdminPoints, setPendingBuildAdminPoints] = useState(0);
-  const [pendingBuildMaintenance, setPendingBuildMaintenance] = useState(0);
+  const [pendingBuildCost, setPendingBuildCost] = useState(0);
+  /** Pending build orders submitted this turn, keyed by system_id. */
+  const [pendingBuildOrders, setPendingBuildOrders] = useState<
+    Map<number, Array<{ orderId: string; facilityTypeId: string; cost: number; maintenance: number }>>
+  >(new Map());
+  /** Pending cancel-build orders submitted this turn, keyed by system_id. */
+  const [pendingCancelBuildOrders, setPendingCancelBuildOrders] = useState<
+    Map<number, Set<string>>
+  >(new Map());
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
   /** Open issues that block turn submission (e.g. fleet group overcapacity). */
   const [submissionIssues, setSubmissionIssues] = useState<string[]>([]);
@@ -446,7 +454,7 @@ const PlayerGame = () => {
     (async () => {
       const { data: orders } = await (supabase as any)
         .from("player_orders")
-        .select("order_type, order_json")
+        .select("id, order_type, order_json")
         .eq("game_id", game.id)
         .eq("player_id", player.id)
         .eq("turn_number", game.turn_number)
@@ -455,10 +463,12 @@ const PlayerGame = () => {
       const map = new Map<string, { kind: "move" | "attack"; targetFleetId?: string; targetSystemId?: number; destX?: number; destY?: number }>();
       let pointsSpent = 0;
       let buildAdmin = 0;
-      let buildMaint = 0;
-      const facilityMaintLookup = new Map<string, number>();
+      let buildCost = 0;
+      const buildBySys = new Map<number, Array<{ orderId: string; facilityTypeId: string; cost: number; maintenance: number }>>();
+      const cancelBySys = new Map<number, Set<string>>();
+      const facilityCostLookup = new Map<string, { cost: number; maintenance: number }>();
       for (const ft of dbFacilityTypesFull) {
-        facilityMaintLookup.set(ft.facility_type_id, ft.maintenance ?? 0);
+        facilityCostLookup.set(ft.facility_type_id, { cost: ft.cost ?? 0, maintenance: ft.maintenance ?? 0 });
       }
       for (const o of (orders ?? []) as any[]) {
         if (o.order_type === "fleet_move" && o.order_json?.fleet_id) {
@@ -484,13 +494,35 @@ const PlayerGame = () => {
           pointsSpent += 1;
         } else if (o.order_type === "build_facility" && o.order_json?.facility_type_id) {
           buildAdmin += 1;
-          buildMaint += facilityMaintLookup.get(o.order_json.facility_type_id) ?? 0;
+          const lookup = facilityCostLookup.get(o.order_json.facility_type_id) || { cost: 0, maintenance: 0 };
+          buildCost += lookup.cost;
+          const sysId = Number(o.order_json.system_id);
+          if (!Number.isNaN(sysId)) {
+            const arr = buildBySys.get(sysId) || [];
+            arr.push({
+              orderId: o.id,
+              facilityTypeId: o.order_json.facility_type_id,
+              cost: lookup.cost,
+              maintenance: lookup.maintenance,
+            });
+            buildBySys.set(sysId, arr);
+          }
+        } else if (o.order_type === "other" && o.order_json?.kind === "cancel_build") {
+          const sysId = Number(o.order_json.system_id);
+          const fid = o.order_json.facility_type_id;
+          if (!Number.isNaN(sysId) && fid) {
+            const set = cancelBySys.get(sysId) || new Set<string>();
+            set.add(String(fid));
+            cancelBySys.set(sysId, set);
+          }
         }
       }
       setPendingFleetOrders(map);
       setPendingFleetOrderCount(pointsSpent);
       setPendingBuildAdminPoints(buildAdmin);
-      setPendingBuildMaintenance(buildMaint);
+      setPendingBuildCost(buildCost);
+      setPendingBuildOrders(buildBySys);
+      setPendingCancelBuildOrders(cancelBySys);
     })();
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number, orderRefreshTick, dbFacilityTypesFull]);
@@ -737,6 +769,67 @@ const PlayerGame = () => {
       playOrderPlaced();
       toast({ title: "Order Submitted", description: "Facility construction order queued." });
       refreshOrders();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  /** Undo a build_facility order placed this turn (deletes the player_orders row). */
+  const handleUndoBuildOrder = async (orderId: string) => {
+    if (!player || !game) return;
+    try {
+      await (supabase as any)
+        .from("player_orders")
+        .delete()
+        .eq("id", orderId)
+        .eq("player_id", player.id);
+      toast({ title: "Order Undone", description: "Construction order removed." });
+      refreshOrders();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  /** Queue a cancel-without-refund for an in-progress facility from a previous turn. */
+  const handleCancelInProduction = async (systemId: number, facilityTypeId: string) => {
+    if (!player || !game) return;
+    try {
+      await (supabase as any).from("player_orders").insert({
+        game_id: game.id,
+        player_id: player.id,
+        turn_number: game.turn_number,
+        order_type: "other",
+        order_json: { kind: "cancel_build", system_id: systemId, facility_type_id: facilityTypeId },
+        notes: "",
+      });
+      toast({ title: "Cancellation Queued", description: "Construction will be halted next turn (no refund)." });
+      refreshOrders();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  /** Undo a queued cancel-build order placed this turn. */
+  const handleUndoCancelBuild = async (systemId: number, facilityTypeId: string) => {
+    if (!player || !game) return;
+    try {
+      const { data: rows } = await (supabase as any)
+        .from("player_orders")
+        .select("id, order_json")
+        .eq("game_id", game.id)
+        .eq("player_id", player.id)
+        .eq("turn_number", game.turn_number)
+        .eq("order_type", "other");
+      const target = (rows || []).find(
+        (r: any) =>
+          r.order_json?.kind === "cancel_build" &&
+          Number(r.order_json?.system_id) === systemId &&
+          String(r.order_json?.facility_type_id) === String(facilityTypeId),
+      );
+      if (target) {
+        await (supabase as any).from("player_orders").delete().eq("id", target.id);
+        refreshOrders();
+      }
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
@@ -1010,7 +1103,7 @@ const PlayerGame = () => {
             combatPointsRemaining: player?.combat_points_remaining ?? 3,
             combatPointsPending: pendingFleetOrderCount,
             adminPointsPending: pendingBuildAdminPoints,
-            costsPending: pendingBuildMaintenance,
+            costsPending: pendingBuildCost,
           }}
           news={rebasedNews}
           activeMode={activeMode}
@@ -1039,6 +1132,11 @@ const PlayerGame = () => {
             onOrdersChanged: refreshOrders,
             onSelect: setSelection,
             onBuildFacility: handleBuildFacility,
+            onUndoBuildOrder: handleUndoBuildOrder,
+            onCancelInProduction: handleCancelInProduction,
+            onUndoCancelBuild: handleUndoCancelBuild,
+            pendingBuildOrders,
+            pendingCancelBuildOrders,
             playerTreasury: player?.treasury ?? 0,
             adminPointsAvailable,
           }}
