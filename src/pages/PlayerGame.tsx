@@ -1042,7 +1042,7 @@ const PlayerGame = () => {
             combatPointsRemaining: player?.combat_points_remaining ?? 3,
             combatPointsPending: pendingFleetOrderCount,
             adminPointsPending: pendingBuildAdminPoints,
-            costsPending: pendingBuildMaintenance,
+            costsPending: pendingBuildCost,
           }}
           news={rebasedNews}
           activeMode={activeMode}
