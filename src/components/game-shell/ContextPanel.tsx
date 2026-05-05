@@ -569,6 +569,17 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
             <StrikecraftDisplay system={realSys} gameData={gameData!} />
           </div>
         </ImperialCard>
+
+        <Dialog open={shipDialogOpen} onOpenChange={setShipDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Build Ships — {realSys.system_name}</DialogTitle>
+            </DialogHeader>
+            <div className="text-xs text-muted-foreground italic py-8 text-center">
+              Shipyard production interface coming soon.
+            </div>
+          </DialogContent>
+        </Dialog>
       </>
     );
   }
