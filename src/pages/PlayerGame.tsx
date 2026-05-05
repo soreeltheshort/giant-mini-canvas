@@ -450,10 +450,16 @@ const PlayerGame = () => {
         .eq("game_id", game.id)
         .eq("player_id", player.id)
         .eq("turn_number", game.turn_number)
-        .in("order_type", ["fleet_move", "other", "set_readiness"]);
+        .in("order_type", ["fleet_move", "other", "set_readiness", "build_facility"]);
       if (cancelled) return;
       const map = new Map<string, { kind: "move" | "attack"; targetFleetId?: string; targetSystemId?: number; destX?: number; destY?: number }>();
       let pointsSpent = 0;
+      let buildAdmin = 0;
+      let buildMaint = 0;
+      const facilityMaintLookup = new Map<string, number>();
+      for (const ft of dbFacilityTypesFull) {
+        facilityMaintLookup.set(ft.facility_type_id, ft.maintenance ?? 0);
+      }
       for (const o of (orders ?? []) as any[]) {
         if (o.order_type === "fleet_move" && o.order_json?.fleet_id) {
           map.set(o.order_json.fleet_id, {
@@ -476,13 +482,18 @@ const PlayerGame = () => {
         } else if (o.order_type === "set_readiness") {
           // Readiness changes also cost 1 combat point per fleet
           pointsSpent += 1;
+        } else if (o.order_type === "build_facility" && o.order_json?.facility_type_id) {
+          buildAdmin += 1;
+          buildMaint += facilityMaintLookup.get(o.order_json.facility_type_id) ?? 0;
         }
       }
       setPendingFleetOrders(map);
       setPendingFleetOrderCount(pointsSpent);
+      setPendingBuildAdminPoints(buildAdmin);
+      setPendingBuildMaintenance(buildMaint);
     })();
     return () => { cancelled = true; };
-  }, [player?.id, game?.id, game?.turn_number, orderRefreshTick]);
+  }, [player?.id, game?.id, game?.turn_number, orderRefreshTick, dbFacilityTypesFull]);
 
   // Visibility hooks must run before the submission-issues effect (which
   // checks attack targets against currently visible hexes). Rules of Hooks:
@@ -674,6 +685,7 @@ const PlayerGame = () => {
   }, [player, toast, submissionIssues]);
 
   const combatPointsAvailable = Math.max(0, (player?.combat_points_remaining ?? 0) - pendingFleetOrderCount);
+  const adminPointsAvailable = Math.max(0, (player?.admin_points_remaining ?? 0) - pendingBuildAdminPoints);
 
   const advanceInit = async () => {
     if (initStep < 3) {
@@ -997,6 +1009,8 @@ const PlayerGame = () => {
             adminPointsRemaining: player?.admin_points_remaining ?? 3,
             combatPointsRemaining: player?.combat_points_remaining ?? 3,
             combatPointsPending: pendingFleetOrderCount,
+            adminPointsPending: pendingBuildAdminPoints,
+            costsPending: pendingBuildMaintenance,
           }}
           news={rebasedNews}
           activeMode={activeMode}
@@ -1024,6 +1038,9 @@ const PlayerGame = () => {
             combatPointsAvailable,
             onOrdersChanged: refreshOrders,
             onSelect: setSelection,
+            onBuildFacility: handleBuildFacility,
+            playerTreasury: player?.treasury ?? 0,
+            adminPointsAvailable,
           }}
           fullWidth={isMobile}
         />
