@@ -260,6 +260,11 @@ function InlineContextContent({
   onOrdersChanged,
   onSelect,
   onBuildFacility,
+  onUndoBuildOrder,
+  onCancelInProduction,
+  onUndoCancelBuild,
+  pendingBuildOrders,
+  pendingCancelBuildOrders,
   playerTreasury,
   adminPointsAvailable,
 }: {
@@ -279,6 +284,11 @@ function InlineContextContent({
   onOrdersChanged?: () => void;
   onSelect?: (selection: MapSelection) => void;
   onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
+  onUndoBuildOrder?: (orderId: string) => void;
+  onCancelInProduction?: (systemId: number, facilityTypeId: string) => void;
+  onUndoCancelBuild?: (systemId: number, facilityTypeId: string) => void;
+  pendingBuildOrders?: Map<number, Array<{ orderId: string; facilityTypeId: string; cost: number; maintenance: number }>>;
+  pendingCancelBuildOrders?: Map<number, Set<string>>;
   playerTreasury?: number;
   adminPointsAvailable?: number;
 }) {
