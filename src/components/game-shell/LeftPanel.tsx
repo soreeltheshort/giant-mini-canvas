@@ -611,64 +611,73 @@ function InlineRegionDetail({
         {((realSys.facilities_in_production || []).length > 0 || sysPending.length > 0) && (
           <ImperialCard title="Production Queue">
             <div className="space-y-1.5">
-              {(realSys.facilities_in_production || []).map((p, i) => {
-                const ft = gameData!.facilityTypes.find((t) => t.facility_type_id === p.facility_type_id);
-                const queuedCancel = sysCancels.has(String(p.facility_type_id));
-                return (
-                  <div
-                    key={`fip-${i}`}
-                    className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
-                  >
-                    <span className={queuedCancel ? "line-through text-muted-foreground" : ""}>
-                      {ft?.icon || "🏭"} {ft?.name || p.facility_type_id}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">{p.turns_remaining}T</span>
-                      {queuedCancel ? (
+              {(() => {
+                const fipList = realSys.facilities_in_production || [];
+                let cumulative = 0;
+                const fipNodes = fipList.map((p, i) => {
+                  const ft = gameData!.facilityTypes.find((t) => t.facility_type_id === p.facility_type_id);
+                  const queuedCancel = sysCancels.has(String(p.facility_type_id));
+                  cumulative += p.turns_remaining;
+                  const displayTurns = cumulative;
+                  return (
+                    <div
+                      key={`fip-${i}`}
+                      className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
+                    >
+                      <span className={queuedCancel ? "line-through text-muted-foreground" : ""}>
+                        {ft?.icon || "🏭"} {ft?.name || p.facility_type_id}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">{displayTurns}T</span>
+                        {queuedCancel ? (
+                          <button
+                            onClick={() => onUndoCancelBuild?.(realSys.system_id, p.facility_type_id)}
+                            className="text-[9px] uppercase tracking-wider text-bronze hover:text-bronze-dark"
+                            title="Undo cancellation"
+                          >
+                            Undo
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onCancelInProduction?.(realSys.system_id, p.facility_type_id)}
+                            className="text-[9px] uppercase tracking-wider text-crimson hover:text-crimson-light"
+                            title="Cancel without refund"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+                const pendingNodes = sysPending.map((po, i) => {
+                  const ft = ftFull.find((t) => t.facility_type_id === po.facilityTypeId);
+                  const buildTime = ft?.turns_to_build ?? 1;
+                  cumulative += buildTime;
+                  return (
+                    <div
+                      key={`pen-${i}`}
+                      className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
+                    >
+                      <span>
+                        {ft?.icon || "🏭"} {ft?.name || po.facilityTypeId}
+                        <span className="ml-1 text-[9px] text-crimson uppercase tracking-wider">New</span>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">{cumulative}T</span>
                         <button
-                          onClick={() => onUndoCancelBuild?.(realSys.system_id, p.facility_type_id)}
+                          onClick={() => onUndoBuildOrder?.(po.orderId)}
                           className="text-[9px] uppercase tracking-wider text-bronze hover:text-bronze-dark"
-                          title="Undo cancellation"
+                          title="Undo this order"
                         >
                           Undo
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => onCancelInProduction?.(realSys.system_id, p.facility_type_id)}
-                          className="text-[9px] uppercase tracking-wider text-crimson hover:text-crimson-light"
-                          title="Cancel without refund"
-                        >
-                          Cancel
-                        </button>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-              {sysPending.map((po, i) => {
-                const ft = ftFull.find((t) => t.facility_type_id === po.facilityTypeId);
-                return (
-                  <div
-                    key={`pen-${i}`}
-                    className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
-                  >
-                    <span>
-                      {ft?.icon || "🏭"} {ft?.name || po.facilityTypeId}
-                      <span className="ml-1 text-[9px] text-crimson uppercase tracking-wider">New</span>
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">{ft?.turns_to_build ?? 1}T</span>
-                      <button
-                        onClick={() => onUndoBuildOrder?.(po.orderId)}
-                        className="text-[9px] uppercase tracking-wider text-bronze hover:text-bronze-dark"
-                        title="Undo this order"
-                      >
-                        Undo
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+                return [...fipNodes, ...pendingNodes];
+              })()}
             </div>
           </ImperialCard>
         )}
