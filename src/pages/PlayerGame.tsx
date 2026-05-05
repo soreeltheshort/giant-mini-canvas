@@ -454,7 +454,7 @@ const PlayerGame = () => {
     (async () => {
       const { data: orders } = await (supabase as any)
         .from("player_orders")
-        .select("order_type, order_json")
+        .select("id, order_type, order_json")
         .eq("game_id", game.id)
         .eq("player_id", player.id)
         .eq("turn_number", game.turn_number)
@@ -463,10 +463,12 @@ const PlayerGame = () => {
       const map = new Map<string, { kind: "move" | "attack"; targetFleetId?: string; targetSystemId?: number; destX?: number; destY?: number }>();
       let pointsSpent = 0;
       let buildAdmin = 0;
-      let buildMaint = 0;
-      const facilityMaintLookup = new Map<string, number>();
+      let buildCost = 0;
+      const buildBySys = new Map<number, Array<{ orderId: string; facilityTypeId: string; cost: number; maintenance: number }>>();
+      const cancelBySys = new Map<number, Set<string>>();
+      const facilityCostLookup = new Map<string, { cost: number; maintenance: number }>();
       for (const ft of dbFacilityTypesFull) {
-        facilityMaintLookup.set(ft.facility_type_id, ft.maintenance ?? 0);
+        facilityCostLookup.set(ft.facility_type_id, { cost: ft.cost ?? 0, maintenance: ft.maintenance ?? 0 });
       }
       for (const o of (orders ?? []) as any[]) {
         if (o.order_type === "fleet_move" && o.order_json?.fleet_id) {
@@ -492,13 +494,36 @@ const PlayerGame = () => {
           pointsSpent += 1;
         } else if (o.order_type === "build_facility" && o.order_json?.facility_type_id) {
           buildAdmin += 1;
-          buildMaint += facilityMaintLookup.get(o.order_json.facility_type_id) ?? 0;
+          const lookup = facilityCostLookup.get(o.order_json.facility_type_id) || { cost: 0, maintenance: 0 };
+          buildCost += lookup.cost;
+          const sysId = Number(o.order_json.system_id);
+          if (!Number.isNaN(sysId)) {
+            const arr = buildBySys.get(sysId) || [];
+            arr.push({
+              orderId: o.id,
+              facilityTypeId: o.order_json.facility_type_id,
+              cost: lookup.cost,
+              maintenance: lookup.maintenance,
+            });
+            buildBySys.set(sysId, arr);
+          }
+        } else if (o.order_type === "other" && o.order_json?.kind === "cancel_build") {
+          buildAdmin += 1;
+          const sysId = Number(o.order_json.system_id);
+          const fid = o.order_json.facility_type_id;
+          if (!Number.isNaN(sysId) && fid) {
+            const set = cancelBySys.get(sysId) || new Set<string>();
+            set.add(String(fid));
+            cancelBySys.set(sysId, set);
+          }
         }
       }
       setPendingFleetOrders(map);
       setPendingFleetOrderCount(pointsSpent);
       setPendingBuildAdminPoints(buildAdmin);
-      setPendingBuildMaintenance(buildMaint);
+      setPendingBuildCost(buildCost);
+      setPendingBuildOrders(buildBySys);
+      setPendingCancelBuildOrders(cancelBySys);
     })();
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number, orderRefreshTick, dbFacilityTypesFull]);
