@@ -508,7 +508,6 @@ const PlayerGame = () => {
             buildBySys.set(sysId, arr);
           }
         } else if (o.order_type === "other" && o.order_json?.kind === "cancel_build") {
-          buildAdmin += 1;
           const sysId = Number(o.order_json.system_id);
           const fid = o.order_json.facility_type_id;
           if (!Number.isNaN(sysId) && fid) {
