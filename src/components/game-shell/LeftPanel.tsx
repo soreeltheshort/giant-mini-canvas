@@ -769,6 +769,7 @@ interface InlineBuildable {
 function getBuildableFacilitiesForSystem(
   system: import("@/lib/mapTypes").SystemData,
   gameData: GameMapData,
+  pendingFacilityTypeIds: string[] = [],
 ): InlineBuildable[] {
   const ftFull = gameData.facilityTypesFull || [];
   const builtFacilities = system.facilities || [];
@@ -777,9 +778,14 @@ function getBuildableFacilitiesForSystem(
   for (const f of builtFacilities) builtMap.set(f.facility_type_id, (builtMap.get(f.facility_type_id) || 0) + f.quantity);
   const prodMap = new Map<string, number>();
   for (const p of inProduction) prodMap.set(p.facility_type_id, (prodMap.get(p.facility_type_id) || 0) + 1);
+  const pendingMap = new Map<string, number>();
+  for (const fid of pendingFacilityTypeIds) pendingMap.set(fid, (pendingMap.get(fid) || 0) + 1);
   const result: InlineBuildable[] = [];
   for (const ft of ftFull) {
-    const builtCount = (builtMap.get(ft.facility_type_id) || 0) + (prodMap.get(ft.facility_type_id) || 0);
+    const builtCount =
+      (builtMap.get(ft.facility_type_id) || 0) +
+      (prodMap.get(ft.facility_type_id) || 0) +
+      (pendingMap.get(ft.facility_type_id) || 0);
     if (ft.max_per_system > 0 && builtCount >= ft.max_per_system) continue;
     if (ft.consumed_facility_id) {
       const prereqCount = builtMap.get(ft.consumed_facility_id) || 0;
