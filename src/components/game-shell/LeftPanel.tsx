@@ -329,6 +329,11 @@ function InlineContextContent({
             id={selection.id}
             gameData={gameData}
             onBuildFacility={onBuildFacility}
+            onUndoBuildOrder={onUndoBuildOrder}
+            onCancelInProduction={onCancelInProduction}
+            onUndoCancelBuild={onUndoCancelBuild}
+            pendingBuildOrders={pendingBuildOrders}
+            pendingCancelBuildOrders={pendingCancelBuildOrders}
             playerTreasury={playerTreasury}
             adminPointsAvailable={adminPointsAvailable}
           />
