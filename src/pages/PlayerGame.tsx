@@ -834,6 +834,8 @@ const PlayerGame = () => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
   };
+
+  const handleHexTargetPicked = async (hex: { x: number; y: number }) => {
     if (!player || !game || !targeting || targeting.mode !== "hex") return;
     if (combatPointsAvailable <= 0) {
       toast({ title: "No combat points", description: "Cancel another fleet order first.", variant: "destructive" });
