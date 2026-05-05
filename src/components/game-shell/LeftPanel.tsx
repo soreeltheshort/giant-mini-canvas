@@ -527,10 +527,26 @@ function InlineEmptyState({
   );
 }
 
-function InlineRegionDetail({ id, gameData, onBuildFacility, playerTreasury, adminPointsAvailable }: {
+function InlineRegionDetail({
+  id,
+  gameData,
+  onBuildFacility,
+  onUndoBuildOrder,
+  onCancelInProduction,
+  onUndoCancelBuild,
+  pendingBuildOrders,
+  pendingCancelBuildOrders,
+  playerTreasury,
+  adminPointsAvailable,
+}: {
   id: string;
   gameData?: GameMapData;
   onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
+  onUndoBuildOrder?: (orderId: string) => void;
+  onCancelInProduction?: (systemId: number, facilityTypeId: string) => void;
+  onUndoCancelBuild?: (systemId: number, facilityTypeId: string) => void;
+  pendingBuildOrders?: Map<number, Array<{ orderId: string; facilityTypeId: string; cost: number; maintenance: number }>>;
+  pendingCancelBuildOrders?: Map<number, Set<string>>;
   playerTreasury?: number;
   adminPointsAvailable?: number;
 }) {
@@ -545,8 +561,13 @@ function InlineRegionDetail({ id, gameData, onBuildFacility, playerTreasury, adm
     });
     const conditionVariant = realSys.condition >= 70 ? "success" : realSys.condition >= 40 ? "warning" : "danger";
     const classLabel = CLASSIFICATION_LABELS[realSys.classification as HexClassification] || realSys.classification;
-    const buildable = gameData ? getBuildableFacilitiesForSystem(realSys, gameData) : [];
+    const sysPending = pendingBuildOrders?.get(realSys.system_id) || [];
+    const sysCancels = pendingCancelBuildOrders?.get(realSys.system_id) || new Set<string>();
+    const buildable = gameData
+      ? getBuildableFacilitiesForSystem(realSys, gameData, sysPending.map((p) => p.facilityTypeId))
+      : [];
     const adminPointsLeft = adminPointsAvailable ?? 0;
+    const ftFull = gameData?.facilityTypesFull || [];
     return (
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
@@ -580,20 +601,64 @@ function InlineRegionDetail({ id, gameData, onBuildFacility, playerTreasury, adm
           </ImperialCard>
         )}
 
-        {(realSys.facilities_in_production || []).length > 0 && (
-          <ImperialCard title="Under Construction">
+        {((realSys.facilities_in_production || []).length > 0 || sysPending.length > 0) && (
+          <ImperialCard title="Production Queue">
             <div className="space-y-1.5">
-              {realSys.facilities_in_production.map((p, i) => {
+              {(realSys.facilities_in_production || []).map((p, i) => {
                 const ft = gameData!.facilityTypes.find((t) => t.facility_type_id === p.facility_type_id);
+                const queuedCancel = sysCancels.has(String(p.facility_type_id));
                 return (
                   <div
-                    key={i}
-                    className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0"
+                    key={`fip-${i}`}
+                    className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
                   >
-                    <span>
+                    <span className={queuedCancel ? "line-through text-muted-foreground" : ""}>
                       {ft?.icon || "🏭"} {ft?.name || p.facility_type_id}
                     </span>
-                    <span className="text-muted-foreground">{p.turns_remaining}T</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">{p.turns_remaining}T</span>
+                      {queuedCancel ? (
+                        <button
+                          onClick={() => onUndoCancelBuild?.(realSys.system_id, p.facility_type_id)}
+                          className="text-[9px] uppercase tracking-wider text-bronze hover:text-bronze-dark"
+                          title="Undo cancellation"
+                        >
+                          Undo
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => onCancelInProduction?.(realSys.system_id, p.facility_type_id)}
+                          className="text-[9px] uppercase tracking-wider text-crimson hover:text-crimson-light"
+                          title="Cancel without refund"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {sysPending.map((po, i) => {
+                const ft = ftFull.find((t) => t.facility_type_id === po.facilityTypeId);
+                return (
+                  <div
+                    key={`pen-${i}`}
+                    className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
+                  >
+                    <span>
+                      {ft?.icon || "🏭"} {ft?.name || po.facilityTypeId}
+                      <span className="ml-1 text-[9px] text-crimson uppercase tracking-wider">New</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">{ft?.turns_to_build ?? 1}T</span>
+                      <button
+                        onClick={() => onUndoBuildOrder?.(po.orderId)}
+                        className="text-[9px] uppercase tracking-wider text-bronze hover:text-bronze-dark"
+                        title="Undo this order"
+                      >
+                        Undo
+                      </button>
+                    </div>
                   </div>
                 );
               })}
