@@ -343,9 +343,17 @@ const PlayerGame = () => {
   const [pendingFleetOrders, setPendingFleetOrders] = useState<
     Map<string, { kind: "move" | "attack"; targetFleetId?: string; targetSystemId?: number; destX?: number; destY?: number }>
   >(new Map());
-  // Pending build_facility orders (each costs 1 admin point + adds maintenance to upcoming costs)
+  // Pending build_facility orders (each costs 1 admin point + upfront cost ₡)
   const [pendingBuildAdminPoints, setPendingBuildAdminPoints] = useState(0);
-  const [pendingBuildMaintenance, setPendingBuildMaintenance] = useState(0);
+  const [pendingBuildCost, setPendingBuildCost] = useState(0);
+  /** Pending build orders submitted this turn, keyed by system_id. */
+  const [pendingBuildOrders, setPendingBuildOrders] = useState<
+    Map<number, Array<{ orderId: string; facilityTypeId: string; cost: number; maintenance: number }>>
+  >(new Map());
+  /** Pending cancel-build orders submitted this turn, keyed by system_id. */
+  const [pendingCancelBuildOrders, setPendingCancelBuildOrders] = useState<
+    Map<number, Set<string>>
+  >(new Map());
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
   /** Open issues that block turn submission (e.g. fleet group overcapacity). */
   const [submissionIssues, setSubmissionIssues] = useState<string[]>([]);
