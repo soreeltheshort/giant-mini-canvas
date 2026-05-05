@@ -570,6 +570,11 @@ function InlineRegionDetail({
       : [];
     const adminPointsLeft = adminPointsAvailable ?? 0;
     const ftFull = gameData?.facilityTypesFull || [];
+    const hasShipyard = (realSys.facilities || []).some((f) => {
+      const ft = gameData?.facilityTypes.find((t) => t.facility_type_id === f.facility_type_id);
+      return (ft?.name || "").toLowerCase().includes("shipyard");
+    });
+    const [shipDialogOpen, setShipDialogOpen] = useState(false);
     return (
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
