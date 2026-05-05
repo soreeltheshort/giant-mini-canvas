@@ -474,8 +474,8 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
           </div>
         </ImperialCard>
 
-        {facilityNames.length > 0 && (
-          <ImperialCard title="Facilities">
+        <ImperialCard title="Facilities">
+          {facilityNames.length > 0 ? (
             <div className="space-y-1.5">
               {facilityNames.map((f, i) => (
                 <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0">
@@ -484,8 +484,11 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
                 </div>
               ))}
             </div>
-          </ImperialCard>
-        )}
+          ) : (
+            <p className="text-[10px] text-muted-foreground italic">No facilities built at this system.</p>
+          )}
+        </ImperialCard>
+
 
         {(realSys.facilities_in_production || []).length > 0 && (
           <ImperialCard title="Under Construction">
