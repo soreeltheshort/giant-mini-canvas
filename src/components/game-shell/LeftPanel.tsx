@@ -579,7 +579,7 @@ function InlineRegionDetail({
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
           <div className="space-y-2">
-            <Row label="Net Tribute" value={`₡${(realSys.tribute - realSys.upkeep).toLocaleString()}`} />
+            <Row className="text-slate-500" label="Net Tribute" value={`₡${(realSys.tribute - realSys.upkeep).toLocaleString()}`} />
             <Row
               label="Population"
               value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Uninhabited"}
