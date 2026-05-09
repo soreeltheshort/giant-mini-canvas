@@ -538,9 +538,9 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-accent">{bf.icon} {bf.name}</span>
                     </div>
-                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                      <span>₡{bf.cost} · {bf.turns_to_build}T · ₡{bf.maintenance}/turn</span>
-                    </div>
+                    {bf.description && (
+                      <p className="text-[10px] text-muted-foreground">{bf.description}</p>
+                    )}
                     {bf.consumesName && (
                       <p className="text-[9px] text-muted-foreground italic">Upgrades {bf.consumesName}</p>
                     )}
