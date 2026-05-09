@@ -518,7 +518,7 @@ function InlineEmptyState({
       <ImperialCard title="Summary">
         <div className="space-y-2">
           {c.stats.map((s) => (
-            <div key={s.label} className="flex justify-between text-xs">
+            <div key={s.label} className="flex justify-between items-center text-xs text-slate-500">
               <span className="text-muted-foreground">{s.label}</span>
               <span className="font-semibold">{s.value}</span>
             </div>
@@ -597,7 +597,7 @@ function InlineRegionDetail({
               {facilityNames.map((f, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0"
+                  className="flex items-center justify-between text-xs text-slate-500 py-1 border-b border-border last:border-0"
                 >
                   <span>
                     {f.icon} {f.name}
