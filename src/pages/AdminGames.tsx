@@ -695,7 +695,7 @@ const AdminGames = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button size="sm" variant="secondary" onClick={() => loginAsPlayer(p)}>Log in as</Button>
+                        <Button size="sm" variant="secondary" disabled={selectedGame.status !== "active"} title={selectedGame.status !== "active" ? "Game must be active" : undefined} onClick={() => loginAsPlayer(p)}>Log in as</Button>
                         <Button size="sm" variant="destructive" onClick={() => removePlayer(p.id)}>Remove</Button>
                       </TableCell>
                     </TableRow>
