@@ -628,7 +628,7 @@ function InlineRegionDetail({
                       key={`fip-${i}`}
                       className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
                     >
-                      <span className={queuedCancel ? "line-through text-muted-foreground" : ""}>
+                      <span className={queuedCancel ? "line-through text-muted-foreground" : "text-slate-500"}>
                         {ft?.icon || "🏭"} {ft?.name || p.facility_type_id}
                       </span>
                       <div className="flex items-center gap-2">
