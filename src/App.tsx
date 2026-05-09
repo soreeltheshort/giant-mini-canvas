@@ -19,6 +19,7 @@ import AdminWeapons from "./pages/AdminWeapons";
 import AdminBattleConfig from "./pages/AdminBattleConfig";
 import AdminUsers from "./pages/AdminUsers";
 import AdminShips from "./pages/AdminShips";
+import AdminFacilities from "./pages/AdminFacilities";
 import AdminGames from "./pages/AdminGames";
 import MyGames from "./pages/MyGames";
 import PlayerGame from "./pages/PlayerGame";
