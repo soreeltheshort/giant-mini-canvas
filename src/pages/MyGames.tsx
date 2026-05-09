@@ -128,8 +128,8 @@ const MyGames = () => {
                       {PROVINCE_NAMES[g.player_slot] || `Slot ${g.player_slot}`} · Turn {g.turn_number}
                     </p>
                   </div>
-                  <Button size="sm" onClick={() => navigate(`/play/${g.game_id}`)}>
-                    {g.initialized ? "Load Game" : "Begin"}
+                  <Button size="sm" disabled={g.game_status !== "active"} onClick={() => navigate(`/play/${g.game_id}`)}>
+                    {g.game_status !== "active" ? "Awaiting Start" : g.initialized ? "Load Game" : "Begin"}
                   </Button>
                 </div>
               ))}
