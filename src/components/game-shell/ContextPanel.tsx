@@ -540,7 +540,7 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
                       <span className="text-xs font-semibold text-accent">{bf.icon} {bf.name}</span>
                     </div>
                     {bf.description && (
-                      <p className="text-[10px] text-muted-foreground">{bf.description}</p>
+                      <p className="text-[10px] text-slate-500">{bf.description}</p>
                     )}
                     {bf.consumesName && (
                       <p className="text-[9px] text-muted-foreground italic">Upgrades {bf.consumesName}</p>
