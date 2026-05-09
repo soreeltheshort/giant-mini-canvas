@@ -63,6 +63,7 @@ const App = () => (
             <Route path="/admin/battle-config" element={<AdminBattleConfig />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/ships" element={<AdminShips />} />
+            <Route path="/admin/facilities" element={<RequireRole roles={["admin", "tester"]}><AdminFacilities /></RequireRole>} />
             <Route path="/admin/games" element={<RequireRole roles={["admin"]}><AdminGames /></RequireRole>} />
             <Route path="/my-games" element={<MyGames />} />
             <Route path="/play/:gameId" element={<PlayerGame />} />
