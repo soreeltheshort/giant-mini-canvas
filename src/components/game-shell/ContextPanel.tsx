@@ -532,7 +532,7 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
                   ? "Insufficient Funds"
                   : !hasAdminPoint
                     ? "No Admin Points"
-                    : "Commission (1 Admin pt)";
+                    : `Commission · ₡${bf.cost} · ${bf.turns_to_build}T`;
                 return (
                   <div key={bf.facility_type_id} className="border border-border rounded-sm p-2 space-y-1">
                     <div className="flex items-center justify-between">
