@@ -844,6 +844,7 @@ function getBuildableFacilitiesForSystem(
       facility_type_id: ft.facility_type_id,
       name: ft.name,
       icon: ft.icon,
+      description: (ft as any).description || "",
       cost: ft.cost,
       turns_to_build: ft.turns_to_build,
       maintenance: ft.maintenance,
