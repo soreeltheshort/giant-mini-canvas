@@ -579,7 +579,7 @@ function InlineRegionDetail({
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
           <div className="space-y-2">
-            <Row label="Net Tribute" value={`₡${(realSys.tribute - realSys.upkeep).toLocaleString()}`} />
+            <Row className="text-slate-500" label="Net Tribute" value={`₡${(realSys.tribute - realSys.upkeep).toLocaleString()}`} />
             <Row
               label="Population"
               value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Uninhabited"}
@@ -628,7 +628,7 @@ function InlineRegionDetail({
                       key={`fip-${i}`}
                       className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
                     >
-                      <span className={queuedCancel ? "line-through text-muted-foreground" : ""}>
+                      <span className={queuedCancel ? "line-through text-muted-foreground" : "text-slate-500"}>
                         {ft?.icon || "🏭"} {ft?.name || p.facility_type_id}
                       </span>
                       <div className="flex items-center gap-2">
@@ -990,9 +990,9 @@ function InlineNewsDetail({ story }: { story?: NewsStory }) {
   );
 }
 
-function Row({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+function Row({ label, value, children, className = "" }: { label: string; value?: string; children?: React.ReactNode; className?: string }) {
   return (
-    <div className="flex justify-between items-center text-xs">
+    <div className={`flex justify-between items-center text-xs ${className}`}>
       <span className="text-muted-foreground">{label}</span>
       {children || <span className="font-semibold text-accent">{value}</span>}
     </div>

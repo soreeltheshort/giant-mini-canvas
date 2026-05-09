@@ -456,7 +456,7 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
           <div className="space-y-2">
-            <Row label="Net Tribute" value={`₡${(realSys.tribute - realSys.upkeep).toLocaleString()}`} figured />
+            <Row className="text-slate-500" label="Net Tribute" value={`₡${(realSys.tribute - realSys.upkeep).toLocaleString()}`} figured />
             <Row label="Population" value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Uninhabited"} />
             <Row label="Condition" figured>
               <StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge>
@@ -870,9 +870,9 @@ function StrikecraftDisplay({ system, gameData }: { system: SystemData; gameData
 }
 
 /* ── Helpers ── */
-function Row({ label, value, children, figured }: { label: string; value?: string; children?: React.ReactNode; figured?: boolean }) {
+function Row({ label, value, children, figured, className = "" }: { label: string; value?: string; children?: React.ReactNode; figured?: boolean; className?: string }) {
   return (
-    <div className="flex justify-between items-center text-xs">
+    <div className={`flex justify-between items-center text-xs ${className}`}>
       <span className="text-muted-foreground">{label}</span>
       {children || (
         <span className={figured
