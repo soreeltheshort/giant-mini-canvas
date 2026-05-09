@@ -719,9 +719,9 @@ function InlineRegionDetail({
                         {bf.icon} {bf.name}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                      <span>₡{bf.cost} · {bf.turns_to_build}T · ₡{bf.maintenance}/turn</span>
-                    </div>
+                    {bf.description && (
+                      <p className="text-[10px] text-muted-foreground">{bf.description}</p>
+                    )}
                     {bf.consumesName && (
                       <p className="text-[9px] text-muted-foreground italic">Upgrades {bf.consumesName}</p>
                     )}
@@ -806,6 +806,7 @@ interface InlineBuildable {
   facility_type_id: string;
   name: string;
   icon: string;
+  description: string;
   cost: number;
   turns_to_build: number;
   maintenance: number;
@@ -843,6 +844,7 @@ function getBuildableFacilitiesForSystem(
       facility_type_id: ft.facility_type_id,
       name: ft.name,
       icon: ft.icon,
+      description: (ft as any).description || "",
       cost: ft.cost,
       turns_to_build: ft.turns_to_build,
       maintenance: ft.maintenance,
