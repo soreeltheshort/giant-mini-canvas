@@ -130,32 +130,22 @@ const Header = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-background z-50">
                   <DropdownMenuItem asChild>
+                    <Link to="/admin/battle-debug">Debug</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to="/admin/weapons">Weapons</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/admin/ships">Ships</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/admin/battle-config">Config</Link>
+                    <Link to="/admin/battle-config">Battle Config</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/map-testing/config">Map Config</Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
-            {user && isAdmin && isCombatTestingMode && (
-              <>
-                <Link to="/admin/battle-debug" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/battle-debug" ? "text-foreground" : ""}`}>
-                  Debug
-                </Link>
-                <Link to="/admin/weapons" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/weapons" ? "text-foreground" : ""}`}>
-                  Weapons
-                </Link>
-                <Link to="/admin/battle-config" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/battle-config" ? "text-foreground" : ""}`}>
-                  Config
-                </Link>
-                <Link to="/admin/ships" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/ships" ? "text-foreground" : ""}`}>
-                  Ships
-                </Link>
-              </>
             )}
             {user && isAdmin && (
               <Link to="/admin/games" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname.startsWith("/admin/games") ? "text-foreground" : ""}`}>
