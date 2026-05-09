@@ -990,9 +990,9 @@ function InlineNewsDetail({ story }: { story?: NewsStory }) {
   );
 }
 
-function Row({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+function Row({ label, value, children, className = "" }: { label: string; value?: string; children?: React.ReactNode; className?: string }) {
   return (
-    <div className="flex justify-between items-center text-xs">
+    <div className={`flex justify-between items-center text-xs ${className}`}>
       <span className="text-muted-foreground">{label}</span>
       {children || <span className="font-semibold text-accent">{value}</span>}
     </div>
