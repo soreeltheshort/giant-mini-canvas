@@ -870,9 +870,9 @@ function StrikecraftDisplay({ system, gameData }: { system: SystemData; gameData
 }
 
 /* ── Helpers ── */
-function Row({ label, value, children, figured }: { label: string; value?: string; children?: React.ReactNode; figured?: boolean }) {
+function Row({ label, value, children, figured, className = "" }: { label: string; value?: string; children?: React.ReactNode; figured?: boolean; className?: string }) {
   return (
-    <div className="flex justify-between items-center text-xs">
+    <div className={`flex justify-between items-center text-xs ${className}`}>
       <span className="text-muted-foreground">{label}</span>
       {children || (
         <span className={figured
