@@ -744,6 +744,7 @@ interface BuildableFacility {
   facility_type_id: string;
   name: string;
   icon: string;
+  description: string;
   cost: number;
   turns_to_build: number;
   maintenance: number;
