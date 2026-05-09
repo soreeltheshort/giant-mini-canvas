@@ -479,7 +479,7 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
           {facilityNames.length > 0 ? (
             <div className="space-y-1.5">
               {facilityNames.map((f, i) => (
-                <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0">
+                <div key={i} className="flex items-center justify-between text-xs text-slate-500 py-1 border-b border-border last:border-0">
                   <span>{f.icon} {f.name}</span>
                   <span className="font-semibold text-bronze">×{f.qty}</span>
                 </div>
@@ -497,7 +497,7 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
               {realSys.facilities_in_production.map((p, i) => {
                 const ft = gameData!.facilityTypes.find(t => t.facility_type_id === p.facility_type_id);
                 return (
-                  <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0">
+                  <div key={i} className="flex items-center justify-between text-xs text-slate-500 py-1 border-b border-border last:border-0">
                     <span>{ft?.icon || "🏭"} {ft?.name || p.facility_type_id}</span>
                     <span className="text-muted-foreground">{p.turns_remaining}T</span>
                   </div>
