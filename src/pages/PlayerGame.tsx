@@ -376,6 +376,11 @@ const PlayerGame = () => {
       navigate("/");
       return;
     }
+    if (gData.status !== "active") {
+      toast({ title: "Game not active", description: `This game is currently ${gData.status}. You can enter once it is active.`, variant: "destructive" });
+      navigate("/my-games");
+      return;
+    }
 
     setGame(gData);
     setPlayer(pData);
