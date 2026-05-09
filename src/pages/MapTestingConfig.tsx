@@ -144,19 +144,7 @@ const MapTestingConfig = () => {
           {isAdmin && <AddPlanetTypeForm onAdd={addPlanetType} />}
         </ConfigSection>
 
-        {/* ── Facility Types ── */}
-        <ConfigSection title="Facility Types" desc="Define the types of facilities that can be placed on planets. These are shared across all maps.">
-          {facilityTypes.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">No facility types defined yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {facilityTypes.map((ft) => (
-                <FacilityTypeRow key={ft.id} ft={ft} isAdmin={isAdmin} onUpdate={updateFacilityType} onRemove={removeFacilityType} allFacilityTypes={facilityTypes} />
-              ))}
-            </div>
-          )}
-          {isAdmin && <AddFacilityForm onAdd={addFacilityType} allFacilityTypes={facilityTypes} />}
-        </ConfigSection>
+        {/* Facility Types moved to Assets → Facilities */}
 
         {/* ── Random System Generation ── */}
         <ConfigSection title="Random System Generation" desc="Configure parameters for randomly placing solar systems on the map.">
