@@ -601,6 +601,9 @@ const AdminGames = () => {
       <div className="container py-6 space-y-6">
         <h1 className="text-2xl font-heading font-bold">Game Management</h1>
 
+        {/* ── Default Map (used by Tester Dashboard) ── */}
+        <DefaultMapSelector />
+
         {/* ── Create Game ── */}
         <div className="flex gap-2 items-end">
           <Input placeholder="New game name..." value={newGameName} onChange={e => setNewGameName(e.target.value)} className="max-w-xs" />
