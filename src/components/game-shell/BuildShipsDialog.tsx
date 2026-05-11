@@ -126,8 +126,9 @@ export default function BuildShipsDialog({
               if ((s.supply_pod ?? 0)     > 0) tags.push(`SP${s.supply_pod}`);
               if ((s.fighter_bay ?? 0)    > 0) tags.push(`FB${s.fighter_bay}`);
               if ((s.gun_ship_link ?? 0)  > 0) tags.push(`GL${s.gun_ship_link}`);
+              const isStrikecraft = s.hull_class === "Fighter" || s.hull_class === "Gunship";
               return (
-                <div key={s.id} className="border border-border rounded-sm p-2 flex items-center justify-between gap-2">
+                <div key={s.id} className="border border-border rounded-sm p-2 flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-semibold text-accent truncate">{s.name}</span>
@@ -139,22 +140,38 @@ export default function BuildShipsDialog({
                     <p className="text-[10px] text-slate-500">
                       ₡{s.point_cost ?? 0} · maint {s.maintenance ?? 0}
                     </p>
+                    {s.flavor_description && (
+                      <p className="text-[10px] text-muted-foreground italic mt-0.5 leading-snug">
+                        {s.flavor_description}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={() => adjust(s.id, -1)}
-                      disabled={qty === 0}
-                      className="w-6 h-6 rounded-sm bg-muted text-foreground disabled:opacity-40 hover:bg-bronze/20 text-sm font-bold"
-                    >
-                      −
-                    </button>
-                    <span className="w-6 text-center text-xs font-semibold text-bronze">{qty}</span>
-                    <button
-                      onClick={() => adjust(s.id, +1)}
-                      className="w-6 h-6 rounded-sm bg-muted text-foreground hover:bg-bronze/20 text-sm font-bold"
-                    >
-                      +
-                    </button>
+                  <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+                    {isStrikecraft ? (
+                      <>
+                        <button
+                          onClick={() => adjust(s.id, -1)}
+                          disabled={qty === 0}
+                          className="w-6 h-6 rounded-sm bg-muted text-foreground disabled:opacity-40 hover:bg-bronze/20 text-sm font-bold"
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center text-xs font-semibold text-bronze">{qty}</span>
+                        <button
+                          onClick={() => adjust(s.id, +1)}
+                          className="w-6 h-6 rounded-sm bg-muted text-foreground hover:bg-bronze/20 text-sm font-bold"
+                        >
+                          +
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => adjust(s.id, +1)}
+                        className="px-2 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+                      >
+                        Build{qty > 0 ? ` (${qty})` : ""}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
