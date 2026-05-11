@@ -22,6 +22,8 @@ export interface FleetShipRow {
   fighter_bay?: number;
   /** Gunship link slots provided by this ship type (per ship). */
   gun_ship_link?: number;
+  /** Ground-invasion units this ship type can carry (per ship). */
+  ground_invasion?: number;
 }
 
 /** Slots a single strikecraft consumes in its bucket (FL=1, FH=2, GS=1). */
