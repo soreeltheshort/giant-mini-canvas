@@ -600,18 +600,12 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
           </DialogContent>
         </Dialog>
 
-        <Dialog open={shipDialogOpen} onOpenChange={setShipDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Build Ships — {realSys.system_name}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
-              <p className="text-[10px] text-muted-foreground italic py-4 text-center">
-                Shipyard production interface coming soon.
-              </p>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <BuildShipsDialog
+          open={shipDialogOpen}
+          onOpenChange={setShipDialogOpen}
+          systemName={realSys.system_name}
+          shipTypes={gameData?.shipTypes || []}
+        />
       </>
     );
   }
