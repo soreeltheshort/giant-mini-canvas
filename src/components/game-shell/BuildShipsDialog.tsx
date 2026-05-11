@@ -186,7 +186,7 @@ export default function BuildShipsDialog({
               if ((s.supply_pod ?? 0)     > 0) tags.push(`SP${s.supply_pod}`);
               if ((s.fighter_bay ?? 0)    > 0) tags.push(`FB${s.fighter_bay}`);
               if ((s.gun_ship_link ?? 0)  > 0) tags.push(`GL${s.gun_ship_link}`);
-              const isStrikecraft = s.hull_class === "Fighter" || s.hull_class === "Gunship";
+              const isStrikecraft = s.hull_class === "Strikecraft";
               return (
                 <div key={s.id} className="border border-border rounded-sm p-2 flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
