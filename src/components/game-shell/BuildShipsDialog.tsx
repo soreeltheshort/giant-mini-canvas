@@ -135,6 +135,22 @@ export default function BuildShipsDialog({
                     </div>
                     <p className="text-[10px] text-slate-500">
                       ₡{s.point_cost ?? 0} · maint {s.maintenance ?? 0}
+                      {(() => {
+                        const w: string[] = [];
+                        if (s.laser_2_5cm)    w.push(`L2.5×${s.laser_2_5cm}`);
+                        if (s.laser_4_5cm)    w.push(`L4.5×${s.laser_4_5cm}`);
+                        if (s.laser_6_5cm)    w.push(`L6.5×${s.laser_6_5cm}`);
+                        if (s.laser_10cm)     w.push(`L10×${s.laser_10cm}`);
+                        if (s.laser_14cm)     w.push(`L14×${s.laser_14cm}`);
+                        if (s.laser_20cm)     w.push(`L20×${s.laser_20cm}`);
+                        if (s.laser_28cm)     w.push(`L28×${s.laser_28cm}`);
+                        if (s.laser_50cm)     w.push(`L50×${s.laser_50cm}`);
+                        if (s.missile_10kg)   w.push(`M10k×${s.missile_10kg}`);
+                        if (s.missile_50kg)   w.push(`M50k×${s.missile_50kg}`);
+                        if (s.missile_100kg)  w.push(`M100k×${s.missile_100kg}`);
+                        if (s.missile_half_kt)w.push(`M½kt×${s.missile_half_kt}`);
+                        return w.length ? <> · <span className="text-bronze">{w.join(" ")}</span></> : null;
+                      })()}
                     </p>
                     {s.flavor_description && (
                       <p className="text-[10px] text-muted-foreground italic mt-0.5 leading-snug">

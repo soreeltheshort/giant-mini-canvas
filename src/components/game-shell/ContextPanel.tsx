@@ -94,6 +94,18 @@ export interface ShipTypeLookup {
   fighter_bay?: number;
   gun_ship_link?: number;
   flavor_description?: string;
+  laser_2_5cm?: number;
+  laser_4_5cm?: number;
+  laser_6_5cm?: number;
+  laser_10cm?: number;
+  laser_14cm?: number;
+  laser_20cm?: number;
+  laser_28cm?: number;
+  laser_50cm?: number;
+  missile_10kg?: number;
+  missile_50kg?: number;
+  missile_100kg?: number;
+  missile_half_kt?: number;
 }
 
 export interface FacilityTypeFull {
