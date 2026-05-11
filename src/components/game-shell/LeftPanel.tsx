@@ -542,6 +542,7 @@ function InlineRegionDetail({
   pendingCancelBuildOrders,
   playerTreasury,
   adminPointsAvailable,
+  playerOwnerClassification,
 }: {
   id: string;
   gameData?: GameMapData;
@@ -553,6 +554,7 @@ function InlineRegionDetail({
   pendingCancelBuildOrders?: Map<number, Set<string>>;
   playerTreasury?: number;
   adminPointsAvailable?: number;
+  playerOwnerClassification?: string;
 }) {
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
   const realSys =
