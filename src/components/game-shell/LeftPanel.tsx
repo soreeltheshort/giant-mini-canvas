@@ -22,6 +22,7 @@ import { StatusBadge } from "./StatusBadge";
 import { ImperialCard } from "./ImperialCard";
 import FleetDetailContent from "./FleetDetailContent";
 import { type GameMapData, DispatchesCard } from "./ContextPanel";
+import BuildShipsDialog from "./BuildShipsDialog";
 import type { HexClassification } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS } from "@/lib/mapTypes";
 
