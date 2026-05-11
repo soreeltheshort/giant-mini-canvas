@@ -339,6 +339,7 @@ function InlineContextContent({
             pendingCancelBuildOrders={pendingCancelBuildOrders}
             playerTreasury={playerTreasury}
             adminPointsAvailable={adminPointsAvailable}
+            playerOwnerClassification={playerOwnerClassification}
           />
         ) : selection.type === "army" ? (
           <InlineArmyDetail
