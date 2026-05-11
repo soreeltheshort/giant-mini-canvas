@@ -33,22 +33,17 @@ export default function BuildShipsDialog({
   shipTypes,
   onConfirm,
 }: BuildShipsDialogProps) {
-  const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
+  const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null);
   const [queue, setQueue] = useState<Map<string, number>>(new Map());
 
   const filtered = useMemo(() => {
-    if (activeFilters.size === 0) return shipTypes;
-    return shipTypes.filter((s) =>
-      Array.from(activeFilters).every((k) => FILTERS.find((f) => f.key === k)!.predicate(s))
-    );
-  }, [shipTypes, activeFilters]);
+    if (!activeFilter) return shipTypes;
+    const f = FILTERS.find((x) => x.key === activeFilter)!;
+    return shipTypes.filter((s) => f.predicate(s));
+  }, [shipTypes, activeFilter]);
 
-  const toggleFilter = (k: FilterKey) => {
-    setActiveFilters((prev) => {
-      const next = new Set(prev);
-      next.has(k) ? next.delete(k) : next.add(k);
-      return next;
-    });
+  const selectFilter = (k: FilterKey) => {
+    setActiveFilter((prev) => (prev === k ? null : k));
   };
 
   const adjust = (id: string, delta: number) => {
@@ -72,7 +67,7 @@ export default function BuildShipsDialog({
       onConfirm(Array.from(queue.entries()).map(([ship_type_id, quantity]) => ({ ship_type_id, quantity })));
     }
     setQueue(new Map());
-    setActiveFilters(new Set());
+    setActiveFilter(null);
     onOpenChange(false);
   };
 
@@ -86,11 +81,11 @@ export default function BuildShipsDialog({
         {/* Filters */}
         <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border">
           {FILTERS.map((f) => {
-            const on = activeFilters.has(f.key);
+            const on = activeFilter === f.key;
             return (
               <button
                 key={f.key}
-                onClick={() => toggleFilter(f.key)}
+                onClick={() => selectFilter(f.key)}
                 className={`px-2 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
                   ${on
                     ? "bg-crimson text-primary-foreground"
@@ -100,9 +95,9 @@ export default function BuildShipsDialog({
               </button>
             );
           })}
-          {activeFilters.size > 0 && (
+          {activeFilter && (
             <button
-              onClick={() => setActiveFilters(new Set())}
+              onClick={() => setActiveFilter(null)}
               className="px-2 py-1 rounded-sm text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
             >
               Clear
