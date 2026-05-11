@@ -22,6 +22,7 @@ import AdminShips from "./pages/AdminShips";
 import AdminFacilities from "./pages/AdminFacilities";
 import AdminGames from "./pages/AdminGames";
 import MyGames from "./pages/MyGames";
+import TesterDashboard from "./pages/TesterDashboard";
 import PlayerGame from "./pages/PlayerGame";
 import UIShowcase from "./pages/UIShowcase";
 import MapTesting from "./pages/MapTesting";
