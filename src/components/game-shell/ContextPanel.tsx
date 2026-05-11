@@ -451,6 +451,7 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
       return (ft?.name || "").toLowerCase().includes("shipyard");
     });
     const [shipDialogOpen, setShipDialogOpen] = useState(false);
+    const [facilityDialogOpen, setFacilityDialogOpen] = useState(false);
 
     return (
       <>
