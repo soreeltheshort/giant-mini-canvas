@@ -35,7 +35,9 @@ export default function BuildShipsDialog({
   onConfirm,
 }: BuildShipsDialogProps) {
   const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null);
-  const [queue, setQueue] = useState<Map<string, number>>(new Map());
+  const [queueOrder, setQueueOrder] = useState<{ id: string; qty: number }[]>([]);
+
+  const qtyOf = (id: string) => queueOrder.find((q) => q.id === id)?.qty ?? 0;
 
   const filtered = useMemo(() => {
     if (!activeFilter) return shipTypes;
@@ -48,26 +50,41 @@ export default function BuildShipsDialog({
   };
 
   const adjust = (id: string, delta: number) => {
-    setQueue((prev) => {
-      const next = new Map(prev);
-      const cur = next.get(id) ?? 0;
-      const v = Math.max(0, cur + delta);
-      if (v === 0) next.delete(id); else next.set(id, v);
+    setQueueOrder((prev) => {
+      const idx = prev.findIndex((q) => q.id === id);
+      if (idx === -1) {
+        if (delta <= 0) return prev;
+        return [...prev, { id, qty: delta }];
+      }
+      const next = [...prev];
+      const v = Math.max(0, next[idx].qty + delta);
+      if (v === 0) next.splice(idx, 1);
+      else next[idx] = { ...next[idx], qty: v };
       return next;
     });
   };
 
-  const totalQueued = Array.from(queue.values()).reduce((a, b) => a + b, 0);
-  const totalCost = Array.from(queue.entries()).reduce((sum, [id, qty]) => {
-    const st = shipTypes.find((s) => s.id === id);
-    return sum + (st?.point_cost ?? 0) * qty;
+  const move = (idx: number, delta: number) => {
+    setQueueOrder((prev) => {
+      const target = idx + delta;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  };
+
+  const totalQueued = queueOrder.reduce((a, q) => a + q.qty, 0);
+  const totalCost = queueOrder.reduce((sum, q) => {
+    const st = shipTypes.find((s) => s.id === q.id);
+    return sum + (st?.point_cost ?? 0) * q.qty;
   }, 0);
 
   const handleDone = () => {
-    if (queue.size > 0 && onConfirm) {
-      onConfirm(Array.from(queue.entries()).map(([ship_type_id, quantity]) => ({ ship_type_id, quantity })));
+    if (queueOrder.length > 0 && onConfirm) {
+      onConfirm(queueOrder.map((q) => ({ ship_type_id: q.id, quantity: q.qty })));
     }
-    setQueue(new Map());
+    setQueueOrder([]);
     setActiveFilter(null);
     onOpenChange(false);
   };
@@ -114,7 +131,7 @@ export default function BuildShipsDialog({
             </p>
           ) : (
             filtered.map((s) => {
-              const qty = queue.get(s.id) ?? 0;
+              const qty = qtyOf(s.id);
               const tags: string[] = [];
               if ((s.ground_invasion ?? 0) > 0) tags.push(`GI${s.ground_invasion}`);
               if ((s.scout_sensors ?? 0)  > 0) tags.push(`SN${s.scout_sensors}`);
