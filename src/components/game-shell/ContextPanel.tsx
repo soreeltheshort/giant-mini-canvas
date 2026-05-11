@@ -439,13 +439,14 @@ function ProductionOverviewEmpty({
     </>
   );
 }
-function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adminPointsAvailable }: {
+function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification }: {
   id: string;
   gameData?: GameMapData;
   mode?: GameMode;
   onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
   playerTreasury?: number;
   adminPointsAvailable?: number;
+  playerOwnerClassification?: string;
 }) {
   // Try real data first (selection id = "sys-{system_id}")
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
