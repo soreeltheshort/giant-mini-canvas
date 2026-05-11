@@ -14,6 +14,32 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          default_map_id: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          default_map_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          default_map_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_settings_default_map_id_fkey"
+            columns: ["default_map_id"]
+            isOneToOne: false
+            referencedRelation: "saved_maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       battle_events: {
         Row: {
           admin_explain_text: string

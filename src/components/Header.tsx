@@ -155,6 +155,11 @@ const Header = () => {
                 Games
               </Link>
             )}
+            {user && canAccessGameFeatures && (
+              <Link to="/tester" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname.startsWith("/tester") ? "text-foreground" : ""}`}>
+                Tester
+              </Link>
+            )}
             {user && isAdmin && (
               <Link to="/admin/users" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/users" ? "text-foreground" : ""}`}>
                 Users
