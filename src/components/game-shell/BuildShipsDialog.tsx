@@ -96,6 +96,53 @@ export default function BuildShipsDialog({
           <DialogTitle>Build Ships — {systemName}</DialogTitle>
         </DialogHeader>
 
+        {/* Build Queue (reorderable) */}
+        {queueOrder.length > 0 && (
+          <div className="border border-border rounded-sm p-2 space-y-1 max-h-40 overflow-y-auto">
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-heading font-semibold">
+              Build Queue
+            </div>
+            {queueOrder.map((q, idx) => {
+              const st = shipTypes.find((s) => s.id === q.id);
+              if (!st) return null;
+              return (
+                <div key={q.id} className="flex items-center gap-2 text-[10px]">
+                  <span className="w-4 text-right text-muted-foreground">{idx + 1}.</span>
+                  <span className="flex-1 truncate text-accent font-semibold">
+                    {st.name} <span className="text-bronze">×{q.qty}</span>
+                  </span>
+                  <span className="text-slate-500">₡{((st.point_cost ?? 0) * q.qty).toLocaleString()}</span>
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => move(idx, -1)}
+                      disabled={idx === 0}
+                      className="w-5 h-5 rounded-sm bg-muted text-foreground disabled:opacity-30 hover:bg-bronze/20 text-[10px] font-bold leading-none"
+                      title="Move up"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      onClick={() => move(idx, +1)}
+                      disabled={idx === queueOrder.length - 1}
+                      className="w-5 h-5 rounded-sm bg-muted text-foreground disabled:opacity-30 hover:bg-bronze/20 text-[10px] font-bold leading-none"
+                      title="Move down"
+                    >
+                      ▼
+                    </button>
+                    <button
+                      onClick={() => adjust(q.id, -q.qty)}
+                      className="w-5 h-5 rounded-sm bg-muted text-foreground hover:bg-crimson/30 text-[10px] font-bold leading-none ml-1"
+                      title="Remove"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border">
           {FILTERS.map((f) => {
