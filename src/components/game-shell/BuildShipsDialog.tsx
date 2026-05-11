@@ -17,6 +17,13 @@ const FILTERS: { key: FilterKey; label: string; predicate: (s: ShipTypeLookup) =
 export interface QueuedShip {
   ship_type_id: string;
   quantity: number;
+  destination_fleet_id: string | null; // null = create new fleet
+}
+
+export interface PlayerFleetOption {
+  fleet_id: string;
+  fleet_name: string;
+  atSystem: boolean;
 }
 
 interface BuildShipsDialogProps {
@@ -24,18 +31,27 @@ interface BuildShipsDialogProps {
   onOpenChange: (open: boolean) => void;
   systemName: string;
   shipTypes: ShipTypeLookup[];
+  playerFleets?: PlayerFleetOption[];
   onConfirm?: (queue: QueuedShip[]) => void;
 }
+
+const NEW_FLEET = "__new__";
 
 export default function BuildShipsDialog({
   open,
   onOpenChange,
   systemName,
   shipTypes,
+  playerFleets = [],
   onConfirm,
 }: BuildShipsDialogProps) {
   const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null);
-  const [queueOrder, setQueueOrder] = useState<{ id: string; qty: number }[]>([]);
+  const [queueOrder, setQueueOrder] = useState<{ id: string; qty: number; destFleetId: string }[]>([]);
+
+  const defaultDestination = useMemo(() => {
+    const atSys = playerFleets.find((f) => f.atSystem);
+    return atSys ? atSys.fleet_id : NEW_FLEET;
+  }, [playerFleets]);
 
   const qtyOf = (id: string) => queueOrder.find((q) => q.id === id)?.qty ?? 0;
 
@@ -54,12 +70,21 @@ export default function BuildShipsDialog({
       const idx = prev.findIndex((q) => q.id === id);
       if (idx === -1) {
         if (delta <= 0) return prev;
-        return [...prev, { id, qty: delta }];
+        return [...prev, { id, qty: delta, destFleetId: defaultDestination }];
       }
       const next = [...prev];
       const v = Math.max(0, next[idx].qty + delta);
       if (v === 0) next.splice(idx, 1);
       else next[idx] = { ...next[idx], qty: v };
+      return next;
+    });
+  };
+
+  const setDest = (idx: number, destFleetId: string) => {
+    setQueueOrder((prev) => {
+      const next = [...prev];
+      if (!next[idx]) return prev;
+      next[idx] = { ...next[idx], destFleetId };
       return next;
     });
   };
@@ -82,7 +107,13 @@ export default function BuildShipsDialog({
 
   const handleDone = () => {
     if (queueOrder.length > 0 && onConfirm) {
-      onConfirm(queueOrder.map((q) => ({ ship_type_id: q.id, quantity: q.qty })));
+      onConfirm(
+        queueOrder.map((q) => ({
+          ship_type_id: q.id,
+          quantity: q.qty,
+          destination_fleet_id: q.destFleetId === NEW_FLEET ? null : q.destFleetId,
+        })),
+      );
     }
     setQueueOrder([]);
     setActiveFilter(null);
