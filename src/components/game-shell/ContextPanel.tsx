@@ -88,6 +88,11 @@ export interface ShipTypeLookup {
   repair_pod?: number;
   supply_pod?: number;
   hull?: number;
+  ground_invasion?: number;
+  scout_sensors?: number;
+  fighter_bay?: number;
+  gun_ship_link?: number;
+  flavor_description?: string;
 }
 
 export interface FacilityTypeFull {
