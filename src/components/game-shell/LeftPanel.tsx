@@ -575,6 +575,7 @@ function InlineRegionDetail({
       return (ft?.name || "").toLowerCase().includes("shipyard");
     });
     const [shipDialogOpen, setShipDialogOpen] = useState(false);
+    const [facilityDialogOpen, setFacilityDialogOpen] = useState(false);
     return (
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
