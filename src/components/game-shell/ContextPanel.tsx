@@ -451,6 +451,7 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
       return (ft?.name || "").toLowerCase().includes("shipyard");
     });
     const [shipDialogOpen, setShipDialogOpen] = useState(false);
+    const [facilityDialogOpen, setFacilityDialogOpen] = useState(false);
 
     return (
       <>
@@ -491,10 +492,10 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
         </ImperialCard>
 
 
-        {(realSys.facilities_in_production || []).length > 0 && (
-          <ImperialCard title="Under Construction">
-            <div className="space-y-1.5">
-              {realSys.facilities_in_production.map((p, i) => {
+        <ImperialCard title="Production Queue">
+          <div className="space-y-1.5">
+            {(realSys.facilities_in_production || []).length > 0 ? (
+              (realSys.facilities_in_production || []).map((p, i) => {
                 const ft = gameData!.facilityTypes.find(t => t.facility_type_id === p.facility_type_id);
                 return (
                   <div key={i} className="flex items-center justify-between text-xs text-slate-500 py-1 border-b border-border last:border-0">
@@ -502,70 +503,36 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
                     <span className="text-muted-foreground">{p.turns_remaining}T</span>
                   </div>
                 );
-              })}
-            </div>
-          </ImperialCard>
-        )}
-
-        <ImperialCard title="Shipyard">
-          <button
-            onClick={() => setShipDialogOpen(true)}
-            disabled={!hasShipyard}
-            className={`w-full py-1.5 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
-              ${hasShipyard
-                ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
-              }`}
-            title={hasShipyard ? "Build ships at this shipyard" : "Requires a shipyard facility"}
-          >
-            {hasShipyard ? "Build Ships" : "No Shipyard"}
-          </button>
+              })
+            ) : (
+              <p className="text-[10px] text-muted-foreground italic">No facilities under construction.</p>
+            )}
+            <button
+              onClick={() => setFacilityDialogOpen(true)}
+              className="w-full mt-1 py-1.5 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+            >
+              Build Facility
+            </button>
+          </div>
         </ImperialCard>
 
-        {buildableFacilities.length > 0 ? (
-          <ImperialCard title="Build New Facility">
-            <div className="space-y-1.5">
-              {buildableFacilities.map((bf) => {
-                const canAfford = (playerTreasury ?? 0) >= bf.cost;
-                const hasAdminPoint = adminPointsLeft > 0;
-                const canCommission = canAfford && hasAdminPoint;
-                const label = !canAfford
-                  ? "Insufficient Funds"
-                  : !hasAdminPoint
-                    ? "No Admin Points"
-                    : `Commission · ₡${bf.cost} · ${bf.turns_to_build}T`;
-                return (
-                  <div key={bf.facility_type_id} className="border border-border rounded-sm p-2 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-accent">{bf.icon} {bf.name}</span>
-                    </div>
-                    {bf.description && (
-                      <p className="text-[10px] text-slate-500">{bf.description}</p>
-                    )}
-                    {bf.consumesName && (
-                      <p className="text-[9px] text-muted-foreground italic">Upgrades {bf.consumesName}</p>
-                    )}
-                    <button
-                      onClick={() => onBuildFacility?.(realSys.system_id, bf.facility_type_id)}
-                      disabled={!canCommission}
-                      className={`w-full mt-1 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
-                        ${canCommission
-                          ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
-                          : "bg-muted text-muted-foreground cursor-not-allowed"
-                        }`}
-                    >
-                      {label}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </ImperialCard>
-        ) : (
-          <ImperialCard title="Build New Facility">
-            <p className="text-[10px] text-muted-foreground italic">No eligible facilities to build at this system.</p>
-          </ImperialCard>
-        )}
+        <ImperialCard title="Manufacturing Queue">
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-muted-foreground italic">No ships under construction.</p>
+            <button
+              onClick={() => setShipDialogOpen(true)}
+              disabled={!hasShipyard}
+              className={`w-full mt-1 py-1.5 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
+                ${hasShipyard
+                  ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+                }`}
+              title={hasShipyard ? "Build ships at this shipyard" : "Requires a shipyard facility"}
+            >
+              {hasShipyard ? "Build Ships" : "No Shipyard"}
+            </button>
+          </div>
+        </ImperialCard>
 
         <ImperialCard title="Defenses">
           <div className="space-y-2">
@@ -574,13 +541,68 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
           </div>
         </ImperialCard>
 
+        <Dialog open={facilityDialogOpen} onOpenChange={setFacilityDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Build Facility — {realSys.system_name}</DialogTitle>
+            </DialogHeader>
+            {buildableFacilities.length > 0 ? (
+              <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
+                {buildableFacilities.map((bf) => {
+                  const canAfford = (playerTreasury ?? 0) >= bf.cost;
+                  const hasAdminPoint = adminPointsLeft > 0;
+                  const canCommission = canAfford && hasAdminPoint;
+                  const label = !canAfford
+                    ? "Insufficient Funds"
+                    : !hasAdminPoint
+                      ? "No Admin Points"
+                      : `Commission · ₡${bf.cost} · ${bf.turns_to_build}T`;
+                  return (
+                    <div key={bf.facility_type_id} className="border border-border rounded-sm p-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-accent">{bf.icon} {bf.name}</span>
+                      </div>
+                      {bf.description && (
+                        <p className="text-[10px] text-slate-500">{bf.description}</p>
+                      )}
+                      {bf.consumesName && (
+                        <p className="text-[9px] text-muted-foreground italic">Upgrades {bf.consumesName}</p>
+                      )}
+                      <button
+                        onClick={() => {
+                          onBuildFacility?.(realSys.system_id, bf.facility_type_id);
+                          setFacilityDialogOpen(false);
+                        }}
+                        disabled={!canCommission}
+                        className={`w-full mt-1 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
+                          ${canCommission
+                            ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+                            : "bg-muted text-muted-foreground cursor-not-allowed"
+                          }`}
+                      >
+                        {label}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-[10px] text-muted-foreground italic py-4 text-center">
+                No eligible facilities to build at this system.
+              </p>
+            )}
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={shipDialogOpen} onOpenChange={setShipDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Build Ships — {realSys.system_name}</DialogTitle>
             </DialogHeader>
-            <div className="text-xs text-muted-foreground italic py-8 text-center">
-              Shipyard production interface coming soon.
+            <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
+              <p className="text-[10px] text-muted-foreground italic py-4 text-center">
+                Shipyard production interface coming soon.
+              </p>
             </div>
           </DialogContent>
         </Dialog>

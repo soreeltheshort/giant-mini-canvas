@@ -575,6 +575,7 @@ function InlineRegionDetail({
       return (ft?.name || "").toLowerCase().includes("shipyard");
     });
     const [shipDialogOpen, setShipDialogOpen] = useState(false);
+    const [facilityDialogOpen, setFacilityDialogOpen] = useState(false);
     return (
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
@@ -612,149 +613,170 @@ function InlineRegionDetail({
         </ImperialCard>
 
 
-        {((realSys.facilities_in_production || []).length > 0 || sysPending.length > 0) && (
-          <ImperialCard title="Production Queue">
-            <div className="space-y-1.5">
-              {(() => {
-                const fipList = realSys.facilities_in_production || [];
-                let cumulative = 0;
-                const fipNodes = fipList.map((p, i) => {
-                  const ft = gameData!.facilityTypes.find((t) => t.facility_type_id === p.facility_type_id);
-                  const queuedCancel = sysCancels.has(String(p.facility_type_id));
-                  cumulative += p.turns_remaining;
-                  const displayTurns = cumulative;
-                  return (
-                    <div
-                      key={`fip-${i}`}
-                      className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
-                    >
-                      <span className={queuedCancel ? "line-through text-muted-foreground" : "text-slate-500"}>
-                        {ft?.icon || "🏭"} {ft?.name || p.facility_type_id}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">{displayTurns}T</span>
-                        {queuedCancel ? (
-                          <button
-                            onClick={() => onUndoCancelBuild?.(realSys.system_id, p.facility_type_id)}
-                            className="text-[9px] uppercase tracking-wider text-bronze hover:text-bronze-dark"
-                            title="Undo cancellation"
-                          >
-                            Undo
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => onCancelInProduction?.(realSys.system_id, p.facility_type_id)}
-                            className="text-[9px] uppercase tracking-wider text-crimson hover:text-crimson-light"
-                            title="Cancel without refund"
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                });
-                const pendingNodes = sysPending.map((po, i) => {
-                  const ft = ftFull.find((t) => t.facility_type_id === po.facilityTypeId);
-                  const buildTime = ft?.turns_to_build ?? 1;
-                  cumulative += buildTime;
-                  return (
-                    <div
-                      key={`pen-${i}`}
-                      className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
-                    >
-                      <span>
-                        {ft?.icon || "🏭"} {ft?.name || po.facilityTypeId}
-                        <span className="ml-1 text-[9px] text-crimson uppercase tracking-wider">New</span>
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">{cumulative}T</span>
+        <ImperialCard title="Production Queue">
+          <div className="space-y-1.5">
+            {(() => {
+              const fipList = realSys.facilities_in_production || [];
+              let cumulative = 0;
+              const fipNodes = fipList.map((p, i) => {
+                const ft = gameData!.facilityTypes.find((t) => t.facility_type_id === p.facility_type_id);
+                const queuedCancel = sysCancels.has(String(p.facility_type_id));
+                cumulative += p.turns_remaining;
+                const displayTurns = cumulative;
+                return (
+                  <div
+                    key={`fip-${i}`}
+                    className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
+                  >
+                    <span className={queuedCancel ? "line-through text-muted-foreground" : "text-slate-500"}>
+                      {ft?.icon || "🏭"} {ft?.name || p.facility_type_id}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">{displayTurns}T</span>
+                      {queuedCancel ? (
                         <button
-                          onClick={() => onUndoBuildOrder?.(po.orderId)}
+                          onClick={() => onUndoCancelBuild?.(realSys.system_id, p.facility_type_id)}
                           className="text-[9px] uppercase tracking-wider text-bronze hover:text-bronze-dark"
-                          title="Undo this order"
+                          title="Undo cancellation"
                         >
                           Undo
                         </button>
-                      </div>
+                      ) : (
+                        <button
+                          onClick={() => onCancelInProduction?.(realSys.system_id, p.facility_type_id)}
+                          className="text-[9px] uppercase tracking-wider text-crimson hover:text-crimson-light"
+                          title="Cancel without refund"
+                        >
+                          Cancel
+                        </button>
+                      )}
                     </div>
-                  );
-                });
-                return [...fipNodes, ...pendingNodes];
-              })()}
-            </div>
-          </ImperialCard>
-        )}
-
-        <ImperialCard title="Shipyard">
-          <button
-            onClick={() => setShipDialogOpen(true)}
-            disabled={!hasShipyard}
-            className={`w-full py-1.5 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
-              ${hasShipyard
-                ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
-              }`}
-            title={hasShipyard ? "Build ships at this shipyard" : "Requires a shipyard facility"}
-          >
-            {hasShipyard ? "Build Ships" : "No Shipyard"}
-          </button>
-        </ImperialCard>
-
-        {buildable.length > 0 ? (
-          <ImperialCard title="Build New Facility">
-            <div className="space-y-1.5">
-              {buildable.map((bf) => {
-                const canAfford = (playerTreasury ?? 0) >= bf.cost;
-                const hasAdminPoint = adminPointsLeft > 0;
-                const canCommission = canAfford && hasAdminPoint;
-                const label = !canAfford
-                  ? "Insufficient Funds"
-                  : !hasAdminPoint
-                    ? "No Admin Points"
-                    : `Commission · ₡${bf.cost} · ${bf.turns_to_build}T`;
-                return (
-                  <div key={bf.facility_type_id} className="border border-border rounded-sm p-2 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-accent">
-                        {bf.icon} {bf.name}
-                      </span>
-                    </div>
-                    {bf.description && (
-                      <p className="text-[10px] text-slate-500">{bf.description}</p>
-                    )}
-                    {bf.consumesName && (
-                      <p className="text-[9px] text-muted-foreground italic">Upgrades {bf.consumesName}</p>
-                    )}
-                    <button
-                      onClick={() => onBuildFacility?.(realSys.system_id, bf.facility_type_id)}
-                      disabled={!canCommission}
-                      className={`w-full mt-1 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
-                        ${canCommission
-                          ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
-                          : "bg-muted text-muted-foreground cursor-not-allowed"
-                        }`}
-                    >
-                      {label}
-                    </button>
                   </div>
                 );
-              })}
-            </div>
-          </ImperialCard>
-        ) : (
-          <ImperialCard title="Build New Facility">
-            <p className="text-[10px] text-muted-foreground italic">No eligible facilities to build at this system.</p>
-          </ImperialCard>
-        )}
+              });
+              const pendingNodes = sysPending.map((po, i) => {
+                const ft = ftFull.find((t) => t.facility_type_id === po.facilityTypeId);
+                const buildTime = ft?.turns_to_build ?? 1;
+                cumulative += buildTime;
+                return (
+                  <div
+                    key={`pen-${i}`}
+                    className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
+                  >
+                    <span>
+                      {ft?.icon || "🏭"} {ft?.name || po.facilityTypeId}
+                      <span className="ml-1 text-[9px] text-crimson uppercase tracking-wider">New</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">{cumulative}T</span>
+                      <button
+                        onClick={() => onUndoBuildOrder?.(po.orderId)}
+                        className="text-[9px] uppercase tracking-wider text-bronze hover:text-bronze-dark"
+                        title="Undo this order"
+                      >
+                        Undo
+                      </button>
+                    </div>
+                  </div>
+                );
+              });
+              const nodes = [...fipNodes, ...pendingNodes];
+              if (nodes.length === 0) {
+                return <p className="text-[10px] text-muted-foreground italic">No facilities under construction.</p>;
+              }
+              return nodes;
+            })()}
+            <button
+              onClick={() => setFacilityDialogOpen(true)}
+              className="w-full mt-1 py-1.5 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+            >
+              Build Facility
+            </button>
+          </div>
+        </ImperialCard>
+
+        <ImperialCard title="Manufacturing Queue">
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-muted-foreground italic">No ships under construction.</p>
+            <button
+              onClick={() => setShipDialogOpen(true)}
+              disabled={!hasShipyard}
+              className={`w-full mt-1 py-1.5 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
+                ${hasShipyard
+                  ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+                }`}
+              title={hasShipyard ? "Build ships at this shipyard" : "Requires a shipyard facility"}
+            >
+              {hasShipyard ? "Build Ships" : "No Shipyard"}
+            </button>
+          </div>
+        </ImperialCard>
+
+        <Dialog open={facilityDialogOpen} onOpenChange={setFacilityDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Build Facility — {realSys.system_name}</DialogTitle>
+            </DialogHeader>
+            {buildable.length > 0 ? (
+              <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
+                {buildable.map((bf) => {
+                  const canAfford = (playerTreasury ?? 0) >= bf.cost;
+                  const hasAdminPoint = adminPointsLeft > 0;
+                  const canCommission = canAfford && hasAdminPoint;
+                  const label = !canAfford
+                    ? "Insufficient Funds"
+                    : !hasAdminPoint
+                      ? "No Admin Points"
+                      : `Commission · ₡${bf.cost} · ${bf.turns_to_build}T`;
+                  return (
+                    <div key={bf.facility_type_id} className="border border-border rounded-sm p-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-accent">
+                          {bf.icon} {bf.name}
+                        </span>
+                      </div>
+                      {bf.description && (
+                        <p className="text-[10px] text-slate-500">{bf.description}</p>
+                      )}
+                      {bf.consumesName && (
+                        <p className="text-[9px] text-muted-foreground italic">Upgrades {bf.consumesName}</p>
+                      )}
+                      <button
+                        onClick={() => {
+                          onBuildFacility?.(realSys.system_id, bf.facility_type_id);
+                          setFacilityDialogOpen(false);
+                        }}
+                        disabled={!canCommission}
+                        className={`w-full mt-1 py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider transition-colors
+                          ${canCommission
+                            ? "bg-crimson text-primary-foreground hover:bg-crimson-light bronze-glow-hover"
+                            : "bg-muted text-muted-foreground cursor-not-allowed"
+                          }`}
+                      >
+                        {label}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-[10px] text-muted-foreground italic py-4 text-center">
+                No eligible facilities to build at this system.
+              </p>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={shipDialogOpen} onOpenChange={setShipDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Build Ships — {realSys.system_name}</DialogTitle>
             </DialogHeader>
-            <div className="text-xs text-muted-foreground italic py-8 text-center">
-              Shipyard production interface coming soon.
+            <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
+              <p className="text-[10px] text-muted-foreground italic py-4 text-center">
+                Shipyard production interface coming soon.
+              </p>
             </div>
           </DialogContent>
         </Dialog>
