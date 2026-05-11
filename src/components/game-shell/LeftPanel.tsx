@@ -22,6 +22,7 @@ import { StatusBadge } from "./StatusBadge";
 import { ImperialCard } from "./ImperialCard";
 import FleetDetailContent from "./FleetDetailContent";
 import { type GameMapData, DispatchesCard } from "./ContextPanel";
+import BuildShipsDialog from "./BuildShipsDialog";
 import type { HexClassification } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS } from "@/lib/mapTypes";
 
@@ -768,18 +769,13 @@ function InlineRegionDetail({
           </DialogContent>
         </Dialog>
 
-        <Dialog open={shipDialogOpen} onOpenChange={setShipDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Build Ships — {realSys.system_name}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
-              <p className="text-[10px] text-muted-foreground italic py-4 text-center">
-                Shipyard production interface coming soon.
-              </p>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <BuildShipsDialog
+          open={shipDialogOpen}
+          onOpenChange={setShipDialogOpen}
+          systemName={realSys.system_name}
+          shipTypes={gameData?.shipTypes || []}
+        />
+
       </>
     );
   }

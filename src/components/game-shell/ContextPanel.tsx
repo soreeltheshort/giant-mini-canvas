@@ -7,6 +7,7 @@ import { ImperialCard } from "./ImperialCard";
 import { StatusBadge } from "./StatusBadge";
 import { ProgressBar } from "./ProgressBar";
 import FleetDetailContent from "./FleetDetailContent";
+import BuildShipsDialog from "./BuildShipsDialog";
 import type { SystemData, MapFleet, FacilityType } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
 
@@ -88,6 +89,11 @@ export interface ShipTypeLookup {
   repair_pod?: number;
   supply_pod?: number;
   hull?: number;
+  ground_invasion?: number;
+  scout_sensors?: number;
+  fighter_bay?: number;
+  gun_ship_link?: number;
+  flavor_description?: string;
 }
 
 export interface FacilityTypeFull {
@@ -594,18 +600,12 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
           </DialogContent>
         </Dialog>
 
-        <Dialog open={shipDialogOpen} onOpenChange={setShipDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Build Ships — {realSys.system_name}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
-              <p className="text-[10px] text-muted-foreground italic py-4 text-center">
-                Shipyard production interface coming soon.
-              </p>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <BuildShipsDialog
+          open={shipDialogOpen}
+          onOpenChange={setShipDialogOpen}
+          systemName={realSys.system_name}
+          shipTypes={gameData?.shipTypes || []}
+        />
       </>
     );
   }
