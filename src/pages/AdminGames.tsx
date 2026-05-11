@@ -864,4 +864,49 @@ function deserializeMapState(json: any): MapState {
   };
 }
 
+/* ── Default Map selector ── */
+function DefaultMapSelector() {
+  const { toast } = useToast();
+  const [maps, setMaps] = useState<Array<{ id: string; name: string }>>([]);
+  const [currentId, setCurrentId] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const [{ data: mapList }, { data: settings }] = await Promise.all([
+        (supabase as any).from("saved_maps").select("id, name").order("created_at", { ascending: false }),
+        (supabase as any).from("app_settings").select("default_map_id").eq("id", "global").maybeSingle(),
+      ]);
+      setMaps(mapList || []);
+      setCurrentId(settings?.default_map_id || "");
+    })();
+  }, []);
+
+  const save = async (newId: string) => {
+    setSaving(true);
+    const { error } = await (supabase as any)
+      .from("app_settings")
+      .upsert({ id: "global", default_map_id: newId, updated_at: new Date().toISOString() });
+    setSaving(false);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    setCurrentId(newId);
+    toast({ title: "Default map updated" });
+  };
+
+  return (
+    <div className="border border-border rounded-md p-4 bg-card space-y-2">
+      <h2 className="text-sm font-heading font-semibold uppercase tracking-wider text-muted-foreground">Default Map for Tester Games</h2>
+      <div className="flex items-center gap-2">
+        <Select value={currentId} onValueChange={save} disabled={saving || maps.length === 0}>
+          <SelectTrigger className="w-72"><SelectValue placeholder={maps.length === 0 ? "No saved maps" : "Select default map"} /></SelectTrigger>
+          <SelectContent>
+            {maps.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {currentId && <span className="text-xs text-muted-foreground">Testers will load this map when creating a new game.</span>}
+      </div>
+    </div>
+  );
+}
+
 export default AdminGames;
