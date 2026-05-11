@@ -273,6 +273,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           ship_class: ext?.class || (st as any)?.class || "",
           fighter_bay: ext?.fighter_bay ?? 0,
           gun_ship_link: ext?.gun_ship_link ?? 0,
+          ground_invasion: ext?.ground_invasion ?? 0,
         };
       });
       setShips(rows);

@@ -22,6 +22,8 @@ export interface FleetShipRow {
   fighter_bay?: number;
   /** Gunship link slots provided by this ship type (per ship). */
   gun_ship_link?: number;
+  /** Ground-invasion units this ship type can carry (per ship). */
+  ground_invasion?: number;
 }
 
 /** Slots a single strikecraft consumes in its bucket (FL=1, FH=2, GS=1). */
@@ -300,6 +302,21 @@ export default function FleetCompositionEditor({
                         }
                         return null;
                       })()}
+                      {(s.fighter_bay || 0) > 0 && (
+                        <span className="text-foreground/70 normal-case tracking-normal font-semibold" title="Fighter bay slots">
+                          FB {s.fighter_bay}
+                        </span>
+                      )}
+                      {(s.gun_ship_link || 0) > 0 && (
+                        <span className="text-foreground/70 normal-case tracking-normal font-semibold" title="Gunship link slots">
+                          GL {s.gun_ship_link}
+                        </span>
+                      )}
+                      {(s.ground_invasion || 0) > 0 && (
+                        <span className="text-foreground/70 normal-case tracking-normal font-semibold" title="Ground invasion capacity">
+                          GI {s.ground_invasion}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {!listEachShip && (canEdit ? (
