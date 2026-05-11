@@ -137,12 +137,25 @@ export default function BuildShipsDialog({
               const st = shipTypes.find((s) => s.id === q.id);
               if (!st) return null;
               return (
-                <div key={q.id} className="flex items-center gap-2 text-[10px]">
+                <div key={`${q.id}-${idx}`} className="flex items-center gap-2 text-[10px] flex-wrap">
                   <span className="w-4 text-right text-muted-foreground">{idx + 1}.</span>
-                  <span className="flex-1 truncate text-accent font-semibold">
+                  <span className="flex-1 min-w-0 truncate text-accent font-semibold">
                     {st.name} <span className="text-bronze">×{q.qty}</span>
                   </span>
                   <span className="text-slate-500">₡{((st.point_cost ?? 0) * q.qty).toLocaleString()}</span>
+                  <select
+                    value={q.destFleetId}
+                    onChange={(e) => setDest(idx, e.target.value)}
+                    className="text-[10px] bg-muted border border-border rounded-sm px-1 py-0.5 text-foreground max-w-[10rem]"
+                    title="Destination fleet"
+                  >
+                    {playerFleets.map((f) => (
+                      <option key={f.fleet_id} value={f.fleet_id}>
+                        {f.fleet_name}{f.atSystem ? " (here)" : ""}
+                      </option>
+                    ))}
+                    <option value={NEW_FLEET}>+ New fleet</option>
+                  </select>
                   <div className="flex items-center gap-0.5">
                     <button
                       onClick={() => move(idx, -1)}
