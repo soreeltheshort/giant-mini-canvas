@@ -17,6 +17,13 @@ const FILTERS: { key: FilterKey; label: string; predicate: (s: ShipTypeLookup) =
 export interface QueuedShip {
   ship_type_id: string;
   quantity: number;
+  destination_fleet_id: string | null; // null = create new fleet
+}
+
+export interface PlayerFleetOption {
+  fleet_id: string;
+  fleet_name: string;
+  atSystem: boolean;
 }
 
 interface BuildShipsDialogProps {
@@ -24,18 +31,27 @@ interface BuildShipsDialogProps {
   onOpenChange: (open: boolean) => void;
   systemName: string;
   shipTypes: ShipTypeLookup[];
+  playerFleets?: PlayerFleetOption[];
   onConfirm?: (queue: QueuedShip[]) => void;
 }
+
+const NEW_FLEET = "__new__";
 
 export default function BuildShipsDialog({
   open,
   onOpenChange,
   systemName,
   shipTypes,
+  playerFleets = [],
   onConfirm,
 }: BuildShipsDialogProps) {
   const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null);
-  const [queueOrder, setQueueOrder] = useState<{ id: string; qty: number }[]>([]);
+  const [queueOrder, setQueueOrder] = useState<{ id: string; qty: number; destFleetId: string }[]>([]);
+
+  const defaultDestination = useMemo(() => {
+    const atSys = playerFleets.find((f) => f.atSystem);
+    return atSys ? atSys.fleet_id : NEW_FLEET;
+  }, [playerFleets]);
 
   const qtyOf = (id: string) => queueOrder.find((q) => q.id === id)?.qty ?? 0;
 
@@ -54,12 +70,21 @@ export default function BuildShipsDialog({
       const idx = prev.findIndex((q) => q.id === id);
       if (idx === -1) {
         if (delta <= 0) return prev;
-        return [...prev, { id, qty: delta }];
+        return [...prev, { id, qty: delta, destFleetId: defaultDestination }];
       }
       const next = [...prev];
       const v = Math.max(0, next[idx].qty + delta);
       if (v === 0) next.splice(idx, 1);
       else next[idx] = { ...next[idx], qty: v };
+      return next;
+    });
+  };
+
+  const setDest = (idx: number, destFleetId: string) => {
+    setQueueOrder((prev) => {
+      const next = [...prev];
+      if (!next[idx]) return prev;
+      next[idx] = { ...next[idx], destFleetId };
       return next;
     });
   };
@@ -82,7 +107,13 @@ export default function BuildShipsDialog({
 
   const handleDone = () => {
     if (queueOrder.length > 0 && onConfirm) {
-      onConfirm(queueOrder.map((q) => ({ ship_type_id: q.id, quantity: q.qty })));
+      onConfirm(
+        queueOrder.map((q) => ({
+          ship_type_id: q.id,
+          quantity: q.qty,
+          destination_fleet_id: q.destFleetId === NEW_FLEET ? null : q.destFleetId,
+        })),
+      );
     }
     setQueueOrder([]);
     setActiveFilter(null);
@@ -106,12 +137,25 @@ export default function BuildShipsDialog({
               const st = shipTypes.find((s) => s.id === q.id);
               if (!st) return null;
               return (
-                <div key={q.id} className="flex items-center gap-2 text-[10px]">
+                <div key={`${q.id}-${idx}`} className="flex items-center gap-2 text-[10px] flex-wrap">
                   <span className="w-4 text-right text-muted-foreground">{idx + 1}.</span>
-                  <span className="flex-1 truncate text-accent font-semibold">
+                  <span className="flex-1 min-w-0 truncate text-accent font-semibold">
                     {st.name} <span className="text-bronze">×{q.qty}</span>
                   </span>
                   <span className="text-slate-500">₡{((st.point_cost ?? 0) * q.qty).toLocaleString()}</span>
+                  <select
+                    value={q.destFleetId}
+                    onChange={(e) => setDest(idx, e.target.value)}
+                    className="text-[10px] bg-muted border border-border rounded-sm px-1 py-0.5 text-foreground max-w-[10rem]"
+                    title="Destination fleet"
+                  >
+                    {playerFleets.map((f) => (
+                      <option key={f.fleet_id} value={f.fleet_id}>
+                        {f.fleet_name}{f.atSystem ? " (here)" : ""}
+                      </option>
+                    ))}
+                    <option value={NEW_FLEET}>+ New fleet</option>
+                  </select>
                   <div className="flex items-center gap-0.5">
                     <button
                       onClick={() => move(idx, -1)}

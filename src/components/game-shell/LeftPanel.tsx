@@ -339,6 +339,7 @@ function InlineContextContent({
             pendingCancelBuildOrders={pendingCancelBuildOrders}
             playerTreasury={playerTreasury}
             adminPointsAvailable={adminPointsAvailable}
+            playerOwnerClassification={playerOwnerClassification}
           />
         ) : selection.type === "army" ? (
           <InlineArmyDetail
@@ -541,6 +542,7 @@ function InlineRegionDetail({
   pendingCancelBuildOrders,
   playerTreasury,
   adminPointsAvailable,
+  playerOwnerClassification,
 }: {
   id: string;
   gameData?: GameMapData;
@@ -552,6 +554,7 @@ function InlineRegionDetail({
   pendingCancelBuildOrders?: Map<number, Set<string>>;
   playerTreasury?: number;
   adminPointsAvailable?: number;
+  playerOwnerClassification?: string;
 }) {
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
   const realSys =
@@ -774,6 +777,18 @@ function InlineRegionDetail({
           onOpenChange={setShipDialogOpen}
           systemName={realSys.system_name}
           shipTypes={gameData?.shipTypes || []}
+          playerFleets={(() => {
+            if (!gameData || !playerOwnerClassification) return [];
+            const sysHex = Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id);
+            return gameData.fleets
+              .filter((f) => f.owner_classification === playerOwnerClassification)
+              .map((f) => ({
+                fleet_id: f.fleet_id,
+                fleet_name: f.fleet_name,
+                atSystem: !!sysHex && f.hex_x === sysHex.x && f.hex_y === sysHex.y,
+              }))
+              .sort((a, b) => Number(b.atSystem) - Number(a.atSystem));
+          })()}
         />
 
       </>

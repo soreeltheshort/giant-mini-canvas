@@ -164,7 +164,7 @@ export default function ContextPanel({ mode, selection, news, onClose, onClearSe
         {selection.type === "news" ? (
           <NewsDetail story={news.find((n) => n.id === selection.id)} />
         ) : selection.type === "region" ? (
-          <RegionDetail id={selection.id} gameData={gameData} mode={mode} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} adminPointsAvailable={adminPointsAvailable} />
+          <RegionDetail id={selection.id} gameData={gameData} mode={mode} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} adminPointsAvailable={adminPointsAvailable} playerOwnerClassification={playerOwnerClassification} />
         ) : selection.type === "army" ? (
           <ArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />
         ) : selection.type === "production-center" ? (
@@ -439,13 +439,14 @@ function ProductionOverviewEmpty({
     </>
   );
 }
-function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adminPointsAvailable }: {
+function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification }: {
   id: string;
   gameData?: GameMapData;
   mode?: GameMode;
   onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
   playerTreasury?: number;
   adminPointsAvailable?: number;
+  playerOwnerClassification?: string;
 }) {
   // Try real data first (selection id = "sys-{system_id}")
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
@@ -617,6 +618,18 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
           onOpenChange={setShipDialogOpen}
           systemName={realSys.system_name}
           shipTypes={gameData?.shipTypes || []}
+          playerFleets={(() => {
+            if (!gameData || !playerOwnerClassification) return [];
+            const sysHex = Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id);
+            return gameData.fleets
+              .filter((f) => f.owner_classification === playerOwnerClassification)
+              .map((f) => ({
+                fleet_id: f.fleet_id,
+                fleet_name: f.fleet_name,
+                atSystem: !!sysHex && f.hex_x === sysHex.x && f.hex_y === sysHex.y,
+              }))
+              .sort((a, b) => Number(b.atSystem) - Number(a.atSystem));
+          })()}
         />
       </>
     );
