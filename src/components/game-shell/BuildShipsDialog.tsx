@@ -11,7 +11,7 @@ const FILTERS: { key: FilterKey; label: string; predicate: (s: ShipTypeLookup) =
   { key: "supply",      label: "Supply",            predicate: (s) => (s.supply_pod ?? 0)     > 0 },
   { key: "fighters",    label: "Carrier",           predicate: (s) => (s.fighter_bay ?? 0)    > 0 },
   { key: "gunship",     label: "GS Tender",         predicate: (s) => (s.gun_ship_link ?? 0)  > 0 },
-  { key: "strikecraft", label: "Fighters/Gunships", predicate: (s) => s.hull_class === "Fighter" || s.hull_class === "Gunship" },
+  { key: "strikecraft", label: "Fighters/Gunships", predicate: (s) => s.hull_class === "Strikecraft" },
 ];
 
 export interface QueuedShip {
