@@ -2,15 +2,16 @@ import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { ShipTypeLookup } from "./ContextPanel";
 
-type FilterKey = "invasion" | "sensors" | "repair" | "supply" | "fighters" | "gunship";
+type FilterKey = "invasion" | "sensors" | "repair" | "supply" | "fighters" | "gunship" | "strikecraft";
 
 const FILTERS: { key: FilterKey; label: string; predicate: (s: ShipTypeLookup) => boolean }[] = [
-  { key: "invasion", label: "Invasion", predicate: (s) => (s.ground_invasion ?? 0) > 0 },
-  { key: "sensors",  label: "Sensors",  predicate: (s) => (s.scout_sensors ?? 0)  > 0 },
-  { key: "repair",   label: "Repair",   predicate: (s) => (s.repair_pod ?? 0)     > 0 },
-  { key: "supply",   label: "Supply",   predicate: (s) => (s.supply_pod ?? 0)     > 0 },
-  { key: "fighters", label: "Carrier",   predicate: (s) => (s.fighter_bay ?? 0)    > 0 },
-  { key: "gunship",  label: "GS Tender", predicate: (s) => (s.gun_ship_link ?? 0)  > 0 },
+  { key: "invasion",    label: "Invasion",          predicate: (s) => (s.ground_invasion ?? 0) > 0 },
+  { key: "sensors",     label: "Sensors",           predicate: (s) => (s.scout_sensors ?? 0)  > 0 },
+  { key: "repair",      label: "Repair",            predicate: (s) => (s.repair_pod ?? 0)     > 0 },
+  { key: "supply",      label: "Supply",            predicate: (s) => (s.supply_pod ?? 0)     > 0 },
+  { key: "fighters",    label: "Carrier",           predicate: (s) => (s.fighter_bay ?? 0)    > 0 },
+  { key: "gunship",     label: "GS Tender",         predicate: (s) => (s.gun_ship_link ?? 0)  > 0 },
+  { key: "strikecraft", label: "Fighters/Gunships", predicate: (s) => s.hull_class === "Fighter" || s.hull_class === "Gunship" },
 ];
 
 export interface QueuedShip {
