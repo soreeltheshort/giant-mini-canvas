@@ -302,6 +302,21 @@ export default function FleetCompositionEditor({
                         }
                         return null;
                       })()}
+                      {(s.fighter_bay || 0) > 0 && (
+                        <span className="text-foreground/70 normal-case tracking-normal font-semibold" title="Fighter bay slots">
+                          FB {s.fighter_bay}
+                        </span>
+                      )}
+                      {(s.gun_ship_link || 0) > 0 && (
+                        <span className="text-foreground/70 normal-case tracking-normal font-semibold" title="Gunship link slots">
+                          GL {s.gun_ship_link}
+                        </span>
+                      )}
+                      {(s.ground_invasion || 0) > 0 && (
+                        <span className="text-foreground/70 normal-case tracking-normal font-semibold" title="Ground invasion capacity">
+                          GI {s.ground_invasion}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {!listEachShip && (canEdit ? (
