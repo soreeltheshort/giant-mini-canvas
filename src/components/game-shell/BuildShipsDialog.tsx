@@ -9,8 +9,8 @@ const FILTERS: { key: FilterKey; label: string; predicate: (s: ShipTypeLookup) =
   { key: "sensors",  label: "Sensors",  predicate: (s) => (s.scout_sensors ?? 0)  > 0 },
   { key: "repair",   label: "Repair",   predicate: (s) => (s.repair_pod ?? 0)     > 0 },
   { key: "supply",   label: "Supply",   predicate: (s) => (s.supply_pod ?? 0)     > 0 },
-  { key: "fighters", label: "Fighters", predicate: (s) => (s.fighter_bay ?? 0)    > 0 },
-  { key: "gunship",  label: "Gunships", predicate: (s) => (s.gun_ship_link ?? 0)  > 0 },
+  { key: "fighters", label: "Carrier",   predicate: (s) => (s.fighter_bay ?? 0)    > 0 },
+  { key: "gunship",  label: "GS Tender", predicate: (s) => (s.gun_ship_link ?? 0)  > 0 },
 ];
 
 export interface QueuedShip {

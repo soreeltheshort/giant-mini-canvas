@@ -415,6 +415,12 @@ const PlayerGame = () => {
       map_speed: Number(s.map_speed) || 0,
       repair_pod: Number(s.repair_pod) || 0,
       supply_pod: Number(s.supply_pod) || 0,
+      hull: Number(s.hull) || 0,
+      ground_invasion: Number(s.ground_invasion) || 0,
+      scout_sensors: Number(s.scout_sensors) || 0,
+      fighter_bay: Number(s.fighter_bay) || 0,
+      gun_ship_link: Number(s.gun_ship_link) || 0,
+      flavor_description: s.flavor_description ?? "",
     })));
 
     const { data: mapRow } = await (supabase as any)
