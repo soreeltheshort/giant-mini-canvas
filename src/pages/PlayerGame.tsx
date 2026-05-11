@@ -421,6 +421,18 @@ const PlayerGame = () => {
       fighter_bay: Number(s.fighter_bay) || 0,
       gun_ship_link: Number(s.gun_ship_link) || 0,
       flavor_description: s.flavor_description ?? "",
+      laser_2_5cm: Number(s.laser_2_5cm) || 0,
+      laser_4_5cm: Number(s.laser_4_5cm) || 0,
+      laser_6_5cm: Number(s.laser_6_5cm) || 0,
+      laser_10cm: Number(s.laser_10cm) || 0,
+      laser_14cm: Number(s.laser_14cm) || 0,
+      laser_20cm: Number(s.laser_20cm) || 0,
+      laser_28cm: Number(s.laser_28cm) || 0,
+      laser_50cm: Number(s.laser_50cm) || 0,
+      missile_10kg: Number(s.missile_10kg) || 0,
+      missile_50kg: Number(s.missile_50kg) || 0,
+      missile_100kg: Number(s.missile_100kg) || 0,
+      missile_half_kt: Number(s.missile_half_kt) || 0,
     })));
 
     const { data: mapRow } = await (supabase as any)
