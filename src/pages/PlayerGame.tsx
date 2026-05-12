@@ -386,7 +386,23 @@ const PlayerGame = () => {
     setPlayer(pData);
     setProfile(prData);
     try { localStorage.setItem(`lastGame:${user.id}`, gameId); } catch {}
-    supabase.from("profiles").update({ last_game_id: gameId }).eq("user_id", user.id).then(() => {});
+    (async () => {
+      const { data: gpRows } = await supabase
+        .from("game_players")
+        .select("game_id, player_slot, games!inner(id, name, status)")
+        .eq("user_id", user.id)
+        .neq("games.status", "completed");
+      const activeGames = (gpRows || []).map((r: any) => ({
+        game_id: r.game_id,
+        player_slot: r.player_slot,
+        name: r.games?.name ?? "",
+        status: r.games?.status ?? "",
+      }));
+      await supabase
+        .from("profiles")
+        .update({ last_game_id: gameId, active_games: activeGames })
+        .eq("user_id", user.id);
+    })();
     setDbFacilityTypes((ftData || []).map((ft: any) => ({
       facility_type_id: ft.id,
       name: ft.name,
