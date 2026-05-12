@@ -15,9 +15,10 @@ import {
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin, isTester, signOut } = useAuth();
+  const { user, isAdmin, isTester, isOptIn, refreshRoles, signOut } = useAuth();
   const { toast } = useToast();
   const [switchingBack, setSwitchingBack] = useState(false);
+  const [togglingOptIn, setTogglingOptIn] = useState(false);
 
   const impersonatingFromAdmin = localStorage.getItem("impersonating_from_admin");
   const isImpersonating = !!impersonatingFromAdmin && user && impersonatingFromAdmin !== user.id;
@@ -28,12 +29,24 @@ const Header = () => {
   const isPlanetTestingMode = location.pathname.startsWith("/planet-testing");
   const isFleetTestingMode = location.pathname.startsWith("/fleet-testing");
   const isGameMode = location.pathname.startsWith("/admin/games");
+  const isForumActive = location.pathname.startsWith("/blog") || location.pathname === "/admin/blog" || location.pathname === "/unsubscribe";
 
-  const handleNewsletter = () => {
-    if (location.pathname === "/") {
-      document.getElementById("newsletter")?.scrollIntoView({ behavior: "smooth" });
-    } else {
-      navigate("/#newsletter");
+  const toggleOptIn = async () => {
+    if (!user) return;
+    setTogglingOptIn(true);
+    try {
+      if (isOptIn) {
+        await supabase.from("user_roles").delete().eq("user_id", user.id).eq("role", "opt_in");
+        toast({ title: "Unsubscribed from communications" });
+      } else {
+        await supabase.from("user_roles").insert({ user_id: user.id, role: "opt_in" });
+        toast({ title: "Subscribed to communications" });
+      }
+      await refreshRoles();
+    } catch (err: any) {
+      toast({ title: "Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setTogglingOptIn(false);
     }
   };
 
