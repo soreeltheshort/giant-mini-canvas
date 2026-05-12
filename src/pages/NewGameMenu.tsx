@@ -14,11 +14,16 @@ interface MenuItem {
 }
 
 export default function NewGameMenu() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
 
+  const handleContinue = () => {
+    const lastGame = user ? localStorage.getItem(`lastGame:${user.id}`) : null;
+    navigate(lastGame ? `/play/${lastGame}` : "/my-games");
+  };
+
   const items: MenuItem[] = [
-    { label: "Continue", to: "/my-games" },
+    { label: "Continue", onClick: handleContinue },
     { label: "New Campaign", disabled: true },
     { label: "Load Game", to: "/my-games" },
     { label: "Senate Chronicles", to: "/manual" },
