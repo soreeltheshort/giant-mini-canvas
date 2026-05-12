@@ -750,9 +750,8 @@ const PlayerGame = () => {
   }, [player?.id, player?.orders_locked]);
 
   const submitOrders = useCallback(async () => {
-    if (!player) return;
-    const next = !player.orders_locked;
-    if (next && submissionIssues.length > 0) {
+    if (!player || !game) return;
+    if (submissionIssues.length > 0 && (!player.orders_locked || isSolo)) {
       toast({
         title: "Cannot submit",
         description: `Resolve ${submissionIssues.length} open issue${submissionIssues.length === 1 ? "" : "s"} first.`,
@@ -760,12 +759,33 @@ const PlayerGame = () => {
       });
       return;
     }
+
+    // Solo flow: lock orders, process the turn immediately, refetch.
+    if (isSolo) {
+      if (processingTurn) return;
+      setProcessingTurn(true);
+      try {
+        await (supabase as any).from("game_players").update({ orders_locked: true }).eq("id", player.id);
+        playOrdersSubmitted();
+        await processTurn(supabase as any, game.id);
+        await load();
+        toast({ title: "Turn processed", description: `Now accepting orders for Turn ${game.turn_number + 1}.` });
+      } catch (err: any) {
+        toast({ title: "Turn failed", description: err?.message || String(err), variant: "destructive" });
+      } finally {
+        setProcessingTurn(false);
+      }
+      return;
+    }
+
+    // Multiplayer flow: toggle the submitted flag.
+    const next = !player.orders_locked;
     const { error } = await (supabase as any).from("game_players").update({ orders_locked: next }).eq("id", player.id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setPlayer(p => (p ? { ...p, orders_locked: next } : p));
     if (next) playOrdersSubmitted();
     toast({ title: next ? "Orders Submitted" : "Orders Withdrawn", description: next ? "Your orders are marked submitted." : "Your orders are no longer marked submitted." });
-  }, [player, toast, submissionIssues]);
+  }, [player, game, toast, submissionIssues, isSolo, processingTurn, load]);
 
   const combatPointsAvailable = Math.max(0, (player?.combat_points_remaining ?? 0) - pendingFleetOrderCount);
   const adminPointsAvailable = Math.max(0, (player?.admin_points_remaining ?? 0) - pendingBuildAdminPoints);
