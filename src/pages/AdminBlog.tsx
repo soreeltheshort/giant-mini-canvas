@@ -142,6 +142,28 @@ const AdminBlog = () => {
     }
   };
 
+  const [mailing, setMailing] = useState(false);
+
+  const mailPost = async (p: BlogPost) => {
+    if (!p.published) {
+      toast({ title: "Publish the post before mailing it.", variant: "destructive" });
+      return;
+    }
+    if ((p.mailed_count || 0) > 0) {
+      const ok = confirm(`⚠ This post was already mailed ${p.mailed_count} time(s)${p.mailed_at ? ` (last on ${new Date(p.mailed_at).toLocaleString()})` : ""}. Send again?`);
+      if (!ok) return;
+    }
+    setMailing(true);
+    const { data, error } = await supabase.functions.invoke("mail-blog-post", { body: { blog_post_id: p.id, force: (p.mailed_count || 0) > 0 } });
+    setMailing(false);
+    if (error || (data as any)?.error) {
+      toast({ title: "Mail failed", description: error?.message || (data as any)?.error, variant: "destructive" });
+      return;
+    }
+    toast({ title: `Sent to ${(data as any).sent} subscriber(s)`, description: (data as any).failed ? `${(data as any).failed} failed` : undefined });
+    load();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
