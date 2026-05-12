@@ -80,6 +80,9 @@ const App = () => (
             <Route path="/admin/blog" element={<RequireRole roles={["admin"]}><AdminBlog /></RequireRole>} />
             <Route path="/new-game" element={<NewGameIntro />} />
             <Route path="/new-game/menu" element={<NewGameMenu />} />
+            <Route path="/admin/cutscenes" element={<RequireRole roles={["admin"]}><AdminCutscenes /></RequireRole>} />
+            <Route path="/admin/cutscenes/:id" element={<RequireRole roles={["admin"]}><AdminCutsceneEditor /></RequireRole>} />
+            <Route path="/cutscenes/:id/play" element={<CutscenePlayer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
