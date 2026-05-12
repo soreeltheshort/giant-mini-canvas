@@ -80,15 +80,18 @@ export default function SlidePlayer({ slide, onComplete }: Props) {
       >
         <div className="max-w-4xl mx-auto">
           <p className="font-heading text-xl md:text-3xl leading-relaxed text-center min-h-[2.5em]">
-            {currentWords.map((w, wIdx) => (
-              <span
-                key={wIdx}
-                className={wIdx < wordCount ? "text-ivory" : "text-transparent"}
-              >
-                {w}
-                {wIdx < currentWords.length - 1 ? " " : ""}
-              </span>
-            ))}
+            {currentWords.map((w, wIdx) => {
+              if (w === "|") return <br key={wIdx} />;
+              return (
+                <span
+                  key={wIdx}
+                  className={wIdx < wordCount ? "text-ivory" : "text-transparent"}
+                >
+                  {w}
+                  {wIdx < currentWords.length - 1 ? " " : ""}
+                </span>
+              );
+            })}
           </p>
         </div>
       </div>
