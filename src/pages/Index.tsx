@@ -103,10 +103,10 @@ const Index = () => {
                         </Button>
                       </Link>
                       <Link to="/map-testing">
-                        <Button variant="outline" className="font-heading uppercase tracking-wider">🗺 Map Testing</Button>
+                        <Button size="sm" variant="outline" className="font-heading uppercase tracking-wider text-xs">🗺 Map Testing</Button>
                       </Link>
                       <Link to="/planet-testing">
-                        <Button variant="outline" className="font-heading uppercase tracking-wider">🌍 Planet Testing</Button>
+                        <Button size="sm" variant="outline" className="font-heading uppercase tracking-wider text-xs">🌍 Planet Testing</Button>
                       </Link>
                     </>
                   )}
