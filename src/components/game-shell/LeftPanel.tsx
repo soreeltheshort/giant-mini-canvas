@@ -236,16 +236,18 @@ export default function LeftPanel({
         )}
         <button
           onClick={onSubmitOrders}
-          disabled={!onSubmitOrders || (!ordersSubmitted && submissionIssues.length > 0)}
+          disabled={!onSubmitOrders || processingTurn || (!ordersSubmitted && submissionIssues.length > 0)}
           className={`w-full py-2 rounded-sm font-heading text-xs font-semibold uppercase tracking-wider transition-colors bronze-glow-hover ${
-            ordersSubmitted
+            ordersSubmitted && !soloMode
               ? "bg-ivory border border-bronze/60 text-bronze-dark hover:bg-ivory-dark"
               : "bg-crimson text-primary-foreground hover:bg-crimson-light"
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          {ordersSubmitted ? "Withdraw Turn" : "Submit Turn"}
+          {soloMode
+            ? (processingTurn ? "Processing…" : "Next Turn")
+            : (ordersSubmitted ? "Withdraw Turn" : "Submit Turn")}
         </button>
-        {ordersSubmitted && (
+        {!soloMode && ordersSubmitted && (
           <p className="text-[9px] font-heading uppercase tracking-widest text-center text-bronze-dark">
             ✓ Submitted — you may keep editing
           </p>
