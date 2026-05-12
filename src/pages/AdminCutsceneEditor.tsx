@@ -14,10 +14,13 @@ interface Slide {
   order_index: number;
   image_url: string | null;
   text: string;
+  text_2: string;
+  text_3: string;
   fade_in_ms: number;
   hold_ms: number;
   fade_out_ms: number;
   word_speed_ms: number;
+  slug_delay_ms: number;
 }
 
 interface Cutscene {
