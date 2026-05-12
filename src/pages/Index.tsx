@@ -149,7 +149,7 @@ const Index = () => {
             </div>
             <Link
               to={`/blog/${latestPost.slug}`}
-              className="mt-6 group grid gap-8 md:grid-cols-[2fr_3fr] items-center border-2 border-bronze/40 bg-ivory rounded-sm overflow-hidden hover:border-bronze transition-colors shadow-[0_4px_20px_-8px_hsl(var(--bronze)/0.35)]"
+              className="mt-6 group grid gap-8 md:grid-cols-[2fr_3fr] items-center border-2 border-bronze/40 bg-ivory rounded-sm overflow-hidden hover:border-bronze transition-colors shadow-[0_4px_20px_-8px_hsl(var(--bronze)/0.35)] bg-slate-950"
             >
               {latestPost.cover_image_url ? (
                 <div className="aspect-video md:aspect-auto md:h-full overflow-hidden bg-muted">
