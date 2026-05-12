@@ -386,6 +386,7 @@ const PlayerGame = () => {
     setPlayer(pData);
     setProfile(prData);
     try { localStorage.setItem(`lastGame:${user.id}`, gameId); } catch {}
+    supabase.from("profiles").update({ last_game_id: gameId }).eq("user_id", user.id).then(() => {});
     setDbFacilityTypes((ftData || []).map((ft: any) => ({
       facility_type_id: ft.id,
       name: ft.name,
