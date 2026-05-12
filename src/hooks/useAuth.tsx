@@ -30,14 +30,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isTester, setIsTester] = useState(false);
+  const [isOptIn, setIsOptIn] = useState(false);
+
+  const checkRoles = async (userId: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const roles = (data || []).map(r => r.role as string);
+    setIsAdmin(roles.includes("admin"));
+    setIsTester(roles.includes("tester"));
+    setIsOptIn(roles.includes("opt_in"));
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      // Always reset roles immediately to prevent stale state from previous user
       setIsAdmin(false);
       setIsTester(false);
+      setIsOptIn(false);
       if (session?.user) {
         setTimeout(() => checkRoles(session.user.id), 0);
       }
@@ -56,14 +68,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkRoles = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    const roles = (data || []).map(r => r.role);
-    setIsAdmin(roles.includes("admin"));
-    setIsTester(roles.includes("tester"));
+  const refreshRoles = async () => {
+    if (user) await checkRoles(user.id);
   };
 
   const signOut = async () => {
@@ -71,7 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, isTester, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, isTester, isOptIn, refreshRoles, signOut }}>
       {children}
     </AuthContext.Provider>
   );
