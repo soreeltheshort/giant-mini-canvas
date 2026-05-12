@@ -75,7 +75,7 @@ const Index = () => {
                 </h1>
                 <div className="mt-3 h-px w-24 bg-gradient-to-r from-bronze via-crimson to-transparent" />
                 <p className="mt-5 text-base leading-relaxed text-muted-foreground">
-                  Forge alliances, command legions, and wage simultaneous-turn war across a hex-bound galaxy.
+                  Forge alliances, command fleets, and wage simultaneous-turn war across a hex-bound galaxy.
                   A tactical wargame of senate intrigue, ground invasions, and an encroaching alien threat.
                 </p>
 
