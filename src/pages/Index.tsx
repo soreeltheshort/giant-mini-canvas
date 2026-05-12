@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -5,11 +6,37 @@ import Newsletter from "@/components/Newsletter";
 import { games } from "@/games";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+
+interface LatestPost {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  cover_image_url: string | null;
+  published_at: string | null;
+  created_at: string;
+}
 
 const Index = () => {
   const activeGame = games.find((g) => g.inDevelopment);
   const { user, isAdmin, isTester } = useAuth();
   const canAccessTesting = isAdmin || isTester;
+  const [latestPost, setLatestPost] = useState<LatestPost | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("blog_posts")
+        .select("id, slug, title, excerpt, cover_image_url, published_at, created_at")
+        .eq("published", true)
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) setLatestPost(data);
+    })();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
