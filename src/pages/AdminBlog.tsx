@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Save, Trash2, Pencil, X, Eye } from "lucide-react";
+import { Plus, Save, Trash2, Pencil, X, Eye, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface BlogPost {
@@ -24,6 +24,8 @@ interface BlogPost {
   author_id: string;
   created_at: string;
   updated_at: string;
+  mailed_at: string | null;
+  mailed_count: number;
 }
 
 function slugify(s: string) {
@@ -138,6 +140,28 @@ const AdminBlog = () => {
       toast({ title: "Deleted" });
       load();
     }
+  };
+
+  const [mailing, setMailing] = useState(false);
+
+  const mailPost = async (p: BlogPost) => {
+    if (!p.published) {
+      toast({ title: "Publish the post before mailing it.", variant: "destructive" });
+      return;
+    }
+    if ((p.mailed_count || 0) > 0) {
+      const ok = confirm(`⚠ This post was already mailed ${p.mailed_count} time(s)${p.mailed_at ? ` (last on ${new Date(p.mailed_at).toLocaleString()})` : ""}. Send again?`);
+      if (!ok) return;
+    }
+    setMailing(true);
+    const { data, error } = await supabase.functions.invoke("mail-blog-post", { body: { blog_post_id: p.id, force: (p.mailed_count || 0) > 0 } });
+    setMailing(false);
+    if (error || (data as any)?.error) {
+      toast({ title: "Mail failed", description: error?.message || (data as any)?.error, variant: "destructive" });
+      return;
+    }
+    toast({ title: `Sent to ${(data as any).sent} subscriber(s)`, description: (data as any).failed ? `${(data as any).failed} failed` : undefined });
+    load();
   };
 
   return (

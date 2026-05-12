@@ -15,9 +15,10 @@ import {
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin, isTester, signOut } = useAuth();
+  const { user, isAdmin, isTester, isOptIn, refreshRoles, signOut } = useAuth();
   const { toast } = useToast();
   const [switchingBack, setSwitchingBack] = useState(false);
+  const [togglingOptIn, setTogglingOptIn] = useState(false);
 
   const impersonatingFromAdmin = localStorage.getItem("impersonating_from_admin");
   const isImpersonating = !!impersonatingFromAdmin && user && impersonatingFromAdmin !== user.id;
@@ -28,12 +29,24 @@ const Header = () => {
   const isPlanetTestingMode = location.pathname.startsWith("/planet-testing");
   const isFleetTestingMode = location.pathname.startsWith("/fleet-testing");
   const isGameMode = location.pathname.startsWith("/admin/games");
+  const isForumActive = location.pathname.startsWith("/blog") || location.pathname === "/admin/blog" || location.pathname === "/unsubscribe";
 
-  const handleNewsletter = () => {
-    if (location.pathname === "/") {
-      document.getElementById("newsletter")?.scrollIntoView({ behavior: "smooth" });
-    } else {
-      navigate("/#newsletter");
+  const toggleOptIn = async () => {
+    if (!user) return;
+    setTogglingOptIn(true);
+    try {
+      if (isOptIn) {
+        await supabase.from("user_roles").delete().eq("user_id", user.id).eq("role", "opt_in");
+        toast({ title: "Unsubscribed from communications" });
+      } else {
+        await supabase.from("user_roles").insert({ user_id: user.id, role: "opt_in" });
+        toast({ title: "Subscribed to communications" });
+      }
+      await refreshRoles();
+    } catch (err: any) {
+      toast({ title: "Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setTogglingOptIn(false);
     }
   };
 
@@ -94,12 +107,7 @@ const Header = () => {
             >
               Home
             </Link>
-            <Link
-              to={isAdmin ? "/admin/blog" : "/blog"}
-              className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/blog") || location.pathname === "/admin/blog" ? "text-foreground" : "text-muted-foreground"} ${isAdmin ? "text-gold" : ""}`}
-            >
-              Blog
-            </Link>
+            {/* Blog moved into Forum dropdown */}
             {user && canAccessGameFeatures && (
               <DropdownMenu>
                 <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isCombatTestingMode || isMapTestingMode || isPlanetTestingMode || isFleetTestingMode ? "text-foreground" : "text-muted-foreground"}`}>
@@ -179,12 +187,32 @@ const Header = () => {
                 Manual
               </Link>
             )}
-            <button
-              onClick={handleNewsletter}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Newsletter
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isForumActive ? "text-foreground" : "text-muted-foreground"}`}>
+                Forum
+                <ChevronDown className="h-3 w-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background z-50">
+                <DropdownMenuItem asChild>
+                  <Link to="/blog">Blog</Link>
+                </DropdownMenuItem>
+                {user && isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin/blog">Manage Blog</Link>
+                  </DropdownMenuItem>
+                )}
+                {user && (
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); toggleOptIn(); }} disabled={togglingOptIn}>
+                    {isOptIn ? "Unsubscribe from dispatches" : "Subscribe to dispatches"}
+                  </DropdownMenuItem>
+                )}
+                {!user && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/unsubscribe">Unsubscribe</Link>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {user ? (
               <Button variant="ghost" size="sm" onClick={() => {
                 localStorage.removeItem("impersonating_from_admin");

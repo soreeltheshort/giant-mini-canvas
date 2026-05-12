@@ -41,6 +41,7 @@ import CutscenePlayer from "./pages/CutscenePlayer";
 import AdminImages from "./pages/AdminImages";
 import AdminSounds from "./pages/AdminSounds";
 import Credits from "./pages/Credits";
+import Unsubscribe from "./pages/Unsubscribe";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,7 @@ const App = () => (
             <Route path="/admin/images" element={<RequireRole roles={["admin"]}><AdminImages /></RequireRole>} />
             <Route path="/admin/sounds" element={<RequireRole roles={["admin"]}><AdminSounds /></RequireRole>} />
             <Route path="/credits" element={<Credits />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
