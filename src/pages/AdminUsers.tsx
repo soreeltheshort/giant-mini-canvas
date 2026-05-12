@@ -138,6 +138,7 @@ const AdminUsers = () => {
                 {users.map(u => {
                   const hasAdmin = u.roles.includes("admin");
                   const hasTester = u.roles.includes("tester");
+                  const hasOptIn = u.roles.includes("opt_in");
                   const isSelf = u.user_id === user?.id;
                   return (
                     <tr key={u.user_id} className="border-b border-border">
@@ -151,11 +152,12 @@ const AdminUsers = () => {
                         {new Date(u.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-2">
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           {u.roles.map(r => (
                             <span key={r} className={`px-2 py-0.5 text-xs rounded ${
                               r === "admin" ? "bg-primary text-primary-foreground" :
                               r === "tester" ? "bg-accent text-accent-foreground" :
+                              r === "opt_in" ? "bg-crimson/20 text-crimson-dark" :
                               "bg-muted text-muted-foreground"
                             }`}>
                               {r}
@@ -164,7 +166,7 @@ const AdminUsers = () => {
                         </div>
                       </td>
                       <td className="px-4 py-2">
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <Button
                             size="sm"
                             variant={hasAdmin ? "outline" : "default"}
@@ -172,11 +174,7 @@ const AdminUsers = () => {
                             disabled={isSelf && hasAdmin}
                             onClick={() => toggleRole(u.user_id, "admin", hasAdmin)}
                           >
-                            {hasAdmin ? (
-                              <><ShieldOff className="mr-1 h-3 w-3" /> Remove Admin</>
-                            ) : (
-                              <><Shield className="mr-1 h-3 w-3" /> Make Admin</>
-                            )}
+                            {hasAdmin ? (<><ShieldOff className="mr-1 h-3 w-3" /> Remove Admin</>) : (<><Shield className="mr-1 h-3 w-3" /> Make Admin</>)}
                           </Button>
                           <Button
                             size="sm"
@@ -184,11 +182,15 @@ const AdminUsers = () => {
                             className="text-xs"
                             onClick={() => toggleRole(u.user_id, "tester", hasTester)}
                           >
-                            {hasTester ? (
-                              <><FlaskConicalOff className="mr-1 h-3 w-3" /> Remove Tester</>
-                            ) : (
-                              <><FlaskConical className="mr-1 h-3 w-3" /> Make Tester</>
-                            )}
+                            {hasTester ? (<><FlaskConicalOff className="mr-1 h-3 w-3" /> Remove Tester</>) : (<><FlaskConical className="mr-1 h-3 w-3" /> Make Tester</>)}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={hasOptIn ? "outline" : "secondary"}
+                            className="text-xs"
+                            onClick={() => toggleRole(u.user_id, "opt_in", hasOptIn)}
+                          >
+                            {hasOptIn ? (<><MailX className="mr-1 h-3 w-3" /> Opt Out</>) : (<><Mail className="mr-1 h-3 w-3" /> Opt In</>)}
                           </Button>
                           {!isSelf && (
                             <Button
