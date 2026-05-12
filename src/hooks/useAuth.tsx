@@ -61,6 +61,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         checkRoles(session.user.id);
+        // Heartbeat: update last_seen_at at most once per hour per browser
+        const key = `lastSeenPing:${session.user.id}`;
+        const last = Number(localStorage.getItem(key) || 0);
+        if (Date.now() - last > 60 * 60 * 1000) {
+          localStorage.setItem(key, String(Date.now()));
+          supabase.from("profiles").update({ last_seen_at: new Date().toISOString() }).eq("user_id", session.user.id).then(() => {});
+        }
       }
       setLoading(false);
     });
