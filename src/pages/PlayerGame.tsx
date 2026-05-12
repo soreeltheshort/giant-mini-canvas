@@ -24,6 +24,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useGameMusic } from "@/hooks/useGameMusic";
 import { playOrderPlaced, playOrdersSubmitted } from "@/lib/uiSounds";
 import { computeGroupStrikecraftCapacity, type FleetShipRow } from "@/components/game-shell/FleetCompositionEditor";
+import { processTurn } from "@/lib/gameLifecycle";
 
 
 const PROVINCE_NAMES: Record<number, string> = {
