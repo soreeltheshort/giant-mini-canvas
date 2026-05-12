@@ -69,16 +69,25 @@ export default function SlidePlayer({ slide, onComplete }: Props) {
   const opacity = phase === "out" ? 0 : 1;
   const transitionMs = phase === "in" ? slide.fade_in_ms : phase === "out" ? slide.fade_out_ms : 0;
 
-  const revealAll = () => {
+  const handleAdvance = () => {
     if (phase === "out") return;
-    if (wordCount < currentWords.length) setWordCount(currentWords.length);
+    if (wordCount < currentWords.length) {
+      setWordCount(currentWords.length);
+      return;
+    }
+    if (slugIdx < slugs.length - 1) {
+      setSlugIdx((i) => i + 1);
+      setWordCount(0);
+    } else {
+      setPhase("out");
+    }
   };
 
   return (
     <div
       className="relative w-full h-full bg-black overflow-hidden cursor-pointer select-none"
-      onClick={revealAll}
-      onTouchStart={revealAll}
+      onClick={handleAdvance}
+      onTouchStart={handleAdvance}
     >
       {slide.image_url && (
         <img
