@@ -175,9 +175,8 @@ const AdminUsers = () => {
                   const isSelf = u.user_id === user?.id;
                   const activeCount = Array.isArray(u.active_games) ? u.active_games.length : 0;
                   return (
-                    <>
+                    <Fragment key={u.user_id}>
                       <tr
-                        key={u.user_id}
                         className="border-b border-border hover:bg-muted/30 cursor-pointer"
                         onClick={() => setExpanded(isOpen ? null : u.user_id)}
                       >
