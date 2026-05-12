@@ -75,6 +75,8 @@ const App = () => (
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/admin/blog" element={<RequireRole roles={["admin"]}><AdminBlog /></RequireRole>} />
+            <Route path="/new-game" element={<NewGameIntro />} />
+            <Route path="/new-game/menu" element={<NewGameMenu />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
