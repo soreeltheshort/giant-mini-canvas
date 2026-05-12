@@ -39,6 +39,7 @@ import NewGameMenu from "./pages/NewGameMenu";
 import AdminCutscenes from "./pages/AdminCutscenes";
 import AdminCutsceneEditor from "./pages/AdminCutsceneEditor";
 import CutscenePlayer from "./pages/CutscenePlayer";
+import AdminImages from "./pages/AdminImages";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ const App = () => (
             <Route path="/admin/cutscenes" element={<RequireRole roles={["admin"]}><AdminCutscenes /></RequireRole>} />
             <Route path="/admin/cutscenes/:id" element={<RequireRole roles={["admin"]}><AdminCutsceneEditor /></RequireRole>} />
             <Route path="/cutscenes/:id/play" element={<CutscenePlayer />} />
+            <Route path="/admin/images" element={<RequireRole roles={["admin"]}><AdminImages /></RequireRole>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
