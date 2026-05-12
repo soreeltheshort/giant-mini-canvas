@@ -158,6 +158,8 @@ export type Database = {
           created_at: string
           excerpt: string
           id: string
+          mailed_at: string | null
+          mailed_count: number
           published: boolean
           published_at: string | null
           slug: string
@@ -171,6 +173,8 @@ export type Database = {
           created_at?: string
           excerpt?: string
           id?: string
+          mailed_at?: string | null
+          mailed_count?: number
           published?: boolean
           published_at?: string | null
           slug: string
@@ -184,6 +188,8 @@ export type Database = {
           created_at?: string
           excerpt?: string
           id?: string
+          mailed_at?: string | null
+          mailed_count?: number
           published?: boolean
           published_at?: string | null
           slug?: string
@@ -308,6 +314,27 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      email_suppressions: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          reason?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          reason?: string
         }
         Relationships: []
       }
@@ -1439,7 +1466,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user" | "tester"
+      app_role: "admin" | "user" | "tester" | "opt_in"
       game_status: "setup" | "active" | "paused" | "completed"
       order_type:
         | "fleet_move"
@@ -1579,7 +1606,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "tester"],
+      app_role: ["admin", "user", "tester", "opt_in"],
       game_status: ["setup", "active", "paused", "completed"],
       order_type: [
         "fleet_move",
