@@ -36,6 +36,9 @@ import AdminBlog from "./pages/AdminBlog";
 import NotFound from "./pages/NotFound";
 import NewGameIntro from "./pages/NewGameIntro";
 import NewGameMenu from "./pages/NewGameMenu";
+import AdminCutscenes from "./pages/AdminCutscenes";
+import AdminCutsceneEditor from "./pages/AdminCutsceneEditor";
+import CutscenePlayer from "./pages/CutscenePlayer";
 
 const queryClient = new QueryClient();
 
