@@ -24,6 +24,8 @@ interface BlogPost {
   author_id: string;
   created_at: string;
   updated_at: string;
+  mailed_at: string | null;
+  mailed_count: number;
 }
 
 function slugify(s: string) {
