@@ -17,8 +17,16 @@ export default function NewGameMenu() {
   const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
 
-  const handleContinue = () => {
-    const lastGame = user ? localStorage.getItem(`lastGame:${user.id}`) : null;
+  const handleContinue = async () => {
+    let lastGame: string | null = null;
+    if (user) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("last_game_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      lastGame = (data?.last_game_id as string | null) ?? localStorage.getItem(`lastGame:${user.id}`);
+    }
     navigate(lastGame ? `/play/${lastGame}` : "/my-games");
   };
 
