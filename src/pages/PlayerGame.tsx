@@ -1183,6 +1183,8 @@ const PlayerGame = () => {
           ordersSubmitted={!!player?.orders_locked}
           onSubmitOrders={submitOrders}
           submissionIssues={submissionIssues}
+          soloMode={isSolo}
+          processingTurn={processingTurn}
           inlineContext={{
             mode: activeMode,
             selection,
