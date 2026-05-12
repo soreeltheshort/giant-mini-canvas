@@ -78,27 +78,18 @@ export default function SlidePlayer({ slide, onComplete }: Props) {
         className="absolute inset-x-0 bottom-0 p-8 md:p-12 bg-gradient-to-t from-black/80 via-black/40 to-transparent"
         style={{ opacity, transition: `opacity ${transitionMs}ms ease-in-out` }}
       >
-        <div className="max-w-4xl mx-auto space-y-3">
-          {slugs.map((slug, sIdx) => {
-            const words = slug.split(/\s+/).filter(Boolean);
-            const revealed = sIdx < slugIdx ? words.length : sIdx === slugIdx ? wordCount : 0;
-            return (
-              <p
-                key={sIdx}
-                className="font-heading text-xl md:text-3xl leading-relaxed text-center"
+        <div className="max-w-4xl mx-auto">
+          <p className="font-heading text-xl md:text-3xl leading-relaxed text-center min-h-[2.5em]">
+            {currentWords.map((w, wIdx) => (
+              <span
+                key={wIdx}
+                className={wIdx < wordCount ? "text-ivory" : "text-transparent"}
               >
-                {words.map((w, wIdx) => (
-                  <span
-                    key={wIdx}
-                    className={wIdx < revealed ? "text-ivory" : "text-transparent"}
-                  >
-                    {w}
-                    {wIdx < words.length - 1 ? " " : ""}
-                  </span>
-                ))}
-              </p>
-            );
-          })}
+                {w}
+                {wIdx < currentWords.length - 1 ? " " : ""}
+              </span>
+            ))}
+          </p>
         </div>
       </div>
     </div>
