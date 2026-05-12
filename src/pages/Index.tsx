@@ -91,9 +91,9 @@ const Index = () => {
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link
                     to={`/games/${activeGame.id}`}
-                    className="inline-flex h-10 items-center border-2 border-bronze/60 bg-ivory px-6 text-sm font-heading font-semibold uppercase tracking-wider text-foreground transition-colors hover:border-bronze hover:bg-ivory-dark text-slate-500"
+                    className="inline-flex h-10 items-center border-2 border-bronze/60 bg-ivory px-6 font-heading font-semibold uppercase tracking-wider text-foreground transition-colors hover:border-bronze hover:bg-ivory-dark text-slate-500 text-base"
                   >
-                    View Dispatch →
+                    Play →
                   </Link>
                   {activeGame.id === "third-republic" && canAccessTesting && (
                     <>
