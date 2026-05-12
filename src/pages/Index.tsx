@@ -23,6 +23,21 @@ const Index = () => {
   const { user, isAdmin, isTester } = useAuth();
   const canAccessTesting = isAdmin || isTester;
   const [latestPost, setLatestPost] = useState<LatestPost | null>(null);
+  const navigate = useNavigate();
+
+  const handlePlay = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    const { data } = await (supabase as any)
+      .from("cutscenes")
+      .select("id")
+      .eq("name", "GameIntro")
+      .maybeSingle();
+    if (data?.id) {
+      navigate(`/cutscenes/${data.id}/play?next=/new-game`);
+    } else {
+      navigate("/new-game");
+    }
+  };
 
   useEffect(() => {
     (async () => {
