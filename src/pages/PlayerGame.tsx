@@ -385,6 +385,7 @@ const PlayerGame = () => {
     setGame(gData);
     setPlayer(pData);
     setProfile(prData);
+    try { localStorage.setItem(`lastGame:${user.id}`, gameId); } catch {}
     setDbFacilityTypes((ftData || []).map((ft: any) => ({
       facility_type_id: ft.id,
       name: ft.name,
