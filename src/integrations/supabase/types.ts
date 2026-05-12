@@ -1106,6 +1106,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_games: Json
           created_at: string
           display_name: string | null
           email: string | null
@@ -1115,6 +1116,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          active_games?: Json
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -1124,6 +1126,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          active_games?: Json
           created_at?: string
           display_name?: string | null
           email?: string | null
