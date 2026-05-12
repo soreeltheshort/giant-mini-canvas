@@ -20,8 +20,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "valid email required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Add to suppression list
-    await admin.from("email_suppressions").upsert({ email: rawEmail, reason: "user_unsubscribe" }, { onConflict: "email" });
+    // Add to suppression list (skip if already there — no unique constraint)
+    const { data: existing } = await admin.from("email_suppressions").select("id").eq("email", rawEmail).maybeSingle();
+    if (!existing) {
+      await admin.from("email_suppressions").insert({ email: rawEmail, reason: "user_unsubscribe" });
+    }
+
+    // Remove from public newsletter subscribers list
+    await admin.from("newsletter_subscribers").delete().eq("email", rawEmail);
 
     // If a profile exists for this email, also remove the opt_in role
     const { data: profile } = await admin.from("profiles").select("user_id").eq("email", rawEmail).maybeSingle();
