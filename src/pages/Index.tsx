@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import Newsletter from "@/components/Newsletter";
+
 import { games } from "@/games";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
