@@ -194,17 +194,17 @@ const Index = () => {
           <div className="container py-20">
             <div className="max-w-lg">
               <p className="text-xs font-heading font-semibold uppercase tracking-[0.3em] text-bronze-dark">Communications</p>
-              <h2 className="mt-2 font-heading text-3xl font-bold text-foreground">Stop Receiving Dispatches</h2>
+              <h2 className="mt-2 font-heading text-3xl font-bold text-foreground">Receive Dispatches</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Already on our list and want to unsubscribe? Enter your email and we'll remove you immediately.
+                Get every new devlog post delivered by email. Unsubscribe anytime.
               </p>
-              <div className="mt-6">
-                <Link to="/unsubscribe">
-                  <Button variant="outline" className="font-heading uppercase tracking-wider">
-                    Unsubscribe →
-                  </Button>
-                </Link>
-              </div>
+              <SubscribeForm />
+              <p className="mt-6 text-xs text-muted-foreground">
+                Already on our list?{" "}
+                <Link to="/unsubscribe" className="underline hover:text-foreground">
+                  Unsubscribe here
+                </Link>.
+              </p>
             </div>
           </div>
         </section>
@@ -214,5 +214,46 @@ const Index = () => {
     </div>
   );
 };
+
+function SubscribeForm() {
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast({ title: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await (supabase as any)
+      .from("newsletter_subscribers")
+      .insert({ email: trimmed, source: "home" });
+    setSubmitting(false);
+    if (error && !/duplicate key/i.test(error.message)) {
+      toast({ title: "Could not subscribe", description: error.message, variant: "destructive" });
+      return;
+    }
+    setEmail("");
+    toast({ title: "Subscribed", description: "You're on the dispatch list." });
+  };
+
+  return (
+    <form onSubmit={submit} className="mt-6 flex flex-col sm:flex-row gap-3 max-w-md">
+      <Input
+        type="email"
+        required
+        placeholder="you@example.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="bg-ivory"
+      />
+      <Button type="submit" disabled={submitting} className="font-heading uppercase tracking-wider">
+        {submitting ? "Subscribing…" : "Subscribe →"}
+      </Button>
+    </form>
+  );
+}
 
 export default Index;
