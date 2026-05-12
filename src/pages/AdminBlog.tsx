@@ -234,6 +234,11 @@ const AdminBlog = () => {
               </h2>
               {editing && (
                 <div className="flex gap-2">
+                  {editing.id && editing.published && (
+                    <Button size="sm" variant="outline" onClick={() => mailPost(editing as BlogPost)} disabled={mailing}>
+                      <Send className="w-4 h-4 mr-1" /> {mailing ? "Sending…" : (editing.mailed_count || 0) > 0 ? "Re-send to subscribers" : "Send to subscribers"}
+                    </Button>
+                  )}
                   {editing.id && (
                     <Button size="sm" variant="outline" onClick={() => remove(editing.id!)}>
                       <Trash2 className="w-4 h-4 mr-1" /> Delete
