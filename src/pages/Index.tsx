@@ -96,21 +96,23 @@ const Index = () => {
                     Play →
                   </Link>
                   {activeGame.id === "third-republic" && canAccessTesting && (
-                    <>
-                      <Link to="/dashboard">
-                        <Button className="bg-gold text-secondary-foreground hover:bg-gold/90 font-heading uppercase tracking-wider">
-                          ⚔ Combat Testing
-                        </Button>
-                      </Link>
-                      <Link to="/map-testing">
-                        <Button size="sm" variant="outline" className="font-heading uppercase tracking-wider text-xs">🗺 Map Testing</Button>
-                      </Link>
-                      <Link to="/planet-testing">
-                        <Button size="sm" variant="outline" className="font-heading uppercase tracking-wider text-xs">🌍 Planet Testing</Button>
-                      </Link>
-                    </>
+                    <Link to="/dashboard">
+                      <Button className="bg-gold text-secondary-foreground hover:bg-gold/90 font-heading uppercase tracking-wider">
+                        ⚔ Combat Testing
+                      </Button>
+                    </Link>
                   )}
                 </div>
+                {activeGame.id === "third-republic" && canAccessTesting && (
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    <Link to="/map-testing">
+                      <Button size="sm" variant="outline" className="font-heading uppercase tracking-wider text-xs">🗺 Map Testing</Button>
+                    </Link>
+                    <Link to="/planet-testing">
+                      <Button size="sm" variant="outline" className="font-heading uppercase tracking-wider text-xs">🌍 Planet Testing</Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           )}
