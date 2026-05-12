@@ -112,6 +112,8 @@ export default function LeftPanel({
   ordersSubmitted = false,
   onSubmitOrders,
   submissionIssues = [],
+  soloMode = false,
+  processingTurn = false,
   fullWidth = false,
 }: LeftPanelProps) {
   const unreadCount = news.filter((n) => !n.read).length;
