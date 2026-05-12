@@ -212,8 +212,123 @@ const AdminUsers = () => {
             </table>
           </div>
         )}
+
+        <NewsletterSubscribersPanel />
       </div>
       <Footer />
+    </div>
+  );
+};
+
+interface Subscriber {
+  id: string;
+  email: string;
+  source: string;
+  created_at: string;
+}
+
+const NewsletterSubscribersPanel = () => {
+  const [subs, setSubs] = useState<Subscriber[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newEmail, setNewEmail] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await (supabase as any)
+      .from("newsletter_subscribers")
+      .select("id, email, source, created_at")
+      .order("created_at", { ascending: false });
+    setSubs(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const add = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast({ title: "Enter a valid email address.", variant: "destructive" });
+      return;
+    }
+    setAdding(true);
+    const { error } = await (supabase as any)
+      .from("newsletter_subscribers")
+      .insert({ email: trimmed, source: "admin" });
+    setAdding(false);
+    if (error) {
+      if (/duplicate key/i.test(error.message)) {
+        toast({ title: "Already subscribed", variant: "destructive" });
+      } else {
+        toast({ title: "Failed to add", description: error.message, variant: "destructive" });
+      }
+      return;
+    }
+    setNewEmail("");
+    toast({ title: "Subscriber added" });
+    load();
+  };
+
+  const remove = async (id: string, email: string) => {
+    if (!confirm(`Remove ${email} from the dispatch list?`)) return;
+    const { error } = await (supabase as any).from("newsletter_subscribers").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Failed to remove", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Removed" });
+    load();
+  };
+
+  return (
+    <div className="mt-12">
+      <h2 className="font-heading text-xl font-bold text-foreground mb-4">
+        Newsletter Subscribers <span className="text-muted-foreground text-sm font-normal">(emails without accounts)</span>
+      </h2>
+      <form onSubmit={add} className="flex gap-2 mb-4 max-w-md">
+        <Input
+          type="email"
+          placeholder="email@example.com"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+        />
+        <Button type="submit" disabled={adding} size="sm">
+          <Plus className="w-4 h-4 mr-1" /> {adding ? "Adding…" : "Add"}
+        </Button>
+      </form>
+      {loading ? (
+        <p className="text-muted-foreground text-sm">Loading…</p>
+      ) : subs.length === 0 ? (
+        <p className="text-muted-foreground text-sm">No subscribers yet.</p>
+      ) : (
+        <div className="overflow-x-auto border border-border rounded">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="px-4 py-2 text-left font-medium text-muted-foreground">Email</th>
+                <th className="px-4 py-2 text-left font-medium text-muted-foreground">Source</th>
+                <th className="px-4 py-2 text-left font-medium text-muted-foreground">Subscribed</th>
+                <th className="px-4 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {subs.map((s) => (
+                <tr key={s.id} className="border-b border-border">
+                  <td className="px-4 py-2 text-foreground">{s.email}</td>
+                  <td className="px-4 py-2 text-muted-foreground text-xs">{s.source}</td>
+                  <td className="px-4 py-2 text-muted-foreground text-xs">{new Date(s.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-2 text-right">
+                    <Button size="sm" variant="ghost" className="text-xs" onClick={() => remove(s.id, s.email)}>
+                      <Trash2 className="w-3 h-3 mr-1" /> Remove
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
