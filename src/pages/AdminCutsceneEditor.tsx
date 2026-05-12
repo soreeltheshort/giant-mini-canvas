@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import SoundPicker from "@/components/cutscene/SoundPicker";
 
 interface Slide {
   id: string;
@@ -27,6 +28,8 @@ interface Cutscene {
   id: string;
   name: string;
   description: string;
+  audio_url: string | null;
+  audio_volume: number;
 }
 
 export default function AdminCutsceneEditor() {
@@ -128,6 +131,14 @@ export default function AdminCutsceneEditor() {
               className="mt-2"
               rows={2}
             />
+            <div className="mt-3">
+              <SoundPicker
+                value={cutscene.audio_url}
+                volume={cutscene.audio_volume ?? 0.5}
+                onChange={(url) => updateCutscene({ audio_url: url })}
+                onVolumeChange={(v) => updateCutscene({ audio_volume: v })}
+              />
+            </div>
           </div>
           <div className="flex gap-2">
             <Link to={`/cutscenes/${cutscene.id}/play`}>

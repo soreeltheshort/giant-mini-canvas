@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import SlidePlayer, { SlideLike } from "@/components/cutscene/SlidePlayer";
@@ -12,25 +12,55 @@ interface Slide extends SlideLike {
 export default function CutscenePlayer() {
   const { id } = useParams<{ id: string }>();
   const [slides, setSlides] = useState<Slide[]>([]);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioVolume, setAudioVolume] = useState<number>(0.5);
   const [idx, setIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [done, setDone] = useState(false);
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const next = params.get("next") || "/";
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     (async () => {
       if (!id) return;
-      const { data } = await (supabase as any)
-        .from("cutscene_slides")
-        .select("id, order_index, image_url, text, text_2, text_3, fade_in_ms, hold_ms, fade_out_ms, word_speed_ms, slug_delay_ms")
-        .eq("cutscene_id", id)
-        .order("order_index");
+      const [{ data: cs }, { data }] = await Promise.all([
+        (supabase as any).from("cutscenes").select("audio_url, audio_volume").eq("id", id).single(),
+        (supabase as any)
+          .from("cutscene_slides")
+          .select("id, order_index, image_url, text, text_2, text_3, fade_in_ms, hold_ms, fade_out_ms, word_speed_ms, slug_delay_ms")
+          .eq("cutscene_id", id)
+          .order("order_index"),
+      ]);
+      setAudioUrl(cs?.audio_url ?? null);
+      setAudioVolume(cs?.audio_volume ?? 0.5);
       setSlides(data || []);
       setLoading(false);
     })();
   }, [id]);
+
+  useEffect(() => {
+    if (!audioUrl) return;
+    const a = new Audio(audioUrl);
+    a.loop = true;
+    a.volume = audioVolume;
+    audioRef.current = a;
+    a.play().catch(() => {
+      const resume = () => { a.play().catch(() => {}); };
+      window.addEventListener("pointerdown", resume, { once: true });
+      window.addEventListener("keydown", resume, { once: true });
+    });
+    return () => {
+      a.pause();
+      a.src = "";
+      audioRef.current = null;
+    };
+  }, [audioUrl]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = audioVolume;
+  }, [audioVolume]);
 
   const skip = () => navigate(next);
 
