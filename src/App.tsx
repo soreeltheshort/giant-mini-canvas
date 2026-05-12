@@ -34,6 +34,8 @@ import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import AdminBlog from "./pages/AdminBlog";
 import NotFound from "./pages/NotFound";
+import NewGameIntro from "./pages/NewGameIntro";
+import NewGameMenu from "./pages/NewGameMenu";
 
 const queryClient = new QueryClient();
 
