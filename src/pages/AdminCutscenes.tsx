@@ -78,7 +78,7 @@ export default function AdminCutscenes() {
               {items.map((c) => (
                 <div key={c.id} className="flex items-center justify-between border-2 border-bronze/40 bg-ivory rounded-sm p-4 hover:border-bronze transition-colors">
                   <div>
-                    <h2 className="font-heading text-lg font-bold text-foreground">{c.name}</h2>
+                    <h2 className="font-heading text-lg font-bold text-slate-500">{c.name}</h2>
                     <p className="text-xs text-muted-foreground">Updated {new Date(c.updated_at).toLocaleString()}</p>
                   </div>
                   <div className="flex gap-2">
