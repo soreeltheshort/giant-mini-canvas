@@ -219,6 +219,83 @@ export type Database = {
         }
         Relationships: []
       }
+      cutscene_slides: {
+        Row: {
+          created_at: string
+          cutscene_id: string
+          fade_in_ms: number
+          fade_out_ms: number
+          hold_ms: number
+          id: string
+          image_url: string | null
+          order_index: number
+          text: string
+          updated_at: string
+          word_speed_ms: number
+        }
+        Insert: {
+          created_at?: string
+          cutscene_id: string
+          fade_in_ms?: number
+          fade_out_ms?: number
+          hold_ms?: number
+          id?: string
+          image_url?: string | null
+          order_index?: number
+          text?: string
+          updated_at?: string
+          word_speed_ms?: number
+        }
+        Update: {
+          created_at?: string
+          cutscene_id?: string
+          fade_in_ms?: number
+          fade_out_ms?: number
+          hold_ms?: number
+          id?: string
+          image_url?: string | null
+          order_index?: number
+          text?: string
+          updated_at?: string
+          word_speed_ms?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cutscene_slides_cutscene_id_fkey"
+            columns: ["cutscene_id"]
+            isOneToOne: false
+            referencedRelation: "cutscenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cutscenes: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       facility_types: {
         Row: {
           condition_bonus: number
