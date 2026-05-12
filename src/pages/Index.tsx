@@ -117,6 +117,57 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Latest Dispatch */}
+      {latestPost && (
+        <section className="border-b-2 border-bronze/40">
+          <div className="container py-16">
+            <div className="flex items-baseline justify-between flex-wrap gap-3">
+              <p className="text-xs font-heading font-semibold uppercase tracking-[0.3em] text-bronze-dark">
+                Latest Dispatch
+              </p>
+              <Link to="/blog" className="text-xs font-heading font-semibold uppercase tracking-wider text-crimson hover:text-crimson-light">
+                All Dispatches →
+              </Link>
+            </div>
+            <Link
+              to={`/blog/${latestPost.slug}`}
+              className="mt-6 group grid gap-8 md:grid-cols-[2fr_3fr] items-center border-2 border-bronze/40 bg-ivory rounded-sm overflow-hidden hover:border-bronze transition-colors shadow-[0_4px_20px_-8px_hsl(var(--bronze)/0.35)]"
+            >
+              {latestPost.cover_image_url ? (
+                <div className="aspect-video md:aspect-auto md:h-full overflow-hidden bg-muted">
+                  <img
+                    src={latestPost.cover_image_url}
+                    alt={latestPost.title}
+                    className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                  />
+                </div>
+              ) : (
+                <div className="aspect-video md:aspect-auto md:h-full bg-gradient-to-br from-ivory-dark via-ivory to-ivory-dark" />
+              )}
+              <div className="p-6 md:p-8">
+                <p className="text-xs uppercase tracking-widest text-bronze-dark font-semibold">
+                  {new Date(latestPost.published_at || latestPost.created_at).toLocaleDateString(undefined, {
+                    year: "numeric", month: "long", day: "numeric",
+                  })}
+                </p>
+                <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground group-hover:text-crimson transition-colors">
+                  {latestPost.title}
+                </h2>
+                <div className="mt-3 h-px w-16 bg-gradient-to-r from-bronze to-transparent" />
+                {latestPost.excerpt && (
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground line-clamp-4">
+                    {latestPost.excerpt}
+                  </p>
+                )}
+                <span className="mt-5 inline-block text-xs font-heading font-semibold uppercase tracking-wider text-crimson">
+                  Read Dispatch →
+                </span>
+              </div>
+            </Link>
+          </div>
+        </section>
+      )}
+
       {/* Newsletter */}
       <section id="newsletter">
         <div className="container py-20">
