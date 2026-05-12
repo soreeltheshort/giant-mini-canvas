@@ -1107,31 +1107,43 @@ export type Database = {
       profiles: {
         Row: {
           active_games: Json
+          admin_notes: string
+          billing_plan: string
           created_at: string
+          credits_balance: number
           display_name: string | null
           email: string | null
           id: string
           last_game_id: string | null
+          last_seen_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           active_games?: Json
+          admin_notes?: string
+          billing_plan?: string
           created_at?: string
+          credits_balance?: number
           display_name?: string | null
           email?: string | null
           id?: string
           last_game_id?: string | null
+          last_seen_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           active_games?: Json
+          admin_notes?: string
+          billing_plan?: string
           created_at?: string
+          credits_balance?: number
           display_name?: string | null
           email?: string | null
           id?: string
           last_game_id?: string | null
+          last_seen_at?: string | null
           updated_at?: string
           user_id?: string
         }
