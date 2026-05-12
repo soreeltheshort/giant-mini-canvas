@@ -280,6 +280,8 @@ export type Database = {
       }
       cutscenes: {
         Row: {
+          audio_url: string | null
+          audio_volume: number
           created_at: string
           created_by: string
           description: string
@@ -288,6 +290,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audio_url?: string | null
+          audio_volume?: number
           created_at?: string
           created_by: string
           description?: string
@@ -296,6 +300,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audio_url?: string | null
+          audio_volume?: number
           created_at?: string
           created_by?: string
           description?: string
