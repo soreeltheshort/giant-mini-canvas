@@ -14,6 +14,7 @@ export default function CutscenePlayer() {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [idx, setIdx] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [done, setDone] = useState(false);
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const next = params.get("next") || "/";
@@ -53,8 +54,12 @@ export default function CutscenePlayer() {
         key={current.id}
         slide={current}
         onComplete={() => {
-          if (idx < slides.length - 1) setIdx(idx + 1);
-          else navigate(next);
+          if (idx < slides.length - 1) {
+            setIdx(idx + 1);
+          } else if (!done) {
+            setDone(true);
+            navigate(next);
+          }
         }}
       />
       <button
