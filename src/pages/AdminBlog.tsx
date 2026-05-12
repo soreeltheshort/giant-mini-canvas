@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Save, Trash2, Pencil, X, Eye } from "lucide-react";
+import { Plus, Save, Trash2, Pencil, X, Eye, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface BlogPost {
