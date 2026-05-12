@@ -167,6 +167,7 @@ const AdminUsers = () => {
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Plan</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Credits</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Roles</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -205,10 +206,22 @@ const AdminUsers = () => {
                             ))}
                           </div>
                         </td>
+                        <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                          {!isSelf && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs h-7"
+                              onClick={() => impersonate(u.user_id, u.display_name)}
+                            >
+                              <LogIn className="mr-1 h-3 w-3" /> Log in as
+                            </Button>
+                          )}
+                        </td>
                       </tr>
                       {isOpen && (
                         <tr className="bg-muted/10 border-b border-border">
-                          <td colSpan={9} className="p-0">
+                          <td colSpan={10} className="p-0">
                             <UserDetailPanel
                               row={u}
                               isSelf={isSelf}
