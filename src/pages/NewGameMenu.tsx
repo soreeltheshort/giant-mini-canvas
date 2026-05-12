@@ -28,7 +28,7 @@ export default function NewGameMenu() {
     { label: "Load Game", to: "/my-games" },
     { label: "Senate Chronicles", to: "/manual" },
     { label: "Options", disabled: true },
-    { label: "Credits", disabled: true },
+    { label: "Credits", to: "/credits" },
     { label: "Exit", onClick: () => navigate("/") },
   ];
 
