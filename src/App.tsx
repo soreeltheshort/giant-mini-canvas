@@ -40,6 +40,7 @@ import AdminCutsceneEditor from "./pages/AdminCutsceneEditor";
 import CutscenePlayer from "./pages/CutscenePlayer";
 import AdminImages from "./pages/AdminImages";
 import AdminSounds from "./pages/AdminSounds";
+import Credits from "./pages/Credits";
 
 const queryClient = new QueryClient();
 
