@@ -69,8 +69,17 @@ export default function SlidePlayer({ slide, onComplete }: Props) {
   const opacity = phase === "out" ? 0 : 1;
   const transitionMs = phase === "in" ? slide.fade_in_ms : phase === "out" ? slide.fade_out_ms : 0;
 
+  const revealAll = () => {
+    if (phase === "out") return;
+    if (wordCount < currentWords.length) setWordCount(currentWords.length);
+  };
+
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden">
+    <div
+      className="relative w-full h-full bg-black overflow-hidden cursor-pointer select-none"
+      onClick={revealAll}
+      onTouchStart={revealAll}
+    >
       {slide.image_url && (
         <img
           src={slide.image_url}
