@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
+const TITLE_BG =
+  "https://komjfcrtwzxssugvsbyc.supabase.co/storage/v1/object/public/images/TitleScreenBackground.png";
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
@@ -18,6 +19,9 @@ interface PlayerGameInfo {
   player_slot: number;
   initialized: boolean;
 }
+
+const HEX_CLIP =
+  "polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%)";
 
 const MyGames = () => {
   const { user, loading } = useAuth();
@@ -80,63 +84,88 @@ const MyGames = () => {
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <p className="font-heading uppercase tracking-[0.3em] text-bronze">Loading…</p>
       </div>
     );
   }
 
-  const statusColor: Record<string, string> = {
-    setup: "bg-yellow-600",
-    active: "bg-green-600",
-    paused: "bg-orange-600",
-    completed: "bg-muted",
-  };
-
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-card">
-        <span className="font-heading font-bold text-xl text-primary">Third Republic</span>
-        <Link to="/">
-          <Button variant="ghost" size="sm">Main Menu</Button>
-        </Link>
-      </header>
+    <div className="min-h-screen flex flex-col bg-black">
+      <main
+        className="flex-1 relative bg-center bg-cover bg-no-repeat"
+        style={{ backgroundImage: `url(${TITLE_BG})` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/70 pointer-events-none" />
 
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <div className="max-w-lg w-full space-y-6">
-          <h1 className="text-2xl font-heading font-bold text-center">Your Games</h1>
+        <div className="relative z-10 flex flex-col items-center min-h-screen px-4 py-10">
+          <h1 className="font-heading uppercase tracking-[0.4em] text-3xl md:text-4xl text-gold drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] mt-[14vh] mb-8 text-center">
+            Load Game
+          </h1>
 
-          {loadingGames ? (
-            <p className="text-muted-foreground text-center text-sm">Loading games...</p>
-          ) : games.length === 0 ? (
-            <p className="text-muted-foreground text-center text-sm">You are not assigned to any games yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {games.map((g) => (
-                <div
-                  key={g.game_id}
-                  className="border border-border rounded-md p-4 flex items-center justify-between bg-card hover:bg-accent/30 transition-colors"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{g.game_name}</span>
-                      <Badge className={`${statusColor[g.game_status] || "bg-muted"} text-xs`}>
-                        {g.game_status}
-                      </Badge>
+          <div className="w-full max-w-xl flex flex-col gap-3">
+            {loadingGames ? (
+              <p className="font-heading uppercase tracking-[0.3em] text-bronze text-center text-sm">
+                Loading games…
+              </p>
+            ) : games.length === 0 ? (
+              <p className="font-heading uppercase tracking-[0.3em] text-bronze text-center text-sm">
+                No campaigns assigned to your name.
+              </p>
+            ) : (
+              games.map((g) => {
+                const isActive = g.game_status === "active";
+                const actionLabel = !isActive
+                  ? "Awaiting"
+                  : g.initialized
+                  ? "Resume"
+                  : "Begin";
+
+                return (
+                  <button
+                    key={g.game_id}
+                    disabled={!isActive}
+                    onClick={() => isActive && navigate(`/play/${g.game_id}`)}
+                    className={`group relative w-full text-left px-7 py-3
+                      border border-bronze/60
+                      bg-gradient-to-b from-black/70 via-black/60 to-black/80
+                      shadow-[inset_0_1px_0_hsl(var(--bronze)/0.35),0_4px_18px_-6px_rgba(0,0,0,0.8)]
+                      backdrop-blur-[2px]
+                      transition-all
+                      ${
+                        isActive
+                          ? "hover:border-gold hover:from-black/80 hover:to-black/90 hover:shadow-[inset_0_1px_0_hsl(var(--gold)/0.5),0_6px_24px_-6px_hsl(var(--gold)/0.35)] cursor-pointer"
+                          : "opacity-50 cursor-not-allowed"
+                      }`}
+                    style={{ clipPath: HEX_CLIP }}
+                  >
+                    <div className="flex items-center justify-between gap-4 px-2">
+                      <div className="min-w-0">
+                        <div className="font-heading uppercase tracking-[0.22em] text-lg text-gold drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)] truncate">
+                          {g.game_name}
+                        </div>
+                        <div className="font-heading text-[11px] uppercase tracking-[0.3em] text-bronze mt-0.5">
+                          {PROVINCE_NAMES[g.player_slot] || `Slot ${g.player_slot}`} · Turn {g.turn_number} · {g.game_status}
+                        </div>
+                      </div>
+                      <div className="font-heading uppercase tracking-[0.25em] text-xs text-gold/90 shrink-0 pl-3 border-l border-bronze/40">
+                        {actionLabel}
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {PROVINCE_NAMES[g.player_slot] || `Slot ${g.player_slot}`} · Turn {g.turn_number}
-                    </p>
-                  </div>
-                  <Button size="sm" disabled={g.game_status !== "active"} onClick={() => navigate(`/play/${g.game_id}`)}>
-                    {g.game_status !== "active" ? "Awaiting Start" : g.initialized ? "Load Game" : "Begin"}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
+                  </button>
+                );
+              })
+            )}
+
+            <button
+              onClick={() => navigate("/new-game")}
+              className="mt-6 self-center font-heading uppercase tracking-[0.3em] text-xs text-bronze hover:text-gold transition-colors"
+            >
+              ← Return to Command Console
+            </button>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
