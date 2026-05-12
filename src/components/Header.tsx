@@ -148,6 +148,9 @@ const Header = () => {
                     <Link to="/admin/images">Images</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link to="/admin/sounds">Sounds</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to="/admin/battle-config">Battle Config</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
