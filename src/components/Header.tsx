@@ -107,12 +107,7 @@ const Header = () => {
             >
               Home
             </Link>
-            <Link
-              to={isAdmin ? "/admin/blog" : "/blog"}
-              className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname.startsWith("/blog") || location.pathname === "/admin/blog" ? "text-foreground" : "text-muted-foreground"} ${isAdmin ? "text-gold" : ""}`}
-            >
-              Blog
-            </Link>
+            {/* Blog moved into Forum dropdown */}
             {user && canAccessGameFeatures && (
               <DropdownMenu>
                 <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isCombatTestingMode || isMapTestingMode || isPlanetTestingMode || isFleetTestingMode ? "text-foreground" : "text-muted-foreground"}`}>
