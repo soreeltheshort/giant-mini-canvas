@@ -36,6 +36,9 @@ import AdminBlog from "./pages/AdminBlog";
 import NotFound from "./pages/NotFound";
 import NewGameIntro from "./pages/NewGameIntro";
 import NewGameMenu from "./pages/NewGameMenu";
+import AdminCutscenes from "./pages/AdminCutscenes";
+import AdminCutsceneEditor from "./pages/AdminCutsceneEditor";
+import CutscenePlayer from "./pages/CutscenePlayer";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +80,9 @@ const App = () => (
             <Route path="/admin/blog" element={<RequireRole roles={["admin"]}><AdminBlog /></RequireRole>} />
             <Route path="/new-game" element={<NewGameIntro />} />
             <Route path="/new-game/menu" element={<NewGameMenu />} />
+            <Route path="/admin/cutscenes" element={<RequireRole roles={["admin"]}><AdminCutscenes /></RequireRole>} />
+            <Route path="/admin/cutscenes/:id" element={<RequireRole roles={["admin"]}><AdminCutsceneEditor /></RequireRole>} />
+            <Route path="/cutscenes/:id/play" element={<CutscenePlayer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
