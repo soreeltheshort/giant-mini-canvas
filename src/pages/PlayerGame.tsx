@@ -356,6 +356,8 @@ const PlayerGame = () => {
     Map<number, Set<string>>
   >(new Map());
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
+  const [isSolo, setIsSolo] = useState(false);
+  const [processingTurn, setProcessingTurn] = useState(false);
   /** Open issues that block turn submission (e.g. fleet group overcapacity). */
   const [submissionIssues, setSubmissionIssues] = useState<string[]>([]);
   /** Player-facing dispatches sourced from game_logs (capture/colonize, etc.) */
