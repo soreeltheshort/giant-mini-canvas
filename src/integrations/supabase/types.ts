@@ -229,7 +229,10 @@ export type Database = {
           id: string
           image_url: string | null
           order_index: number
+          slug_delay_ms: number
           text: string
+          text_2: string
+          text_3: string
           updated_at: string
           word_speed_ms: number
         }
@@ -242,7 +245,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           order_index?: number
+          slug_delay_ms?: number
           text?: string
+          text_2?: string
+          text_3?: string
           updated_at?: string
           word_speed_ms?: number
         }
@@ -255,7 +261,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           order_index?: number
+          slug_delay_ms?: number
           text?: string
+          text_2?: string
+          text_3?: string
           updated_at?: string
           word_speed_ms?: number
         }

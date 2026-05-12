@@ -23,7 +23,7 @@ export default function CutscenePlayer() {
       if (!id) return;
       const { data } = await (supabase as any)
         .from("cutscene_slides")
-        .select("id, order_index, image_url, text, fade_in_ms, hold_ms, fade_out_ms, word_speed_ms")
+        .select("id, order_index, image_url, text, text_2, text_3, fade_in_ms, hold_ms, fade_out_ms, word_speed_ms, slug_delay_ms")
         .eq("cutscene_id", id)
         .order("order_index");
       setSlides(data || []);
