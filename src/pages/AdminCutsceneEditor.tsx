@@ -229,7 +229,6 @@ function SlideRow({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <NumField label="Fade In (ms)" value={slide.fade_in_ms} onChange={(v) => onPatch({ fade_in_ms: v })} />
-            <NumField label="Total slide length (ms)" value={slide.hold_ms} onChange={(v) => onPatch({ hold_ms: v })} />
             <NumField label="Fade Out (ms)" value={slide.fade_out_ms} onChange={(v) => onPatch({ fade_out_ms: v })} />
             <NumField label="Word Speed (ms/word)" value={slide.word_speed_ms} onChange={(v) => onPatch({ word_speed_ms: v })} />
             <NumField label="Slug Delay (ms)" value={slide.slug_delay_ms} onChange={(v) => onPatch({ slug_delay_ms: v })} />
