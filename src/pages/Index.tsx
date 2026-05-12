@@ -150,7 +150,7 @@ const Index = () => {
                     year: "numeric", month: "long", day: "numeric",
                   })}
                 </p>
-                <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground group-hover:text-crimson transition-colors">
+                <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-slate-500 group-hover:text-crimson transition-colors">
                   {latestPost.title}
                 </h2>
                 <div className="mt-3 h-px w-16 bg-gradient-to-r from-bronze to-transparent" />
