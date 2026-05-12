@@ -33,30 +33,23 @@ export default function SlidePlayer({ slide, onComplete }: Props) {
   const currentWords = (slugs[slugIdx] || "").split(/\s+/).filter(Boolean);
   const slugDelay = slide.slug_delay_ms ?? 600;
 
+  // Reset on slide change and run fade-in
   useEffect(() => {
     setPhase("in");
     setSlugIdx(0);
     setWordCount(0);
-    let fired = false;
-    const t1 = setTimeout(() => setPhase("hold"), slide.fade_in_ms);
-    const t2 = setTimeout(() => setPhase("out"), slide.fade_in_ms + slide.hold_ms);
-    const t3 = setTimeout(() => {
-      if (fired) return;
-      fired = true;
-      onComplete();
-    }, slide.fade_in_ms + slide.hold_ms + slide.fade_out_ms);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    const t = setTimeout(() => setPhase("hold"), slide.fade_in_ms);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slide]);
 
-  // Word-by-word reveal within the current slug
+  // Word-by-word reveal + slug advancement; final slug triggers fade-out
   useEffect(() => {
     if (phase === "out") return;
     if (wordCount < currentWords.length) {
       const t = setTimeout(() => setWordCount((c) => c + 1), slide.word_speed_ms);
       return () => clearTimeout(t);
     }
-    // Slug fully shown — schedule advance to next slug
     if (slugIdx < slugs.length - 1) {
       const t = setTimeout(() => {
         setSlugIdx((i) => i + 1);
@@ -64,7 +57,18 @@ export default function SlidePlayer({ slide, onComplete }: Props) {
       }, slugDelay);
       return () => clearTimeout(t);
     }
+    // Last slug fully shown — wait slugDelay, then fade out
+    const t = setTimeout(() => setPhase("out"), slugDelay);
+    return () => clearTimeout(t);
   }, [wordCount, phase, currentWords.length, slide.word_speed_ms, slugIdx, slugs.length, slugDelay]);
+
+  // When fade-out begins, complete after fade_out_ms
+  useEffect(() => {
+    if (phase !== "out") return;
+    const t = setTimeout(() => onComplete(), slide.fade_out_ms);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   const opacity = phase === "out" ? 0 : 1;
   const transitionMs = phase === "in" ? slide.fade_in_ms : phase === "out" ? slide.fade_out_ms : 0;
