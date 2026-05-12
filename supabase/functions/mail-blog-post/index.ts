@@ -81,19 +81,36 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "already_mailed", mailed_at: post.mailed_at, mailed_count: post.mailed_count }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Get opt-in users
+    // Collect recipients from BOTH opt-in users (with accounts) AND newsletter_subscribers (no account)
     const { data: optInRoles } = await admin.from("user_roles").select("user_id").eq("role", "opt_in");
     const userIds = Array.from(new Set((optInRoles || []).map((r: any) => r.user_id)));
-    if (userIds.length === 0) {
-      return new Response(JSON.stringify({ sent: 0, skipped: 0, message: "No opt-in subscribers." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    let optInProfiles: any[] = [];
+    if (userIds.length > 0) {
+      const { data } = await admin.from("profiles").select("email").in("user_id", userIds);
+      optInProfiles = data || [];
     }
 
-    const { data: profiles } = await admin.from("profiles").select("user_id, email, display_name").in("user_id", userIds);
+    const { data: publicSubs } = await admin.from("newsletter_subscribers").select("email");
     const { data: suppressed } = await admin.from("email_suppressions").select("email");
     const suppressedSet = new Set((suppressed || []).map((s: any) => (s.email || "").toLowerCase()));
 
-    const recipients = (profiles || [])
-      .filter((p: any) => p.email && !suppressedSet.has(p.email.toLowerCase()));
+    const emailMap = new Map<string, { email: string }>();
+    for (const p of optInProfiles) {
+      if (p.email && !suppressedSet.has(p.email.toLowerCase())) {
+        emailMap.set(p.email.toLowerCase(), { email: p.email });
+      }
+    }
+    for (const s of publicSubs || []) {
+      if (s.email && !suppressedSet.has(s.email.toLowerCase())) {
+        emailMap.set(s.email.toLowerCase(), { email: s.email });
+      }
+    }
+    const recipients = Array.from(emailMap.values());
+
+    if (recipients.length === 0) {
+      return new Response(JSON.stringify({ sent: 0, skipped: 0, message: "No subscribers." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const postUrl = `${APP_URL}/blog/${post.slug}`;
     let sent = 0;
