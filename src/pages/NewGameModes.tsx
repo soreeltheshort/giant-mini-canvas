@@ -341,7 +341,10 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
         .from("game_players").insert({ game_id: g.id, user_id: user.id, player_slot: slot });
       if (joinErr) throw joinErr;
 
-      toast({ title: "Game created", description: `${g.name} — ${PROVINCE_NAMES[slot]}` });
+      setStage("Starting game…");
+      await startGame(supabase as any, g.id);
+
+      toast({ title: "Game started", description: `${g.name} — ${PROVINCE_NAMES[slot]}` });
       navigate(`/play/${g.id}`);
     } catch (e: any) {
       toast({ title: "Create failed", description: e.message || String(e), variant: "destructive" });
