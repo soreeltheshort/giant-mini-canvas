@@ -83,6 +83,7 @@ const App = () => (
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/admin/blog" element={<RequireRole roles={["admin"]}><AdminBlog /></RequireRole>} />
             <Route path="/new-game" element={<NewGameMenu />} />
+            <Route path="/new-game/select" element={<NewGameModes />} />
             <Route path="/admin/cutscenes" element={<RequireRole roles={["admin"]}><AdminCutscenes /></RequireRole>} />
             <Route path="/admin/cutscenes/:id" element={<RequireRole roles={["admin"]}><AdminCutsceneEditor /></RequireRole>} />
             <Route path="/cutscenes/:id/play" element={<CutscenePlayer />} />
