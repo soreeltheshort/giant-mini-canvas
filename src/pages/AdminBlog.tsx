@@ -160,7 +160,14 @@ const AdminBlog = () => {
       toast({ title: "Mail failed", description: error?.message || (data as any)?.error, variant: "destructive" });
       return;
     }
-    toast({ title: `Sent to ${(data as any).sent} subscriber(s)`, description: (data as any).failed ? `${(data as any).failed} failed` : undefined });
+    const d: any = data;
+    const errLines = (d.errors || []).slice(0, 3).join("\n");
+    toast({
+      title: `Sent ${d.sent}/${d.total ?? d.sent} • ${d.failed || 0} failed`,
+      description: errLines || undefined,
+      variant: d.failed ? "destructive" : "default",
+    });
+    if (d.errors?.length) console.error("mail-blog-post errors:", d.errors);
     load();
   };
 
