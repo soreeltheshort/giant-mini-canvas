@@ -38,7 +38,7 @@ export default function NewGameMenu() {
 
   const items: MenuItem[] = [
     { label: "Continue", onClick: handleContinue, disabled: !lastGameId },
-    { label: "New Game", to: "/my-games" },
+    { label: "New Game", to: "/new-game/select" },
     { label: "Load Game", to: "/my-games" },
     { label: "Senate Chronicles", to: "/manual" },
     { label: "Options", disabled: true },
