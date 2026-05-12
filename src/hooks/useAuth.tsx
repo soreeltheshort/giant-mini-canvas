@@ -8,6 +8,8 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isTester: boolean;
+  isOptIn: boolean;
+  refreshRoles: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -17,6 +19,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   isTester: false,
+  isOptIn: false,
+  refreshRoles: async () => {},
   signOut: async () => {},
 });
 
