@@ -38,6 +38,10 @@ interface LeftPanelProps {
   onSubmitOrders?: () => void;
   /** Open issues that block turn submission. Empty array = ready to submit. */
   submissionIssues?: string[];
+  /** Solo game: button reads "Next Turn" and processes the turn in-place. */
+  soloMode?: boolean;
+  /** Disable + show processing label while the turn engine runs. */
+  processingTurn?: boolean;
   /** When true, render full-width (mobile stacked layout) instead of fixed 14rem rail. */
   fullWidth?: boolean;
   /** Inline context (used on tablet where right panel is hidden) */
