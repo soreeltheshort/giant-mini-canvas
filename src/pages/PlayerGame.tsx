@@ -389,6 +389,13 @@ const PlayerGame = () => {
     setPlayer(pData);
     setProfile(prData);
     try { localStorage.setItem(`lastGame:${user.id}`, gameId); } catch {}
+
+    // Determine if this is a solo game (only one player joined)
+    const { count: playerCount } = await (supabase as any)
+      .from("game_players")
+      .select("id", { count: "exact", head: true })
+      .eq("game_id", gameId);
+    setIsSolo((playerCount ?? 0) <= 1);
     (async () => {
       const { data: gpRows } = await supabase
         .from("game_players")
