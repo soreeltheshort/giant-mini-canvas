@@ -17,23 +17,27 @@ interface MenuItem {
 export default function NewGameMenu() {
   const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
+  const [lastGameId, setLastGameId] = useState<string | null>(null);
 
-  const handleContinue = async () => {
-    let lastGame: string | null = null;
-    if (user) {
-      const { data } = await supabase
-        .from("profiles")
-        .select("last_game_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      lastGame = (data?.last_game_id as string | null) ?? localStorage.getItem(`lastGame:${user.id}`);
-    }
-    navigate(lastGame ? `/play/${lastGame}` : "/my-games");
+  useEffect(() => {
+    if (!user) { setLastGameId(null); return; }
+    supabase
+      .from("profiles")
+      .select("last_game_id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setLastGameId((data?.last_game_id as string | null) ?? null);
+      });
+  }, [user]);
+
+  const handleContinue = () => {
+    if (lastGameId) navigate(`/play/${lastGameId}`);
   };
 
   const items: MenuItem[] = [
-    { label: "Continue", onClick: handleContinue },
-    { label: "New Game", disabled: true },
+    { label: "Continue", onClick: handleContinue, disabled: !lastGameId },
+    { label: "New Game", to: "/my-games" },
     { label: "Load Game", to: "/my-games" },
     { label: "Senate Chronicles", to: "/manual" },
     { label: "Options", disabled: true },
