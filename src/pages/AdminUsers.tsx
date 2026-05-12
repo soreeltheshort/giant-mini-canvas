@@ -167,6 +167,7 @@ const AdminUsers = () => {
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Plan</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Credits</th>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground">Roles</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
