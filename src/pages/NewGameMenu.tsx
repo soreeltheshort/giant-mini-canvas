@@ -18,7 +18,7 @@ export default function NewGameMenu() {
   const navigate = useNavigate();
 
   const items: MenuItem[] = [
-    { label: "Continue", sub: "Senate Session", to: "/my-games" },
+    { label: "Continue", to: "/my-games" },
     { label: "New Campaign", disabled: true },
     { label: "Load Game", to: "/my-games" },
     { label: "Senate Chronicles", to: "/blog" },
@@ -40,7 +40,7 @@ export default function NewGameMenu() {
 
         <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-10">
           {/* Menu plates */}
-          <nav className="flex flex-col gap-3 w-full max-w-md mt-[26vh]">
+          <nav className="flex flex-col gap-3 w-full max-w-md mt-[16vh]">
             {items.map((item) => {
               const content = (
                 <div
