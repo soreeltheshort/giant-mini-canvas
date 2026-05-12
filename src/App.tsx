@@ -41,6 +41,7 @@ import CutscenePlayer from "./pages/CutscenePlayer";
 import AdminImages from "./pages/AdminImages";
 import AdminSounds from "./pages/AdminSounds";
 import Credits from "./pages/Credits";
+import Unsubscribe from "./pages/Unsubscribe";
 
 const queryClient = new QueryClient();
 
