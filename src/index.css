@@ -8,7 +8,7 @@
   :root {
     /* Ivory marble surfaces */
     --background: 40 20% 95%;
-    --foreground: 20 15% 15%;
+    --foreground: 215 16% 47%; /* slate-500 */
 
     --card: 40 25% 92%;
     --card-foreground: 20 15% 15%;
