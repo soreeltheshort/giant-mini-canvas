@@ -16,6 +16,7 @@ export default function CutscenePlayer() {
   const [audioVolume, setAudioVolume] = useState<number>(0.5);
   const [idx, setIdx] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [audioReady, setAudioReady] = useState(false);
   const [done, setDone] = useState(false);
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -40,23 +41,46 @@ export default function CutscenePlayer() {
     })();
   }, [id]);
 
+  // Preload audio; gate slides until it can play through (or fallback timeout).
   useEffect(() => {
-    if (!audioUrl) return;
-    const a = new Audio(audioUrl);
+    if (loading) return;
+    if (!audioUrl) {
+      setAudioReady(true);
+      return;
+    }
+    const a = new Audio();
     a.loop = true;
     a.volume = audioVolume;
+    a.preload = "auto";
+    a.src = audioUrl;
     audioRef.current = a;
-    a.play().catch(() => {
-      const resume = () => { a.play().catch(() => {}); };
-      window.addEventListener("pointerdown", resume, { once: true });
-      window.addEventListener("keydown", resume, { once: true });
-    });
+
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      a.play()
+        .then(() => setAudioReady(true))
+        .catch(() => {
+          setAudioReady(true);
+          const resume = () => { a.play().catch(() => {}); };
+          window.addEventListener("pointerdown", resume, { once: true });
+          window.addEventListener("keydown", resume, { once: true });
+        });
+    };
+
+    a.addEventListener("canplaythrough", start, { once: true });
+    a.addEventListener("error", () => setAudioReady(true), { once: true });
+    const fallback = window.setTimeout(start, 4000);
+    a.load();
+
     return () => {
+      window.clearTimeout(fallback);
       a.pause();
       a.src = "";
       audioRef.current = null;
     };
-  }, [audioUrl]);
+  }, [audioUrl, loading]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = audioVolume;
@@ -64,7 +88,7 @@ export default function CutscenePlayer() {
 
   const skip = () => navigate(next);
 
-  if (loading) return <div className="min-h-screen bg-black" />;
+  if (loading || !audioReady) return <div className="min-h-screen bg-black" />;
   if (slides.length === 0) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-ivory">
