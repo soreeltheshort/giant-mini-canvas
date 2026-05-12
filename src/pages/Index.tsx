@@ -186,21 +186,27 @@ const Index = () => {
         </section>
       )}
 
-      {/* Newsletter */}
-      <section id="newsletter">
-        <div className="container py-20">
-          <div className="max-w-lg">
-            <p className="text-xs font-heading font-semibold uppercase tracking-[0.3em] text-bronze-dark">Dispatches</p>
-            <h2 className="mt-2 font-heading text-3xl font-bold text-foreground">From the Forum</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Development logs, playtest invitations, and field reports from the front. No spam — just news from the Republic.
-            </p>
-            <div className="mt-6">
-              <Newsletter />
+      {/* Communications */}
+      {!user && (
+        <section id="newsletter">
+          <div className="container py-20">
+            <div className="max-w-lg">
+              <p className="text-xs font-heading font-semibold uppercase tracking-[0.3em] text-bronze-dark">Communications</p>
+              <h2 className="mt-2 font-heading text-3xl font-bold text-foreground">Stop Receiving Dispatches</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Already on our list and want to unsubscribe? Enter your email and we'll remove you immediately.
+              </p>
+              <div className="mt-6">
+                <Link to="/unsubscribe">
+                  <Button variant="outline" className="font-heading uppercase tracking-wider">
+                    Unsubscribe →
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <Footer />
     </div>
