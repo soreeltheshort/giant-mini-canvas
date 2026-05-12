@@ -219,7 +219,7 @@ const AdminUsers = () => {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>
