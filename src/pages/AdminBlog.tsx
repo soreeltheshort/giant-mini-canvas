@@ -210,15 +210,22 @@ const AdminBlog = () => {
                         <p className="text-sm font-medium text-foreground truncate">{p.title}</p>
                         <p className="text-xs text-muted-foreground truncate">/{p.slug}</p>
                       </div>
-                      <span
-                        className={`shrink-0 text-[10px] uppercase tracking-wider px-2 py-0.5 ${
-                          p.published
-                            ? "bg-primary/10 text-primary"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {p.published ? "Live" : "Draft"}
-                      </span>
+                      <div className="shrink-0 flex flex-col gap-1 items-end">
+                        <span
+                          className={`text-[10px] uppercase tracking-wider px-2 py-0.5 ${
+                            p.published
+                              ? "bg-primary/10 text-primary"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {p.published ? "Live" : "Draft"}
+                        </span>
+                        {(p.mailed_count || 0) > 0 && (
+                          <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 bg-gold/15 text-gold" title={p.mailed_at ? `Last mailed ${new Date(p.mailed_at).toLocaleString()}` : ""}>
+                            Mailed{p.mailed_count > 1 ? ` ×${p.mailed_count}` : ""}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 ))
