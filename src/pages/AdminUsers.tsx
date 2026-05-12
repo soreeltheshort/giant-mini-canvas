@@ -55,7 +55,7 @@ const AdminUsers = () => {
     setLoadingData(false);
   };
 
-  const toggleRole = async (targetUserId: string, role: "admin" | "tester", hasRole: boolean) => {
+  const toggleRole = async (targetUserId: string, role: "admin" | "tester" | "opt_in", hasRole: boolean) => {
     if (targetUserId === user?.id && role === "admin" && hasRole) {
       toast({ title: "Cannot remove your own admin role", variant: "destructive" });
       return;
