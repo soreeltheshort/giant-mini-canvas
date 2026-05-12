@@ -27,6 +27,8 @@ interface Cutscene {
   id: string;
   name: string;
   description: string;
+  audio_url: string | null;
+  audio_volume: number;
 }
 
 export default function AdminCutsceneEditor() {
