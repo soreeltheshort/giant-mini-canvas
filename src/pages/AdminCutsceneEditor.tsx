@@ -205,14 +205,23 @@ function SlideRow({
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-heading uppercase tracking-wider text-bronze-dark">Text</label>
-            <Textarea value={slide.text} onChange={(e) => onPatch({ text: e.target.value })} rows={4} placeholder="Narration text…" />
+            <label className="text-xs font-heading uppercase tracking-wider text-bronze-dark">Text Slug 1</label>
+            <Textarea value={slide.text} onChange={(e) => onPatch({ text: e.target.value })} rows={2} placeholder="First narration line…" />
+          </div>
+          <div>
+            <label className="text-xs font-heading uppercase tracking-wider text-bronze-dark">Text Slug 2</label>
+            <Textarea value={slide.text_2} onChange={(e) => onPatch({ text_2: e.target.value })} rows={2} placeholder="(optional)" />
+          </div>
+          <div>
+            <label className="text-xs font-heading uppercase tracking-wider text-bronze-dark">Text Slug 3</label>
+            <Textarea value={slide.text_3} onChange={(e) => onPatch({ text_3: e.target.value })} rows={2} placeholder="(optional)" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <NumField label="Fade In (ms)" value={slide.fade_in_ms} onChange={(v) => onPatch({ fade_in_ms: v })} />
             <NumField label="Hold (ms)" value={slide.hold_ms} onChange={(v) => onPatch({ hold_ms: v })} />
             <NumField label="Fade Out (ms)" value={slide.fade_out_ms} onChange={(v) => onPatch({ fade_out_ms: v })} />
             <NumField label="Word Speed (ms/word)" value={slide.word_speed_ms} onChange={(v) => onPatch({ word_speed_ms: v })} />
+            <NumField label="Slug Delay (ms)" value={slide.slug_delay_ms} onChange={(v) => onPatch({ slug_delay_ms: v })} />
           </div>
         </div>
       </div>
