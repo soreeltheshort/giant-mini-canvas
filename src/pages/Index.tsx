@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Newsletter from "@/components/Newsletter";
@@ -23,6 +23,21 @@ const Index = () => {
   const { user, isAdmin, isTester } = useAuth();
   const canAccessTesting = isAdmin || isTester;
   const [latestPost, setLatestPost] = useState<LatestPost | null>(null);
+  const navigate = useNavigate();
+
+  const handlePlay = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    const { data } = await (supabase as any)
+      .from("cutscenes")
+      .select("id")
+      .eq("name", "GameIntro")
+      .maybeSingle();
+    if (data?.id) {
+      navigate(`/cutscenes/${data.id}/play?next=/new-game`);
+    } else {
+      navigate("/new-game");
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -91,6 +106,7 @@ const Index = () => {
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link
                     to="/new-game"
+                    onClick={handlePlay}
                     className="inline-flex h-10 items-center border-2 border-bronze/60 bg-ivory px-6 font-heading font-semibold uppercase tracking-wider text-foreground transition-colors hover:border-bronze hover:bg-ivory-dark text-slate-500 text-base"
                   >
                     Play →
