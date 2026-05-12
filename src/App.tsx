@@ -86,6 +86,7 @@ const App = () => (
             <Route path="/cutscenes/:id/play" element={<CutscenePlayer />} />
             <Route path="/admin/images" element={<RequireRole roles={["admin"]}><AdminImages /></RequireRole>} />
             <Route path="/admin/sounds" element={<RequireRole roles={["admin"]}><AdminSounds /></RequireRole>} />
+            <Route path="/credits" element={<Credits />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
