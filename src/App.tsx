@@ -35,6 +35,7 @@ import BlogPost from "./pages/BlogPost";
 import AdminBlog from "./pages/AdminBlog";
 import NotFound from "./pages/NotFound";
 import NewGameMenu from "./pages/NewGameMenu";
+import NewGameModes from "./pages/NewGameModes";
 import AdminCutscenes from "./pages/AdminCutscenes";
 import AdminCutsceneEditor from "./pages/AdminCutsceneEditor";
 import CutscenePlayer from "./pages/CutscenePlayer";
