@@ -37,9 +37,14 @@ export default function SlidePlayer({ slide, onComplete }: Props) {
     setPhase("in");
     setSlugIdx(0);
     setWordCount(0);
+    let fired = false;
     const t1 = setTimeout(() => setPhase("hold"), slide.fade_in_ms);
     const t2 = setTimeout(() => setPhase("out"), slide.fade_in_ms + slide.hold_ms);
-    const t3 = setTimeout(() => onComplete(), slide.fade_in_ms + slide.hold_ms + slide.fade_out_ms);
+    const t3 = setTimeout(() => {
+      if (fired) return;
+      fired = true;
+      onComplete();
+    }, slide.fade_in_ms + slide.hold_ms + slide.fade_out_ms);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slide]);
