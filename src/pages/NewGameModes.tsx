@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { importFromSqlite } from "@/lib/mapDatabase";
 import { materializeGameFleets } from "@/lib/materializeGameFleets";
-import { PROVINCE_NAMES } from "@/lib/gameLifecycle";
+import { PROVINCE_NAMES, startGame } from "@/lib/gameLifecycle";
 
 const TITLE_BG =
   "https://komjfcrtwzxssugvsbyc.supabase.co/storage/v1/object/public/images/TitleScreenBackground.png";
