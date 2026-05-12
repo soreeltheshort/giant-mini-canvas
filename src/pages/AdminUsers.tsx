@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Shield, ShieldOff, FlaskConical, FlaskConicalOff, LogIn } from "lucide-react";
+import { Shield, ShieldOff, FlaskConical, FlaskConicalOff, LogIn, Mail, MailX } from "lucide-react";
 
 interface UserWithRole {
   user_id: string;
