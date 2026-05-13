@@ -78,6 +78,56 @@ const About = () => {
                 </p>
               </div>
             </div>
+
+            <div className="mt-16 border-t-2 border-bronze/40 pt-12">
+              <p className="text-xs font-heading font-semibold uppercase tracking-[0.3em] text-bronze-dark">
+                On AI
+              </p>
+              <h2 className="mt-3 font-heading text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+                AI philosophy
+              </h2>
+              <div className="mt-6 space-y-5 text-base leading-relaxed text-muted-foreground">
+                <p>
+                  Mini Giant Games believes games are ultimately made by people for people.
+                  We value human collaboration, argument, intuition, taste, and the strange
+                  creative chemistry that happens when a team sits together wrestling with
+                  systems for months or years. AI is a tool, not a replacement for that
+                  process. There is still a meaningful difference between software and a
+                  human being with judgment, experience, responsibility, and creative
+                  instinct. Until you can share a scotch with an AI after a brutal
+                  milestone and argue about naval logistics at 1 AM, the distinction
+                  matters.
+                </p>
+                <p>
+                  At the same time, we are not ideological about technology. We prototype
+                  aggressively with AI because it is fast, cheap, and often good enough to
+                  test mechanics, interfaces, writing structures, and production concepts
+                  early. Refusing useful tools out of dogma is just another form of
+                  incompetence.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-16 border-t-2 border-bronze/40 pt-12">
+              <p className="text-xs font-heading font-semibold uppercase tracking-[0.3em] text-bronze-dark">
+                On Money
+              </p>
+              <h2 className="mt-3 font-heading text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+                Financial philosophy
+              </h2>
+              <div className="mt-6 space-y-5 text-base leading-relaxed text-muted-foreground">
+                <p>
+                  Our financial philosophy is equally straightforward. Revenue and
+                  investment are not treated as fuel for vanity, dying with the most points
+                  (wealth) or speculative growth. The first responsibility of the studio is
+                  to survive and pay its bills. The second is to create stable, livable
+                  compensation for the developers building and supporting the games over
+                  the long term. After that, yes, a little profit. A healthy company should
+                  make money both to sustain craftsmanship and independence and because not
+                  making some profit feels somewhat unamerican.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
       </main>
