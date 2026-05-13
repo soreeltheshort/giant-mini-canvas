@@ -91,8 +91,7 @@ const About = () => {
                   Mini Giant Games believes games are ultimately made by people for people.
                   We value human collaboration, argument, intuition, taste, and the strange
                   creative chemistry that happens when a team sits together wrestling with
-                  systems for months or years. AI is a tool, not a replacement for that
-                  process. There is still a meaningful difference between software and a
+                  systems for months or years. There is still a difference between software and a
                   human being with judgment, experience, responsibility, and creative
                   instinct. Until you can share a scotch with an AI after a brutal
                   milestone and argue about naval logistics at 1 AM, the distinction
