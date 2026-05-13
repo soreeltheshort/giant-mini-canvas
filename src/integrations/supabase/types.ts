@@ -354,6 +354,7 @@ export type Database = {
           maintenance: number
           max_per_system: number
           name: string
+          ship_build_capacity: number
           survey_bonus: number
           tribute_flat: number
           tribute_percent: number
@@ -375,6 +376,7 @@ export type Database = {
           maintenance?: number
           max_per_system?: number
           name: string
+          ship_build_capacity?: number
           survey_bonus?: number
           tribute_flat?: number
           tribute_percent?: number
@@ -396,6 +398,7 @@ export type Database = {
           maintenance?: number
           max_per_system?: number
           name?: string
+          ship_build_capacity?: number
           survey_bonus?: number
           tribute_flat?: number
           tribute_percent?: number
@@ -1344,6 +1347,51 @@ export type Database = {
         }
         Relationships: []
       }
+      ships_in_transit: {
+        Row: {
+          created_at: string
+          created_turn: number
+          destination_fleet_id: string | null
+          game_id: string
+          id: string
+          origin_system_id: number | null
+          owner_classification: string
+          quantity: number
+          ship_type_id: string
+          updated_at: string
+          virt_x: number
+          virt_y: number
+        }
+        Insert: {
+          created_at?: string
+          created_turn?: number
+          destination_fleet_id?: string | null
+          game_id: string
+          id?: string
+          origin_system_id?: number | null
+          owner_classification?: string
+          quantity?: number
+          ship_type_id: string
+          updated_at?: string
+          virt_x?: number
+          virt_y?: number
+        }
+        Update: {
+          created_at?: string
+          created_turn?: number
+          destination_fleet_id?: string | null
+          game_id?: string
+          id?: string
+          origin_system_id?: number | null
+          owner_classification?: string
+          quantity?: number
+          ship_type_id?: string
+          updated_at?: string
+          virt_x?: number
+          virt_y?: number
+        }
+        Relationships: []
+      }
       system_actions: {
         Row: {
           created_at: string
@@ -1367,6 +1415,51 @@ export type Database = {
           icon?: string
           id?: string
           name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      system_ship_production: {
+        Row: {
+          cost_paid: number
+          created_at: string
+          destination_fleet_id: string | null
+          game_id: string
+          id: string
+          owner_classification: string
+          points_remaining: number
+          position: number
+          quantity: number
+          ship_type_id: string
+          system_id: number
+          updated_at: string
+        }
+        Insert: {
+          cost_paid?: number
+          created_at?: string
+          destination_fleet_id?: string | null
+          game_id: string
+          id?: string
+          owner_classification?: string
+          points_remaining?: number
+          position?: number
+          quantity?: number
+          ship_type_id: string
+          system_id: number
+          updated_at?: string
+        }
+        Update: {
+          cost_paid?: number
+          created_at?: string
+          destination_fleet_id?: string | null
+          game_id?: string
+          id?: string
+          owner_classification?: string
+          points_remaining?: number
+          position?: number
+          quantity?: number
+          ship_type_id?: string
+          system_id?: number
           updated_at?: string
         }
         Relationships: []

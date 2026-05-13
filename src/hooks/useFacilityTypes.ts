@@ -20,6 +20,7 @@ export interface DbFacilityType {
   fighter_capacity: number;
   gunship_capacity: number;
   max_per_system: number;
+  ship_build_capacity: number;
 }
 
 export function useFacilityTypes() {

@@ -139,6 +139,8 @@ export interface MapFleet {
   hex_x: number;
   hex_y: number;
   source_fleet_id: string; // reference to the fleets table
+  is_garrison?: boolean;
+  system_id?: number | null;
 }
 
 export interface MapState {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { ShipTypeLookup } from "./ContextPanel";
+import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 
 type FilterKey = "invasion" | "sensors" | "repair" | "supply" | "fighters" | "gunship" | "strikecraft";
 
@@ -24,12 +25,19 @@ export interface PlayerFleetOption {
   fleet_id: string;
   fleet_name: string;
   atSystem: boolean;
+  hex_x: number;
+  hex_y: number;
+  is_garrison?: boolean;
 }
 
 interface BuildShipsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   systemName: string;
+  systemHexX?: number;
+  systemHexY?: number;
+  /** Ship-build capacity (points/turn) of the producing system. */
+  shipBuildCapacity?: number;
   shipTypes: ShipTypeLookup[];
   playerFleets?: PlayerFleetOption[];
   onConfirm?: (queue: QueuedShip[]) => void;
@@ -37,10 +45,19 @@ interface BuildShipsDialogProps {
 
 const NEW_FLEET = "__new__";
 
+function hexDist(ax: number, ay: number, bx: number, by: number) {
+  const [a1, a2, a3] = offsetToCube(ax, ay);
+  const [b1, b2, b3] = offsetToCube(bx, by);
+  return cubeDistance(a1, a2, a3, b1, b2, b3);
+}
+
 export default function BuildShipsDialog({
   open,
   onOpenChange,
   systemName,
+  systemHexX,
+  systemHexY,
+  shipBuildCapacity = 0,
   shipTypes,
   playerFleets = [],
   onConfirm,
@@ -61,6 +78,15 @@ export default function BuildShipsDialog({
     return shipTypes.filter((s) => f.predicate(s));
   }, [shipTypes, activeFilter]);
 
+  /** Strikecraft can only target fleets/garrisons within 2 hexes of the producing system. */
+  const fleetsForShip = (shipTypeId: string): PlayerFleetOption[] => {
+    const st = shipTypes.find(s => s.id === shipTypeId);
+    if (!st) return playerFleets;
+    if (st.hull_class !== "Strikecraft") return playerFleets;
+    if (systemHexX === undefined || systemHexY === undefined) return playerFleets;
+    return playerFleets.filter(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
+  };
+
   const selectFilter = (k: FilterKey) => {
     setActiveFilter((prev) => (prev === k ? null : k));
   };
@@ -70,7 +96,14 @@ export default function BuildShipsDialog({
       const idx = prev.findIndex((q) => q.id === id);
       if (idx === -1) {
         if (delta <= 0) return prev;
-        return [...prev, { id, qty: delta, destFleetId: defaultDestination }];
+        // For strikecraft, default destination must be within 2 hexes.
+        const st = shipTypes.find(s => s.id === id);
+        let dflt = defaultDestination;
+        if (st?.hull_class === "Strikecraft" && systemHexX !== undefined && systemHexY !== undefined) {
+          const ok = playerFleets.find(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
+          dflt = ok ? ok.fleet_id : NEW_FLEET;
+        }
+        return [...prev, { id, qty: delta, destFleetId: dflt }];
       }
       const next = [...prev];
       const v = Math.max(0, next[idx].qty + delta);
@@ -105,6 +138,18 @@ export default function BuildShipsDialog({
     return sum + (st?.point_cost ?? 0) * q.qty;
   }, 0);
 
+  // Cumulative ETA estimator (head-first capacity drain).
+  const etaForIndex = (idx: number): number | null => {
+    if (shipBuildCapacity <= 0) return null;
+    let pointsAhead = 0;
+    for (let i = 0; i <= idx; i++) {
+      const q = queueOrder[i];
+      const st = shipTypes.find(s => s.id === q.id);
+      pointsAhead += (st?.point_cost ?? 0) * q.qty;
+    }
+    return Math.max(1, Math.ceil(pointsAhead / shipBuildCapacity));
+  };
+
   const handleDone = () => {
     if (queueOrder.length > 0 && onConfirm) {
       onConfirm(
@@ -124,18 +169,33 @@ export default function BuildShipsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Build Ships — {systemName}</DialogTitle>
+          <DialogTitle>
+            Build Ships — {systemName}
+            {shipBuildCapacity > 0 && (
+              <span className="ml-2 text-[10px] font-body font-semibold text-bronze">
+                · {shipBuildCapacity} pts/turn
+              </span>
+            )}
+          </DialogTitle>
         </DialogHeader>
+
+        {shipBuildCapacity <= 0 && (
+          <p className="text-[10px] text-crimson italic">
+            This system has no shipyards. Builds will not progress until one is commissioned.
+          </p>
+        )}
 
         {/* Build Queue (reorderable) */}
         {queueOrder.length > 0 && (
-          <div className="border border-border rounded-sm p-2 space-y-1 max-h-40 overflow-y-auto">
+          <div className="border border-border rounded-sm p-2 space-y-1 max-h-48 overflow-y-auto">
             <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-heading font-semibold">
               Build Queue
             </div>
             {queueOrder.map((q, idx) => {
               const st = shipTypes.find((s) => s.id === q.id);
               if (!st) return null;
+              const eta = etaForIndex(idx);
+              const allowedFleets = fleetsForShip(q.id);
               return (
                 <div key={`${q.id}-${idx}`} className="flex items-center gap-2 text-[10px] flex-wrap">
                   <span className="w-4 text-right text-muted-foreground">{idx + 1}.</span>
@@ -143,15 +203,16 @@ export default function BuildShipsDialog({
                     {st.name} <span className="text-bronze">×{q.qty}</span>
                   </span>
                   <span className="text-slate-500">₡{((st.point_cost ?? 0) * q.qty).toLocaleString()}</span>
+                  {eta && <span className="text-bronze">ETA {eta}T</span>}
                   <select
                     value={q.destFleetId}
                     onChange={(e) => setDest(idx, e.target.value)}
-                    className="text-[10px] bg-muted border border-border rounded-sm px-1 py-0.5 text-foreground max-w-[10rem]"
+                    className="text-[10px] bg-muted border border-border rounded-sm px-1 py-0.5 text-foreground max-w-[12rem]"
                     title="Destination fleet"
                   >
-                    {playerFleets.map((f) => (
+                    {allowedFleets.map((f) => (
                       <option key={f.fleet_id} value={f.fleet_id}>
-                        {f.fleet_name}{f.atSystem ? " (here)" : ""}
+                        {f.fleet_name}{f.atSystem ? " (here)" : ""}{f.is_garrison ? " ⚓" : ""}
                       </option>
                     ))}
                     <option value={NEW_FLEET}>+ New fleet</option>
@@ -231,6 +292,9 @@ export default function BuildShipsDialog({
               if ((s.fighter_bay ?? 0)    > 0) tags.push(`FB${s.fighter_bay}`);
               if ((s.gun_ship_link ?? 0)  > 0) tags.push(`GL${s.gun_ship_link}`);
               const isStrikecraft = s.hull_class === "Strikecraft";
+              const strikecraftBlocked = isStrikecraft &&
+                systemHexX !== undefined && systemHexY !== undefined &&
+                !playerFleets.some(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
               return (
                 <div key={s.id} className="border border-border rounded-sm p-2 flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -240,25 +304,12 @@ export default function BuildShipsDialog({
                       {tags.map((t) => (
                         <span key={t} className="text-[9px] px-1 rounded-sm bg-bronze/20 text-bronze font-semibold">{t}</span>
                       ))}
+                      {isStrikecraft && (
+                        <span className="text-[9px] text-bronze italic">requires fleet within 2 hexes</span>
+                      )}
                     </div>
                     <p className="text-[10px] text-slate-500">
-                      ₡{s.point_cost ?? 0} · maint {s.maintenance ?? 0}
-                      {(() => {
-                        const w: string[] = [];
-                        if (s.laser_2_5cm)    w.push(`L2.5×${s.laser_2_5cm}`);
-                        if (s.laser_4_5cm)    w.push(`L4.5×${s.laser_4_5cm}`);
-                        if (s.laser_6_5cm)    w.push(`L6.5×${s.laser_6_5cm}`);
-                        if (s.laser_10cm)     w.push(`L10×${s.laser_10cm}`);
-                        if (s.laser_14cm)     w.push(`L14×${s.laser_14cm}`);
-                        if (s.laser_20cm)     w.push(`L20×${s.laser_20cm}`);
-                        if (s.laser_28cm)     w.push(`L28×${s.laser_28cm}`);
-                        if (s.laser_50cm)     w.push(`L50×${s.laser_50cm}`);
-                        if (s.missile_10kg)   w.push(`M10k×${s.missile_10kg}`);
-                        if (s.missile_50kg)   w.push(`M50k×${s.missile_50kg}`);
-                        if (s.missile_100kg)  w.push(`M100k×${s.missile_100kg}`);
-                        if (s.missile_half_kt)w.push(`M½kt×${s.missile_half_kt}`);
-                        return w.length ? <> · <span className="text-bronze">{w.join(" ")}</span></> : null;
-                      })()}
+                      ₡{s.point_cost ?? 0} · maint {s.maintenance ?? 0} · spd {s.map_speed ?? 1}
                     </p>
                     {s.flavor_description && (
                       <p className="text-[10px] text-muted-foreground italic mt-0.5 leading-snug">
@@ -279,7 +330,9 @@ export default function BuildShipsDialog({
                         <span className="w-6 text-center text-xs font-semibold text-bronze">{qty}</span>
                         <button
                           onClick={() => adjust(s.id, +1)}
-                          className="w-6 h-6 rounded-sm bg-muted text-foreground hover:bg-bronze/20 text-sm font-bold"
+                          disabled={strikecraftBlocked}
+                          title={strikecraftBlocked ? "No friendly fleet within 2 hexes" : ""}
+                          className="w-6 h-6 rounded-sm bg-muted text-foreground hover:bg-bronze/20 text-sm font-bold disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                           +
                         </button>

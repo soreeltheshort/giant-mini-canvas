@@ -1,0 +1,277 @@
+/**
+ * Ship Production Phase
+ *
+ * Per-system queue advance. Each system spends total ship_build_capacity
+ * (sum across its built shipyards) against the head of its
+ * `system_ship_production` queue, head-first. Completed ships either:
+ *   - join their destination fleet immediately if distance ≤ ship.map_speed,
+ *   - or enter `ships_in_transit` (virtual fleet, no map presence).
+ *
+ * Then every existing in-transit row advances ship.map_speed hexes toward
+ * its current destination fleet's hex. On arrival, ships are inserted into
+ * game_fleet_ships (Core group) and the transit row is deleted.
+ *
+ * If a destination fleet is missing/destroyed, both queued and in-transit
+ * rows are rerouted to the nearest owned (is_garrison=true) fleet for the
+ * same owner_classification. If no garrison exists, the row holds.
+ *
+ * Runs AFTER economy (so income is settled) and BEFORE movement.
+ */
+import type { Phase, TurnContext } from "../types";
+import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+
+interface MiniShipType {
+  id: string;
+  point_cost: number;
+  map_speed: number;
+  hull_class: string;
+}
+
+function stepToward(fromX: number, fromY: number, toX: number, toY: number) {
+  const [ax, ay, az] = offsetToCube(fromX, fromY);
+  const [bx, by, bz] = offsetToCube(toX, toY);
+  const dx = bx - ax, dy = by - ay, dz = bz - az;
+  const adx = Math.abs(dx), ady = Math.abs(dy), adz = Math.abs(dz);
+  let nx = ax, ny = ay, nz = az;
+  if (adx >= ady && adx >= adz) {
+    nx += Math.sign(dx);
+    if (ady >= adz) ny += Math.sign(dy); else nz += Math.sign(dz);
+  } else if (ady >= adx && ady >= adz) {
+    ny += Math.sign(dy);
+    if (adx >= adz) nx += Math.sign(dx); else nz += Math.sign(dz);
+  } else {
+    nz += Math.sign(dz);
+    if (adx >= ady) nx += Math.sign(dx); else ny += Math.sign(dy);
+  }
+  const col = nx + (nz - (nz & 1)) / 2;
+  const row = nz;
+  return { x: col, y: row };
+}
+
+function distHex(ax: number, ay: number, bx: number, by: number) {
+  const [a1, a2, a3] = offsetToCube(ax, ay);
+  const [b1, b2, b3] = offsetToCube(bx, by);
+  return cubeDistance(a1, a2, a3, b1, b2, b3);
+}
+
+export const shipProductionPhase: Phase = {
+  name: "economy", // groups under economy in PhaseName union; logs use "ship_production"
+  label: "Ship Production",
+  async run(ctx: TurnContext) {
+    const { supabase, gameId, currentTurn, mapState, facilityTypes } = ctx;
+
+    // Load all ship types we may need.
+    const { data: shipTypeRows } = await (supabase as any)
+      .from("ship_types")
+      .select("id, point_cost, map_speed, hull_class");
+    const shipTypes = new Map<string, MiniShipType>(
+      (shipTypeRows || []).map((s: any) => [s.id, {
+        id: s.id,
+        point_cost: Number(s.point_cost) || 0,
+        map_speed: Math.max(1, Number(s.map_speed) || 1),
+        hull_class: String(s.hull_class || ""),
+      }])
+    );
+
+    // ── 1. Advance per-system queues ────────────────────────────────
+    const { data: queueRows } = await (supabase as any)
+      .from("system_ship_production")
+      .select("*")
+      .eq("game_id", gameId)
+      .order("system_id", { ascending: true })
+      .order("position", { ascending: true });
+
+    const allQueue: any[] = queueRows || [];
+
+    // Group by system, advance each system independently.
+    const bySystem = new Map<number, any[]>();
+    for (const r of allQueue) {
+      const arr = bySystem.get(r.system_id) || [];
+      arr.push(r);
+      bySystem.set(r.system_id, arr);
+    }
+
+    const completedItems: Array<{
+      row: any;
+      ship: MiniShipType;
+      ownerClass: string;
+      systemHex: { x: number; y: number };
+    }> = [];
+
+    for (const [sysId, rows] of bySystem) {
+      const sys = mapState.systems.get(sysId);
+      if (!sys) continue;
+      // Total capacity from built facilities
+      let capacity = 0;
+      for (const f of sys.facilities || []) {
+        const ft = facilityTypes.find(t => String(t.id) === String(f.facility_type_id));
+        const c = Number((ft as any)?.ship_build_capacity) || 0;
+        if (c > 0) capacity += c * (f.quantity || 1);
+      }
+      if (capacity <= 0) continue;
+
+      // System hex
+      const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+      if (!sysHex) continue;
+
+      let remainingCap = capacity;
+      for (const row of rows) {
+        if (remainingCap <= 0) break;
+        const ship = shipTypes.get(row.ship_type_id);
+        if (!ship) continue;
+
+        const spend = Math.min(remainingCap, row.points_remaining);
+        const newRemaining = row.points_remaining - spend;
+        remainingCap -= spend;
+
+        if (newRemaining <= 0) {
+          // Completed — delete row, queue for destination resolution
+          await (supabase as any)
+            .from("system_ship_production")
+            .delete().eq("id", row.id);
+          completedItems.push({
+            row,
+            ship,
+            ownerClass: row.owner_classification || sys.owner || "",
+            systemHex: { x: sysHex.x, y: sysHex.y },
+          });
+        } else {
+          await (supabase as any)
+            .from("system_ship_production")
+            .update({ points_remaining: newRemaining })
+            .eq("id", row.id);
+        }
+      }
+    }
+
+    // ── 2. Resolve completed ships → fleet or transit ───────────────
+    // Helper: find a destination fleet (or reroute to nearest garrison)
+    const findDestFleet = (destId: string | null, ownerClass: string, fromX: number, fromY: number): any | null => {
+      if (destId) {
+        const f = mapState.fleets.find(x => x.fleet_id === destId);
+        if (f) return f;
+      }
+      // Reroute: nearest garrison of same owner
+      const garrisons = mapState.fleets.filter(f =>
+        (f as any).owner_classification === ownerClass
+      );
+      if (garrisons.length === 0) return null;
+      let best: any = null;
+      let bestD = Infinity;
+      for (const g of garrisons) {
+        const d = distHex(fromX, fromY, g.hex_x, g.hex_y);
+        if (d < bestD) { bestD = d; best = g; }
+      }
+      return best;
+    };
+
+    for (const item of completedItems) {
+      const { row, ship, ownerClass, systemHex } = item;
+      const dest = findDestFleet(row.destination_fleet_id, ownerClass, systemHex.x, systemHex.y);
+      if (!dest) {
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "ship_built_stranded",
+          message: `Built ${row.quantity} ship(s) at system #${row.system_id} but no destination fleet/garrison exists; ships lost.`,
+          details_json: { row },
+        });
+        continue;
+      }
+      const dist = distHex(systemHex.x, systemHex.y, dest.hex_x, dest.hex_y);
+      if (dist <= ship.map_speed) {
+        // Insert directly into game_fleet_ships — one row per ship for HP tracking.
+        const inserts = Array.from({ length: row.quantity }, () => ({
+          game_fleet_id: dest.fleet_id,
+          ship_type_id: ship.id,
+          quantity: 1,
+          tactical_group: "Core",
+          current_hp: null,
+          crippled: false,
+        }));
+        if (inserts.length > 0) {
+          await (supabase as any).from("game_fleet_ships").insert(inserts);
+        }
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "ship_built_arrived",
+          message: `${row.quantity}× new ship(s) joined ${dest.fleet_name || "fleet"} at (${dest.hex_x}, ${dest.hex_y}).`,
+          details_json: { fleet_id: dest.fleet_id, ship_type_id: ship.id, quantity: row.quantity },
+        });
+      } else {
+        // Enter virtual transit
+        await (supabase as any).from("ships_in_transit").insert({
+          game_id: gameId,
+          owner_classification: ownerClass,
+          ship_type_id: ship.id,
+          quantity: row.quantity,
+          destination_fleet_id: dest.fleet_id,
+          origin_system_id: row.system_id,
+          virt_x: systemHex.x,
+          virt_y: systemHex.y,
+          created_turn: currentTurn,
+        });
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "ship_built_in_transit",
+          message: `${row.quantity}× ship(s) built at system #${row.system_id}; in virtual transit toward ${dest.fleet_name || "fleet"}.`,
+          details_json: { from: systemHex, to: { x: dest.hex_x, y: dest.hex_y }, dist, ship_type_id: ship.id },
+        });
+      }
+    }
+
+    // ── 3. Advance existing in-transit rows ─────────────────────────
+    const { data: transitRows } = await (supabase as any)
+      .from("ships_in_transit")
+      .select("*")
+      .eq("game_id", gameId);
+
+    for (const t of (transitRows || [])) {
+      const ship = shipTypes.get(t.ship_type_id);
+      if (!ship) continue;
+      const dest = findDestFleet(t.destination_fleet_id, t.owner_classification, t.virt_x, t.virt_y);
+      if (!dest) {
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "transit_stranded",
+          message: `Transit ${t.quantity}× ship(s) has no destination; holding at (${t.virt_x}, ${t.virt_y}).`,
+          details_json: { transit_id: t.id },
+        });
+        continue;
+      }
+      // Step map_speed times toward dest's current hex
+      let cx = t.virt_x, cy = t.virt_y;
+      let stepsLeft = ship.map_speed;
+      while (stepsLeft > 0 && (cx !== dest.hex_x || cy !== dest.hex_y)) {
+        const n = stepToward(cx, cy, dest.hex_x, dest.hex_y);
+        cx = n.x; cy = n.y;
+        stepsLeft--;
+      }
+      if (cx === dest.hex_x && cy === dest.hex_y) {
+        const inserts = Array.from({ length: t.quantity }, () => ({
+          game_fleet_id: dest.fleet_id,
+          ship_type_id: ship.id,
+          quantity: 1,
+          tactical_group: "Core",
+          current_hp: null,
+          crippled: false,
+        }));
+        if (inserts.length > 0) {
+          await (supabase as any).from("game_fleet_ships").insert(inserts);
+        }
+        await (supabase as any).from("ships_in_transit").delete().eq("id", t.id);
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "ship_arrived",
+          message: `${t.quantity}× ship(s) arrived at ${dest.fleet_name || "fleet"}.`,
+          details_json: { fleet_id: dest.fleet_id, ship_type_id: ship.id, quantity: t.quantity },
+        });
+      } else {
+        const newDestId = dest.fleet_id !== t.destination_fleet_id ? dest.fleet_id : t.destination_fleet_id;
+        await (supabase as any)
+          .from("ships_in_transit")
+          .update({ virt_x: cx, virt_y: cy, destination_fleet_id: newDestId })
+          .eq("id", t.id);
+      }
+    }
+  },
+};
