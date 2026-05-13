@@ -15,6 +15,8 @@ import logo from "@/assets/mini-giant-games-logo.png";
 
 const Index = () => {
   const inDev = games.find((g) => g.inDevelopment) ?? games[0];
+  const { user } = useAuth();
+  const enterGameTo = user ? "/new-game" : `/games/${inDev.id}`;
 
   return (
     <div className="min-h-screen bg-background">
