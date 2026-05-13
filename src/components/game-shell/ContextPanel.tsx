@@ -512,6 +512,9 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
           )}
         </ImperialCard>
 
+        {mode === "military" && gameId ? (
+          <GarrisonCard gameId={gameId} systemId={realSys.system_id} />
+        ) : null}
 
         <ImperialCard title="Production Queue">
           <div className="space-y-1.5">
