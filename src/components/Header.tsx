@@ -31,6 +31,14 @@ const Header = () => {
   const isGameMode = location.pathname.startsWith("/admin/games");
   const isForumActive = location.pathname.startsWith("/blog") || location.pathname === "/admin/blog" || location.pathname === "/unsubscribe";
 
+  // Studio mode = Mini Giant Games marketing surface (home, about, public games index/detail).
+  // Renders a simplified nav: Games, About Us, Sign In/Out only.
+  const isStudioMode =
+    location.pathname === "/" ||
+    location.pathname === "/about" ||
+    location.pathname === "/games" ||
+    location.pathname.startsWith("/games/");
+
   const toggleOptIn = async () => {
     if (!user) return;
     setTogglingOptIn(true);
