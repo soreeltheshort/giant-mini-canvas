@@ -72,6 +72,7 @@ const Index = () => {
 
               <Link
                 to={enterGameTo}
+                onClick={handleEnterGame}
                 className="mt-6 group grid gap-8 md:grid-cols-[3fr_2fr] items-center border-2 border-bronze/40 bg-ivory rounded-sm overflow-hidden hover:border-bronze transition-colors shadow-[0_4px_20px_-8px_hsl(var(--bronze)/0.35)]"
               >
                 <div className="aspect-video overflow-hidden bg-muted">
