@@ -37,6 +37,7 @@ interface GameRow {
   status: string;
   turn_number: number;
   created_at: string;
+  created_by: string;
 }
 
 interface GamePlayerRow {
@@ -80,6 +81,7 @@ const AdminGames = () => {
 
   // games list
   const [games, setGames] = useState<GameRow[]>([]);
+  const [gamePlayersMap, setGamePlayersMap] = useState<Map<string, { user_id: string; player_slot: number }[]>>(new Map());
   const [loadingGames, setLoadingGames] = useState(true);
 
   // selected game
@@ -99,8 +101,23 @@ const AdminGames = () => {
 
   /* ── fetch helpers ── */
   const fetchGames = useCallback(async () => {
-    const { data } = await (supabase as any).from("games").select("id, name, status, turn_number, created_at").order("created_at", { ascending: false });
-    setGames(data || []);
+    const { data: gData } = await (supabase as any).from("games").select("id, name, status, turn_number, created_at, created_by").order("created_at", { ascending: false });
+    const list = (gData || []) as GameRow[];
+    setGames(list);
+    // Fetch player rosters for all games so the list can show participants
+    if (list.length > 0) {
+      const ids = list.map(g => g.id);
+      const { data: pData } = await (supabase as any).from("game_players").select("game_id, user_id, player_slot").in("game_id", ids);
+      const map = new Map<string, { user_id: string; player_slot: number }[]>();
+      for (const row of (pData || [])) {
+        const arr = map.get(row.game_id) || [];
+        arr.push({ user_id: row.user_id, player_slot: row.player_slot });
+        map.set(row.game_id, arr);
+      }
+      setGamePlayersMap(map);
+    } else {
+      setGamePlayersMap(new Map());
+    }
     setLoadingGames(false);
   }, []);
 
@@ -618,27 +635,42 @@ const AdminGames = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Turn</TableHead>
+                <TableHead>Creator</TableHead>
+                <TableHead>Players</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loadingGames ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Loading...</TableCell></TableRow>
               ) : games.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No games yet</TableCell></TableRow>
-              ) : games.map(g => (
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No games yet</TableCell></TableRow>
+              ) : games.map(g => {
+                const roster = (gamePlayersMap.get(g.id) || []).slice().sort((a, b) => a.player_slot - b.player_slot);
+                return (
                 <TableRow key={g.id} className={selectedGame?.id === g.id ? "bg-accent/30" : ""}>
                   <TableCell className="font-medium">{g.name}</TableCell>
                   <TableCell><Badge className={statusColors[g.status]}>{g.status}</Badge></TableCell>
                   <TableCell>{g.turn_number}</TableCell>
+                  <TableCell className="text-xs">{getProfileLabel(g.created_by)}</TableCell>
+                  <TableCell className="text-xs">
+                    {roster.length === 0 ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <span title={roster.map(r => `${PROVINCE_NAMES[r.player_slot] || `Slot ${r.player_slot}`}: ${getProfileLabel(r.user_id)}`).join("\n")}>
+                        {roster.map(r => getProfileLabel(r.user_id)).join(", ")}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-xs">{new Date(g.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button size="sm" variant="outline" onClick={() => loadGame(g)}>Load</Button>
                     <Button size="sm" variant="destructive" onClick={() => deleteGame(g.id)}>Delete</Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>
