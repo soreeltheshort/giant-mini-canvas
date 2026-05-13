@@ -43,6 +43,7 @@ import AdminImages from "./pages/AdminImages";
 import AdminSounds from "./pages/AdminSounds";
 import Credits from "./pages/Credits";
 import Unsubscribe from "./pages/Unsubscribe";
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
