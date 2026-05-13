@@ -1275,6 +1275,7 @@ const PlayerGame = () => {
             onSelect: setSelection,
             onBuildFacility: handleBuildFacility,
             onUndoBuildOrder: handleUndoBuildOrder,
+            onCreateFleet: handleCreateFleet,
             onCancelInProduction: handleCancelInProduction,
             onUndoCancelBuild: handleUndoCancelBuild,
             pendingBuildOrders,
