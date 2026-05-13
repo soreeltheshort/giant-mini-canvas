@@ -374,6 +374,8 @@ function InlineContextContent({
             gameData={gameData}
             playerOwnerClassification={playerOwnerClassification}
             onSelect={onSelect}
+            onCreateFleet={onCreateFleet}
+            combatPointsAvailable={combatPointsAvailable}
           />
         )}
       </div>
