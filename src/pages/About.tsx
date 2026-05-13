@@ -57,8 +57,7 @@ const About = () => {
                   What we make
                 </p>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  Strategy and simulation games with deterministic systems and long
-                  decision horizons.
+                  Strategy and simulation games with deterministic systems.
                 </p>
               </div>
               <div>
