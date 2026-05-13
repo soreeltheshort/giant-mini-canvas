@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import {
   Shield, ShieldOff, FlaskConical, FlaskConicalOff, LogIn, Mail, MailX,
-  Plus, Trash2, ChevronDown, ChevronRight, Save, Search,
+  Plus, Trash2, ChevronDown, ChevronRight, Save, Search, Copy,
 } from "lucide-react";
 
 interface UserRow {
