@@ -100,8 +100,23 @@ const AdminGames = () => {
 
   /* ── fetch helpers ── */
   const fetchGames = useCallback(async () => {
-    const { data } = await (supabase as any).from("games").select("id, name, status, turn_number, created_at").order("created_at", { ascending: false });
-    setGames(data || []);
+    const { data: gData } = await (supabase as any).from("games").select("id, name, status, turn_number, created_at, created_by").order("created_at", { ascending: false });
+    const list = (gData || []) as GameRow[];
+    setGames(list);
+    // Fetch player rosters for all games so the list can show participants
+    if (list.length > 0) {
+      const ids = list.map(g => g.id);
+      const { data: pData } = await (supabase as any).from("game_players").select("game_id, user_id, player_slot").in("game_id", ids);
+      const map = new Map<string, { user_id: string; player_slot: number }[]>();
+      for (const row of (pData || [])) {
+        const arr = map.get(row.game_id) || [];
+        arr.push({ user_id: row.user_id, player_slot: row.player_slot });
+        map.set(row.game_id, arr);
+      }
+      setGamePlayersMap(map);
+    } else {
+      setGamePlayersMap(new Map());
+    }
     setLoadingGames(false);
   }, []);
 
