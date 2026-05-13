@@ -43,6 +43,7 @@ import AdminImages from "./pages/AdminImages";
 import AdminSounds from "./pages/AdminSounds";
 import Credits from "./pages/Credits";
 import Unsubscribe from "./pages/Unsubscribe";
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/games" element={<Games />} />
+            <Route path="/about" element={<About />} />
             <Route path="/games/:id" element={<GameDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />

@@ -31,6 +31,14 @@ const Header = () => {
   const isGameMode = location.pathname.startsWith("/admin/games");
   const isForumActive = location.pathname.startsWith("/blog") || location.pathname === "/admin/blog" || location.pathname === "/unsubscribe";
 
+  // Studio mode = Mini Giant Games marketing surface (home, about, public games index/detail).
+  // Renders a simplified nav: Games, About Us, Sign In/Out only.
+  const isStudioMode =
+    location.pathname === "/" ||
+    location.pathname === "/about" ||
+    location.pathname === "/games" ||
+    location.pathname.startsWith("/games/");
+
   const toggleOptIn = async () => {
     if (!user) return;
     setTogglingOptIn(true);
@@ -98,133 +106,164 @@ const Header = () => {
       <header className="border-b border-border">
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="font-heading text-lg font-semibold tracking-tight text-foreground">
-            {location.pathname === "/" ? "Mini Giant Games" : "Third Republic"}
+            {isStudioMode ? "Mini Giant Games" : "Third Republic"}
           </Link>
           <nav className="flex items-center gap-6">
-            <Link
-              to="/"
-              className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/" ? "text-foreground" : "text-muted-foreground"}`}
-            >
-              Home
-            </Link>
-            {/* Blog moved into Forum dropdown */}
-            {user && canAccessGameFeatures && (
-              <DropdownMenu>
-                <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isCombatTestingMode || isMapTestingMode || isPlanetTestingMode || isFleetTestingMode ? "text-foreground" : "text-muted-foreground"}`}>
-                  Testing
-                  <ChevronDown className="h-3 w-3" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-background z-50">
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard">Combat Testing</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/map-testing">Map Testing</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/planet-testing">Planet Testing</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/fleet-testing">Fleet Testing</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            {user && isAdmin && (
-              <DropdownMenu>
-                <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/weapons" || location.pathname === "/admin/ships" || location.pathname === "/admin/battle-config" ? "text-foreground" : ""}`}>
-                  Assets
-                  <ChevronDown className="h-3 w-3" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-background z-50">
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/battle-debug">Debug</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/weapons">Weapons</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/ships">Ships</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/facilities">Facilities</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/cutscenes">Cutscenes</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/images">Images</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/sounds">Sounds</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/battle-config">Battle Config</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/map-testing/config">Map Config</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            {user && isAdmin && (
-              <Link to="/admin/games" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname.startsWith("/admin/games") ? "text-foreground" : ""}`}>
-                Games
-              </Link>
-            )}
-            {user && canAccessGameFeatures && (
-              <Link to="/tester" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname.startsWith("/tester") ? "text-foreground" : ""}`}>
-                Tester
-              </Link>
-            )}
-            {user && isAdmin && (
-              <Link to="/admin/users" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/users" ? "text-foreground" : ""}`}>
-                Users
-              </Link>
-            )}
-            {user && canAccessGameFeatures && (
-              <Link to="/manual" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/manual" ? "text-foreground" : "text-muted-foreground"}`}>
-                Manual
-              </Link>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isForumActive ? "text-foreground" : "text-muted-foreground"}`}>
-                Forum
-                <ChevronDown className="h-3 w-3" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background z-50">
-                <DropdownMenuItem asChild>
-                  <Link to="/blog">Blog</Link>
-                </DropdownMenuItem>
-                {user && isAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/blog">Manage Blog</Link>
-                  </DropdownMenuItem>
+            {isStudioMode ? (
+              <>
+                <Link
+                  to="/games"
+                  className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/games" || location.pathname.startsWith("/games/") ? "text-foreground" : "text-muted-foreground"}`}
+                >
+                  Games
+                </Link>
+                <Link
+                  to="/about"
+                  className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/about" ? "text-foreground" : "text-muted-foreground"}`}
+                >
+                  About Us
+                </Link>
+                {user ? (
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    localStorage.removeItem("impersonating_from_admin");
+                    signOut();
+                    navigate("/");
+                  }}>
+                    Sign Out
+                  </Button>
+                ) : (
+                  <Link to="/login">
+                    <Button variant="outline" size="sm">Log In</Button>
+                  </Link>
                 )}
-                {user && (
-                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); toggleOptIn(); }} disabled={togglingOptIn}>
-                    {isOptIn ? "Unsubscribe from dispatches" : "Subscribe to dispatches"}
-                  </DropdownMenuItem>
-                )}
-                {!user && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/unsubscribe">Unsubscribe</Link>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {user ? (
-              <Button variant="ghost" size="sm" onClick={() => {
-                localStorage.removeItem("impersonating_from_admin");
-                signOut();
-                navigate("/");
-              }}>
-                Sign Out
-              </Button>
+              </>
             ) : (
-              <Link to="/login">
-                <Button variant="outline" size="sm">Sign In</Button>
-              </Link>
+              <>
+                <Link
+                  to="/"
+                  className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/" ? "text-foreground" : "text-muted-foreground"}`}
+                >
+                  Home
+                </Link>
+                {user && canAccessGameFeatures && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isCombatTestingMode || isMapTestingMode || isPlanetTestingMode || isFleetTestingMode ? "text-foreground" : "text-muted-foreground"}`}>
+                      Testing
+                      <ChevronDown className="h-3 w-3" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-background z-50">
+                      <DropdownMenuItem asChild>
+                        <Link to="/dashboard">Combat Testing</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/map-testing">Map Testing</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/planet-testing">Planet Testing</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/fleet-testing">Fleet Testing</Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                {user && isAdmin && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/weapons" || location.pathname === "/admin/ships" || location.pathname === "/admin/battle-config" ? "text-foreground" : ""}`}>
+                      Assets
+                      <ChevronDown className="h-3 w-3" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-background z-50">
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/battle-debug">Debug</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/weapons">Weapons</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/ships">Ships</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/facilities">Facilities</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/cutscenes">Cutscenes</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/images">Images</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/sounds">Sounds</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/battle-config">Battle Config</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/map-testing/config">Map Config</Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                {user && isAdmin && (
+                  <Link to="/admin/games" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname.startsWith("/admin/games") ? "text-foreground" : ""}`}>
+                    Games
+                  </Link>
+                )}
+                {user && canAccessGameFeatures && (
+                  <Link to="/tester" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname.startsWith("/tester") ? "text-foreground" : ""}`}>
+                    Tester
+                  </Link>
+                )}
+                {user && isAdmin && (
+                  <Link to="/admin/users" className={`text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/users" ? "text-foreground" : ""}`}>
+                    Users
+                  </Link>
+                )}
+                {user && canAccessGameFeatures && (
+                  <Link to="/manual" className={`text-sm font-medium transition-colors hover:text-foreground ${location.pathname === "/manual" ? "text-foreground" : "text-muted-foreground"}`}>
+                    Manual
+                  </Link>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isForumActive ? "text-foreground" : "text-muted-foreground"}`}>
+                    Forum
+                    <ChevronDown className="h-3 w-3" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-background z-50">
+                    <DropdownMenuItem asChild>
+                      <Link to="/blog">Blog</Link>
+                    </DropdownMenuItem>
+                    {user && isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/blog">Manage Blog</Link>
+                      </DropdownMenuItem>
+                    )}
+                    {user && (
+                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); toggleOptIn(); }} disabled={togglingOptIn}>
+                        {isOptIn ? "Unsubscribe from dispatches" : "Subscribe to dispatches"}
+                      </DropdownMenuItem>
+                    )}
+                    {!user && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/unsubscribe">Unsubscribe</Link>
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {user ? (
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    localStorage.removeItem("impersonating_from_admin");
+                    signOut();
+                    navigate("/");
+                  }}>
+                    Sign Out
+                  </Button>
+                ) : (
+                  <Link to="/login">
+                    <Button variant="outline" size="sm">Sign In</Button>
+                  </Link>
+                )}
+              </>
             )}
           </nav>
         </div>
