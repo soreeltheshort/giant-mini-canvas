@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import GameCard from "@/components/GameCard";
@@ -22,13 +23,22 @@ const Games = () => {
             </p>
             <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {games.map((game) => (
-                <GameCard
-                  key={game.id}
-                  id={game.id}
-                  title={game.title}
-                  description={game.description}
-                  image={game.image}
-                />
+                <div key={game.id} className="flex flex-col">
+                  <GameCard
+                    id={game.id}
+                    title={game.title}
+                    description={game.description}
+                    image={game.image}
+                  />
+                  {game.id === "third-republic" && (
+                    <Link
+                      to="/my-games"
+                      className="mt-3 inline-flex items-center justify-center rounded-sm border border-bronze bg-crimson px-4 py-2 font-heading text-sm font-semibold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-crimson-light"
+                    >
+                      Play
+                    </Link>
+                  )}
+                </div>
               ))}
             </div>
           </div>
