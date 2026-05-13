@@ -635,27 +635,42 @@ const AdminGames = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Turn</TableHead>
+                <TableHead>Creator</TableHead>
+                <TableHead>Players</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loadingGames ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Loading...</TableCell></TableRow>
               ) : games.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No games yet</TableCell></TableRow>
-              ) : games.map(g => (
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No games yet</TableCell></TableRow>
+              ) : games.map(g => {
+                const roster = (gamePlayersMap.get(g.id) || []).slice().sort((a, b) => a.player_slot - b.player_slot);
+                return (
                 <TableRow key={g.id} className={selectedGame?.id === g.id ? "bg-accent/30" : ""}>
                   <TableCell className="font-medium">{g.name}</TableCell>
                   <TableCell><Badge className={statusColors[g.status]}>{g.status}</Badge></TableCell>
                   <TableCell>{g.turn_number}</TableCell>
+                  <TableCell className="text-xs">{getProfileLabel(g.created_by)}</TableCell>
+                  <TableCell className="text-xs">
+                    {roster.length === 0 ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <span title={roster.map(r => `${PROVINCE_NAMES[r.player_slot] || `Slot ${r.player_slot}`}: ${getProfileLabel(r.user_id)}`).join("\n")}>
+                        {roster.map(r => getProfileLabel(r.user_id)).join(", ")}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-xs">{new Date(g.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button size="sm" variant="outline" onClick={() => loadGame(g)}>Load</Button>
                     <Button size="sm" variant="destructive" onClick={() => deleteGame(g.id)}>Delete</Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>
