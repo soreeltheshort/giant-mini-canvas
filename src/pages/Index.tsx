@@ -63,7 +63,7 @@ const Index = () => {
                   />
                 </div>
                 <div className="p-6 md:p-8">
-                  <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground group-hover:text-crimson transition-colors tracking-tight">
+                  <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground group-hover:text-crimson transition-colors tracking-tight text-slate-500">
                     {inDev.title}
                   </h2>
                   <div className="mt-3 h-px w-16 bg-gradient-to-r from-bronze via-crimson to-transparent" />
