@@ -305,6 +305,7 @@ function InlineContextContent({
   pendingCancelBuildOrders?: Map<number, Set<string>>;
   playerTreasury?: number;
   adminPointsAvailable?: number;
+  onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
 }) {
   const getModeIcon = () => {
     if (selection.type === "news") return <Scroll className="w-3.5 h-3.5" />;
