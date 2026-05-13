@@ -98,7 +98,7 @@ const Header = () => {
       <header className="border-b border-border">
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="font-heading text-lg font-semibold tracking-tight text-foreground">
-            Third Republic
+            {location.pathname === "/" ? "Mini Giant Games" : "Third Republic"}
           </Link>
           <nav className="flex items-center gap-6">
             <Link
