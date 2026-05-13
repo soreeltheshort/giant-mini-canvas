@@ -622,6 +622,19 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
           open={shipDialogOpen}
           onOpenChange={setShipDialogOpen}
           systemName={realSys.system_name}
+          systemHexX={(() => {
+            const h = gameData?.hexes ? Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id) : undefined;
+            return h?.x;
+          })()}
+          systemHexY={(() => {
+            const h = gameData?.hexes ? Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id) : undefined;
+            return h?.y;
+          })()}
+          shipBuildCapacity={(realSys.facilities || []).reduce((sum, f) => {
+            const ft = (gameData?.facilityTypesFull || []).find(t => String(t.facility_type_id) === String(f.facility_type_id)) as any;
+            const cap = Number(ft?.ship_build_capacity) || 0;
+            return sum + cap * (f.quantity || 1);
+          }, 0)}
           shipTypes={gameData?.shipTypes || []}
           playerFleets={(() => {
             if (!gameData || !playerOwnerClassification) return [];
@@ -631,10 +644,33 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
               .map((f) => ({
                 fleet_id: f.fleet_id,
                 fleet_name: f.fleet_name,
+                hex_x: f.hex_x,
+                hex_y: f.hex_y,
+                is_garrison: !!(f as any).is_garrison,
                 atSystem: !!sysHex && f.hex_x === sysHex.x && f.hex_y === sysHex.y,
               }))
               .sort((a, b) => Number(b.atSystem) - Number(a.atSystem));
           })()}
+          onConfirm={async (queue) => {
+            if (!gameId || !playerOwnerClassification || queue.length === 0) return;
+            const { supabase } = await import("@/integrations/supabase/client");
+            const rows = queue.map((q, idx) => {
+              const st = (gameData?.shipTypes || []).find(s => s.id === q.ship_type_id);
+              const cost = (st?.point_cost ?? 0) * q.quantity;
+              return {
+                game_id: gameId,
+                system_id: realSys.system_id,
+                position: Date.now() + idx,
+                ship_type_id: q.ship_type_id,
+                quantity: q.quantity,
+                destination_fleet_id: q.destination_fleet_id,
+                points_remaining: cost,
+                cost_paid: cost,
+                owner_classification: playerOwnerClassification,
+              };
+            });
+            await (supabase as any).from("system_ship_production").insert(rows);
+          }}
         />
       </>
     );
