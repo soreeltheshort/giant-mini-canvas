@@ -21,6 +21,7 @@ import { ProgressBar } from "./ProgressBar";
 import { StatusBadge } from "./StatusBadge";
 import { ImperialCard } from "./ImperialCard";
 import FleetDetailContent from "./FleetDetailContent";
+import GarrisonCard from "./GarrisonCard";
 import { type GameMapData, DispatchesCard } from "./ContextPanel";
 import BuildShipsDialog from "./BuildShipsDialog";
 import type { HexClassification } from "@/lib/mapTypes";
@@ -343,6 +344,8 @@ function InlineContextContent({
           <InlineRegionDetail
             id={selection.id}
             gameData={gameData}
+            mode={mode}
+            gameId={fleetOrderContext?.gameId}
             onBuildFacility={onBuildFacility}
             onUndoBuildOrder={onUndoBuildOrder}
             onCancelInProduction={onCancelInProduction}
@@ -691,6 +694,8 @@ function InlineEmptyState({
 function InlineRegionDetail({
   id,
   gameData,
+  mode,
+  gameId,
   onBuildFacility,
   onUndoBuildOrder,
   onCancelInProduction,
@@ -703,6 +708,8 @@ function InlineRegionDetail({
 }: {
   id: string;
   gameData?: GameMapData;
+  mode?: GameMode;
+  gameId?: string;
   onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
   onUndoBuildOrder?: (orderId: string) => void;
   onCancelInProduction?: (systemId: number, facilityTypeId: string) => void;
