@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import Header from "@/components/Header";
@@ -16,7 +16,23 @@ import logo from "@/assets/mini-giant-games-logo.png";
 const Index = () => {
   const inDev = games.find((g) => g.inDevelopment) ?? games[0];
   const { user } = useAuth();
-  const enterGameTo = user ? "/new-game" : `/games/${inDev.id}`;
+  const navigate = useNavigate();
+
+  const handleEnterGame = async (e: React.MouseEvent) => {
+    if (!user) return; // let the Link navigate to game detail
+    e.preventDefault();
+    const { data } = await (supabase as any)
+      .from("cutscenes")
+      .select("id")
+      .eq("name", "GameIntro")
+      .maybeSingle();
+    if (data?.id) {
+      navigate(`/cutscenes/${data.id}/play?next=/new-game`);
+    } else {
+      navigate("/new-game");
+    }
+  };
+  const enterGameTo = user ? "#" : `/games/${inDev.id}`;
 
   return (
     <div className="min-h-screen bg-background">
