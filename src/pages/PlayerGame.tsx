@@ -826,6 +826,75 @@ const PlayerGame = () => {
     setRightPanelOpen(true);
   };
 
+  /** Create a new empty fleet on a player-owned hex. Costs 1 combat point. */
+  const handleCreateFleet = useCallback(async (name: string, hexX: number, hexY: number) => {
+    if (!player || !game || !mapState) return;
+    const trimmed = name.trim();
+    if (!trimmed) {
+      toast({ title: "Name required", description: "Give the fleet a name.", variant: "destructive" });
+      return;
+    }
+    if (combatPointsAvailable < 1) {
+      toast({ title: "No combat points", description: "Creating a fleet costs 1 combat point.", variant: "destructive" });
+      return;
+    }
+    const ownClass = `PROVINCE_${player.player_slot}`;
+    const hex = mapState.hexes.get(hexKey(hexX, hexY));
+    if (!hex) {
+      toast({ title: "Invalid hex", description: "That hex does not exist.", variant: "destructive" });
+      return;
+    }
+    const sys = Array.from(mapState.systems.values()).find(s => s.hex_id === hex.hex_id);
+    const owns = hex.classification === ownClass || (sys && sys.owner === ownClass);
+    if (!owns) {
+      toast({ title: "Not your hex", description: "You can only place fleets on hexes you own.", variant: "destructive" });
+      return;
+    }
+    if (mapState.fleets.some(f => f.hex_x === hexX && f.hex_y === hexY)) {
+      toast({ title: "Hex occupied", description: "There is already a fleet on that hex.", variant: "destructive" });
+      return;
+    }
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Not signed in");
+      const { data: tpl, error: e1 } = await (supabase as any)
+        .from("fleets")
+        .insert({ owner_user_id: authUser.id, name: trimmed, points_budget: 0 })
+        .select("id").single();
+      if (e1 || !tpl) throw e1 || new Error("fleet create failed");
+      const { data: gf, error: e2 } = await (supabase as any)
+        .from("game_fleets")
+        .insert({
+          game_id: game.id, fleet_id: tpl.id, fleet_name: trimmed,
+          owner_classification: ownClass, hex_x: hexX, hex_y: hexY,
+        })
+        .select("id").single();
+      if (e2 || !gf) throw e2 || new Error("game fleet create failed");
+      const newMapFleet: MapFleet = {
+        fleet_id: gf.id, fleet_name: trimmed, owner_classification: ownClass,
+        hex_x: hexX, hex_y: hexY, source_fleet_id: tpl.id,
+      };
+      const updated: MapState = { ...mapState, fleets: [...mapState.fleets, newMapFleet] };
+      const serialized = {
+        mapData: updated.mapData,
+        hexes: Array.from(updated.hexes.entries()),
+        systems: Array.from(updated.systems.entries()),
+        regions: updated.regions,
+        facilityTypes: updated.facilityTypes,
+        fleets: updated.fleets,
+      };
+      await (supabase as any).from("games").update({ map_data_json: serialized }).eq("id", game.id);
+      const newCP = Math.max(0, (player.combat_points_remaining ?? 0) - 1);
+      await (supabase as any).from("game_players").update({ combat_points_remaining: newCP }).eq("id", player.id);
+      setMapState(updated);
+      setPlayer({ ...player, combat_points_remaining: newCP });
+      playOrderPlaced();
+      toast({ title: "Fleet Commissioned", description: `${trimmed} stationed at (${hexX}, ${hexY}).` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message ?? String(e), variant: "destructive" });
+    }
+  }, [player, game, mapState, combatPointsAvailable, toast]);
+
   const handleBuildFacility = async (systemId: number, facilityTypeId: string) => {
     if (!player || !game) return;
     try {
@@ -1206,6 +1275,7 @@ const PlayerGame = () => {
             onSelect: setSelection,
             onBuildFacility: handleBuildFacility,
             onUndoBuildOrder: handleUndoBuildOrder,
+            onCreateFleet: handleCreateFleet,
             onCancelInProduction: handleCancelInProduction,
             onUndoCancelBuild: handleUndoCancelBuild,
             pendingBuildOrders,
