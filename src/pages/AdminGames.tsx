@@ -81,6 +81,7 @@ const AdminGames = () => {
 
   // games list
   const [games, setGames] = useState<GameRow[]>([]);
+  const [gamePlayersMap, setGamePlayersMap] = useState<Map<string, { user_id: string; player_slot: number }[]>>(new Map());
   const [loadingGames, setLoadingGames] = useState(true);
 
   // selected game
