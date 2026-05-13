@@ -207,16 +207,31 @@ const AdminUsers = () => {
                           </div>
                         </td>
                         <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                          {!isSelf && (
+                          <div className="flex justify-end gap-1">
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant={u.roles.includes("tester") ? "outline" : "secondary"}
                               className="text-xs h-7"
-                              onClick={() => impersonate(u.user_id, u.display_name)}
+                              onClick={() => toggleRole(u.user_id, "tester", u.roles.includes("tester"))}
+                              title={u.roles.includes("tester") ? "Remove tester role" : "Grant tester role"}
                             >
-                              <LogIn className="mr-1 h-3 w-3" /> Log in as
+                              {u.roles.includes("tester") ? (
+                                <><FlaskConicalOff className="mr-1 h-3 w-3" />Remove Tester</>
+                              ) : (
+                                <><FlaskConical className="mr-1 h-3 w-3" />Make Tester</>
+                              )}
                             </Button>
-                          )}
+                            {!isSelf && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-7"
+                                onClick={() => impersonate(u.user_id, u.display_name)}
+                              >
+                                <LogIn className="mr-1 h-3 w-3" /> Log in as
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                       {isOpen && (
