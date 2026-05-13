@@ -273,7 +273,7 @@ const CopyMailingListButton = () => {
     setBusy(true);
     try {
       const [optInRes, newsRes, supRes] = await Promise.all([
-        supabase.from("user_roles").select("profiles!inner(email)").eq("role", "opt_in" as any),
+        supabase.from("user_roles").select("user_id").eq("role", "opt_in" as any),
         supabase.from("newsletter_subscribers").select("email"),
         supabase.from("email_suppressions").select("email"),
       ]);
@@ -281,12 +281,21 @@ const CopyMailingListButton = () => {
       if (newsRes.error) throw newsRes.error;
       if (supRes.error) throw supRes.error;
 
+      const optInIds = ((optInRes.data as any[]) || []).map((r) => r.user_id).filter(Boolean);
+      let optInEmails: string[] = [];
+      if (optInIds.length) {
+        const { data: profs, error: pErr } = await supabase
+          .from("profiles").select("email").in("user_id", optInIds);
+        if (pErr) throw pErr;
+        optInEmails = ((profs as any[]) || []).map((p) => p.email).filter(Boolean);
+      }
+
       const suppressed = new Set(
         ((supRes.data as any[]) || []).map((r) => (r.email || "").trim().toLowerCase()).filter(Boolean)
       );
       const emails = new Set<string>();
-      for (const r of (optInRes.data as any[]) || []) {
-        const e = (r.profiles?.email || "").trim().toLowerCase();
+      for (const e0 of optInEmails) {
+        const e = e0.trim().toLowerCase();
         if (e && !suppressed.has(e)) emails.add(e);
       }
       for (const r of (newsRes.data as any[]) || []) {
