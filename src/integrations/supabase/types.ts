@@ -616,7 +616,9 @@ export type Database = {
           hex_x: number
           hex_y: number
           id: string
+          is_garrison: boolean
           owner_classification: string
+          system_id: number | null
         }
         Insert: {
           created_at?: string
@@ -626,7 +628,9 @@ export type Database = {
           hex_x?: number
           hex_y?: number
           id?: string
+          is_garrison?: boolean
           owner_classification?: string
+          system_id?: number | null
         }
         Update: {
           created_at?: string
@@ -636,7 +640,9 @@ export type Database = {
           hex_x?: number
           hex_y?: number
           id?: string
+          is_garrison?: boolean
           owner_classification?: string
+          system_id?: number | null
         }
         Relationships: [
           {
@@ -1496,6 +1502,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ensure_game_garrisons: { Args: { _game_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
