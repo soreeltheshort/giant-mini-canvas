@@ -15,15 +15,15 @@ const About = () => {
       <main>
         <section>
           <div className="container py-16 max-w-3xl">
-            <div className="flex justify-center">
+            <div className="flex justify-center opacity-70">
               <img
                 src={logo}
                 alt="Mini Giant Games"
-                className="w-full max-w-xs h-auto rounded-sm shadow-[0_8px_30px_-12px_hsl(var(--bronze)/0.5)]"
+                className="w-full max-w-[120px] h-auto rounded-sm"
               />
             </div>
 
-            <p className="mt-12 text-xs font-heading font-semibold uppercase tracking-[0.3em] text-bronze-dark text-center">
+            <p className="mt-10 text-xs font-heading font-semibold uppercase tracking-[0.3em] text-bronze-dark text-center">
               About the Studio
             </p>
             <h1 className="mt-4 font-heading text-4xl md:text-5xl font-bold text-foreground tracking-tight text-center">
