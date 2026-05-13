@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -14,6 +15,8 @@ import logo from "@/assets/mini-giant-games-logo.png";
 
 const Index = () => {
   const inDev = games.find((g) => g.inDevelopment) ?? games[0];
+  const { user } = useAuth();
+  const enterGameTo = user ? "/new-game" : `/games/${inDev.id}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -52,7 +55,7 @@ const Index = () => {
               </div>
 
               <Link
-                to={`/games/${inDev.id}`}
+                to={enterGameTo}
                 className="mt-6 group grid gap-8 md:grid-cols-[3fr_2fr] items-center border-2 border-bronze/40 bg-ivory rounded-sm overflow-hidden hover:border-bronze transition-colors shadow-[0_4px_20px_-8px_hsl(var(--bronze)/0.35)]"
               >
                 <div className="aspect-video overflow-hidden bg-muted">
