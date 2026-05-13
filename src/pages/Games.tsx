@@ -1,11 +1,29 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import GameCard from "@/components/GameCard";
 import PageMeta from "@/components/PageMeta";
 import { games } from "@/games";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const Games = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handlePlay = async () => {
+    const { data } = await (supabase as any)
+      .from("cutscenes")
+      .select("id")
+      .eq("name", "GameIntro")
+      .maybeSingle();
+    if (data?.id) {
+      navigate(`/cutscenes/${data.id}/play?next=/new-game`);
+    } else {
+      navigate("/new-game");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <PageMeta
@@ -30,13 +48,13 @@ const Games = () => {
                     description={game.description}
                     image={game.image}
                   />
-                  {game.id === "third-republic" && (
-                    <Link
-                      to="/my-games"
+                  {game.id === "third-republic" && user && (
+                    <button
+                      onClick={handlePlay}
                       className="mt-3 inline-flex items-center justify-center rounded-sm border border-bronze bg-crimson px-4 py-2 font-heading text-sm font-semibold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-crimson-light"
                     >
                       Play
-                    </Link>
+                    </button>
                   )}
                 </div>
               ))}
