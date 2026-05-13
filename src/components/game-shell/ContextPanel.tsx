@@ -7,6 +7,7 @@ import { ImperialCard } from "./ImperialCard";
 import { StatusBadge } from "./StatusBadge";
 import { ProgressBar } from "./ProgressBar";
 import FleetDetailContent from "./FleetDetailContent";
+import GarrisonCard from "./GarrisonCard";
 import BuildShipsDialog from "./BuildShipsDialog";
 import type { SystemData, MapFleet, FacilityType } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
