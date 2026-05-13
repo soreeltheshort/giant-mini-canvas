@@ -21,9 +21,11 @@ import { movementPhase } from "./phases/movement";
 import { visibilityPhase } from "./phases/visibility";
 import { combatPhase } from "./phases/combat";
 import { groundCombatPhase } from "./phases/groundCombat";
+import { shipProductionPhase } from "./phases/shipProduction";
 
 // Order matters:
 //   - economy: tribute, upkeep, repairs, builds.
+//   - ship_production: advance per-system ship build queues + virtual transit.
 //   - combat: fleet-vs-fleet engagements.
 //   - movement: fleets advance toward destinations.
 //   - ground_combat: any fleet that ended movement on an enemy/unowned planet
@@ -32,6 +34,7 @@ import { groundCombatPhase } from "./phases/groundCombat";
 //   - visibility: scout/intel updates pick up the new owner.
 export const PHASE_ORDER: Phase[] = [
   economyPhase,
+  shipProductionPhase,
   combatPhase,
   movementPhase,
   groundCombatPhase,
