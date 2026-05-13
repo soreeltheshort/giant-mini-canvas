@@ -407,12 +407,16 @@ function InlineEmptyState({
   gameData,
   playerOwnerClassification,
   onSelect,
+  onCreateFleet,
+  combatPointsAvailable,
 }: {
   mode: GameMode;
   news?: NewsStory[];
   gameData?: GameMapData;
   playerOwnerClassification?: string;
   onSelect?: (selection: MapSelection) => void;
+  onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
+  combatPointsAvailable?: number;
 }) {
   if (mode === "military") {
     const playerFactionName = playerOwnerClassification
