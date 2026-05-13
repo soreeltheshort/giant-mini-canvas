@@ -1392,6 +1392,33 @@ export type Database = {
         }
         Relationships: []
       }
+      studio_signups: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          kind: string
+          message: string | null
+          name: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          kind: string
+          message?: string | null
+          name?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          kind?: string
+          message?: string | null
+          name?: string | null
+        }
+        Relationships: []
+      }
       system_actions: {
         Row: {
           created_at: string
