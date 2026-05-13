@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import {
   Shield, ShieldOff, FlaskConical, FlaskConicalOff, LogIn, Mail, MailX,
-  Plus, Trash2, ChevronDown, ChevronRight, Save, Search,
+  Plus, Trash2, ChevronDown, ChevronRight, Save, Search, Copy,
 } from "lucide-react";
 
 interface UserRow {
@@ -145,9 +145,12 @@ const AdminUsers = () => {
       <div className="container py-12">
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <h1 className="font-heading text-2xl font-bold text-foreground">User Management</h1>
-          <div className="relative w-72">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input className="pl-8" placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="flex items-center gap-2">
+            <CopyMailingListButton />
+            <div className="relative w-72">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input className="pl-8" placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
           </div>
         </div>
 
@@ -259,6 +262,55 @@ const AdminUsers = () => {
       </div>
       <Footer />
     </div>
+  );
+};
+
+/* -------------------- Copy mailing list button -------------------- */
+
+const CopyMailingListButton = () => {
+  const [busy, setBusy] = useState(false);
+  const handleCopy = async () => {
+    setBusy(true);
+    try {
+      const [optInRes, newsRes, supRes] = await Promise.all([
+        supabase.from("user_roles").select("profiles!inner(email)").eq("role", "opt_in" as any),
+        supabase.from("newsletter_subscribers").select("email"),
+        supabase.from("email_suppressions").select("email"),
+      ]);
+      if (optInRes.error) throw optInRes.error;
+      if (newsRes.error) throw newsRes.error;
+      if (supRes.error) throw supRes.error;
+
+      const suppressed = new Set(
+        ((supRes.data as any[]) || []).map((r) => (r.email || "").trim().toLowerCase()).filter(Boolean)
+      );
+      const emails = new Set<string>();
+      for (const r of (optInRes.data as any[]) || []) {
+        const e = (r.profiles?.email || "").trim().toLowerCase();
+        if (e && !suppressed.has(e)) emails.add(e);
+      }
+      for (const r of (newsRes.data as any[]) || []) {
+        const e = (r.email || "").trim().toLowerCase();
+        if (e && !suppressed.has(e)) emails.add(e);
+      }
+
+      const list = Array.from(emails).sort().join(", ");
+      if (!list) {
+        toast({ title: "No recipients", description: "No opt-in users or newsletter subscribers found." });
+        return;
+      }
+      await navigator.clipboard.writeText(list);
+      toast({ title: `Copied ${emails.size} email${emails.size === 1 ? "" : "s"} to clipboard` });
+    } catch (err: any) {
+      toast({ title: "Copy failed", description: err.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button size="sm" variant="outline" onClick={handleCopy} disabled={busy}>
+      <Copy className="mr-2 h-4 w-4" /> {busy ? "Copying…" : "Copy mailing list"}
+    </Button>
   );
 };
 
