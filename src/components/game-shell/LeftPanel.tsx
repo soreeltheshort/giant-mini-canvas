@@ -78,6 +78,8 @@ interface LeftPanelProps {
     playerTreasury?: number;
     /** Player's admin points still available this turn (gates Commission). */
     adminPointsAvailable?: number;
+    /** Create a new empty fleet at a given hex (Military Overview action). */
+    onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
   };
 }
 
