@@ -265,6 +265,55 @@ const AdminUsers = () => {
   );
 };
 
+/* -------------------- Copy mailing list button -------------------- */
+
+const CopyMailingListButton = () => {
+  const [busy, setBusy] = useState(false);
+  const handleCopy = async () => {
+    setBusy(true);
+    try {
+      const [optInRes, newsRes, supRes] = await Promise.all([
+        supabase.from("user_roles").select("profiles!inner(email)").eq("role", "opt_in" as any),
+        supabase.from("newsletter_subscribers").select("email"),
+        supabase.from("email_suppressions").select("email"),
+      ]);
+      if (optInRes.error) throw optInRes.error;
+      if (newsRes.error) throw newsRes.error;
+      if (supRes.error) throw supRes.error;
+
+      const suppressed = new Set(
+        ((supRes.data as any[]) || []).map((r) => (r.email || "").trim().toLowerCase()).filter(Boolean)
+      );
+      const emails = new Set<string>();
+      for (const r of (optInRes.data as any[]) || []) {
+        const e = (r.profiles?.email || "").trim().toLowerCase();
+        if (e && !suppressed.has(e)) emails.add(e);
+      }
+      for (const r of (newsRes.data as any[]) || []) {
+        const e = (r.email || "").trim().toLowerCase();
+        if (e && !suppressed.has(e)) emails.add(e);
+      }
+
+      const list = Array.from(emails).sort().join(", ");
+      if (!list) {
+        toast({ title: "No recipients", description: "No opt-in users or newsletter subscribers found." });
+        return;
+      }
+      await navigator.clipboard.writeText(list);
+      toast({ title: `Copied ${emails.size} email${emails.size === 1 ? "" : "s"} to clipboard` });
+    } catch (err: any) {
+      toast({ title: "Copy failed", description: err.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button size="sm" variant="outline" onClick={handleCopy} disabled={busy}>
+      <Copy className="mr-2 h-4 w-4" /> {busy ? "Copying…" : "Copy mailing list"}
+    </Button>
+  );
+};
+
 /* -------------------- Per-user detail panel -------------------- */
 
 interface DetailProps {
