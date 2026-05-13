@@ -101,8 +101,8 @@ const About = () => {
                   At the same time, we are not ideological about technology. We prototype
                   aggressively with AI because it is fast, cheap, and often good enough to
                   test mechanics, interfaces, writing structures, and production concepts
-                  early. Refusing useful tools out of dogma is just another form of
-                  incompetence.
+                  early. Refusing useful tools out of dogma is a luxury we can't afford
+                  and won't charge you for.
                 </p>
               </div>
             </div>
