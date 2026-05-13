@@ -145,9 +145,12 @@ const AdminUsers = () => {
       <div className="container py-12">
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <h1 className="font-heading text-2xl font-bold text-foreground">User Management</h1>
-          <div className="relative w-72">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input className="pl-8" placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="flex items-center gap-2">
+            <CopyMailingListButton />
+            <div className="relative w-72">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input className="pl-8" placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
           </div>
         </div>
 
