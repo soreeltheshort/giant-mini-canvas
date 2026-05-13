@@ -33,15 +33,10 @@ const About = () => {
 
             <div className="mt-10 space-y-6 text-base leading-relaxed text-muted-foreground">
               <p>
-                Mini Giant Games is an independent studio designing strategy and simulation
-                games with the depth of a wargame and the readability of a board game. We
-                build for players who want decisions that matter — not loops that pacify.
-              </p>
-              <p>
-                Our work is small in team size and large in scope. Every system we ship is
-                hand-tuned, every rule is in service of a moment a player will remember.
-                We move slowly on purpose, because the games we want to play don't exist
-                yet and they're worth the time to build properly.
+                At Mini Giant Games we create strategy and simulation games that are
+                original in game mechanics or theme because we are tired of the me-too
+                simulation and strategy games. Yes we love Civ, Total War, Panzer General
+                and anything civil war but let's make something new.
               </p>
               <p>
                 <span className="text-foreground font-semibold">Currently in development:</span>{" "}
