@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
+import PageMeta from "@/components/PageMeta";
 import { useAuth } from "@/hooks/useAuth";
 
 const TITLE_BG =
@@ -10,6 +11,11 @@ export default function Credits() {
 
   return (
     <div className="min-h-screen flex flex-col bg-black">
+      <PageMeta
+        title="Credits — MiniGiantGames"
+        description="Music, art, and tools that helped build the MiniGiantGames studio and the tactical space wargame Third Republic."
+        path="/credits"
+      />
       {isAdmin && <Header />}
       <main
         className="flex-1 relative bg-center bg-cover bg-no-repeat"

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import PageMeta from "@/components/PageMeta";
 
 interface BlogPostListItem {
   id: string;
@@ -34,7 +35,13 @@ const Blog = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Blog — Third Republic Devlog"
+        description="Development updates, design notes, and behind-the-scenes stories from MiniGiantGames and Third Republic, our tactical space wargame."
+        path="/blog"
+      />
       <Header />
+      <main>
       <section className="border-b border-border">
         <div className="container py-16">
           <p className="text-xs font-medium uppercase tracking-widest text-gold">Devlog</p>
@@ -92,6 +99,7 @@ const Blog = () => {
           )}
         </div>
       </section>
+      </main>
       <Footer />
     </div>
   );

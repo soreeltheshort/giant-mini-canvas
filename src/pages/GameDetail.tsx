@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Newsletter from "@/components/Newsletter";
+import PageMeta from "@/components/PageMeta";
 import { games } from "@/games";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,22 @@ const GameDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title={`${game.title} — MiniGiantGames`}
+        description={(game.pitch || game.description || "").slice(0, 160)}
+        path={`/games/${game.id}`}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "VideoGame",
+          name: game.title,
+          description: game.pitch || game.description,
+          applicationCategory: "Game",
+          operatingSystem: (game.platforms || []).join(", ") || "Web",
+          publisher: { "@type": "Organization", name: "MiniGiantGames" },
+        }}
+      />
       <Header />
+      <main>
 
       {/* Hero Screenshot */}
       <div className="aspect-[21/9] w-full overflow-hidden border-b border-border">
@@ -134,6 +150,7 @@ const GameDetail = () => {
         </div>
       </div>
 
+      </main>
       <Footer />
     </div>
   );

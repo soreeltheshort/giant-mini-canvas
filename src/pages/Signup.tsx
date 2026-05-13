@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import PageMeta from "@/components/PageMeta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +59,11 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Create Account — MiniGiantGames"
+        description="Create a free MiniGiantGames commander account to follow development and earn early access to Third Republic playtests."
+        path="/signup"
+      />
       <Header />
       <div className="container flex items-center justify-center py-20">
         <div className="w-full max-w-sm space-y-6">
