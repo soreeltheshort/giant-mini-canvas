@@ -422,6 +422,7 @@ const STAT_DEFS: { key: keyof DbFacilityType; label: string; prefix?: string; su
   { key: "fighter_capacity", label: "Fighter Cap" },
   { key: "gunship_capacity", label: "Gunship Cap" },
   { key: "max_per_system", label: "Max/System" },
+  { key: "ship_build_capacity", label: "Ship Build Cap (pts/turn)" },
 ];
 
 function StatBadges({ ft, allFacilityTypes }: { ft: DbFacilityType; allFacilityTypes: DbFacilityType[] }) {
