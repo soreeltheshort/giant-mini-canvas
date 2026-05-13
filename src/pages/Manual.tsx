@@ -173,6 +173,11 @@ const Manual = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Manual — Third Republic Wiki"
+        description="Rules, mechanics, and gameplay reference for Third Republic, the tactical space wargame from MiniGiantGames."
+        path="/manual"
+      />
       <Header />
       <div className="container py-8">
         <div className="flex gap-8">
