@@ -280,6 +280,7 @@ function InlineContextContent({
   pendingCancelBuildOrders,
   playerTreasury,
   adminPointsAvailable,
+  onCreateFleet,
 }: {
   mode: GameMode;
   selection: MapSelection;
