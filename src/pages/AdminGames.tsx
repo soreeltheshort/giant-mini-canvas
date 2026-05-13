@@ -37,6 +37,7 @@ interface GameRow {
   status: string;
   turn_number: number;
   created_at: string;
+  created_by: string;
 }
 
 interface GamePlayerRow {
