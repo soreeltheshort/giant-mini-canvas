@@ -479,6 +479,13 @@ const PlayerGame = () => {
       }
     }
 
+    // Ensure every system has a garrison fleet (idempotent server-side RPC).
+    try {
+      await (supabase as any).rpc("ensure_game_garrisons", { _game_id: gameId });
+    } catch (e) {
+      console.warn("ensure_game_garrisons failed:", e);
+    }
+
     if (!pData.initialized) {
       setInitStep(1);
     }

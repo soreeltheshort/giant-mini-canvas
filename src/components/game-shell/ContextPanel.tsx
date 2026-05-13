@@ -7,6 +7,7 @@ import { ImperialCard } from "./ImperialCard";
 import { StatusBadge } from "./StatusBadge";
 import { ProgressBar } from "./ProgressBar";
 import FleetDetailContent from "./FleetDetailContent";
+import GarrisonCard from "./GarrisonCard";
 import BuildShipsDialog from "./BuildShipsDialog";
 import type { SystemData, MapFleet, FacilityType } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
@@ -164,7 +165,7 @@ export default function ContextPanel({ mode, selection, news, onClose, onClearSe
         {selection.type === "news" ? (
           <NewsDetail story={news.find((n) => n.id === selection.id)} />
         ) : selection.type === "region" ? (
-          <RegionDetail id={selection.id} gameData={gameData} mode={mode} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} adminPointsAvailable={adminPointsAvailable} playerOwnerClassification={playerOwnerClassification} />
+          <RegionDetail id={selection.id} gameData={gameData} mode={mode} gameId={fleetOrderContext?.gameId} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} adminPointsAvailable={adminPointsAvailable} playerOwnerClassification={playerOwnerClassification} />
         ) : selection.type === "army" ? (
           <ArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />
         ) : selection.type === "production-center" ? (
@@ -439,10 +440,11 @@ function ProductionOverviewEmpty({
     </>
   );
 }
-function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification }: {
+function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification }: {
   id: string;
   gameData?: GameMapData;
   mode?: GameMode;
+  gameId?: string;
   onBuildFacility?: (systemId: number, facilityTypeId: string) => void;
   playerTreasury?: number;
   adminPointsAvailable?: number;
@@ -510,6 +512,9 @@ function RegionDetail({ id, gameData, mode, onBuildFacility, playerTreasury, adm
           )}
         </ImperialCard>
 
+        {mode === "military" && gameId ? (
+          <GarrisonCard gameId={gameId} systemId={realSys.system_id} />
+        ) : null}
 
         <ImperialCard title="Production Queue">
           <div className="space-y-1.5">
