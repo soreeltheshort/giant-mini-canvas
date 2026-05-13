@@ -128,6 +128,30 @@ const About = () => {
                 </p>
               </div>
             </div>
+
+            <div className="mt-16 border-t-2 border-bronze/40 pt-12">
+              <p className="text-xs font-heading font-semibold uppercase tracking-[0.3em] text-bronze-dark">
+                Investor Relations
+              </p>
+              <h2 className="mt-3 font-heading text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+                Build with us
+              </h2>
+              <div className="mt-6 space-y-5 text-base leading-relaxed text-muted-foreground">
+                <p>
+                  Want to be part of something amazing? Interested in great game
+                  development done by people who actually know how to competently run a
+                  business? Contact us!
+                </p>
+                <p>
+                  <a
+                    href="mailto:investors@minigiantgames.com"
+                    className="font-heading font-semibold text-crimson hover:text-crimson-dark underline underline-offset-4 decoration-bronze/60"
+                  >
+                    investors@minigiantgames.com
+                  </a>
+                </p>
+              </div>
+            </div>
           </div>
         </section>
       </main>
