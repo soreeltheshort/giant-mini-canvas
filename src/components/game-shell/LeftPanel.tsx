@@ -441,6 +441,15 @@ function InlineEmptyState({
       <>
         <DispatchesCard mode="military" news={news ?? []} onSelect={onSelect} />
 
+        {onCreateFleet && (
+          <CreateFleetCard
+            gameData={gameData}
+            playerOwnerClassification={playerOwnerClassification}
+            combatPointsAvailable={combatPointsAvailable ?? 0}
+            onCreateFleet={onCreateFleet}
+          />
+        )}
+
         <ImperialCard title={`Fleets (${ownedFleets.length})`}>
           {ownedFleets.length === 0 ? (
             <p className="text-[10px] text-muted-foreground italic">No fleets in service.</p>
