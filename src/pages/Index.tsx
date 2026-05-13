@@ -219,7 +219,7 @@ function ContactCard() {
 
   return (
     <div className="flex flex-col border-2 border-bronze/40 bg-ivory p-6 rounded-sm shadow-[0_4px_20px_-8px_hsl(var(--bronze)/0.35)]">
-      <h3 className="font-heading text-xl font-bold text-foreground tracking-tight">Message the Team</h3>
+      <h3 className="font-heading text-xl font-bold text-foreground tracking-tight text-slate-500">Message the Team</h3>
       <div className="mt-3 h-px w-12 bg-gradient-to-r from-bronze via-crimson to-transparent" />
       <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
         Questions, feedback, or partnership inquiries — we read every message.
