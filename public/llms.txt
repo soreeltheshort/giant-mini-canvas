@@ -1,0 +1,16 @@
+# MiniGiantGames
+
+> Independent studio building deep, replayable strategy and simulation games. Current project: Third Republic, a tactical space wargame.
+
+## Pages
+
+- [Home](/): Studio overview and currently active game.
+- [Games](/games): All games in development and released.
+- [Manual](/manual): In-app wiki and gameplay documentation for Third Republic.
+- [Blog](/blog): Development updates and design notes.
+- [Credits](/credits): People and tools behind the studio.
+
+## Optional
+
+- [Sign up](/signup): Create an account to play.
+- [Log in](/login): Sign in to an existing account.

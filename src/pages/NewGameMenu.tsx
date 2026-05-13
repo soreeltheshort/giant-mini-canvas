@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
+import PageMeta from "@/components/PageMeta";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -48,6 +49,11 @@ export default function NewGameMenu() {
 
   return (
     <div className="min-h-screen flex flex-col bg-black">
+      <PageMeta
+        title="Command Console — Third Republic"
+        description="Continue your campaign, start a new game, or load a saved session in Third Republic, the tactical space wargame from MiniGiantGames."
+        path="/new-game"
+      />
       {isAdmin && <Header />}
 
       <main

@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { renderMarkdown } from "@/lib/renderMarkdown";
+
+const SITE_ORIGIN = "https://www.minigiantgames.com";
 
 interface BlogPost {
   id: string;
@@ -36,17 +39,47 @@ const BlogPostPage = () => {
         setNotFound(true);
       } else {
         setPost(data);
-        document.title = `${data.title} — Third Republic Blog`;
-        const meta = document.querySelector('meta[name="description"]');
-        if (meta && data.excerpt) meta.setAttribute("content", data.excerpt.slice(0, 160));
       }
       setLoading(false);
     })();
   }, [slug]);
 
+  const url = `${SITE_ORIGIN}/blog/${slug}`;
+  const pageTitle = post ? `${post.title} — Third Republic Blog` : "Blog — Third Republic";
+  const pageDesc = post?.excerpt
+    ? post.excerpt.slice(0, 160)
+    : "Development updates and design notes from MiniGiantGames and Third Republic.";
+
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDesc} />
+        <link rel="canonical" href={url} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDesc} />
+        <meta property="og:url" content={url} />
+        <meta property="og:type" content="article" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDesc} />
+        {post && (
+          <script type="application/ld+json">
+            {JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Article",
+              headline: post.title,
+              description: post.excerpt || undefined,
+              datePublished: post.published_at || post.created_at,
+              image: post.cover_image_url || undefined,
+              mainEntityOfPage: url,
+              author: { "@type": "Organization", name: "MiniGiantGames" },
+              publisher: { "@type": "Organization", name: "MiniGiantGames" },
+            })}
+          </script>
+        )}
+      </Helmet>
       <Header />
+      <main>
       <article className="container py-12 max-w-3xl">
         <Link to="/blog" className="text-xs font-medium uppercase tracking-widest text-gold hover:underline">
           ← Back to blog
@@ -87,6 +120,7 @@ const BlogPostPage = () => {
           </>
         )}
       </article>
+      </main>
       <Footer />
     </div>
   );

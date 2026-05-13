@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import PageMeta from "@/components/PageMeta";
 
 import { games } from "@/games";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,7 +58,13 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="MiniGiantGames — Strategy & Simulation Game Studio"
+        description="Independent studio building deep, replayable strategy and simulation games, including the tactical space wargame Third Republic."
+        path="/"
+      />
       <Header />
+      <main>
 
       {/* Currently in Development */}
       <section className="border-b-2 border-bronze/40 relative overflow-hidden">
@@ -210,6 +217,7 @@ const Index = () => {
         </section>
       )}
 
+      </main>
       <Footer />
     </div>
   );

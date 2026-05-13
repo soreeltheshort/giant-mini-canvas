@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import PageMeta from "@/components/PageMeta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
@@ -172,6 +173,11 @@ const Manual = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Manual — Third Republic Wiki"
+        description="Rules, mechanics, and gameplay reference for Third Republic, the tactical space wargame from MiniGiantGames."
+        path="/manual"
+      />
       <Header />
       <div className="container py-8">
         <div className="flex gap-8">
