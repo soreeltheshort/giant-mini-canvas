@@ -588,6 +588,60 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     onOrdersChanged?.();
   };
 
+  // ── Transfer target order persistence ──
+  const transferOrder = pendingOrders.find(
+    o => o.order_type === "other" && o.order_json?.kind === "transfer_ships",
+  );
+  const transferTarget: { kind: "fleet" | "system"; id: string } | null = transferOrder
+    ? (transferOrder.order_json?.target_fleet_id
+        ? { kind: "fleet", id: String(transferOrder.order_json.target_fleet_id) }
+        : transferOrder.order_json?.target_system_id != null
+          ? { kind: "system", id: String(transferOrder.order_json.target_system_id) }
+          : null)
+    : null;
+
+  const persistTransferTarget = async (target: { kind: "fleet" | "system"; id: string } | null) => {
+    if (!orderContext) return;
+    const { gameId, playerId, turnNumber } = orderContext;
+    await (supabase as any).from("player_orders")
+      .delete()
+      .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+      .eq("order_type", "other")
+      .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
+      .filter("order_json->>kind", "eq", "transfer_ships");
+    let inserted: any = null;
+    if (target) {
+      const payload: any = { fleet_id: fleet.fleet_id, kind: "transfer_ships" };
+      if (target.kind === "fleet") payload.target_fleet_id = target.id;
+      else payload.target_system_id = Number(target.id);
+      const { data } = await (supabase as any).from("player_orders").insert({
+        game_id: gameId, player_id: playerId, turn_number: turnNumber,
+        order_type: "other", order_json: payload,
+      }).select("*").single();
+      inserted = data;
+      playOrderPlaced();
+    }
+    setPendingOrders(prev => {
+      const filtered = prev.filter(o => !(o.order_type === "other" && o.order_json?.kind === "transfer_ships"));
+      return inserted ? [...filtered, inserted] : filtered;
+    });
+    onOrdersChanged?.();
+  };
+
+  // Friendly fleets at the same hex (excluding self) — eligible transfer targets.
+  const sameHexFriendlyFleets = allFleets.filter(f =>
+    f.fleet_id !== fleet.fleet_id &&
+    f.owner_classification === fleet.owner_classification &&
+    f.hex_x === fleet.hex_x && f.hex_y === fleet.hex_y
+  );
+  // Owned systems at the same hex (planet drop-off).
+  const sameHexOwnedSystem = (() => {
+    const h = allHexes?.get(`${fleet.hex_x},${fleet.hex_y}`);
+    if (!h) return null;
+    return allSystems.find(s => s.hex_id === h.hex_id && s.owner === fleet.owner_classification) || null;
+  })();
+  const transferActive = detail.special1_role === "Transfer" || detail.special2_role === "Transfer";
+
   return (
     <>
       <ImperialCard title={fleet.fleet_name}>
