@@ -136,6 +136,8 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const [shipTypeExtras, setShipTypeExtras] = useState<Map<string, ShipTypeExtra>>(new Map());
   // Catalog of buildable strikecraft classes (FL/FH/GS), used in the build queue UI.
   const [strikecraftCatalog, setStrikecraftCatalog] = useState<StrikecraftCatalogEntry[]>([]);
+  // Ships currently in transit toward THIS fleet (from production or transfer).
+  const [incomingTransit, setIncomingTransit] = useState<Array<{ id: string; ship_type_id: string; quantity: number; virt_x: number; virt_y: number; eta: number; ship_name: string }>>([]);
 
   const sourceId = fleet.source_fleet_id;
 
