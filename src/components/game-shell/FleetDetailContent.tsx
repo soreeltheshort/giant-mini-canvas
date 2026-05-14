@@ -292,6 +292,42 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       }
       setReplenishOpen(false);
       setRepairOpen(false);
+
+      // Load ships currently in transit toward this fleet.
+      const { data: transitRows } = await (supabase as any)
+        .from("ships_in_transit")
+        .select("id, ship_type_id, quantity, virt_x, virt_y")
+        .eq("destination_fleet_id", fleet.fleet_id);
+      if (!cancelled) {
+        const incoming = (transitRows || []).map((t: any) => {
+          const st = shipTypes.find(s => s.id === t.ship_type_id) as any;
+          const speed = Math.max(1, Number(st?.map_speed) || 1);
+          const [a1, a2, a3] = (() => {
+            const x = t.virt_x | 0, y = t.virt_y | 0;
+            const xx = x - (y - (y & 1)) / 2;
+            const zz = y;
+            return [xx, -xx - zz, zz];
+          })();
+          const [b1, b2, b3] = (() => {
+            const x = fleet.hex_x | 0, y = fleet.hex_y | 0;
+            const xx = x - (y - (y & 1)) / 2;
+            const zz = y;
+            return [xx, -xx - zz, zz];
+          })();
+          const dist = Math.max(Math.abs(a1 - b1), Math.abs(a2 - b2), Math.abs(a3 - b3));
+          return {
+            id: t.id,
+            ship_type_id: t.ship_type_id,
+            quantity: Number(t.quantity) || 0,
+            virt_x: t.virt_x,
+            virt_y: t.virt_y,
+            eta: Math.max(1, Math.ceil(dist / speed)),
+            ship_name: st?.name || "Ship",
+          };
+        });
+        setIncomingTransit(incoming);
+      }
+
       setLoading(false);
     }
     load();
