@@ -62,15 +62,6 @@ export const transferShipsPhase: Phase = {
           });
           continue;
         }
-        if (dest.hex_x !== source.hex_x || dest.hex_y !== source.hex_y) {
-          ctx.logs.push({
-            game_id: gameId, turn_number: currentTurn, phase: "movement",
-            log_type: "transfer_failed",
-            message: `Transfer from ${source.fleet_name} failed: ${dest.fleet_name} is no longer at the same hex.`,
-            details_json: { order_id: order.id },
-          });
-          continue;
-        }
         if ((dest as any).owner_classification !== (source as any).owner_classification) {
           ctx.logs.push({
             game_id: gameId, turn_number: currentTurn, phase: "movement",
