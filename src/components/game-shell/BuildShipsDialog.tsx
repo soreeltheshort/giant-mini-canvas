@@ -399,3 +399,94 @@ export default function BuildShipsDialog({
     </Dialog>
   );
 }
+
+/* ───────── Inline hex picker for new-fleet destination ───────── */
+function NewFleetHexPicker({
+  ownedHexes,
+  systemHex,
+  selected,
+  onSelect,
+}: {
+  ownedHexes: OwnedHex[];
+  systemHex: { x: number; y: number } | null;
+  selected: { x: number; y: number } | null;
+  onSelect: (h: { x: number; y: number }) => void;
+}) {
+  const SIZE = 9;
+  const SQRT3 = Math.sqrt(3);
+  const hexW = SQRT3 * SIZE;
+  const hexH = 2 * SIZE;
+  const vert = 1.5 * SIZE;
+
+  const positioned = ownedHexes.map((h) => {
+    const px = hexW * (h.x + 0.5 * (h.y & 1));
+    const py = vert * h.y;
+    return { ...h, px, py };
+  });
+
+  if (positioned.length === 0) return null;
+
+  const minX = Math.min(...positioned.map((p) => p.px)) - hexW;
+  const maxX = Math.max(...positioned.map((p) => p.px)) + hexW;
+  const minY = Math.min(...positioned.map((p) => p.py)) - hexH;
+  const maxY = Math.max(...positioned.map((p) => p.py)) + hexH;
+  const w = maxX - minX;
+  const h = maxY - minY;
+
+  const hexPath = (cx: number, cy: number) => {
+    const pts: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 180) * (60 * i - 30);
+      pts.push(`${(cx + SIZE * Math.cos(a)).toFixed(2)},${(cy + SIZE * Math.sin(a)).toFixed(2)}`);
+    }
+    return `M${pts.join("L")}Z`;
+  };
+
+  return (
+    <div className="border border-border rounded-sm p-2 space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-heading font-semibold">
+          New Fleet Destination
+        </span>
+        <span className="text-[10px] text-bronze font-semibold">
+          {selected ? `(${selected.x}, ${selected.y})` : "— pick a hex —"}
+        </span>
+      </div>
+      <p className="text-[9px] text-muted-foreground italic">
+        Click any hex in your province. Defaults to the producing system.
+      </p>
+      <div className="bg-muted/40 rounded-sm overflow-auto max-h-56 flex justify-center">
+        <svg
+          viewBox={`${minX} ${minY} ${w} ${h}`}
+          width={Math.min(420, Math.max(160, w * 1.6))}
+          height={Math.min(220, Math.max(120, h * 1.6))}
+          className="block"
+        >
+          {positioned.map((p) => {
+            const isSel = !!(selected && selected.x === p.x && selected.y === p.y);
+            const isSys = !!(systemHex && systemHex.x === p.x && systemHex.y === p.y);
+            return (
+              <g key={`${p.x},${p.y}`} onClick={() => onSelect({ x: p.x, y: p.y })} style={{ cursor: "pointer" }}>
+                <title>{p.system_name ? `${p.system_name} (${p.x},${p.y})` : `(${p.x},${p.y})`}</title>
+                <path
+                  d={hexPath(p.px, p.py)}
+                  className={
+                    isSel
+                      ? "fill-crimson stroke-crimson"
+                      : isSys
+                        ? "fill-bronze/40 stroke-bronze"
+                        : "fill-ivory stroke-bronze/50 hover:fill-bronze/20"
+                  }
+                  strokeWidth={isSel ? 1.5 : 0.8}
+                />
+                {p.system_name && (
+                  <circle cx={p.px} cy={p.py} r={SIZE * 0.25} className="fill-bronze" />
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+}
