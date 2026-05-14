@@ -170,11 +170,16 @@ export default function BuildShipsDialog({
   const handleDone = () => {
     if (queueOrder.length > 0 && onConfirm) {
       onConfirm(
-        queueOrder.map((q) => ({
-          ship_type_id: q.id,
-          quantity: q.qty,
-          destination_fleet_id: q.destFleetId === NEW_FLEET ? null : q.destFleetId,
-        })),
+        queueOrder.map((q) => {
+          const isNewFleet = q.destFleetId === NEW_FLEET;
+          return {
+            ship_type_id: q.id,
+            quantity: q.qty,
+            destination_fleet_id: isNewFleet ? null : q.destFleetId,
+            destination_hex_x: isNewFleet ? (newFleetHex?.x ?? systemHexX ?? null) : null,
+            destination_hex_y: isNewFleet ? (newFleetHex?.y ?? systemHexY ?? null) : null,
+          };
+        }),
       );
     }
     setQueueOrder([]);
