@@ -282,6 +282,70 @@ export default function BuildShipsDialog({
           </p>
         )}
 
+        {/* Persisted Manufacturing Queue (already saved to DB) */}
+        {(persistedLoading || persisted.length > 0) && (
+          <div className="border border-bronze/40 rounded-sm p-2 space-y-1 max-h-48 overflow-y-auto bg-bronze/5">
+            <div className="flex items-center justify-between">
+              <div className="text-[9px] uppercase tracking-wider text-bronze font-heading font-semibold">
+                Manufacturing Queue
+              </div>
+              {shipBuildCapacity > 0 && (
+                <span className="text-[9px] text-muted-foreground">{shipBuildCapacity} pts/turn</span>
+              )}
+            </div>
+            {persistedLoading && persisted.length === 0 ? (
+              <p className="text-[10px] text-muted-foreground italic">Loading…</p>
+            ) : (
+              (() => {
+                let pointsAhead = 0;
+                return persisted.map((row, idx) => {
+                  const st = shipTypes.find((s) => s.id === row.ship_type_id);
+                  pointsAhead += row.points_remaining;
+                  const eta = shipBuildCapacity > 0 ? Math.max(1, Math.ceil(pointsAhead / shipBuildCapacity)) : null;
+                  const inProgress = row.points_remaining < row.cost_paid;
+                  const allowedFleets = (() => {
+                    if (!st) return playerFleets;
+                    if (st.hull_class !== "Strikecraft") return playerFleets;
+                    if (systemHexX === undefined || systemHexY === undefined) return playerFleets;
+                    return playerFleets.filter(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
+                  })();
+                  const currentDest = row.destination_fleet_id ?? NEW_FLEET;
+                  return (
+                    <div key={row.id} className="flex items-center gap-2 text-[10px] flex-wrap">
+                      <span className="w-4 text-right text-muted-foreground">{idx + 1}.</span>
+                      <span className="flex-1 min-w-0 truncate text-accent font-semibold">
+                        {st?.name ?? row.ship_type_id} <span className="text-bronze">×{row.quantity}</span>
+                      </span>
+                      <span className="text-slate-500">{row.points_remaining}/{row.cost_paid} pts</span>
+                      {eta && <span className="text-bronze">ETA {eta}T</span>}
+                      <select
+                        value={currentDest}
+                        onChange={(e) => updatePersistedDest(row, e.target.value)}
+                        className="text-[10px] bg-muted border border-border rounded-sm px-1 py-0.5 text-foreground max-w-[12rem]"
+                        title="Destination"
+                      >
+                        <option value={NEW_FLEET}>🪐 Planet (new fleet)</option>
+                        {allowedFleets.map((f) => (
+                          <option key={f.fleet_id} value={f.fleet_id}>
+                            {f.fleet_name}{f.atSystem ? " (here)" : ""}{f.is_garrison ? " ⚓" : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => cancelPersisted(row)}
+                        className="px-1.5 py-0.5 rounded-sm bg-muted text-foreground hover:bg-crimson/30 text-[10px] font-bold"
+                        title={inProgress ? "Cancel — partial work lost" : "Cancel"}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  );
+                });
+              })()
+            )}
+          </div>
+        )}
+
         {/* Build Queue (reorderable) */}
         {queueOrder.length > 0 && (
           <div className="border border-border rounded-sm p-2 space-y-1 max-h-48 overflow-y-auto">
