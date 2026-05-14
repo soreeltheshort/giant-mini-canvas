@@ -980,6 +980,48 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               {STRATEGY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
+          {transferActive && (
+            <div className="border-t border-border pt-2 mt-1 space-y-1">
+              <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
+                Transfer Target
+              </label>
+              <select
+                disabled={!canEdit}
+                value={transferTarget ? `${transferTarget.kind}:${transferTarget.id}` : ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) { persistTransferTarget(null); return; }
+                  const [kind, id] = v.split(":") as ["fleet" | "system", string];
+                  persistTransferTarget({ kind, id });
+                }}
+                className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground disabled:opacity-60"
+              >
+                <option value="">— pick a target —</option>
+                {sameHexOwnedSystem && (
+                  <option value={`system:${sameHexOwnedSystem.system_id}`}>
+                    🪐 {sameHexOwnedSystem.system_name} (planet)
+                  </option>
+                )}
+                {sameHexFriendlyFleets.length > 0 && (
+                  <optgroup label="Friendly fleets here">
+                    {sameHexFriendlyFleets.map(f => (
+                      <option key={f.fleet_id} value={`fleet:${f.fleet_id}`}>
+                        ⚓ {f.fleet_name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              {!sameHexOwnedSystem && sameHexFriendlyFleets.length === 0 && (
+                <p className="text-[10px] text-crimson italic">
+                  No friendly fleet or owned planet at this hex. Move here first.
+                </p>
+              )}
+              <p className="text-[10px] text-muted-foreground italic">
+                Drag ships into the <span className="text-bronze font-semibold">Transfer</span> group below; they will move to the target at end of turn.
+              </p>
+            </div>
+          )}
         </div>
       </ImperialCard>
 
