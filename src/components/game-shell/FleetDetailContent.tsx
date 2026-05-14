@@ -996,14 +996,18 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                 className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground disabled:opacity-60"
               >
                 <option value="">— pick a target —</option>
-                {sameHexOwnedSystem && (
-                  <option value={`system:${sameHexOwnedSystem.system_id}`}>
-                    🪐 {sameHexOwnedSystem.system_name} (planet)
-                  </option>
+                {ownedSystems.length > 0 && (
+                  <optgroup label="Owned planets">
+                    {ownedSystems.map(s => (
+                      <option key={s.system_id} value={`system:${s.system_id}`}>
+                        🪐 {s.system_name}
+                      </option>
+                    ))}
+                  </optgroup>
                 )}
-                {sameHexFriendlyFleets.length > 0 && (
-                  <optgroup label="Friendly fleets here">
-                    {sameHexFriendlyFleets.map(f => (
+                {friendlyFleets.length > 0 && (
+                  <optgroup label="Friendly fleets">
+                    {friendlyFleets.map(f => (
                       <option key={f.fleet_id} value={`fleet:${f.fleet_id}`}>
                         ⚓ {f.fleet_name}
                       </option>
@@ -1011,9 +1015,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                   </optgroup>
                 )}
               </select>
-              {!sameHexOwnedSystem && sameHexFriendlyFleets.length === 0 && (
+              {ownedSystems.length === 0 && friendlyFleets.length === 0 && (
                 <p className="text-[10px] text-crimson italic">
-                  No friendly fleet or owned planet at this hex. Move here first.
+                  No friendly fleets or owned planets available.
                 </p>
               )}
               <p className="text-[10px] text-muted-foreground italic">
