@@ -85,6 +85,18 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
           ))}
         </select>
       </div>
+      {fields.ship_build_capacity > 0 && (
+        <div className="flex flex-col gap-0.5">
+          <label className="text-[10px] text-muted-foreground">Max Ship Hull Class (shipyards only)</label>
+          <select
+            value={fields.max_ship_hull_class || "Any"}
+            onChange={(e) => patch({ max_ship_hull_class: e.target.value })}
+            className="h-7 text-xs rounded border border-input bg-background px-2"
+          >
+            {HULL_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+          </select>
+        </div>
+      )}
     </div>
   );
 }
