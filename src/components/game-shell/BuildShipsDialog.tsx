@@ -24,7 +24,9 @@ const FILTERS: { key: FilterKey; label: string; predicate: (s: ShipTypeLookup) =
 export interface QueuedShip {
   ship_type_id: string;
   quantity: number;
-  destination_fleet_id: string | null; // null = create new fleet
+  destination_fleet_id: string | null; // null = create new fleet at destination_hex
+  destination_hex_x: number | null;    // only meaningful when destination_fleet_id is null
+  destination_hex_y: number | null;
 }
 
 export interface PlayerFleetOption {
@@ -46,6 +48,8 @@ interface BuildShipsDialogProps {
   shipBuildCapacity?: number;
   shipTypes: ShipTypeLookup[];
   playerFleets?: PlayerFleetOption[];
+  /** Hexes inside the player's province (where new fleets can spawn). */
+  ownedHexes?: OwnedHex[];
   onConfirm?: (queue: QueuedShip[]) => void;
 }
 
