@@ -167,6 +167,60 @@ export const shipProductionPhase: Phase = {
 
     for (const item of completedItems) {
       const { row, ship, ownerClass, systemHex } = item;
+
+      // ── New-fleet build: destination_fleet_id is null → spawn a new fleet at the picked hex
+      if (!row.destination_fleet_id) {
+        const destX = (row.destination_hex_x ?? null) !== null ? row.destination_hex_x : systemHex.x;
+        const destY = (row.destination_hex_y ?? null) !== null ? row.destination_hex_y : systemHex.y;
+
+        // Generate a fleet name; use the system as the source of identity.
+        const sysName = mapState.systems.get(row.system_id)?.system_name ?? `System #${row.system_id}`;
+        const fleetName = `${sysName} Detachment`;
+
+        const { data: newFleetRow, error: nfErr } = await (supabase as any)
+          .from("game_fleets")
+          .insert({
+            game_id: gameId,
+            owner_classification: ownerClass,
+            fleet_name: fleetName,
+            hex_x: destX,
+            hex_y: destY,
+            system_id: row.system_id,
+            is_garrison: false,
+          })
+          .select("id")
+          .single();
+
+        if (nfErr || !newFleetRow) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "economy",
+            log_type: "ship_built_stranded",
+            message: `Built ${row.quantity} ship(s) at ${sysName} but new-fleet creation failed.`,
+            details_json: { row, error: nfErr?.message },
+          });
+          continue;
+        }
+
+        const inserts = Array.from({ length: row.quantity }, () => ({
+          game_fleet_id: newFleetRow.id,
+          ship_type_id: ship.id,
+          quantity: 1,
+          tactical_group: "Core",
+          current_hp: null,
+          crippled: false,
+        }));
+        if (inserts.length > 0) {
+          await (supabase as any).from("game_fleet_ships").insert(inserts);
+        }
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "ship_built_new_fleet",
+          message: `${row.quantity}× new ship(s) commissioned as "${fleetName}" at (${destX}, ${destY}).`,
+          details_json: { fleet_id: newFleetRow.id, ship_type_id: ship.id, quantity: row.quantity },
+        });
+        continue;
+      }
+
       const dest = findDestFleet(row.destination_fleet_id, ownerClass, systemHex.x, systemHex.y);
       if (!dest) {
         ctx.logs.push({

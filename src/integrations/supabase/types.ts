@@ -1562,6 +1562,8 @@ export type Database = {
           cost_paid: number
           created_at: string
           destination_fleet_id: string | null
+          destination_hex_x: number | null
+          destination_hex_y: number | null
           game_id: string
           id: string
           owner_classification: string
@@ -1576,6 +1578,8 @@ export type Database = {
           cost_paid?: number
           created_at?: string
           destination_fleet_id?: string | null
+          destination_hex_x?: number | null
+          destination_hex_y?: number | null
           game_id: string
           id?: string
           owner_classification?: string
@@ -1590,6 +1594,8 @@ export type Database = {
           cost_paid?: number
           created_at?: string
           destination_fleet_id?: string | null
+          destination_hex_x?: number | null
+          destination_hex_y?: number | null
           game_id?: string
           id?: string
           owner_classification?: string

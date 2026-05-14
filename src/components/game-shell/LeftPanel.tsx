@@ -982,6 +982,14 @@ function InlineRegionDetail({
               }))
               .sort((a, b) => Number(b.atSystem) - Number(a.atSystem));
           })()}
+          ownedHexes={(() => {
+            if (!gameData?.hexes || !playerOwnerClassification) return [];
+            const sysByHexId = new Map<number, string>();
+            for (const s of gameData.systems.values()) sysByHexId.set(s.hex_id, s.system_name);
+            return Array.from(gameData.hexes.values())
+              .filter((h) => h.classification === playerOwnerClassification)
+              .map((h) => ({ x: h.x, y: h.y, system_name: sysByHexId.get(h.hex_id) ?? null }));
+          })()}
           onConfirm={async (queue) => {
             if (!gameId || !playerOwnerClassification || queue.length === 0) return;
             const { supabase } = await import("@/integrations/supabase/client");
@@ -995,6 +1003,8 @@ function InlineRegionDetail({
                 ship_type_id: q.ship_type_id,
                 quantity: q.quantity,
                 destination_fleet_id: q.destination_fleet_id,
+                destination_hex_x: q.destination_hex_x,
+                destination_hex_y: q.destination_hex_y,
                 points_remaining: cost,
                 cost_paid: cost,
                 owner_classification: playerOwnerClassification,
