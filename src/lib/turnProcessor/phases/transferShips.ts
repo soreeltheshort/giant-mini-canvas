@@ -6,9 +6,23 @@
  * fleet (must be at the same hex) or to an owned planet (a new detachment
  * fleet is created at the system hex if one does not already exist there).
  *
+ * Per-ship range rule (parity with ship production transit):
+ *   - If hex distance from source → destination ≤ ship.map_speed, the ship
+ *     joins the destination fleet immediately (row reassigned, HP preserved).
+ *   - Otherwise the ships enter `ships_in_transit` (virtual fleet, no map
+ *     presence) starting at the source hex and advance ship.map_speed hexes
+ *     per turn until they arrive at the destination fleet.
+ *
  * Runs AFTER movement (so positions are final) and BEFORE ground combat.
  */
 import type { Phase, TurnContext } from "../types";
+import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+
+function distHex(ax: number, ay: number, bx: number, by: number) {
+  const [a1, a2, a3] = offsetToCube(ax, ay);
+  const [b1, b2, b3] = offsetToCube(bx, by);
+  return cubeDistance(a1, a2, a3, b1, b2, b3);
+}
 
 export const transferShipsPhase: Phase = {
   name: "movement",
@@ -20,6 +34,14 @@ export const transferShipsPhase: Phase = {
       o => o.order_type === "other" && o.order_json?.kind === "transfer_ships",
     );
     if (orders.length === 0) return;
+
+    // Preload ship types for map_speed lookups.
+    const { data: shipTypeRows } = await (supabase as any)
+      .from("ship_types")
+      .select("id, map_speed");
+    const shipSpeed = new Map<string, number>(
+      (shipTypeRows || []).map((s: any) => [s.id, Math.max(1, Number(s.map_speed) || 1)]),
+    );
 
     for (const order of orders) {
       const oj = order.order_json || {};
@@ -50,6 +72,8 @@ export const transferShipsPhase: Phase = {
       // Resolve destination fleet id (creating one at the planet if needed).
       let destFleetId: string | null = null;
       let destLabel = "";
+      let destX = 0;
+      let destY = 0;
 
       if (oj.target_fleet_id) {
         const dest = mapState.fleets.find(f => f.fleet_id === oj.target_fleet_id);
@@ -73,6 +97,8 @@ export const transferShipsPhase: Phase = {
         }
         destFleetId = dest.fleet_id;
         destLabel = dest.fleet_name;
+        destX = dest.hex_x;
+        destY = dest.hex_y;
       } else if (oj.target_system_id != null) {
         const sys = mapState.systems.get(Number(oj.target_system_id));
         if (!sys) continue;
@@ -99,6 +125,8 @@ export const transferShipsPhase: Phase = {
         if (existing) {
           destFleetId = existing.fleet_id;
           destLabel = existing.fleet_name;
+          destX = existing.hex_x;
+          destY = existing.hex_y;
         } else {
           const newName = `${sys.system_name} Detachment`;
           const { data: newFleet, error: nfErr } = await (supabase as any)
@@ -125,6 +153,8 @@ export const transferShipsPhase: Phase = {
           }
           destFleetId = newFleet.id;
           destLabel = newName;
+          destX = sysHex.x;
+          destY = sysHex.y;
         }
       } else {
         continue;
@@ -132,28 +162,96 @@ export const transferShipsPhase: Phase = {
 
       if (!destFleetId) continue;
 
-      // Reassign rows to the destination fleet, reset to Core group.
-      const ids = rows.map(r => r.id);
-      const totalQty = rows.reduce((s, r) => s + (r.quantity || 0), 0);
-      const { error: updErr } = await (supabase as any)
-        .from("game_fleet_ships")
-        .update({ game_fleet_id: destFleetId, tactical_group: "Core" })
-        .in("id", ids);
-      if (updErr) {
-        ctx.logs.push({
-          game_id: gameId, turn_number: currentTurn, phase: "movement",
-          log_type: "transfer_failed",
-          message: `Transfer from ${source.fleet_name} failed: ${updErr.message}`,
-          details_json: { order_id: order.id },
-        });
-        continue;
+      const dist = distHex(source.hex_x, source.hex_y, destX, destY);
+      const ownerClass = (source as any).owner_classification;
+
+      // Partition rows into immediate (in-range) vs in-transit (out-of-range)
+      // on a per-ship-type basis using ship.map_speed.
+      const immediateIds: string[] = [];
+      const transitBuckets = new Map<string, number>(); // ship_type_id → quantity
+
+      for (const r of rows) {
+        const speed = shipSpeed.get(r.ship_type_id) ?? 1;
+        const qty = Number(r.quantity) || 0;
+        if (qty <= 0) continue;
+        if (dist <= speed) {
+          immediateIds.push(r.id);
+        } else {
+          transitBuckets.set(r.ship_type_id, (transitBuckets.get(r.ship_type_id) || 0) + qty);
+        }
       }
 
+      let immediateCount = 0;
+      if (immediateIds.length > 0) {
+        // Sum quantity across the ids we're moving for the log.
+        for (const r of rows) {
+          if (immediateIds.includes(r.id)) immediateCount += Number(r.quantity) || 0;
+        }
+        const { error: updErr } = await (supabase as any)
+          .from("game_fleet_ships")
+          .update({ game_fleet_id: destFleetId, tactical_group: "Core" })
+          .in("id", immediateIds);
+        if (updErr) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "movement",
+            log_type: "transfer_failed",
+            message: `Transfer from ${source.fleet_name} failed: ${updErr.message}`,
+            details_json: { order_id: order.id },
+          });
+          continue;
+        }
+      }
+
+      let transitCount = 0;
+      if (transitBuckets.size > 0) {
+        const inserts: any[] = [];
+        for (const [shipTypeId, qty] of transitBuckets) {
+          inserts.push({
+            game_id: gameId,
+            owner_classification: ownerClass,
+            ship_type_id: shipTypeId,
+            quantity: qty,
+            destination_fleet_id: destFleetId,
+            origin_system_id: (source as any).system_id ?? null,
+            virt_x: source.hex_x,
+            virt_y: source.hex_y,
+            created_turn: currentTurn,
+          });
+          transitCount += qty;
+        }
+        const { error: insErr } = await (supabase as any)
+          .from("ships_in_transit")
+          .insert(inserts);
+        if (!insErr) {
+          // Remove the in-transit rows from the source fleet roster — they
+          // are now virtual until they arrive (HP is reset to full).
+          const transitIds = rows
+            .filter(r => transitBuckets.has(r.ship_type_id))
+            .map(r => r.id);
+          if (transitIds.length > 0) {
+            await (supabase as any)
+              .from("game_fleet_ships")
+              .delete()
+              .in("id", transitIds);
+          }
+        } else {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "movement",
+            log_type: "transfer_failed",
+            message: `Transfer from ${source.fleet_name}: in-transit insert failed: ${insErr.message}`,
+            details_json: { order_id: order.id },
+          });
+        }
+      }
+
+      const parts: string[] = [];
+      if (immediateCount > 0) parts.push(`${immediateCount} arrived`);
+      if (transitCount > 0) parts.push(`${transitCount} in transit (${dist} hex)`);
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "movement",
-        log_type: "transfer_completed",
-        message: `${totalQty} ship(s) transferred from ${source.fleet_name} to ${destLabel}.`,
-        details_json: { from: source.fleet_id, to: destFleetId, count: totalQty },
+        log_type: transitCount > 0 ? "transfer_in_transit" : "transfer_completed",
+        message: `Transfer from ${source.fleet_name} → ${destLabel}: ${parts.join(", ") || "no ships"}.`,
+        details_json: { from: source.fleet_id, to: destFleetId, dist, immediate: immediateCount, in_transit: transitCount },
       });
     }
   },
