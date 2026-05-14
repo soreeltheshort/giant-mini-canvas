@@ -644,11 +644,7 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
             const h = gameData?.hexes ? Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id) : undefined;
             return h?.y;
           })()}
-          shipBuildCapacity={(realSys.facilities || []).reduce((sum, f) => {
-            const ft = (gameData?.facilityTypesFull || []).find(t => String(t.facility_type_id) === String(f.facility_type_id)) as any;
-            const cap = Number(ft?.ship_build_capacity) || 0;
-            return sum + cap * (f.quantity || 1);
-          }, 0)}
+          shipBuildCapacity={shipBuildCapacity}
           shipTypes={gameData?.shipTypes || []}
           playerFleets={(() => {
             if (!gameData || !playerOwnerClassification) return [];
@@ -683,7 +679,14 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
                 owner_classification: playerOwnerClassification,
               };
             });
-            await (supabase as any).from("system_ship_production").insert(rows);
+            const { error } = await (supabase as any).from("system_ship_production").insert(rows);
+            if (error) {
+              console.error("[ship build] insert failed", error);
+              const { toast } = await import("@/hooks/use-toast");
+              toast.toast({ title: "Build failed", description: error.message, variant: "destructive" });
+              return;
+            }
+            setQueueRefresh((n) => n + 1);
           }}
         />
       </>
