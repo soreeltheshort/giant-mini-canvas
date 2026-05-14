@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { ShipTypeLookup } from "./ContextPanel";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export interface OwnedHex {
   x: number;
@@ -38,6 +40,18 @@ export interface PlayerFleetOption {
   is_garrison?: boolean;
 }
 
+interface PersistedQueueRow {
+  id: string;
+  ship_type_id: string;
+  quantity: number;
+  destination_fleet_id: string | null;
+  destination_hex_x: number | null;
+  destination_hex_y: number | null;
+  points_remaining: number;
+  cost_paid: number;
+  position: number;
+}
+
 interface BuildShipsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,6 +64,12 @@ interface BuildShipsDialogProps {
   playerFleets?: PlayerFleetOption[];
   /** Hexes inside the player's province (where new fleets can spawn). */
   ownedHexes?: OwnedHex[];
+  /** Required to load + edit the persisted queue. */
+  gameId?: string;
+  systemId?: number;
+  ownerClassification?: string;
+  /** Called after a persisted-queue edit so parent lists can refetch. */
+  onQueueChanged?: () => void;
   onConfirm?: (queue: QueuedShip[]) => void;
 }
 
