@@ -744,6 +744,12 @@ function InlineRegionDetail({
     });
     const [shipDialogOpen, setShipDialogOpen] = useState(false);
     const [facilityDialogOpen, setFacilityDialogOpen] = useState(false);
+    const [queueRefresh, setQueueRefresh] = useState(0);
+    const shipBuildCapacity = (realSys.facilities || []).reduce((sum, f) => {
+      const ft = (gameData?.facilityTypesFull || []).find(t => String(t.facility_type_id) === String(f.facility_type_id)) as any;
+      const cap = Number(ft?.ship_build_capacity) || 0;
+      return sum + cap * (f.quantity || 1);
+    }, 0);
     return (
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
