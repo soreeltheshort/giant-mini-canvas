@@ -417,9 +417,17 @@ function CreateFleetCard({
   onCreateFleet: (name: string, hexX: number, hexY: number) => Promise<void> | void;
 }) {
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<"hex" | "name">("hex");
   const [name, setName] = useState("");
   const [hexValue, setHexValue] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const resetAndClose = () => {
+    setOpen(false);
+    setStep("hex");
+    setName("");
+    setHexValue("");
+  };
 
   // Compute eligible hexes: owned by player AND no fleet currently on the hex.
   const eligible = (() => {
@@ -456,13 +464,13 @@ function CreateFleetCard({
     setBusy(true);
     try {
       await onCreateFleet(name.trim(), hex.x, hex.y);
-      setOpen(false);
-      setName("");
-      setHexValue("");
+      resetAndClose();
     } finally {
       setBusy(false);
     }
   };
+
+  const selectedHex = eligible.find(e => e.key === hexValue);
 
   return (
     <ImperialCard title="Commission Fleet">
@@ -472,7 +480,7 @@ function CreateFleetCard({
           <span className="block text-bronze-dark font-semibold mt-0.5">Cost: 1 Combat Point</span>
         </p>
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => { setStep("hex"); setOpen(true); }}
           disabled={combatPointsAvailable < 1 || eligible.length === 0}
           className="w-full py-1.5 rounded-sm bg-crimson text-primary-foreground text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -480,54 +488,89 @@ function CreateFleetCard({
         </button>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else setOpen(true); }}>
         <DialogContent className="bg-marble border-bronze/40">
           <DialogHeader>
-            <DialogTitle className="font-heading text-senate-dark">Commission New Fleet</DialogTitle>
+            <DialogTitle className="font-heading text-senate-dark">
+              {step === "hex" ? "Commission New Fleet — Choose Location" : "Commission New Fleet — Name Fleet"}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Fleet Name</label>
-              <input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="e.g. First Legion"
-                className="w-full rounded-sm border border-border bg-ivory px-2 py-1.5 text-sm text-senate-dark"
-                autoFocus
-              />
+
+          {step === "hex" ? (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Place at Hex</label>
+                <select
+                  value={hexValue}
+                  onChange={e => setHexValue(e.target.value)}
+                  autoFocus
+                  className="w-full rounded-sm border border-border bg-ivory px-2 py-1.5 text-sm text-senate-dark"
+                >
+                  <option value="">Select an owned hex…</option>
+                  {eligible.map(e => (
+                    <option key={e.key} value={e.key}>{e.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="text-[10px] text-bronze-dark font-semibold">
+                Cost: 1 Combat Point · Available: {combatPointsAvailable}
+              </div>
+              <div className="flex gap-2 justify-end pt-1">
+                <button
+                  onClick={resetAndClose}
+                  className="px-3 py-1.5 rounded-sm border border-border text-[11px] font-heading uppercase tracking-wider text-senate-dark hover:bg-ivory-dark"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setStep("name")}
+                  disabled={hexValue === ""}
+                  className="px-3 py-1.5 rounded-sm bg-crimson text-primary-foreground text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Place at Hex</label>
-              <select
-                value={hexValue}
-                onChange={e => setHexValue(e.target.value)}
-                className="w-full rounded-sm border border-border bg-ivory px-2 py-1.5 text-sm text-senate-dark"
-              >
-                <option value="">Select an owned hex…</option>
-                {eligible.map(e => (
-                  <option key={e.key} value={e.key}>{e.label}</option>
-                ))}
-              </select>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-[10px] text-muted-foreground">
+                Location: <span className="text-senate-dark font-semibold">{selectedHex?.label}</span>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Fleet Name</label>
+                <input
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="e.g. First Legion"
+                  className="w-full rounded-sm border border-border bg-ivory px-2 py-1.5 text-sm text-senate-dark"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2 justify-between pt-1">
+                <button
+                  onClick={() => setStep("hex")}
+                  className="px-3 py-1.5 rounded-sm border border-border text-[11px] font-heading uppercase tracking-wider text-senate-dark hover:bg-ivory-dark"
+                >
+                  Back
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={resetAndClose}
+                    className="px-3 py-1.5 rounded-sm border border-border text-[11px] font-heading uppercase tracking-wider text-senate-dark hover:bg-ivory-dark"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!canSubmit}
+                    className="px-3 py-1.5 rounded-sm bg-crimson text-primary-foreground text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {busy ? "Commissioning…" : "Done"}
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="text-[10px] text-bronze-dark font-semibold">
-              Cost: 1 Combat Point · Available: {combatPointsAvailable}
-            </div>
-            <div className="flex gap-2 justify-end pt-1">
-              <button
-                onClick={() => setOpen(false)}
-                className="px-3 py-1.5 rounded-sm border border-border text-[11px] font-heading uppercase tracking-wider text-senate-dark hover:bg-ivory-dark"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                className="px-3 py-1.5 rounded-sm bg-crimson text-primary-foreground text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {busy ? "Commissioning…" : "Commission"}
-              </button>
-            </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </ImperialCard>
