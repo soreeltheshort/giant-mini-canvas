@@ -1,7 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { ShipTypeLookup } from "./ContextPanel";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+
+export interface OwnedHex {
+  x: number;
+  y: number;
+  system_name?: string | null;
+}
 
 type FilterKey = "invasion" | "sensors" | "repair" | "supply" | "fighters" | "gunship" | "strikecraft";
 
