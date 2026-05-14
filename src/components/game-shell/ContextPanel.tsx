@@ -683,7 +683,7 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
             if (error) {
               console.error("[ship build] insert failed", error);
               const { toast } = await import("@/hooks/use-toast");
-              toast.toast({ title: "Build failed", description: error.message, variant: "destructive" });
+              toast({ title: "Build failed", description: error.message, variant: "destructive" });
               return;
             }
             setQueueRefresh((n) => n + 1);
