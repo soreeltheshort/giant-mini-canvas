@@ -635,6 +635,10 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
         <BuildShipsDialog
           open={shipDialogOpen}
           onOpenChange={setShipDialogOpen}
+          gameId={gameId}
+          systemId={realSys.system_id}
+          ownerClassification={playerOwnerClassification ?? undefined}
+          onQueueChanged={() => setQueueRefresh((n) => n + 1)}
           systemName={realSys.system_name}
           systemHexX={(() => {
             const h = gameData?.hexes ? Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id) : undefined;

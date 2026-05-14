@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { ShipTypeLookup } from "./ContextPanel";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export interface OwnedHex {
   x: number;
@@ -38,6 +40,18 @@ export interface PlayerFleetOption {
   is_garrison?: boolean;
 }
 
+interface PersistedQueueRow {
+  id: string;
+  ship_type_id: string;
+  quantity: number;
+  destination_fleet_id: string | null;
+  destination_hex_x: number | null;
+  destination_hex_y: number | null;
+  points_remaining: number;
+  cost_paid: number;
+  position: number;
+}
+
 interface BuildShipsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,6 +64,12 @@ interface BuildShipsDialogProps {
   playerFleets?: PlayerFleetOption[];
   /** Hexes inside the player's province (where new fleets can spawn). */
   ownedHexes?: OwnedHex[];
+  /** Required to load + edit the persisted queue. */
+  gameId?: string;
+  systemId?: number;
+  ownerClassification?: string;
+  /** Called after a persisted-queue edit so parent lists can refetch. */
+  onQueueChanged?: () => void;
   onConfirm?: (queue: QueuedShip[]) => void;
 }
 
@@ -71,11 +91,39 @@ export default function BuildShipsDialog({
   shipTypes,
   playerFleets = [],
   ownedHexes = [],
+  gameId,
+  systemId,
+  ownerClassification,
+  onQueueChanged,
   onConfirm,
 }: BuildShipsDialogProps) {
+  const { toast } = useToast();
   const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null);
   const [queueOrder, setQueueOrder] = useState<{ id: string; qty: number; destFleetId: string }[]>([]);
   const [newFleetHex, setNewFleetHex] = useState<{ x: number; y: number } | null>(null);
+  const [persisted, setPersisted] = useState<PersistedQueueRow[]>([]);
+  const [persistedLoading, setPersistedLoading] = useState(false);
+
+  // Load persisted queue rows whenever the dialog opens.
+  const reloadPersisted = async () => {
+    if (!gameId || systemId === undefined) { setPersisted([]); return; }
+    setPersistedLoading(true);
+    let q = (supabase as any)
+      .from("system_ship_production")
+      .select("id, ship_type_id, quantity, destination_fleet_id, destination_hex_x, destination_hex_y, points_remaining, cost_paid, position")
+      .eq("game_id", gameId)
+      .eq("system_id", systemId)
+      .order("position", { ascending: true });
+    if (ownerClassification) q = q.eq("owner_classification", ownerClassification);
+    const { data } = await q;
+    setPersisted((data as PersistedQueueRow[]) || []);
+    setPersistedLoading(false);
+  };
+
+  useEffect(() => {
+    if (open) reloadPersisted();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, gameId, systemId, ownerClassification]);
 
   // Initialize / reset the new-fleet destination hex to the producing system whenever it opens.
   useEffect(() => {
@@ -83,6 +131,33 @@ export default function BuildShipsDialog({
       setNewFleetHex({ x: systemHexX, y: systemHexY });
     }
   }, [open, systemHexX, systemHexY]);
+
+  const cancelPersisted = async (row: PersistedQueueRow) => {
+    const { error } = await (supabase as any).from("system_ship_production").delete().eq("id", row.id);
+    if (error) {
+      toast({ title: "Cancel failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    await reloadPersisted();
+    onQueueChanged?.();
+  };
+
+  const updatePersistedDest = async (row: PersistedQueueRow, destFleetId: string) => {
+    const isNewFleet = destFleetId === NEW_FLEET;
+    const patch: any = {
+      destination_fleet_id: isNewFleet ? null : destFleetId,
+      destination_hex_x: isNewFleet ? (newFleetHex?.x ?? systemHexX ?? null) : null,
+      destination_hex_y: isNewFleet ? (newFleetHex?.y ?? systemHexY ?? null) : null,
+    };
+    const { error } = await (supabase as any).from("system_ship_production").update(patch).eq("id", row.id);
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    await reloadPersisted();
+    onQueueChanged?.();
+  };
+
 
   // Default to building at the planet (new fleet); user can pick an existing fleet instead.
   const defaultDestination = NEW_FLEET;
@@ -205,6 +280,70 @@ export default function BuildShipsDialog({
           <p className="text-[10px] text-crimson italic">
             This system has no shipyards. Builds will not progress until one is commissioned.
           </p>
+        )}
+
+        {/* Persisted Manufacturing Queue (already saved to DB) */}
+        {(persistedLoading || persisted.length > 0) && (
+          <div className="border border-bronze/40 rounded-sm p-2 space-y-1 max-h-48 overflow-y-auto bg-bronze/5">
+            <div className="flex items-center justify-between">
+              <div className="text-[9px] uppercase tracking-wider text-bronze font-heading font-semibold">
+                Manufacturing Queue
+              </div>
+              {shipBuildCapacity > 0 && (
+                <span className="text-[9px] text-muted-foreground">{shipBuildCapacity} pts/turn</span>
+              )}
+            </div>
+            {persistedLoading && persisted.length === 0 ? (
+              <p className="text-[10px] text-muted-foreground italic">Loading…</p>
+            ) : (
+              (() => {
+                let pointsAhead = 0;
+                return persisted.map((row, idx) => {
+                  const st = shipTypes.find((s) => s.id === row.ship_type_id);
+                  pointsAhead += row.points_remaining;
+                  const eta = shipBuildCapacity > 0 ? Math.max(1, Math.ceil(pointsAhead / shipBuildCapacity)) : null;
+                  const inProgress = row.points_remaining < row.cost_paid;
+                  const allowedFleets = (() => {
+                    if (!st) return playerFleets;
+                    if (st.hull_class !== "Strikecraft") return playerFleets;
+                    if (systemHexX === undefined || systemHexY === undefined) return playerFleets;
+                    return playerFleets.filter(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
+                  })();
+                  const currentDest = row.destination_fleet_id ?? NEW_FLEET;
+                  return (
+                    <div key={row.id} className="flex items-center gap-2 text-[10px] flex-wrap">
+                      <span className="w-4 text-right text-muted-foreground">{idx + 1}.</span>
+                      <span className="flex-1 min-w-0 truncate text-accent font-semibold">
+                        {st?.name ?? row.ship_type_id} <span className="text-bronze">×{row.quantity}</span>
+                      </span>
+                      <span className="text-slate-500">{row.points_remaining}/{row.cost_paid} pts</span>
+                      {eta && <span className="text-bronze">ETA {eta}T</span>}
+                      <select
+                        value={currentDest}
+                        onChange={(e) => updatePersistedDest(row, e.target.value)}
+                        className="text-[10px] bg-muted border border-border rounded-sm px-1 py-0.5 text-foreground max-w-[12rem]"
+                        title="Destination"
+                      >
+                        <option value={NEW_FLEET}>🪐 Planet (new fleet)</option>
+                        {allowedFleets.map((f) => (
+                          <option key={f.fleet_id} value={f.fleet_id}>
+                            {f.fleet_name}{f.atSystem ? " (here)" : ""}{f.is_garrison ? " ⚓" : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => cancelPersisted(row)}
+                        className="px-1.5 py-0.5 rounded-sm bg-muted text-foreground hover:bg-crimson/30 text-[10px] font-bold"
+                        title={inProgress ? "Cancel — partial work lost" : "Cancel"}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  );
+                });
+              })()
+            )}
+          </div>
         )}
 
         {/* Build Queue (reorderable) */}
