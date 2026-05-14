@@ -1066,6 +1066,23 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         </div>
       </ImperialCard>
 
+      {incomingTransit.length > 0 && (
+        <ImperialCard title="Incoming Reinforcements">
+          <div className="space-y-1">
+            {incomingTransit.map(t => (
+              <div key={t.id} className="flex items-center justify-between text-[11px]">
+                <span className="text-senate-dark font-semibold">
+                  {t.quantity}× {t.ship_name}
+                </span>
+                <span className="text-bronze-dark font-heading uppercase tracking-wider text-[10px]">
+                  ETA {t.eta} turn{t.eta === 1 ? "" : "s"} · ({t.virt_x}, {t.virt_y})
+                </span>
+              </div>
+            ))}
+          </div>
+        </ImperialCard>
+      )}
+
       <ImperialCard title="Composition">
         <FleetCompositionEditor
           ships={ships}
