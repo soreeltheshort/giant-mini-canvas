@@ -70,10 +70,19 @@ export default function BuildShipsDialog({
   shipBuildCapacity = 0,
   shipTypes,
   playerFleets = [],
+  ownedHexes = [],
   onConfirm,
 }: BuildShipsDialogProps) {
   const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null);
   const [queueOrder, setQueueOrder] = useState<{ id: string; qty: number; destFleetId: string }[]>([]);
+  const [newFleetHex, setNewFleetHex] = useState<{ x: number; y: number } | null>(null);
+
+  // Initialize / reset the new-fleet destination hex to the producing system whenever it opens.
+  useEffect(() => {
+    if (open && systemHexX !== undefined && systemHexY !== undefined) {
+      setNewFleetHex({ x: systemHexX, y: systemHexY });
+    }
+  }, [open, systemHexX, systemHexY]);
 
   // Default to building at the planet (new fleet); user can pick an existing fleet instead.
   const defaultDestination = NEW_FLEET;
