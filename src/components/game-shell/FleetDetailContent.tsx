@@ -628,18 +628,17 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     onOrdersChanged?.();
   };
 
-  // Friendly fleets at the same hex (excluding self) — eligible transfer targets.
-  const sameHexFriendlyFleets = allFleets.filter(f =>
-    f.fleet_id !== fleet.fleet_id &&
-    f.owner_classification === fleet.owner_classification &&
-    f.hex_x === fleet.hex_x && f.hex_y === fleet.hex_y
-  );
-  // Owned systems at the same hex (planet drop-off).
-  const sameHexOwnedSystem = (() => {
-    const h = allHexes?.get(`${fleet.hex_x},${fleet.hex_y}`);
-    if (!h) return null;
-    return allSystems.find(s => s.hex_id === h.hex_id && s.owner === fleet.owner_classification) || null;
-  })();
+  // Any friendly fleet (excluding self) — eligible transfer targets.
+  const friendlyFleets = allFleets
+    .filter(f =>
+      f.fleet_id !== fleet.fleet_id &&
+      f.owner_classification === fleet.owner_classification
+    )
+    .sort((a, b) => a.fleet_name.localeCompare(b.fleet_name));
+  // Any owned system — planet drop-off.
+  const ownedSystems = allSystems
+    .filter(s => s.owner === fleet.owner_classification)
+    .sort((a, b) => a.system_name.localeCompare(b.system_name));
   const transferActive = detail.special1_role === "Transfer" || detail.special2_role === "Transfer";
 
   return (
@@ -997,14 +996,18 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                 className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground disabled:opacity-60"
               >
                 <option value="">— pick a target —</option>
-                {sameHexOwnedSystem && (
-                  <option value={`system:${sameHexOwnedSystem.system_id}`}>
-                    🪐 {sameHexOwnedSystem.system_name} (planet)
-                  </option>
+                {ownedSystems.length > 0 && (
+                  <optgroup label="Owned planets">
+                    {ownedSystems.map(s => (
+                      <option key={s.system_id} value={`system:${s.system_id}`}>
+                        🪐 {s.system_name}
+                      </option>
+                    ))}
+                  </optgroup>
                 )}
-                {sameHexFriendlyFleets.length > 0 && (
-                  <optgroup label="Friendly fleets here">
-                    {sameHexFriendlyFleets.map(f => (
+                {friendlyFleets.length > 0 && (
+                  <optgroup label="Friendly fleets">
+                    {friendlyFleets.map(f => (
                       <option key={f.fleet_id} value={`fleet:${f.fleet_id}`}>
                         ⚓ {f.fleet_name}
                       </option>
@@ -1012,9 +1015,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                   </optgroup>
                 )}
               </select>
-              {!sameHexOwnedSystem && sameHexFriendlyFleets.length === 0 && (
+              {ownedSystems.length === 0 && friendlyFleets.length === 0 && (
                 <p className="text-[10px] text-crimson italic">
-                  No friendly fleet or owned planet at this hex. Move here first.
+                  No friendly fleets or owned planets available.
                 </p>
               )}
               <p className="text-[10px] text-muted-foreground italic">

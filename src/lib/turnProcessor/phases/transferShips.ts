@@ -62,15 +62,6 @@ export const transferShipsPhase: Phase = {
           });
           continue;
         }
-        if (dest.hex_x !== source.hex_x || dest.hex_y !== source.hex_y) {
-          ctx.logs.push({
-            game_id: gameId, turn_number: currentTurn, phase: "movement",
-            log_type: "transfer_failed",
-            message: `Transfer from ${source.fleet_name} failed: ${dest.fleet_name} is no longer at the same hex.`,
-            details_json: { order_id: order.id },
-          });
-          continue;
-        }
         if ((dest as any).owner_classification !== (source as any).owner_classification) {
           ctx.logs.push({
             game_id: gameId, turn_number: currentTurn, phase: "movement",
@@ -87,21 +78,23 @@ export const transferShipsPhase: Phase = {
         if (!sys) continue;
         const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
         if (!sysHex) continue;
-        if (sysHex.x !== source.hex_x || sysHex.y !== source.hex_y) {
+        // Verify owner still controls the system.
+        const ownerClass = (source as any).owner_classification;
+        if ((sys as any).owner !== ownerClass) {
           ctx.logs.push({
             game_id: gameId, turn_number: currentTurn, phase: "movement",
             log_type: "transfer_failed",
-            message: `Transfer from ${source.fleet_name} failed: not at ${sys.system_name}.`,
+            message: `Transfer from ${source.fleet_name} failed: ${sys.system_name} is no longer owned.`,
             details_json: { order_id: order.id },
           });
           continue;
         }
-        // Find or create a friendly non-garrison fleet at this hex.
-        const ownerClass = (source as any).owner_classification;
+        // Find or create a friendly non-garrison fleet at the system's hex.
         const existing = mapState.fleets.find(f =>
           (f as any).owner_classification === ownerClass &&
           f.hex_x === sysHex.x && f.hex_y === sysHex.y &&
-          f.fleet_id !== source.fleet_id,
+          f.fleet_id !== source.fleet_id &&
+          !(f as any).is_garrison,
         );
         if (existing) {
           destFleetId = existing.fleet_id;
