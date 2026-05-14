@@ -417,9 +417,17 @@ function CreateFleetCard({
   onCreateFleet: (name: string, hexX: number, hexY: number) => Promise<void> | void;
 }) {
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<"hex" | "name">("hex");
   const [name, setName] = useState("");
   const [hexValue, setHexValue] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const resetAndClose = () => {
+    setOpen(false);
+    setStep("hex");
+    setName("");
+    setHexValue("");
+  };
 
   // Compute eligible hexes: owned by player AND no fleet currently on the hex.
   const eligible = (() => {
