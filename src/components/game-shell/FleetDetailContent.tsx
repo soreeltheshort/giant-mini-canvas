@@ -628,18 +628,17 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     onOrdersChanged?.();
   };
 
-  // Friendly fleets at the same hex (excluding self) — eligible transfer targets.
-  const sameHexFriendlyFleets = allFleets.filter(f =>
-    f.fleet_id !== fleet.fleet_id &&
-    f.owner_classification === fleet.owner_classification &&
-    f.hex_x === fleet.hex_x && f.hex_y === fleet.hex_y
-  );
-  // Owned systems at the same hex (planet drop-off).
-  const sameHexOwnedSystem = (() => {
-    const h = allHexes?.get(`${fleet.hex_x},${fleet.hex_y}`);
-    if (!h) return null;
-    return allSystems.find(s => s.hex_id === h.hex_id && s.owner === fleet.owner_classification) || null;
-  })();
+  // Any friendly fleet (excluding self) — eligible transfer targets.
+  const friendlyFleets = allFleets
+    .filter(f =>
+      f.fleet_id !== fleet.fleet_id &&
+      f.owner_classification === fleet.owner_classification
+    )
+    .sort((a, b) => a.fleet_name.localeCompare(b.fleet_name));
+  // Any owned system — planet drop-off.
+  const ownedSystems = allSystems
+    .filter(s => s.owner === fleet.owner_classification)
+    .sort((a, b) => a.system_name.localeCompare(b.system_name));
   const transferActive = detail.special1_role === "Transfer" || detail.special2_role === "Transfer";
 
   return (
