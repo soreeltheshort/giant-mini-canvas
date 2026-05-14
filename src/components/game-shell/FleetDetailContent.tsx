@@ -36,7 +36,7 @@ function readinessMaintMult(level: number): number {
 }
 
 const STRATEGY_OPTIONS = [
-  "Flank", "Outflank", "Skirmish", "Cover Retreat", "Rear", "Attack Planet",
+  "Flank", "Outflank", "Skirmish", "Cover Retreat", "Rear", "Attack Planet", "Transfer",
 ];
 
 interface FleetDetail {
