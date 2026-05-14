@@ -91,11 +91,39 @@ export default function BuildShipsDialog({
   shipTypes,
   playerFleets = [],
   ownedHexes = [],
+  gameId,
+  systemId,
+  ownerClassification,
+  onQueueChanged,
   onConfirm,
 }: BuildShipsDialogProps) {
+  const { toast } = useToast();
   const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null);
   const [queueOrder, setQueueOrder] = useState<{ id: string; qty: number; destFleetId: string }[]>([]);
   const [newFleetHex, setNewFleetHex] = useState<{ x: number; y: number } | null>(null);
+  const [persisted, setPersisted] = useState<PersistedQueueRow[]>([]);
+  const [persistedLoading, setPersistedLoading] = useState(false);
+
+  // Load persisted queue rows whenever the dialog opens.
+  const reloadPersisted = async () => {
+    if (!gameId || systemId === undefined) { setPersisted([]); return; }
+    setPersistedLoading(true);
+    let q = (supabase as any)
+      .from("system_ship_production")
+      .select("id, ship_type_id, quantity, destination_fleet_id, destination_hex_x, destination_hex_y, points_remaining, cost_paid, position")
+      .eq("game_id", gameId)
+      .eq("system_id", systemId)
+      .order("position", { ascending: true });
+    if (ownerClassification) q = q.eq("owner_classification", ownerClassification);
+    const { data } = await q;
+    setPersisted((data as PersistedQueueRow[]) || []);
+    setPersistedLoading(false);
+  };
+
+  useEffect(() => {
+    if (open) reloadPersisted();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, gameId, systemId, ownerClassification]);
 
   // Initialize / reset the new-fleet destination hex to the producing system whenever it opens.
   useEffect(() => {
@@ -103,6 +131,33 @@ export default function BuildShipsDialog({
       setNewFleetHex({ x: systemHexX, y: systemHexY });
     }
   }, [open, systemHexX, systemHexY]);
+
+  const cancelPersisted = async (row: PersistedQueueRow) => {
+    const { error } = await (supabase as any).from("system_ship_production").delete().eq("id", row.id);
+    if (error) {
+      toast({ title: "Cancel failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    await reloadPersisted();
+    onQueueChanged?.();
+  };
+
+  const updatePersistedDest = async (row: PersistedQueueRow, destFleetId: string) => {
+    const isNewFleet = destFleetId === NEW_FLEET;
+    const patch: any = {
+      destination_fleet_id: isNewFleet ? null : destFleetId,
+      destination_hex_x: isNewFleet ? (newFleetHex?.x ?? systemHexX ?? null) : null,
+      destination_hex_y: isNewFleet ? (newFleetHex?.y ?? systemHexY ?? null) : null,
+    };
+    const { error } = await (supabase as any).from("system_ship_production").update(patch).eq("id", row.id);
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    await reloadPersisted();
+    onQueueChanged?.();
+  };
+
 
   // Default to building at the planet (new fleet); user can pick an existing fleet instead.
   const defaultDestination = NEW_FLEET;
