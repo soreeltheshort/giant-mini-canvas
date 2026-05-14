@@ -270,6 +270,16 @@ export default function BuildShipsDialog({
           </div>
         )}
 
+        {/* Inline mini-map: pick destination hex for new fleets */}
+        {ownedHexes.length > 0 && (queueOrder.length === 0 || queueOrder.some(q => q.destFleetId === NEW_FLEET)) && (
+          <NewFleetHexPicker
+            ownedHexes={ownedHexes}
+            systemHex={systemHexX !== undefined && systemHexY !== undefined ? { x: systemHexX, y: systemHexY } : null}
+            selected={newFleetHex}
+            onSelect={(h) => setNewFleetHex(h)}
+          />
+        )}
+
         {/* Filters */}
         <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border">
           {FILTERS.map((f) => {
