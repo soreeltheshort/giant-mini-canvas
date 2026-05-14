@@ -548,7 +548,14 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
 
         <ImperialCard title="Manufacturing Queue">
           <div className="space-y-1.5">
-            <p className="text-[10px] text-muted-foreground italic">No ships under construction.</p>
+            <ShipProductionList
+              gameId={gameId}
+              systemId={realSys.system_id}
+              ownerClassification={playerOwnerClassification}
+              shipTypes={gameData?.shipTypes || []}
+              shipBuildCapacity={shipBuildCapacity}
+              refreshKey={queueRefresh}
+            />
             <button
               onClick={() => setShipDialogOpen(true)}
               disabled={!hasShipyard}
