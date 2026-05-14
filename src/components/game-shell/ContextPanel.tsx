@@ -9,6 +9,7 @@ import { ProgressBar } from "./ProgressBar";
 import FleetDetailContent from "./FleetDetailContent";
 import GarrisonCard from "./GarrisonCard";
 import BuildShipsDialog from "./BuildShipsDialog";
+import ShipProductionList from "./ShipProductionList";
 import type { SystemData, MapFleet, FacilityType } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
 
