@@ -213,7 +213,7 @@ export default function BuildShipsDialog({
                         {f.fleet_name}{f.atSystem ? " (here)" : ""}{f.is_garrison ? " ⚓" : ""}
                       </option>
                     ))}
-                    <option value={NEW_FLEET}>+ New fleet</option>
+                    <option value={NEW_FLEET}>🪐 Planet (new fleet)</option>
                   </select>
                   <div className="flex items-center gap-0.5">
                     <button
