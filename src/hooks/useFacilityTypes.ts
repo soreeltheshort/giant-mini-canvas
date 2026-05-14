@@ -21,6 +21,7 @@ export interface DbFacilityType {
   gunship_capacity: number;
   max_per_system: number;
   ship_build_capacity: number;
+  max_ship_hull_class: string;
 }
 
 export function useFacilityTypes() {
