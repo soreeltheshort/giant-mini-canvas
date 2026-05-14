@@ -36,7 +36,7 @@ function readinessMaintMult(level: number): number {
 }
 
 const STRATEGY_OPTIONS = [
-  "Flank", "Outflank", "Skirmish", "Cover Retreat", "Rear", "Attack Planet",
+  "Flank", "Outflank", "Skirmish", "Cover Retreat", "Rear", "Attack Planet", "Transfer",
 ];
 
 interface FleetDetail {
@@ -588,6 +588,60 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     onOrdersChanged?.();
   };
 
+  // ── Transfer target order persistence ──
+  const transferOrder = pendingOrders.find(
+    o => o.order_type === "other" && o.order_json?.kind === "transfer_ships",
+  );
+  const transferTarget: { kind: "fleet" | "system"; id: string } | null = transferOrder
+    ? (transferOrder.order_json?.target_fleet_id
+        ? { kind: "fleet", id: String(transferOrder.order_json.target_fleet_id) }
+        : transferOrder.order_json?.target_system_id != null
+          ? { kind: "system", id: String(transferOrder.order_json.target_system_id) }
+          : null)
+    : null;
+
+  const persistTransferTarget = async (target: { kind: "fleet" | "system"; id: string } | null) => {
+    if (!orderContext) return;
+    const { gameId, playerId, turnNumber } = orderContext;
+    await (supabase as any).from("player_orders")
+      .delete()
+      .eq("game_id", gameId).eq("player_id", playerId).eq("turn_number", turnNumber)
+      .eq("order_type", "other")
+      .filter("order_json->>fleet_id", "eq", fleet.fleet_id)
+      .filter("order_json->>kind", "eq", "transfer_ships");
+    let inserted: any = null;
+    if (target) {
+      const payload: any = { fleet_id: fleet.fleet_id, kind: "transfer_ships" };
+      if (target.kind === "fleet") payload.target_fleet_id = target.id;
+      else payload.target_system_id = Number(target.id);
+      const { data } = await (supabase as any).from("player_orders").insert({
+        game_id: gameId, player_id: playerId, turn_number: turnNumber,
+        order_type: "other", order_json: payload,
+      }).select("*").single();
+      inserted = data;
+      playOrderPlaced();
+    }
+    setPendingOrders(prev => {
+      const filtered = prev.filter(o => !(o.order_type === "other" && o.order_json?.kind === "transfer_ships"));
+      return inserted ? [...filtered, inserted] : filtered;
+    });
+    onOrdersChanged?.();
+  };
+
+  // Friendly fleets at the same hex (excluding self) — eligible transfer targets.
+  const sameHexFriendlyFleets = allFleets.filter(f =>
+    f.fleet_id !== fleet.fleet_id &&
+    f.owner_classification === fleet.owner_classification &&
+    f.hex_x === fleet.hex_x && f.hex_y === fleet.hex_y
+  );
+  // Owned systems at the same hex (planet drop-off).
+  const sameHexOwnedSystem = (() => {
+    const h = allHexes?.get(`${fleet.hex_x},${fleet.hex_y}`);
+    if (!h) return null;
+    return allSystems.find(s => s.hex_id === h.hex_id && s.owner === fleet.owner_classification) || null;
+  })();
+  const transferActive = detail.special1_role === "Transfer" || detail.special2_role === "Transfer";
+
   return (
     <>
       <ImperialCard title={fleet.fleet_name}>
@@ -926,6 +980,48 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               {STRATEGY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
+          {transferActive && (
+            <div className="border-t border-border pt-2 mt-1 space-y-1">
+              <label className="text-[10px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
+                Transfer Target
+              </label>
+              <select
+                disabled={!canEdit}
+                value={transferTarget ? `${transferTarget.kind}:${transferTarget.id}` : ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) { persistTransferTarget(null); return; }
+                  const [kind, id] = v.split(":") as ["fleet" | "system", string];
+                  persistTransferTarget({ kind, id });
+                }}
+                className="h-8 w-full rounded-sm border border-input bg-background px-2 text-xs text-foreground disabled:opacity-60"
+              >
+                <option value="">— pick a target —</option>
+                {sameHexOwnedSystem && (
+                  <option value={`system:${sameHexOwnedSystem.system_id}`}>
+                    🪐 {sameHexOwnedSystem.system_name} (planet)
+                  </option>
+                )}
+                {sameHexFriendlyFleets.length > 0 && (
+                  <optgroup label="Friendly fleets here">
+                    {sameHexFriendlyFleets.map(f => (
+                      <option key={f.fleet_id} value={`fleet:${f.fleet_id}`}>
+                        ⚓ {f.fleet_name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              {!sameHexOwnedSystem && sameHexFriendlyFleets.length === 0 && (
+                <p className="text-[10px] text-crimson italic">
+                  No friendly fleet or owned planet at this hex. Move here first.
+                </p>
+              )}
+              <p className="text-[10px] text-muted-foreground italic">
+                Drag ships into the <span className="text-bronze font-semibold">Transfer</span> group below; they will move to the target at end of turn.
+              </p>
+            </div>
+          )}
         </div>
       </ImperialCard>
 
