@@ -440,6 +440,7 @@ export type Database = {
           id: string
           maintenance: number
           max_per_system: number
+          max_ship_hull_class: string
           name: string
           ship_build_capacity: number
           survey_bonus: number
@@ -462,6 +463,7 @@ export type Database = {
           id?: string
           maintenance?: number
           max_per_system?: number
+          max_ship_hull_class?: string
           name: string
           ship_build_capacity?: number
           survey_bonus?: number
@@ -484,6 +486,7 @@ export type Database = {
           id?: string
           maintenance?: number
           max_per_system?: number
+          max_ship_hull_class?: string
           name?: string
           ship_build_capacity?: number
           survey_bonus?: number

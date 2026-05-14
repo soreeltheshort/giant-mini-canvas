@@ -1,0 +1,1 @@
+ALTER TABLE public.facility_types ADD COLUMN max_ship_hull_class text NOT NULL DEFAULT 'Any';
