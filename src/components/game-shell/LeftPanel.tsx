@@ -24,6 +24,7 @@ import FleetDetailContent from "./FleetDetailContent";
 import GarrisonCard from "./GarrisonCard";
 import { type GameMapData, DispatchesCard } from "./ContextPanel";
 import BuildShipsDialog from "./BuildShipsDialog";
+import ShipProductionList from "./ShipProductionList";
 import type { HexClassification } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS } from "@/lib/mapTypes";
 
