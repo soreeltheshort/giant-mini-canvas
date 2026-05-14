@@ -993,13 +993,22 @@ function InlineRegionDetail({
           onConfirm={async (queue) => {
             if (!gameId || !playerOwnerClassification || queue.length === 0) return;
             const { supabase } = await import("@/integrations/supabase/client");
+            const { data: maxRow } = await (supabase as any)
+              .from("system_ship_production")
+              .select("position")
+              .eq("game_id", gameId)
+              .eq("system_id", realSys.system_id)
+              .order("position", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            const basePos = (maxRow?.position ?? 0) + 1;
             const rows = queue.map((q, idx) => {
               const st = (gameData?.shipTypes || []).find(s => s.id === q.ship_type_id);
               const cost = (st?.point_cost ?? 0) * q.quantity;
               return {
                 game_id: gameId,
                 system_id: realSys.system_id,
-                position: Date.now() + idx,
+                position: basePos + idx,
                 ship_type_id: q.ship_type_id,
                 quantity: q.quantity,
                 destination_fleet_id: q.destination_fleet_id,
