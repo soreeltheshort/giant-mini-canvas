@@ -1098,7 +1098,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         </div>
       </ImperialCard>
 
-      {incomingTransit.length > 0 && (
+      {(incomingTransit.length > 0 || incomingBuild.length > 0) && (
         <ImperialCard title="Incoming Reinforcements">
           <div className="space-y-1">
             {incomingTransit.map(t => (
@@ -1107,7 +1107,17 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                   {t.quantity}× {t.ship_name}
                 </span>
                 <span className="text-bronze-dark font-heading uppercase tracking-wider text-[10px]">
-                  ETA {t.eta} turn{t.eta === 1 ? "" : "s"} · ({t.virt_x}, {t.virt_y})
+                  In Transit · ETA {t.eta} turn{t.eta === 1 ? "" : "s"} · ({t.virt_x}, {t.virt_y})
+                </span>
+              </div>
+            ))}
+            {incomingBuild.map(b => (
+              <div key={b.id} className="flex items-center justify-between text-[11px]">
+                <span className="text-senate-dark font-semibold">
+                  {b.quantity}× {b.ship_name}
+                </span>
+                <span className="text-bronze-dark font-heading uppercase tracking-wider text-[10px]">
+                  Building · {b.points_remaining} pts left · {b.system_name}
                 </span>
               </div>
             ))}
