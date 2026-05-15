@@ -138,6 +138,8 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const [strikecraftCatalog, setStrikecraftCatalog] = useState<StrikecraftCatalogEntry[]>([]);
   // Ships currently in transit toward THIS fleet (from production or transfer).
   const [incomingTransit, setIncomingTransit] = useState<Array<{ id: string; ship_type_id: string; quantity: number; virt_x: number; virt_y: number; eta: number; ship_name: string }>>([]);
+  // Ships still being built (in system_ship_production queue) destined for THIS fleet.
+  const [incomingBuild, setIncomingBuild] = useState<Array<{ id: string; ship_type_id: string; quantity: number; points_remaining: number; system_id: number; system_name: string; ship_name: string }>>([]);
 
   const sourceId = fleet.source_fleet_id;
 
