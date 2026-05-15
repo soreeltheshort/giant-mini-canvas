@@ -130,6 +130,75 @@ const VIRTUAL_DEF_FIELDS: { key: keyof ShipType; label: string }[] = VIRTUAL_SPE
   label: g,
 }));
 
+interface HullClass { id: string; code: string; sort_order: number; }
+
+function HullClassesPanel() {
+  const [rows, setRows] = useState<HullClass[]>([]);
+  const [newCode, setNewCode] = useState("");
+  const reload = async () => {
+    const { data } = await (supabase as any)
+      .from("ship_hull_classes")
+      .select("id, code, sort_order")
+      .order("sort_order", { ascending: true });
+    setRows(data || []);
+  };
+  useEffect(() => { reload(); }, []);
+
+  const updateRow = async (id: string, patch: Partial<HullClass>) => {
+    await (supabase as any).from("ship_hull_classes").update(patch).eq("id", id);
+    reload();
+  };
+  const removeRow = async (id: string) => {
+    await (supabase as any).from("ship_hull_classes").delete().eq("id", id);
+    reload();
+  };
+  const addRow = async () => {
+    const code = newCode.trim().toUpperCase();
+    if (!code) return;
+    const nextOrder = (rows[rows.length - 1]?.sort_order || 0) + 10;
+    await (supabase as any).from("ship_hull_classes").insert({ code, sort_order: nextOrder });
+    setNewCode("");
+    reload();
+  };
+
+  return (
+    <div className="mb-6 border border-border rounded p-4">
+      <h2 className="font-heading text-sm font-bold text-foreground mb-2">Ship Hull Classes (smallest → largest)</h2>
+      <p className="text-xs text-muted-foreground mb-3">Used as the "max ship hull class" option for shipyard facilities.</p>
+      <div className="flex flex-wrap gap-2 items-center">
+        {rows.map((r) => (
+          <div key={r.id} className="flex items-center gap-1 border border-border rounded px-2 py-1 bg-muted">
+            <input
+              type="text"
+              defaultValue={r.code}
+              onBlur={(e) => { const v = e.target.value.trim().toUpperCase(); if (v && v !== r.code) updateRow(r.id, { code: v }); }}
+              className="w-14 h-6 text-xs bg-background border border-input rounded px-1"
+            />
+            <input
+              type="number"
+              defaultValue={r.sort_order}
+              onBlur={(e) => { const v = parseInt(e.target.value) || 0; if (v !== r.sort_order) updateRow(r.id, { sort_order: v }); }}
+              className="w-16 h-6 text-xs bg-background border border-input rounded px-1"
+              title="Sort order (lower = smaller)"
+            />
+            <button onClick={() => removeRow(r.id)} className="text-xs text-destructive hover:underline">×</button>
+          </div>
+        ))}
+        <div className="flex items-center gap-1">
+          <input
+            type="text"
+            value={newCode}
+            onChange={(e) => setNewCode(e.target.value)}
+            placeholder="New code"
+            className="w-20 h-6 text-xs bg-background border border-input rounded px-1"
+          />
+          <button onClick={addRow} className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded">Add</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const AdminShips = () => {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
