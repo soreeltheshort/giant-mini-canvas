@@ -1232,7 +1232,7 @@ const PlayerGame = () => {
         turnNumber={game.turn_number}
         factionName={factionName}
         playerName={playerName}
-        backTo={isAdmin ? "/admin/games" : "/my-games"}
+        backTo={isAdmin ? "/admin/games" : "/new-game"}
         isImpersonating={isAdmin}
       />
 
