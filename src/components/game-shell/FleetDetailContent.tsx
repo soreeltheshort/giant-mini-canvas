@@ -138,6 +138,8 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const [strikecraftCatalog, setStrikecraftCatalog] = useState<StrikecraftCatalogEntry[]>([]);
   // Ships currently in transit toward THIS fleet (from production or transfer).
   const [incomingTransit, setIncomingTransit] = useState<Array<{ id: string; ship_type_id: string; quantity: number; virt_x: number; virt_y: number; eta: number; ship_name: string }>>([]);
+  // Ships still being built (in system_ship_production queue) destined for THIS fleet.
+  const [incomingBuild, setIncomingBuild] = useState<Array<{ id: string; ship_type_id: string; quantity: number; points_remaining: number; system_id: number; system_name: string; ship_name: string }>>([]);
 
   const sourceId = fleet.source_fleet_id;
 
@@ -326,6 +328,36 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           };
         });
         setIncomingTransit(incoming);
+      }
+
+      // Load ships still being constructed and destined for this fleet.
+      const { data: buildRows } = await (supabase as any)
+        .from("system_ship_production")
+        .select("id, ship_type_id, quantity, points_remaining, system_id")
+        .eq("destination_fleet_id", fleet.fleet_id);
+      if (!cancelled) {
+        // Resolve system names from games.map_data_json (already in mapState upstream),
+        // but here we just look up by system_id from the ship name list when available.
+        const sysIds = Array.from(new Set((buildRows || []).map((r: any) => r.system_id)));
+        let sysNames: Record<number, string> = {};
+        if (sysIds.length > 0) {
+          // Best-effort lookup from game_fleets.system_id is not enough; fetch from games map_data_json upstream is complex.
+          // Fall back to "System #N" naming.
+          sysIds.forEach((id: number) => { sysNames[id] = `System #${id}`; });
+        }
+        const builds = (buildRows || []).map((r: any) => {
+          const st = shipTypes.find(s => s.id === r.ship_type_id) as any;
+          return {
+            id: r.id,
+            ship_type_id: r.ship_type_id,
+            quantity: Number(r.quantity) || 0,
+            points_remaining: Number(r.points_remaining) || 0,
+            system_id: r.system_id,
+            system_name: sysNames[r.system_id] || `System #${r.system_id}`,
+            ship_name: st?.name || "Ship",
+          };
+        });
+        setIncomingBuild(builds);
       }
 
       setLoading(false);
@@ -1066,7 +1098,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         </div>
       </ImperialCard>
 
-      {incomingTransit.length > 0 && (
+      {(incomingTransit.length > 0 || incomingBuild.length > 0) && (
         <ImperialCard title="Incoming Reinforcements">
           <div className="space-y-1">
             {incomingTransit.map(t => (
@@ -1075,7 +1107,17 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                   {t.quantity}× {t.ship_name}
                 </span>
                 <span className="text-bronze-dark font-heading uppercase tracking-wider text-[10px]">
-                  ETA {t.eta} turn{t.eta === 1 ? "" : "s"} · ({t.virt_x}, {t.virt_y})
+                  In Transit · ETA {t.eta} turn{t.eta === 1 ? "" : "s"} · ({t.virt_x}, {t.virt_y})
+                </span>
+              </div>
+            ))}
+            {incomingBuild.map(b => (
+              <div key={b.id} className="flex items-center justify-between text-[11px]">
+                <span className="text-senate-dark font-semibold">
+                  {b.quantity}× {b.ship_name}
+                </span>
+                <span className="text-bronze-dark font-heading uppercase tracking-wider text-[10px]">
+                  Building · {b.points_remaining} pts left · {b.system_name}
                 </span>
               </div>
             ))}
