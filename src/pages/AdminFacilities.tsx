@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes, DbFacilityType } from "@/hooks/useFacilityTypes";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,17 @@ const STAT_DEFS: { key: keyof DbFacilityType; label: string; prefix?: string; su
   { key: "ship_build_capacity", label: "Ship Build Cap (pts/turn)" },
 ];
 
-const HULL_OPTIONS = ["Any", "Capital", "Cruiser", "Escort", "Strikecraft"];
+function useHullClasses() {
+  const [classes, setClasses] = useState<{ id: string; code: string; sort_order: number }[]>([]);
+  useEffect(() => {
+    (supabase as any)
+      .from("ship_hull_classes")
+      .select("id, code, sort_order")
+      .order("sort_order", { ascending: true })
+      .then(({ data }: any) => setClasses(data || []));
+  }, []);
+  return classes;
+}
 
 function StatBadges({ ft, allFacilityTypes }: { ft: DbFacilityType; allFacilityTypes: DbFacilityType[] }) {
   const nonZero = STAT_DEFS.filter((s) => (ft[s.key] as number) !== 0);
