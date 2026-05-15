@@ -440,7 +440,7 @@ export type Database = {
           id: string
           maintenance: number
           max_per_system: number
-          max_ship_hull_class: string
+          max_ship_hull_class: string | null
           name: string
           ship_build_capacity: number
           survey_bonus: number
@@ -463,7 +463,7 @@ export type Database = {
           id?: string
           maintenance?: number
           max_per_system?: number
-          max_ship_hull_class?: string
+          max_ship_hull_class?: string | null
           name: string
           ship_build_capacity?: number
           survey_bonus?: number
@@ -486,7 +486,7 @@ export type Database = {
           id?: string
           maintenance?: number
           max_per_system?: number
-          max_ship_hull_class?: string
+          max_ship_hull_class?: string | null
           name?: string
           ship_build_capacity?: number
           survey_bonus?: number
@@ -1269,6 +1269,33 @@ export type Database = {
           id?: string
           name?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      ship_hull_classes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
         }
         Relationships: []
       }
