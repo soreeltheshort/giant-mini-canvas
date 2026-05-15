@@ -439,6 +439,7 @@ const AdminShips = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container py-16">
+        <HullClassesPanel />
         <div className="flex items-center justify-between mb-4">
           <h1 className="font-heading text-2xl font-bold text-foreground">Ship Catalog (Admin)</h1>
           <div className="flex gap-2">
