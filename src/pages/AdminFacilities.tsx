@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes, DbFacilityType } from "@/hooks/useFacilityTypes";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,12 +23,22 @@ const STAT_DEFS: { key: keyof DbFacilityType; label: string; prefix?: string; su
   { key: "ship_build_capacity", label: "Ship Build Cap (pts/turn)" },
 ];
 
-const HULL_OPTIONS = ["Any", "Capital", "Cruiser", "Escort", "Strikecraft"];
+function useHullClasses() {
+  const [classes, setClasses] = useState<{ id: string; code: string; sort_order: number }[]>([]);
+  useEffect(() => {
+    (supabase as any)
+      .from("ship_hull_classes")
+      .select("id, code, sort_order")
+      .order("sort_order", { ascending: true })
+      .then(({ data }: any) => setClasses(data || []));
+  }, []);
+  return classes;
+}
 
 function StatBadges({ ft, allFacilityTypes }: { ft: DbFacilityType; allFacilityTypes: DbFacilityType[] }) {
   const nonZero = STAT_DEFS.filter((s) => (ft[s.key] as number) !== 0);
   const consumed = ft.consumed_facility_id ? allFacilityTypes.find(f => f.id === ft.consumed_facility_id) : null;
-  const showHull = ft.ship_build_capacity > 0 && ft.max_ship_hull_class && ft.max_ship_hull_class !== "Any";
+  const showHull = ft.ship_build_capacity > 0 && !!ft.max_ship_hull_class;
   if (nonZero.length === 0 && !consumed && !showHull) return null;
   return (
     <div className="flex flex-wrap gap-1 mt-1">
@@ -57,6 +68,7 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
   currentId?: string;
 }) {
   const selectableTypes = allFacilityTypes.filter(f => f.id !== currentId);
+  const hullClasses = useHullClasses();
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -89,11 +101,12 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
         <div className="flex flex-col gap-0.5">
           <label className="text-[10px] text-muted-foreground">Max Ship Hull Class (shipyards only)</label>
           <select
-            value={fields.max_ship_hull_class || "Any"}
-            onChange={(e) => patch({ max_ship_hull_class: e.target.value })}
+            value={fields.max_ship_hull_class || ""}
+            onChange={(e) => patch({ max_ship_hull_class: e.target.value || (null as any) })}
             className="h-7 text-xs rounded border border-input bg-background px-2"
           >
-            {HULL_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+            <option value="">No limit</option>
+            {hullClasses.map(h => <option key={h.id} value={h.code}>{h.code}</option>)}
           </select>
         </div>
       )}
@@ -153,7 +166,7 @@ function AddFacilityForm({ onAdd, allFacilityTypes }: { onAdd: (fields: Omit<DbF
     cost: 0, maintenance: 0, condition_bonus: 0,
     tribute_flat: 0, tribute_percent: 0, survey_bonus: 0, ground_defense_bonus: 0,
     turns_to_build: 1, construction_kickback: 0, consumed_facility_id: null,
-    fighter_capacity: 0, gunship_capacity: 0, max_per_system: 0, ship_build_capacity: 0, max_ship_hull_class: "Any",
+    fighter_capacity: 0, gunship_capacity: 0, max_per_system: 0, ship_build_capacity: 0, max_ship_hull_class: null,
   };
   const [fields, setFields] = useState(empty);
   const patch = (p: Partial<Omit<DbFacilityType, "id">>) => setFields((prev) => ({ ...prev, ...p }));
