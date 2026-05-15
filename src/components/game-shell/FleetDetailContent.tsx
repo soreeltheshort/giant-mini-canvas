@@ -330,6 +330,36 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
         setIncomingTransit(incoming);
       }
 
+      // Load ships still being constructed and destined for this fleet.
+      const { data: buildRows } = await (supabase as any)
+        .from("system_ship_production")
+        .select("id, ship_type_id, quantity, points_remaining, system_id")
+        .eq("destination_fleet_id", fleet.fleet_id);
+      if (!cancelled) {
+        // Resolve system names from games.map_data_json (already in mapState upstream),
+        // but here we just look up by system_id from the ship name list when available.
+        const sysIds = Array.from(new Set((buildRows || []).map((r: any) => r.system_id)));
+        let sysNames: Record<number, string> = {};
+        if (sysIds.length > 0) {
+          // Best-effort lookup from game_fleets.system_id is not enough; fetch from games map_data_json upstream is complex.
+          // Fall back to "System #N" naming.
+          sysIds.forEach((id: number) => { sysNames[id] = `System #${id}`; });
+        }
+        const builds = (buildRows || []).map((r: any) => {
+          const st = shipTypes.find(s => s.id === r.ship_type_id) as any;
+          return {
+            id: r.id,
+            ship_type_id: r.ship_type_id,
+            quantity: Number(r.quantity) || 0,
+            points_remaining: Number(r.points_remaining) || 0,
+            system_id: r.system_id,
+            system_name: sysNames[r.system_id] || `System #${r.system_id}`,
+            ship_name: st?.name || "Ship",
+          };
+        });
+        setIncomingBuild(builds);
+      }
+
       setLoading(false);
     }
     load();
