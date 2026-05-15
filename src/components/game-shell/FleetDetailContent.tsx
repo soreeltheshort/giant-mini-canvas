@@ -1112,13 +1112,36 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               </div>
             ))}
             {incomingBuild.map(b => (
-              <div key={b.id} className="flex items-center justify-between text-[11px]">
-                <span className="text-senate-dark font-semibold">
+              <div key={b.id} className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="text-senate-dark font-semibold whitespace-nowrap">
                   {b.quantity}× {b.ship_name}
                 </span>
-                <span className="text-bronze-dark font-heading uppercase tracking-wider text-[10px]">
-                  Building · {b.points_remaining} pts left · {b.system_name}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-bronze-dark font-heading uppercase tracking-wider text-[10px]">
+                    Building · {b.points_remaining} pts · {b.system_name}
+                  </span>
+                  {canEdit && (
+                    <select
+                      className="text-[10px] bg-marble border border-bronze/40 px-1 py-0.5 font-body"
+                      value={fleet.fleet_id}
+                      onChange={async (e) => {
+                        const newDest = e.target.value;
+                        if (newDest === fleet.fleet_id) return;
+                        await (supabase as any)
+                          .from("system_ship_production")
+                          .update({ destination_fleet_id: newDest })
+                          .eq("id", b.id);
+                        setIncomingBuild(prev => prev.filter(x => x.id !== b.id));
+                        onOrdersChanged?.();
+                      }}
+                    >
+                      <option value={fleet.fleet_id}>{fleet.fleet_name} (current)</option>
+                      {friendlyFleets.map(f => (
+                        <option key={f.fleet_id} value={f.fleet_id}>{f.fleet_name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
             ))}
           </div>
