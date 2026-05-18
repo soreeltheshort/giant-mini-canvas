@@ -110,6 +110,14 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
           </select>
         </div>
       )}
+      <label className="flex items-center gap-2 text-xs text-foreground pt-1">
+        <input
+          type="checkbox"
+          checked={!!fields.synod}
+          onChange={(e) => patch({ synod: e.target.checked })}
+        />
+        Synod facility (hidden from non-admin players)
+      </label>
     </div>
   );
 }
