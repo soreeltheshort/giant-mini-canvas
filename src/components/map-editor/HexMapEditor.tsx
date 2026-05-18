@@ -393,6 +393,11 @@ const HexMapEditor: React.FC = () => {
               const hex = Array.from(mapState.hexes.values()).find((h) => h.hex_id === hexId);
               if (hex) setEditorState((s) => ({ ...s, selectedHexKey: hexKey(hex.x, hex.y) }));
             }}
+            selectedHexId={selectedHex?.has_system ? selectedHex.hex_id : null}
+            factions={factions}
+            dbFacilityTypes={dbFacilityTypes}
+            onUpdateSystem={handleUpdateSystem}
+            onCloseEditor={() => setEditorState((s) => ({ ...s, selectedHexKey: null }))}
           />
         ) : (
           <LeftPanel

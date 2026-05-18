@@ -8,15 +8,33 @@ import {
   HexClassification,
   hexKey,
 } from "@/lib/mapTypes";
+import { DbFaction } from "@/hooks/useFactions";
+import { DbFacilityType } from "@/hooks/useFacilityTypes";
+import PlanetEditorCard from "./PlanetEditorCard";
 
 interface Props {
   systems: Map<number, SystemData>;
   hexes: Map<string, HexData>;
   facilityTypes: FacilityType[];
   onSelectSystem: (hexId: number) => void;
+  selectedHexId?: number | null;
+  factions?: DbFaction[];
+  dbFacilityTypes?: DbFacilityType[];
+  onUpdateSystem?: (hexId: number, updates: Partial<Omit<SystemData, "system_id" | "map_id" | "hex_id">>) => void;
+  onCloseEditor?: () => void;
 }
 
-const PlanetsPanel: React.FC<Props> = ({ systems, hexes, facilityTypes, onSelectSystem }) => {
+const PlanetsPanel: React.FC<Props> = ({
+  systems,
+  hexes,
+  facilityTypes,
+  onSelectSystem,
+  selectedHexId,
+  factions = [],
+  dbFacilityTypes = [],
+  onUpdateSystem,
+  onCloseEditor,
+}) => {
   const ftMap = useMemo(() => {
     const m = new Map<string, FacilityType>();
     for (const ft of facilityTypes) m.set(ft.facility_type_id, ft);
@@ -48,6 +66,11 @@ const PlanetsPanel: React.FC<Props> = ({ systems, hexes, facilityTypes, onSelect
     );
   }
 
+  const selectedSystem = selectedHexId != null ? systems.get(selectedHexId) : undefined;
+  const selectedHex = selectedSystem
+    ? Array.from(hexes.values()).find((h) => h.hex_id === selectedHexId)
+    : undefined;
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 pb-2">
@@ -56,6 +79,19 @@ const PlanetsPanel: React.FC<Props> = ({ systems, hexes, facilityTypes, onSelect
         </h3>
       </div>
       <div className="flex-1 overflow-y-auto px-2 pb-4">
+        {selectedSystem && selectedHex && onUpdateSystem && (
+          <div className="mb-3 px-1">
+            <PlanetEditorCard
+              system={selectedSystem}
+              hex={selectedHex}
+              factions={factions}
+              facilityTypes={facilityTypes}
+              dbFacilityTypes={dbFacilityTypes}
+              onUpdateSystem={onUpdateSystem}
+              onClose={() => onCloseEditor?.()}
+            />
+          </div>
+        )}
         <div className="space-y-1">
           {systemList.map((sys) => {
             const classification = sys.classification as HexClassification;
