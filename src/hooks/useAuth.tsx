@@ -51,16 +51,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsTester(false);
       setIsOptIn(false);
       if (session?.user) {
-        setTimeout(() => checkRoles(session.user.id), 0);
+        setLoading(true);
+        setTimeout(() => {
+          checkRoles(session.user.id).finally(() => setLoading(false));
+        }, 0);
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        checkRoles(session.user.id);
+        checkRoles(session.user.id).finally(() => setLoading(false));
         // Heartbeat: update last_seen_at at most once per hour per browser
         const key = `lastSeenPing:${session.user.id}`;
         const last = Number(localStorage.getItem(key) || 0);
@@ -68,8 +72,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           localStorage.setItem(key, String(Date.now()));
           supabase.from("profiles").update({ last_seen_at: new Date().toISOString() }).eq("user_id", session.user.id).then(() => {});
         }
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
