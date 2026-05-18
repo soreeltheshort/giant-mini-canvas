@@ -50,6 +50,7 @@ const HexMapCanvas: React.FC<Props> = ({
   showPlanetSizes = false,
   ownerColorMap,
   centerOnHex,
+  visibleSystemHexIds,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
