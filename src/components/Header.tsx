@@ -34,10 +34,12 @@ const Header = () => {
   // Studio mode = Mini Giant Games marketing surface (home, about, public games index/detail).
   // Renders a simplified nav: Games, About Us, Sign In/Out only.
   const isStudioMode =
-    location.pathname === "/" ||
-    location.pathname === "/about" ||
-    location.pathname === "/games" ||
-    location.pathname.startsWith("/games/");
+    !isAdmin && (
+      location.pathname === "/" ||
+      location.pathname === "/about" ||
+      location.pathname === "/games" ||
+      location.pathname.startsWith("/games/")
+    );
 
   const toggleOptIn = async () => {
     if (!user) return;
