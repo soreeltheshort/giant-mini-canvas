@@ -39,10 +39,12 @@ function StatBadges({ ft, allFacilityTypes }: { ft: DbFacilityType; allFacilityT
   const nonZero = STAT_DEFS.filter((s) => (ft[s.key] as number) !== 0);
   const consumed = ft.consumed_facility_id ? allFacilityTypes.find(f => f.id === ft.consumed_facility_id) : null;
   const showHull = ft.ship_build_capacity > 0 && !!ft.max_ship_hull_class;
-  if (nonZero.length === 0 && !consumed && !showHull) return null;
+  if (nonZero.length === 0 && !consumed && !showHull && !ft.synod) return null;
   return (
     <div className="flex flex-wrap gap-1 mt-1">
-      {nonZero.map((s) => (
+      {ft.synod && (
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground font-mono">Synod</span>
+      )}
         <span key={s.key} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
           {s.label}: {s.prefix || ""}{ft[s.key] as number}{s.suffix || ""}
         </span>
