@@ -227,7 +227,7 @@ const HexMapCanvas: React.FC<Props> = ({
     }
 
     ctx.restore();
-  }, [hexes, systems, fleets, editorState]);
+  }, [hexes, systems, fleets, editorState, showPlanetSizes]);
 
   useEffect(() => {
     const loop = () => {
