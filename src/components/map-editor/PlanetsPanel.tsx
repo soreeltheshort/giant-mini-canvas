@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
+
 import {
   SystemData,
   FacilityType,
@@ -44,7 +45,6 @@ const PlanetsPanel: React.FC<Props> = ({
   const systemList = useMemo(() => {
     const list: (SystemData & { hex?: HexData })[] = [];
     for (const sys of systems.values()) {
-      // Find hex for this system
       let hex: HexData | undefined;
       for (const h of hexes.values()) {
         if (h.hex_id === sys.hex_id) { hex = h; break; }
@@ -54,6 +54,34 @@ const PlanetsPanel: React.FC<Props> = ({
     list.sort((a, b) => a.system_name.localeCompare(b.system_name));
     return list;
   }, [systems, hexes]);
+
+  const ownerOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of systemList) set.add(s.owner || "");
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [systemList]);
+
+  const [ownerFilter, setOwnerFilter] = useState<string>("__all");
+  const [condMin, setCondMin] = useState<string>("");
+  const [condMax, setCondMax] = useState<string>("");
+  const [popMin, setPopMin] = useState<string>("");
+  const [popMax, setPopMax] = useState<string>("");
+
+  const filteredList = useMemo(() => {
+    const cMin = condMin === "" ? -Infinity : Number(condMin);
+    const cMax = condMax === "" ? Infinity : Number(condMax);
+    const pMin = popMin === "" ? -Infinity : Number(popMin);
+    const pMax = popMax === "" ? Infinity : Number(popMax);
+    return systemList.filter((s) => {
+      if (ownerFilter !== "__all" && (s.owner || "") !== ownerFilter) return false;
+      const c = s.condition ?? 0;
+      const p = s.current_population ?? 0;
+      if (c < cMin || c > cMax) return false;
+      if (p < pMin || p > pMax) return false;
+      return true;
+    });
+  }, [systemList, ownerFilter, condMin, condMax, popMin, popMax]);
+
 
   if (systemList.length === 0) {
     return (
@@ -73,10 +101,48 @@ const PlanetsPanel: React.FC<Props> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 pb-2">
+      <div className="p-4 pb-2 space-y-2">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Planets ({systemList.length})
+          Planets ({filteredList.length}/{systemList.length})
         </h3>
+        <div className="space-y-1.5">
+          <select
+            value={ownerFilter}
+            onChange={(e) => setOwnerFilter(e.target.value)}
+            className="w-full rounded border border-border bg-background px-2 py-1 text-[11px] text-foreground"
+          >
+            <option value="__all">All owners</option>
+            {ownerOptions.map((o) => (
+              <option key={o || "__none"} value={o}>{o || "(unowned)"}</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] w-12 text-muted-foreground">Cond</span>
+            <input
+              type="number" placeholder="min" value={condMin}
+              onChange={(e) => setCondMin(e.target.value)}
+              className="w-full min-w-0 rounded border border-border bg-background px-1.5 py-1 text-[11px] text-foreground"
+            />
+            <input
+              type="number" placeholder="max" value={condMax}
+              onChange={(e) => setCondMax(e.target.value)}
+              className="w-full min-w-0 rounded border border-border bg-background px-1.5 py-1 text-[11px] text-foreground"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] w-12 text-muted-foreground">Pop</span>
+            <input
+              type="number" placeholder="min" value={popMin}
+              onChange={(e) => setPopMin(e.target.value)}
+              className="w-full min-w-0 rounded border border-border bg-background px-1.5 py-1 text-[11px] text-foreground"
+            />
+            <input
+              type="number" placeholder="max" value={popMax}
+              onChange={(e) => setPopMax(e.target.value)}
+              className="w-full min-w-0 rounded border border-border bg-background px-1.5 py-1 text-[11px] text-foreground"
+            />
+          </div>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto px-2 pb-4">
         {selectedSystem && selectedHex && onUpdateSystem && (
@@ -93,7 +159,7 @@ const PlanetsPanel: React.FC<Props> = ({
           </div>
         )}
         <div className="space-y-1">
-          {systemList.map((sys) => {
+          {filteredList.map((sys) => {
             const classification = sys.classification as HexClassification;
             const color = CLASSIFICATION_COLORS[classification] || "#666";
             const label = CLASSIFICATION_LABELS[classification] || sys.classification;
