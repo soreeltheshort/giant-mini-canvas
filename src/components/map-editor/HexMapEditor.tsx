@@ -438,19 +438,21 @@ const HexMapEditor: React.FC = () => {
           showPlanetSizes={leftTab === "planets"}
         />
       </div>
-      <RightPanel
-        hex={selectedHex}
-        system={selectedSystem}
-        fleetsAtHex={selectedHex ? (mapState.fleets || []).filter(f => f.hex_x === selectedHex.x && f.hex_y === selectedHex.y) : []}
-        facilityTypes={facilityTypesForUI}
-        dbFacilityTypes={dbFacilityTypes}
-        factions={factions}
-        onClassificationChange={handleClassificationChange}
-        onAddSystem={handleAddSystem}
-        onUpdateSystem={handleUpdateSystem}
-        onRemoveSystem={handleRemoveSystem}
-        onSearchCoords={handleSearchCoords}
-      />
+      {leftTab !== "planets" && (
+        <RightPanel
+          hex={selectedHex}
+          system={selectedSystem}
+          fleetsAtHex={selectedHex ? (mapState.fleets || []).filter(f => f.hex_x === selectedHex.x && f.hex_y === selectedHex.y) : []}
+          facilityTypes={facilityTypesForUI}
+          dbFacilityTypes={dbFacilityTypes}
+          factions={factions}
+          onClassificationChange={handleClassificationChange}
+          onAddSystem={handleAddSystem}
+          onUpdateSystem={handleUpdateSystem}
+          onRemoveSystem={handleRemoveSystem}
+          onSearchCoords={handleSearchCoords}
+        />
+      )}
     </div>
   );
 };
