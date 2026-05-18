@@ -596,11 +596,11 @@ const PlayerGame = () => {
 
   // Admin-only override: reveal the entire map regardless of player sensor coverage.
   const [adminRevealAll, setAdminRevealAll] = useState(false);
-  const allSystemIds = React.useMemo(
+  const allSystemIds = useMemo(
     () => (mapState ? Array.from(mapState.systems.keys()) : []),
     [mapState]
   );
-  const allHexKeys = React.useMemo(() => {
+  const allHexKeys = useMemo(() => {
     const set = new Set<string>();
     if (mapState) for (const k of mapState.hexes.keys()) set.add(k);
     return set;
