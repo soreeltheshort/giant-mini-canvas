@@ -352,6 +352,8 @@ const HexMapEditor: React.FC = () => {
     return m;
   }, [factions]);
 
+  const [centerOnHex, setCenterOnHex] = useState<{ x: number; y: number; nonce: number } | null>(null);
+
   const handleAddFleet = useCallback((fleet: MapFleet) => {
     setMapState((prev) => ({ ...prev, fleets: [...(prev.fleets || []), fleet] }));
   }, []);
