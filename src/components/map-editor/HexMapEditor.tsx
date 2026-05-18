@@ -456,6 +456,7 @@ const HexMapEditor: React.FC = () => {
           showPlanetSizes={leftTab === "planets"}
           ownerColorMap={ownerColorMap}
           centerOnHex={centerOnHex}
+          visibleSystemHexIds={leftTab === "planets" ? visibleSystemHexIds : null}
         />
       </div>
       {leftTab !== "planets" && (
