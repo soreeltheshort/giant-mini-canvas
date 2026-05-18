@@ -1312,7 +1312,18 @@ const PlayerGame = () => {
         />
 
         {/* Center Map + Overlay Demo */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {isAdmin && (
+            <label className="absolute top-2 right-2 z-20 flex items-center gap-2 rounded bg-background/90 border border-bronze/30 px-2 py-1 text-[10px] font-heading uppercase tracking-wider text-foreground cursor-pointer hover:bg-background">
+              <input
+                type="checkbox"
+                checked={adminRevealAll}
+                onChange={(e) => setAdminRevealAll(e.target.checked)}
+                className="h-3 w-3 accent-crimson"
+              />
+              Admin: Reveal Full Map
+            </label>
+          )}
           {mapState ? (
             <PlayerMapCanvas
               hexes={mapState.hexes}
