@@ -341,6 +341,17 @@ const HexMapEditor: React.FC = () => {
 
   const stats = useMemo(() => getProvinceStats(mapState), [mapState]);
 
+  // Map Testing only: owner → color for planet rendering.
+  // Includes faction names plus Synod fallback.
+  const ownerColorMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const f of factions) {
+      if (f.name && f.color) m.set(f.name.toLowerCase(), f.color);
+    }
+    if (!m.has("synod")) m.set("synod", "#c9a84c");
+    return m;
+  }, [factions]);
+
   const handleAddFleet = useCallback((fleet: MapFleet) => {
     setMapState((prev) => ({ ...prev, fleets: [...(prev.fleets || []), fleet] }));
   }, []);
@@ -436,6 +447,7 @@ const HexMapEditor: React.FC = () => {
           onBrushPaint={handleBrushPaint}
           onFloodFill={handleFloodFill}
           showPlanetSizes={leftTab === "planets"}
+          ownerColorMap={ownerColorMap}
         />
       </div>
       {leftTab !== "planets" && (

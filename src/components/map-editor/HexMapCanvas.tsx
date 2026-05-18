@@ -29,6 +29,7 @@ interface Props {
   onBrushPaint: (hexes: HexData[]) => void;
   onFloodFill: (hex: HexData) => void;
   showPlanetSizes?: boolean;
+  ownerColorMap?: Map<string, string>;
 }
 
 const HEX_SIZE = 10;
@@ -45,6 +46,7 @@ const HexMapCanvas: React.FC<Props> = ({
   onBrushPaint,
   onFloodFill,
   showPlanetSizes = false,
+  ownerColorMap,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -143,6 +145,9 @@ const HexMapCanvas: React.FC<Props> = ({
       // Solar system marker
       if (hex.has_system && editorState.showSystems) {
         const sys = systems.get(hex.hex_id);
+        const ownerKey = sys?.owner ? sys.owner.toLowerCase() : "";
+        const ownerColor = ownerKey && ownerColorMap ? ownerColorMap.get(ownerKey) : undefined;
+        const planetFill = ownerColor || "#3b82f6";
         // Planet size visualization (Map Testing > Planets tab only)
         if (showPlanetSizes && sys) {
           const hexWidth = Math.sqrt(3) * size; // pointy-top hex width
@@ -151,7 +156,7 @@ const HexMapCanvas: React.FC<Props> = ({
           const ratio = Math.min(1, (cond + pop) / 200);
           const planetRadius = ratio * 0.75 * hexWidth; // diameter up to 1.5×hexWidth
           if (planetRadius > 0.5) {
-            ctx.fillStyle = "#3b82f6";
+            ctx.fillStyle = planetFill;
             ctx.beginPath();
             ctx.arc(px, py, planetRadius, 0, Math.PI * 2);
             ctx.fill();
@@ -160,7 +165,7 @@ const HexMapCanvas: React.FC<Props> = ({
             ctx.stroke();
           }
         } else {
-          ctx.fillStyle = "#000000";
+          ctx.fillStyle = ownerColor || "#000000";
           ctx.beginPath();
           ctx.arc(px, py, size * 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -227,7 +232,7 @@ const HexMapCanvas: React.FC<Props> = ({
     }
 
     ctx.restore();
-  }, [hexes, systems, fleets, editorState, showPlanetSizes]);
+  }, [hexes, systems, fleets, editorState, showPlanetSizes, ownerColorMap]);
 
   useEffect(() => {
     const loop = () => {
