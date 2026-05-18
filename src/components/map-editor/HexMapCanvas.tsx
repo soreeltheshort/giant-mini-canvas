@@ -147,7 +147,7 @@ const HexMapCanvas: React.FC<Props> = ({
       }
 
       // Solar system marker
-      if (hex.has_system && editorState.showSystems) {
+      if (hex.has_system && editorState.showSystems && (!visibleSystemHexIds || visibleSystemHexIds.has(hex.hex_id))) {
         const sys = systems.get(hex.hex_id);
         const ownerKey = sys?.owner ? sys.owner.toLowerCase() : "";
         const ownerColor = ownerKey && ownerColorMap ? ownerColorMap.get(ownerKey) : undefined;
