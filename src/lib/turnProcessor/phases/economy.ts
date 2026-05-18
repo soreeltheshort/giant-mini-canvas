@@ -99,6 +99,20 @@ export const economyPhase: Phase = {
     );
 
     for (const sys of eligible) {
+      // Synod-owned planets bypass normal economy processing and run through
+      // a dedicated stub (no tribute, no upkeep, no production tick).
+      if ((sys.owner || "").trim().toLowerCase() === "synod") {
+        ctx.logs.push({
+          game_id: gameId,
+          turn_number: currentTurn,
+          phase: "economy",
+          log_type: "synod_planet_stub",
+          message: `${sys.system_name}: Synod-owned — routed through Synod planet stub (normal processing skipped)`,
+          details_json: { system_id: sys.system_id, owner: sys.owner },
+        });
+        continue;
+      }
+
       const result = processNextTurn(sys, facilityTypes, DEFAULT_TURN_CONSTANTS, 0, shipTypes);
       mapState.systems.set(sys.system_id, result.planet);
 
