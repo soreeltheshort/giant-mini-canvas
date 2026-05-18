@@ -66,6 +66,11 @@ const PlanetsPanel: React.FC<Props> = ({
     );
   }
 
+  const selectedSystem = selectedHexId != null ? systems.get(selectedHexId) : undefined;
+  const selectedHex = selectedSystem
+    ? Array.from(hexes.values()).find((h) => h.hex_id === selectedHexId)
+    : undefined;
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 pb-2">
@@ -74,6 +79,19 @@ const PlanetsPanel: React.FC<Props> = ({
         </h3>
       </div>
       <div className="flex-1 overflow-y-auto px-2 pb-4">
+        {selectedSystem && selectedHex && onUpdateSystem && (
+          <div className="mb-3 px-1">
+            <PlanetEditorCard
+              system={selectedSystem}
+              hex={selectedHex}
+              factions={factions}
+              facilityTypes={facilityTypes}
+              dbFacilityTypes={dbFacilityTypes}
+              onUpdateSystem={onUpdateSystem}
+              onClose={() => onCloseEditor?.()}
+            />
+          </div>
+        )}
         <div className="space-y-1">
           {systemList.map((sys) => {
             const classification = sys.classification as HexClassification;
