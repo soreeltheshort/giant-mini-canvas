@@ -594,6 +594,22 @@ const PlayerGame = () => {
   const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
   const { live: liveHexKeys, everSeen: everSeenHexKeys } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
 
+  // Admin-only override: reveal the entire map regardless of player sensor coverage.
+  const [adminRevealAll, setAdminRevealAll] = useState(false);
+  const allSystemIds = React.useMemo(
+    () => (mapState ? Array.from(mapState.systems.keys()) : []),
+    [mapState]
+  );
+  const allHexKeys = React.useMemo(() => {
+    const set = new Set<string>();
+    if (mapState) for (const k of mapState.hexes.keys()) set.add(k);
+    return set;
+  }, [mapState]);
+  const effectiveLiveSystemIds = isAdmin && adminRevealAll ? allSystemIds : liveVisibleIds;
+  const effectiveEverSeenSystemIds = isAdmin && adminRevealAll ? allSystemIds : everSeenSystemIds;
+  const effectiveLiveHexKeys = isAdmin && adminRevealAll ? allHexKeys : liveHexKeys;
+  const effectiveEverSeenHexKeys = isAdmin && adminRevealAll ? allHexKeys : everSeenHexKeys;
+
   // ─── Real dispatches from game_logs ───
   // Pull recent capture/colonize events affecting this player's province
   // (either as the new owner or as the previous owner) and turn them into
