@@ -31,6 +31,7 @@ interface Props {
   showPlanetSizes?: boolean;
   ownerColorMap?: Map<string, string>;
   centerOnHex?: { x: number; y: number; nonce: number } | null;
+  visibleSystemHexIds?: Set<number> | null;
 }
 
 const HEX_SIZE = 10;
