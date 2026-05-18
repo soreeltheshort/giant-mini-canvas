@@ -415,6 +415,7 @@ const HexMapEditor: React.FC = () => {
             dbFacilityTypes={dbFacilityTypes}
             onUpdateSystem={handleUpdateSystem}
             onCloseEditor={() => setEditorState((s) => ({ ...s, selectedHexKey: null }))}
+            onVisibleSystemsChange={setVisibleSystemHexIds}
           />
         ) : (
           <LeftPanel
