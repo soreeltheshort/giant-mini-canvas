@@ -430,6 +430,7 @@ const HexMapEditor: React.FC = () => {
           onPaintHex={handlePaintHex}
           onBrushPaint={handleBrushPaint}
           onFloodFill={handleFloodFill}
+          showPlanetSizes={leftTab === "planets"}
         />
       </div>
       <RightPanel

@@ -28,6 +28,7 @@ interface Props {
   onPaintHex: (hex: HexData) => void;
   onBrushPaint: (hexes: HexData[]) => void;
   onFloodFill: (hex: HexData) => void;
+  showPlanetSizes?: boolean;
 }
 
 const HEX_SIZE = 10;
@@ -43,6 +44,7 @@ const HexMapCanvas: React.FC<Props> = ({
   onPaintHex,
   onBrushPaint,
   onFloodFill,
+  showPlanetSizes = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -140,23 +142,39 @@ const HexMapCanvas: React.FC<Props> = ({
 
       // Solar system marker
       if (hex.has_system && editorState.showSystems) {
-        ctx.fillStyle = "#000000";
-        ctx.beginPath();
-        ctx.arc(px, py, size * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#fbbf24";
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        const sys = systems.get(hex.hex_id);
+        // Planet size visualization (Map Testing > Planets tab only)
+        if (showPlanetSizes && sys) {
+          const hexWidth = Math.sqrt(3) * size; // pointy-top hex width
+          const cond = Math.max(0, Math.min(100, sys.condition || 0));
+          const pop = Math.max(0, Math.min(100, sys.current_population || 0));
+          const ratio = Math.min(1, (cond + pop) / 200);
+          const planetRadius = ratio * 0.75 * hexWidth; // diameter up to 1.5×hexWidth
+          if (planetRadius > 0.5) {
+            ctx.fillStyle = "#3b82f6";
+            ctx.beginPath();
+            ctx.arc(px, py, planetRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#fbbf24";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        } else {
+          ctx.fillStyle = "#000000";
+          ctx.beginPath();
+          ctx.arc(px, py, size * 0.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#fbbf24";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
 
         // System name when zoomed in
-        if (zoom > 3) {
-          const sys = systems.get(hex.hex_id);
-          if (sys) {
-            ctx.fillStyle = "#ffffff";
-            ctx.font = `${Math.max(6, size * 0.25)}px sans-serif`;
-            ctx.textAlign = "center";
-            ctx.fillText(sys.system_name, px, py + size * 0.6);
-          }
+        if (zoom > 3 && sys) {
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `${Math.max(6, size * 0.25)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText(sys.system_name, px, py + size * 0.6);
         }
       }
 
@@ -209,7 +227,7 @@ const HexMapCanvas: React.FC<Props> = ({
     }
 
     ctx.restore();
-  }, [hexes, systems, fleets, editorState]);
+  }, [hexes, systems, fleets, editorState, showPlanetSizes]);
 
   useEffect(() => {
     const loop = () => {
