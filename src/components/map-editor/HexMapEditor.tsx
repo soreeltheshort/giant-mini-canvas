@@ -436,6 +436,7 @@ const HexMapEditor: React.FC = () => {
           onBrushPaint={handleBrushPaint}
           onFloodFill={handleFloodFill}
           showPlanetSizes={leftTab === "planets"}
+          ownerColorMap={ownerColorMap}
         />
       </div>
       {leftTab !== "planets" && (
