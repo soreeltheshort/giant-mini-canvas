@@ -28,6 +28,7 @@ interface Props {
   onPaintHex: (hex: HexData) => void;
   onBrushPaint: (hexes: HexData[]) => void;
   onFloodFill: (hex: HexData) => void;
+  showPlanetSizes?: boolean;
 }
 
 const HEX_SIZE = 10;
