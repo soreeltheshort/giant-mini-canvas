@@ -85,6 +85,19 @@ const PlanetsPanel: React.FC<Props> = ({
     });
   }, [systemList, ownerFilter, condMin, condMax, popMin, popMax]);
 
+  useEffect(() => {
+    if (!onVisibleSystemsChange) return;
+    if (!filterMapActive) {
+      onVisibleSystemsChange(null);
+    } else {
+      onVisibleSystemsChange(new Set(filteredList.map((s) => s.hex_id)));
+    }
+  }, [filterMapActive, filteredList, onVisibleSystemsChange]);
+
+  useEffect(() => {
+    return () => onVisibleSystemsChange?.(null);
+  }, [onVisibleSystemsChange]);
+
 
   if (systemList.length === 0) {
     return (
