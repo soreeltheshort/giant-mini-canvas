@@ -45,6 +45,7 @@ function StatBadges({ ft, allFacilityTypes }: { ft: DbFacilityType; allFacilityT
       {ft.synod && (
         <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground font-mono">Synod</span>
       )}
+      {nonZero.map((s) => (
         <span key={s.key} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
           {s.label}: {s.prefix || ""}{ft[s.key] as number}{s.suffix || ""}
         </span>
