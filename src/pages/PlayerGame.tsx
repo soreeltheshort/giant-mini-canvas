@@ -594,6 +594,22 @@ const PlayerGame = () => {
   const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
   const { live: liveHexKeys, everSeen: everSeenHexKeys } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
 
+  // Admin-only override: reveal the entire map regardless of player sensor coverage.
+  const [adminRevealAll, setAdminRevealAll] = useState(false);
+  const allSystemIds = useMemo(
+    () => (mapState ? Array.from(mapState.systems.keys()) : []),
+    [mapState]
+  );
+  const allHexKeys = useMemo(() => {
+    const set = new Set<string>();
+    if (mapState) for (const k of mapState.hexes.keys()) set.add(k);
+    return set;
+  }, [mapState]);
+  const effectiveLiveSystemIds = isAdmin && adminRevealAll ? allSystemIds : liveVisibleIds;
+  const effectiveEverSeenSystemIds = isAdmin && adminRevealAll ? allSystemIds : everSeenSystemIds;
+  const effectiveLiveHexKeys = isAdmin && adminRevealAll ? allHexKeys : liveHexKeys;
+  const effectiveEverSeenHexKeys = isAdmin && adminRevealAll ? allHexKeys : everSeenHexKeys;
+
   // ─── Real dispatches from game_logs ───
   // Pull recent capture/colonize events affecting this player's province
   // (either as the new owner or as the previous owner) and turn them into
@@ -1296,13 +1312,24 @@ const PlayerGame = () => {
         />
 
         {/* Center Map + Overlay Demo */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {isAdmin && (
+            <label className="absolute top-2 right-2 z-20 flex items-center gap-2 rounded bg-background/90 border border-bronze/30 px-2 py-1 text-[10px] font-heading uppercase tracking-wider text-foreground cursor-pointer hover:bg-background">
+              <input
+                type="checkbox"
+                checked={adminRevealAll}
+                onChange={(e) => setAdminRevealAll(e.target.checked)}
+                className="h-3 w-3 accent-crimson"
+              />
+              Admin: Reveal Full Map
+            </label>
+          )}
           {mapState ? (
             <PlayerMapCanvas
               hexes={mapState.hexes}
               systems={mapState.systems}
-              visibleSystemIds={liveVisibleIds}
-              everSeenSystemIds={everSeenSystemIds}
+              visibleSystemIds={effectiveLiveSystemIds}
+              everSeenSystemIds={effectiveEverSeenSystemIds}
               fleets={mapState.fleets}
               onSystemClick={handleSystemClick}
               onFleetClick={handleFleetClick}
@@ -1311,8 +1338,8 @@ const PlayerGame = () => {
               onFleetTargetPicked={handleFleetTargetPicked}
               onSystemTargetPicked={handleSystemTargetPicked}
               onCancelTargeting={() => setTargeting(null)}
-              debugVisibleHexKeys={liveHexKeys}
-              everSeenHexKeys={everSeenHexKeys}
+              debugVisibleHexKeys={effectiveLiveHexKeys}
+              everSeenHexKeys={effectiveEverSeenHexKeys}
               orderArrow={orderArrow}
               ownClassification={`PROVINCE_${player.player_slot}`}
               className="flex-1"
