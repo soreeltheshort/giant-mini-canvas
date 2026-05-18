@@ -255,6 +255,8 @@ const HexMapCanvas: React.FC<Props> = ({
     [camera, hexes]
   );
 
+  const pendingClickRef = useRef<{ hex: HexData; startX: number; startY: number } | null>(null);
+
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button === 1 || (e.button === 0 && e.altKey)) {
@@ -264,11 +266,17 @@ const HexMapCanvas: React.FC<Props> = ({
       }
       if (e.button === 0) {
         const hex = getHexAtMouse(e);
-        if (!hex) return;
 
         if (editorState.tool === "select") {
-          onHexClick(hex);
-        } else if (editorState.tool === "paint") {
+          // Left-drag pans the map; click (no drag past 5px) selects
+          setIsDragging(true);
+          setDragStart({ x: e.clientX - camera.x, y: e.clientY - camera.y });
+          pendingClickRef.current = hex ? { hex, startX: e.clientX, startY: e.clientY } : null;
+          return;
+        }
+
+        if (!hex) return;
+        if (editorState.tool === "paint") {
           setIsPainting(true);
           onPaintHex(hex);
         } else if (editorState.tool === "fill") {
@@ -281,7 +289,7 @@ const HexMapCanvas: React.FC<Props> = ({
         }
       }
     },
-    [camera, getHexAtMouse, editorState, onHexClick, onPaintHex, onFloodFill, onBrushPaint, hexes]
+    [camera, getHexAtMouse, editorState, onPaintHex, onFloodFill, onBrushPaint, hexes]
   );
 
   const handleMouseMove = useCallback(
@@ -292,6 +300,11 @@ const HexMapCanvas: React.FC<Props> = ({
           x: e.clientX - dragStart.x,
           y: e.clientY - dragStart.y,
         }));
+        // Cancel pending click if mouse moved past 5px threshold
+        const pc = pendingClickRef.current;
+        if (pc && (Math.abs(e.clientX - pc.startX) > 5 || Math.abs(e.clientY - pc.startY) > 5)) {
+          pendingClickRef.current = null;
+        }
         return;
       }
       const hex = getHexAtMouse(e);
@@ -311,9 +324,13 @@ const HexMapCanvas: React.FC<Props> = ({
   );
 
   const handleMouseUp = useCallback(() => {
+    if (pendingClickRef.current) {
+      onHexClick(pendingClickRef.current.hex);
+      pendingClickRef.current = null;
+    }
     setIsDragging(false);
     setIsPainting(false);
-  }, []);
+  }, [onHexClick]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
