@@ -413,13 +413,15 @@ const PlayerGame = () => {
         .update({ last_game_id: gameId, active_games: activeGames })
         .eq("user_id", user.id);
     })();
-    setDbFacilityTypes((ftData || []).map((ft: any) => ({
+    // Hide Synod-flagged facilities from non-admin players in any build screen.
+    const visibleFt = (ftData || []).filter((ft: any) => isAdmin || !ft.synod);
+    setDbFacilityTypes(visibleFt.map((ft: any) => ({
       facility_type_id: ft.id,
       name: ft.name,
       description: ft.description || "",
       icon: ft.icon || "🏭",
     })));
-    setDbFacilityTypesFull((ftData || []).map((ft: any) => ({
+    setDbFacilityTypesFull(visibleFt.map((ft: any) => ({
       facility_type_id: ft.id,
       name: ft.name,
       description: ft.description || "",
