@@ -485,6 +485,22 @@ export const groundCombatPhase: Phase = {
           outcome,
         },
       });
+
+      if (synodPurge) {
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+          log_type: "synod_planet_purged",
+          message: `Synod facilities and population purged from ${sys.system_name} upon conquest by ${sys.owner || "invader"}.`,
+          details_json: {
+            system_id: systemId,
+            system_name: sys.system_name,
+            previous_owner: previousOwner,
+            new_owner: sys.owner,
+            removed_facility_ids: synodPurge.removed_facility_ids,
+            removed_population: synodPurge.removed_population,
+          },
+        });
+      }
       resolved++;
     }
 
