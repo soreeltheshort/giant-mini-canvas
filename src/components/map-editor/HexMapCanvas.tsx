@@ -31,6 +31,7 @@ interface Props {
   showPlanetSizes?: boolean;
   ownerColorMap?: Map<string, string>;
   centerOnHex?: { x: number; y: number; nonce: number } | null;
+  visibleSystemHexIds?: Set<number> | null;
 }
 
 const HEX_SIZE = 10;
@@ -49,6 +50,7 @@ const HexMapCanvas: React.FC<Props> = ({
   showPlanetSizes = false,
   ownerColorMap,
   centerOnHex,
+  visibleSystemHexIds,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -145,7 +147,7 @@ const HexMapCanvas: React.FC<Props> = ({
       }
 
       // Solar system marker
-      if (hex.has_system && editorState.showSystems) {
+      if (hex.has_system && editorState.showSystems && (!visibleSystemHexIds || visibleSystemHexIds.has(hex.hex_id))) {
         const sys = systems.get(hex.hex_id);
         const ownerKey = sys?.owner ? sys.owner.toLowerCase() : "";
         const ownerColor = ownerKey && ownerColorMap ? ownerColorMap.get(ownerKey) : undefined;
@@ -234,7 +236,7 @@ const HexMapCanvas: React.FC<Props> = ({
     }
 
     ctx.restore();
-  }, [hexes, systems, fleets, editorState, showPlanetSizes, ownerColorMap]);
+  }, [hexes, systems, fleets, editorState, showPlanetSizes, ownerColorMap, visibleSystemHexIds]);
 
   useEffect(() => {
     const loop = () => {

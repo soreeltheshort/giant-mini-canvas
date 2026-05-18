@@ -353,6 +353,7 @@ const HexMapEditor: React.FC = () => {
   }, [factions]);
 
   const [centerOnHex, setCenterOnHex] = useState<{ x: number; y: number; nonce: number } | null>(null);
+  const [visibleSystemHexIds, setVisibleSystemHexIds] = useState<Set<number> | null>(null);
 
   const handleAddFleet = useCallback((fleet: MapFleet) => {
     setMapState((prev) => ({ ...prev, fleets: [...(prev.fleets || []), fleet] }));
@@ -414,6 +415,7 @@ const HexMapEditor: React.FC = () => {
             dbFacilityTypes={dbFacilityTypes}
             onUpdateSystem={handleUpdateSystem}
             onCloseEditor={() => setEditorState((s) => ({ ...s, selectedHexKey: null }))}
+            onVisibleSystemsChange={setVisibleSystemHexIds}
           />
         ) : (
           <LeftPanel
@@ -454,6 +456,7 @@ const HexMapEditor: React.FC = () => {
           showPlanetSizes={leftTab === "planets"}
           ownerColorMap={ownerColorMap}
           centerOnHex={centerOnHex}
+          visibleSystemHexIds={leftTab === "planets" ? visibleSystemHexIds : null}
         />
       </div>
       {leftTab !== "planets" && (

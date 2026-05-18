@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 
 import {
   SystemData,
@@ -23,6 +23,7 @@ interface Props {
   dbFacilityTypes?: DbFacilityType[];
   onUpdateSystem?: (hexId: number, updates: Partial<Omit<SystemData, "system_id" | "map_id" | "hex_id">>) => void;
   onCloseEditor?: () => void;
+  onVisibleSystemsChange?: (ids: Set<number> | null) => void;
 }
 
 const PlanetsPanel: React.FC<Props> = ({
@@ -35,6 +36,7 @@ const PlanetsPanel: React.FC<Props> = ({
   dbFacilityTypes = [],
   onUpdateSystem,
   onCloseEditor,
+  onVisibleSystemsChange,
 }) => {
   const ftMap = useMemo(() => {
     const m = new Map<string, FacilityType>();
@@ -66,6 +68,7 @@ const PlanetsPanel: React.FC<Props> = ({
   const [condMax, setCondMax] = useState<string>("");
   const [popMin, setPopMin] = useState<string>("");
   const [popMax, setPopMax] = useState<string>("");
+  const [filterMapActive, setFilterMapActive] = useState(false);
 
   const filteredList = useMemo(() => {
     const cMin = condMin === "" ? -Infinity : Number(condMin);
@@ -81,6 +84,19 @@ const PlanetsPanel: React.FC<Props> = ({
       return true;
     });
   }, [systemList, ownerFilter, condMin, condMax, popMin, popMax]);
+
+  useEffect(() => {
+    if (!onVisibleSystemsChange) return;
+    if (!filterMapActive) {
+      onVisibleSystemsChange(null);
+    } else {
+      onVisibleSystemsChange(new Set(filteredList.map((s) => s.hex_id)));
+    }
+  }, [filterMapActive, filteredList, onVisibleSystemsChange]);
+
+  useEffect(() => {
+    return () => onVisibleSystemsChange?.(null);
+  }, [onVisibleSystemsChange]);
 
 
   if (systemList.length === 0) {
@@ -102,9 +118,19 @@ const PlanetsPanel: React.FC<Props> = ({
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 pb-2 space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Planets ({filteredList.length}/{systemList.length})
-        </h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Planets ({filteredList.length}/{systemList.length})
+          </h3>
+          <label className="flex items-center gap-1.5 text-[10px] text-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={filterMapActive}
+              onChange={(e) => setFilterMapActive(e.target.checked)}
+            />
+            Filter map
+          </label>
+        </div>
         <div className="space-y-1.5">
           <select
             value={ownerFilter}
