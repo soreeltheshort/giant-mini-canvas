@@ -118,9 +118,19 @@ const PlanetsPanel: React.FC<Props> = ({
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 pb-2 space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Planets ({filteredList.length}/{systemList.length})
-        </h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Planets ({filteredList.length}/{systemList.length})
+          </h3>
+          <label className="flex items-center gap-1.5 text-[10px] text-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={filterMapActive}
+              onChange={(e) => setFilterMapActive(e.target.checked)}
+            />
+            Filter map
+          </label>
+        </div>
         <div className="space-y-1.5">
           <select
             value={ownerFilter}
