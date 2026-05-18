@@ -45,7 +45,6 @@ const PlanetsPanel: React.FC<Props> = ({
   const systemList = useMemo(() => {
     const list: (SystemData & { hex?: HexData })[] = [];
     for (const sys of systems.values()) {
-      // Find hex for this system
       let hex: HexData | undefined;
       for (const h of hexes.values()) {
         if (h.hex_id === sys.hex_id) { hex = h; break; }
@@ -55,6 +54,34 @@ const PlanetsPanel: React.FC<Props> = ({
     list.sort((a, b) => a.system_name.localeCompare(b.system_name));
     return list;
   }, [systems, hexes]);
+
+  const ownerOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of systemList) set.add(s.owner || "");
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [systemList]);
+
+  const [ownerFilter, setOwnerFilter] = useState<string>("__all");
+  const [condMin, setCondMin] = useState<string>("");
+  const [condMax, setCondMax] = useState<string>("");
+  const [popMin, setPopMin] = useState<string>("");
+  const [popMax, setPopMax] = useState<string>("");
+
+  const filteredList = useMemo(() => {
+    const cMin = condMin === "" ? -Infinity : Number(condMin);
+    const cMax = condMax === "" ? Infinity : Number(condMax);
+    const pMin = popMin === "" ? -Infinity : Number(popMin);
+    const pMax = popMax === "" ? Infinity : Number(popMax);
+    return systemList.filter((s) => {
+      if (ownerFilter !== "__all" && (s.owner || "") !== ownerFilter) return false;
+      const c = s.condition ?? 0;
+      const p = s.current_population ?? 0;
+      if (c < cMin || c > cMax) return false;
+      if (p < pMin || p > pMax) return false;
+      return true;
+    });
+  }, [systemList, ownerFilter, condMin, condMax, popMin, popMax]);
+
 
   if (systemList.length === 0) {
     return (
