@@ -44,6 +44,7 @@ const HexMapCanvas: React.FC<Props> = ({
   onPaintHex,
   onBrushPaint,
   onFloodFill,
+  showPlanetSizes = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
