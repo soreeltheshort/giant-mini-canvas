@@ -23,6 +23,7 @@ interface Props {
   dbFacilityTypes?: DbFacilityType[];
   onUpdateSystem?: (hexId: number, updates: Partial<Omit<SystemData, "system_id" | "map_id" | "hex_id">>) => void;
   onCloseEditor?: () => void;
+  onVisibleSystemsChange?: (ids: Set<number> | null) => void;
 }
 
 const PlanetsPanel: React.FC<Props> = ({
