@@ -8,15 +8,33 @@ import {
   HexClassification,
   hexKey,
 } from "@/lib/mapTypes";
+import { DbFaction } from "@/hooks/useFactions";
+import { DbFacilityType } from "@/hooks/useFacilityTypes";
+import PlanetEditorCard from "./PlanetEditorCard";
 
 interface Props {
   systems: Map<number, SystemData>;
   hexes: Map<string, HexData>;
   facilityTypes: FacilityType[];
   onSelectSystem: (hexId: number) => void;
+  selectedHexId?: number | null;
+  factions?: DbFaction[];
+  dbFacilityTypes?: DbFacilityType[];
+  onUpdateSystem?: (hexId: number, updates: Partial<Omit<SystemData, "system_id" | "map_id" | "hex_id">>) => void;
+  onCloseEditor?: () => void;
 }
 
-const PlanetsPanel: React.FC<Props> = ({ systems, hexes, facilityTypes, onSelectSystem }) => {
+const PlanetsPanel: React.FC<Props> = ({
+  systems,
+  hexes,
+  facilityTypes,
+  onSelectSystem,
+  selectedHexId,
+  factions = [],
+  dbFacilityTypes = [],
+  onUpdateSystem,
+  onCloseEditor,
+}) => {
   const ftMap = useMemo(() => {
     const m = new Map<string, FacilityType>();
     for (const ft of facilityTypes) m.set(ft.facility_type_id, ft);
