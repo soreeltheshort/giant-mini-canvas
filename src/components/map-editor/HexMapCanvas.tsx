@@ -352,6 +352,17 @@ const HexMapCanvas: React.FC<Props> = ({
     setCamera({ x: 0, y: 0, zoom: 1 });
   }, []);
 
+  // Recenter on a specific hex when requested
+  useEffect(() => {
+    if (!centerOnHex) return;
+    setCamera((c) => {
+      const zoom = Math.max(c.zoom, 2);
+      const size = HEX_SIZE * zoom;
+      const [px, py] = hexToPixel(centerOnHex.x, centerOnHex.y, size);
+      return { x: -px, y: -py, zoom };
+    });
+  }, [centerOnHex?.nonce]);
+
   return (
     <div ref={containerRef} className="relative h-full w-full overflow-hidden bg-black">
       <canvas
