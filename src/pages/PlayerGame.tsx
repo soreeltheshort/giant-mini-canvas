@@ -1317,8 +1317,8 @@ const PlayerGame = () => {
             <PlayerMapCanvas
               hexes={mapState.hexes}
               systems={mapState.systems}
-              visibleSystemIds={liveVisibleIds}
-              everSeenSystemIds={everSeenSystemIds}
+              visibleSystemIds={effectiveLiveSystemIds}
+              everSeenSystemIds={effectiveEverSeenSystemIds}
               fleets={mapState.fleets}
               onSystemClick={handleSystemClick}
               onFleetClick={handleFleetClick}
@@ -1327,8 +1327,8 @@ const PlayerGame = () => {
               onFleetTargetPicked={handleFleetTargetPicked}
               onSystemTargetPicked={handleSystemTargetPicked}
               onCancelTargeting={() => setTargeting(null)}
-              debugVisibleHexKeys={liveHexKeys}
-              everSeenHexKeys={everSeenHexKeys}
+              debugVisibleHexKeys={effectiveLiveHexKeys}
+              everSeenHexKeys={effectiveEverSeenHexKeys}
               orderArrow={orderArrow}
               ownClassification={`PROVINCE_${player.player_slot}`}
               className="flex-1"
