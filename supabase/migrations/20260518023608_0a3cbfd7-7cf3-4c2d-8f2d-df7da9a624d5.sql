@@ -1,0 +1,1 @@
+ALTER TABLE public.facility_types ADD COLUMN IF NOT EXISTS synod boolean NOT NULL DEFAULT false;

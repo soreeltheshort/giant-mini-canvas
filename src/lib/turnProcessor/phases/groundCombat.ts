@@ -398,9 +398,31 @@ export const groundCombatPhase: Phase = {
       sys.current_ground_defenses = newDefenses;
 
       let outcome: "capture" | "colonize" | "repulsed" | "stalemate" = "stalemate";
+      let synodPurge: { removed_facility_ids: string[]; removed_population: number } | null = null;
       if (newDefenses <= 0) {
         sys.owner = champion.owner_classification;
         outcome = planetWasUnpopulated ? "colonize" : "capture";
+
+        // If the planet was Synod-owned, strip all Synod facilities and wipe population on conquest.
+        if ((previousOwner || "").toLowerCase() === "synod") {
+          const synodIds = new Set(
+            (ctx.facilityTypes || [])
+              .filter((ft: any) => ft.synod === true)
+              .map((ft: any) => String(ft.id))
+          );
+          const before = sys.facilities || [];
+          const removed = before.filter(f => synodIds.has(String(f.facility_type_id)));
+          sys.facilities = before.filter(f => !synodIds.has(String(f.facility_type_id)));
+          sys.facilities_in_production = (sys.facilities_in_production || [])
+            .filter(p => !synodIds.has(String(p.facility_type_id)));
+          const removedPop = Number(sys.current_population) || 0;
+          sys.current_population = 0;
+          synodPurge = {
+            removed_facility_ids: removed.map(r => String(r.facility_type_id)),
+            removed_population: removedPop,
+          };
+        }
+
         if (outcome === "colonize") {
           // Seed baseline values, then immediately run one population-change
           // tick so the colony shows growth on the same turn it falls.
@@ -463,6 +485,22 @@ export const groundCombatPhase: Phase = {
           outcome,
         },
       });
+
+      if (synodPurge) {
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+          log_type: "synod_planet_purged",
+          message: `Synod facilities and population purged from ${sys.system_name} upon conquest by ${sys.owner || "invader"}.`,
+          details_json: {
+            system_id: systemId,
+            system_name: sys.system_name,
+            previous_owner: previousOwner,
+            new_owner: sys.owner,
+            removed_facility_ids: synodPurge.removed_facility_ids,
+            removed_population: synodPurge.removed_population,
+          },
+        });
+      }
       resolved++;
     }
 

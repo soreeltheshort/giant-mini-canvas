@@ -22,6 +22,7 @@ export interface DbFacilityType {
   max_per_system: number;
   ship_build_capacity: number;
   max_ship_hull_class: string | null;
+  synod: boolean;
 }
 
 export function useFacilityTypes() {

@@ -39,9 +39,12 @@ function StatBadges({ ft, allFacilityTypes }: { ft: DbFacilityType; allFacilityT
   const nonZero = STAT_DEFS.filter((s) => (ft[s.key] as number) !== 0);
   const consumed = ft.consumed_facility_id ? allFacilityTypes.find(f => f.id === ft.consumed_facility_id) : null;
   const showHull = ft.ship_build_capacity > 0 && !!ft.max_ship_hull_class;
-  if (nonZero.length === 0 && !consumed && !showHull) return null;
+  if (nonZero.length === 0 && !consumed && !showHull && !ft.synod) return null;
   return (
     <div className="flex flex-wrap gap-1 mt-1">
+      {ft.synod && (
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground font-mono">Synod</span>
+      )}
       {nonZero.map((s) => (
         <span key={s.key} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
           {s.label}: {s.prefix || ""}{ft[s.key] as number}{s.suffix || ""}
@@ -110,6 +113,14 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
           </select>
         </div>
       )}
+      <label className="flex items-center gap-2 text-xs text-foreground pt-1">
+        <input
+          type="checkbox"
+          checked={!!fields.synod}
+          onChange={(e) => patch({ synod: e.target.checked })}
+        />
+        Synod facility (hidden from non-admin players)
+      </label>
     </div>
   );
 }
@@ -167,6 +178,7 @@ function AddFacilityForm({ onAdd, allFacilityTypes }: { onAdd: (fields: Omit<DbF
     tribute_flat: 0, tribute_percent: 0, survey_bonus: 0, ground_defense_bonus: 0,
     turns_to_build: 1, construction_kickback: 0, consumed_facility_id: null,
     fighter_capacity: 0, gunship_capacity: 0, max_per_system: 0, ship_build_capacity: 0, max_ship_hull_class: null,
+    synod: false,
   };
   const [fields, setFields] = useState(empty);
   const patch = (p: Partial<Omit<DbFacilityType, "id">>) => setFields((prev) => ({ ...prev, ...p }));
