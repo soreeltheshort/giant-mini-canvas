@@ -68,6 +68,7 @@ const PlanetsPanel: React.FC<Props> = ({
   const [condMax, setCondMax] = useState<string>("");
   const [popMin, setPopMin] = useState<string>("");
   const [popMax, setPopMax] = useState<string>("");
+  const [filterMapActive, setFilterMapActive] = useState(false);
 
   const filteredList = useMemo(() => {
     const cMin = condMin === "" ? -Infinity : Number(condMin);
