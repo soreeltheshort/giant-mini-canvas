@@ -501,7 +501,7 @@ const PlayerGame = () => {
     });
 
     setLoading(false);
-  }, [user, gameId, navigate, toast]);
+  }, [user, gameId, navigate, toast, isAdmin]);
 
   useEffect(() => { load(); }, [load]);
 
