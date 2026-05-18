@@ -353,6 +353,7 @@ const HexMapEditor: React.FC = () => {
   }, [factions]);
 
   const [centerOnHex, setCenterOnHex] = useState<{ x: number; y: number; nonce: number } | null>(null);
+  const [visibleSystemHexIds, setVisibleSystemHexIds] = useState<Set<number> | null>(null);
 
   const handleAddFleet = useCallback((fleet: MapFleet) => {
     setMapState((prev) => ({ ...prev, fleets: [...(prev.fleets || []), fleet] }));
