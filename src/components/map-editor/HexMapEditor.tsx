@@ -404,7 +404,10 @@ const HexMapEditor: React.FC = () => {
             facilityTypes={facilityTypesForUI}
             onSelectSystem={(hexId) => {
               const hex = Array.from(mapState.hexes.values()).find((h) => h.hex_id === hexId);
-              if (hex) setEditorState((s) => ({ ...s, selectedHexKey: hexKey(hex.x, hex.y) }));
+              if (hex) {
+                setEditorState((s) => ({ ...s, selectedHexKey: hexKey(hex.x, hex.y) }));
+                setCenterOnHex({ x: hex.x, y: hex.y, nonce: Date.now() });
+              }
             }}
             selectedHexId={selectedHex?.has_system ? selectedHex.hex_id : null}
             factions={factions}
