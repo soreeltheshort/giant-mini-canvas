@@ -236,7 +236,7 @@ const HexMapCanvas: React.FC<Props> = ({
     }
 
     ctx.restore();
-  }, [hexes, systems, fleets, editorState, showPlanetSizes, ownerColorMap]);
+  }, [hexes, systems, fleets, editorState, showPlanetSizes, ownerColorMap, visibleSystemHexIds]);
 
   useEffect(() => {
     const loop = () => {
