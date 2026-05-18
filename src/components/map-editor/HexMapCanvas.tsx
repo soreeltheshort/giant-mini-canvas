@@ -29,6 +29,7 @@ interface Props {
   onBrushPaint: (hexes: HexData[]) => void;
   onFloodFill: (hex: HexData) => void;
   showPlanetSizes?: boolean;
+  ownerColorMap?: Map<string, string>;
 }
 
 const HEX_SIZE = 10;
