@@ -444,6 +444,7 @@ export type Database = {
           name: string
           ship_build_capacity: number
           survey_bonus: number
+          synod: boolean
           tribute_flat: number
           tribute_percent: number
           turns_to_build: number
@@ -467,6 +468,7 @@ export type Database = {
           name: string
           ship_build_capacity?: number
           survey_bonus?: number
+          synod?: boolean
           tribute_flat?: number
           tribute_percent?: number
           turns_to_build?: number
@@ -490,6 +492,7 @@ export type Database = {
           name?: string
           ship_build_capacity?: number
           survey_bonus?: number
+          synod?: boolean
           tribute_flat?: number
           tribute_percent?: number
           turns_to_build?: number
