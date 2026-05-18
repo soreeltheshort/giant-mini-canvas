@@ -30,6 +30,7 @@ interface Props {
   onFloodFill: (hex: HexData) => void;
   showPlanetSizes?: boolean;
   ownerColorMap?: Map<string, string>;
+  centerOnHex?: { x: number; y: number; nonce: number } | null;
 }
 
 const HEX_SIZE = 10;
@@ -47,6 +48,7 @@ const HexMapCanvas: React.FC<Props> = ({
   onFloodFill,
   showPlanetSizes = false,
   ownerColorMap,
+  centerOnHex,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -349,6 +351,17 @@ const HexMapCanvas: React.FC<Props> = ({
   const centerMap = useCallback(() => {
     setCamera({ x: 0, y: 0, zoom: 1 });
   }, []);
+
+  // Recenter on a specific hex when requested
+  useEffect(() => {
+    if (!centerOnHex) return;
+    setCamera((c) => {
+      const zoom = Math.max(c.zoom, 2);
+      const size = HEX_SIZE * zoom;
+      const [px, py] = hexToPixel(centerOnHex.x, centerOnHex.y, size);
+      return { x: -px, y: -py, zoom };
+    });
+  }, [centerOnHex?.nonce]);
 
   return (
     <div ref={containerRef} className="relative h-full w-full overflow-hidden bg-black">

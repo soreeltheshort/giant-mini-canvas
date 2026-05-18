@@ -352,6 +352,8 @@ const HexMapEditor: React.FC = () => {
     return m;
   }, [factions]);
 
+  const [centerOnHex, setCenterOnHex] = useState<{ x: number; y: number; nonce: number } | null>(null);
+
   const handleAddFleet = useCallback((fleet: MapFleet) => {
     setMapState((prev) => ({ ...prev, fleets: [...(prev.fleets || []), fleet] }));
   }, []);
@@ -402,7 +404,10 @@ const HexMapEditor: React.FC = () => {
             facilityTypes={facilityTypesForUI}
             onSelectSystem={(hexId) => {
               const hex = Array.from(mapState.hexes.values()).find((h) => h.hex_id === hexId);
-              if (hex) setEditorState((s) => ({ ...s, selectedHexKey: hexKey(hex.x, hex.y) }));
+              if (hex) {
+                setEditorState((s) => ({ ...s, selectedHexKey: hexKey(hex.x, hex.y) }));
+                setCenterOnHex({ x: hex.x, y: hex.y, nonce: Date.now() });
+              }
             }}
             selectedHexId={selectedHex?.has_system ? selectedHex.hex_id : null}
             factions={factions}
@@ -448,6 +453,7 @@ const HexMapEditor: React.FC = () => {
           onFloodFill={handleFloodFill}
           showPlanetSizes={leftTab === "planets"}
           ownerColorMap={ownerColorMap}
+          centerOnHex={centerOnHex}
         />
       </div>
       {leftTab !== "planets" && (
