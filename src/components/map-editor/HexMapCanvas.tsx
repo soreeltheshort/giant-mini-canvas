@@ -30,6 +30,7 @@ interface Props {
   onFloodFill: (hex: HexData) => void;
   showPlanetSizes?: boolean;
   ownerColorMap?: Map<string, string>;
+  centerOnHex?: { x: number; y: number; nonce: number } | null;
 }
 
 const HEX_SIZE = 10;
