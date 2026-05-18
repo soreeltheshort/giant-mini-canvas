@@ -36,6 +36,7 @@ const PlanetsPanel: React.FC<Props> = ({
   dbFacilityTypes = [],
   onUpdateSystem,
   onCloseEditor,
+  onVisibleSystemsChange,
 }) => {
   const ftMap = useMemo(() => {
     const m = new Map<string, FacilityType>();
