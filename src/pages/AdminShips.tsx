@@ -112,6 +112,12 @@ const WEAPON_FIELDS: { key: keyof ShipType; label: string }[] = [
   { key: "missile_50kg", label: "M50" },
   { key: "missile_100kg", label: "M100" },
   { key: "missile_half_kt", label: "M½kt" },
+  { key: "laser_light", label: "L-Light" },
+  { key: "laser_medium", label: "L-Med" },
+  { key: "laser_heavy", label: "L-Heavy" },
+  { key: "laser_hull_breaker", label: "L-HB" },
+  { key: "missile_synod", label: "M-Synod" },
+  { key: "missile_kraken", label: "M-Kraken" },
 ];
 
 const UTILITY_FIELDS: { key: keyof ShipType; label: string }[] = [
