@@ -22,6 +22,7 @@ interface Weapon {
   point_cost: number;
   _dirty?: boolean;
   _new?: boolean;
+  _deleted?: boolean;
 }
 
 const WEAPON_TYPES = ["Laser", "Missile", "Kinetic", "Energy"];
