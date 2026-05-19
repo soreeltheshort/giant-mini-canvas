@@ -430,6 +430,8 @@ const AdminShips = () => {
       laser_2_5cm: 0, laser_4_5cm: 0, laser_6_5cm: 0, laser_10cm: 0,
       laser_14cm: 0, laser_20cm: 0, laser_28cm: 0, laser_50cm: 0,
       missile_10kg: 0, missile_50kg: 0, missile_100kg: 0, missile_half_kt: 0,
+      laser_light: 0, laser_medium: 0, laser_heavy: 0, laser_hull_breaker: 0,
+      missile_synod: 0, missile_kraken: 0,
       fighter_bay: 0, fighter_storage: 0, gun_ship_link: 0, gunship_storage: 0,
       scout_sensors: 0, supply_pod: 0, repair_pod: 0, ground_invasion: 0,
       virtual_atk_speed_attack: 0, virtual_atk_speed_core: 0, virtual_atk_speed_rear: 0,
