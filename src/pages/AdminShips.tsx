@@ -28,6 +28,7 @@ interface ShipType {
   target_preference: string;
   flavor_description: string;
   ship_id: string | null;
+  synod: boolean;
   // Weapons
   laser_2_5cm: number;
   laser_4_5cm: number;
