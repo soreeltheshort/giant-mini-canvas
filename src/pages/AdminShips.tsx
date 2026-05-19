@@ -411,7 +411,7 @@ const AdminShips = () => {
       id: crypto.randomUUID(),
       name: "New Ship", class: "DD", hull_class: "Escort", hull: 10, armor: 0,
       point_cost: 1, maintenance: 0, cbt_speed: 0, map_speed: 0, sensor_rating: 0,
-      target_preference: "", flavor_description: "", ship_id: null,
+      target_preference: "", flavor_description: "", ship_id: null, synod: false,
       laser_2_5cm: 0, laser_4_5cm: 0, laser_6_5cm: 0, laser_10cm: 0,
       laser_14cm: 0, laser_20cm: 0, laser_28cm: 0, laser_50cm: 0,
       missile_10kg: 0, missile_50kg: 0, missile_100kg: 0, missile_half_kt: 0,
