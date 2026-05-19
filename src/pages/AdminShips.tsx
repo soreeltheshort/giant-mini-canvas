@@ -42,6 +42,12 @@ interface ShipType {
   missile_50kg: number;
   missile_100kg: number;
   missile_half_kt: number;
+  laser_light: number;
+  laser_medium: number;
+  laser_heavy: number;
+  laser_hull_breaker: number;
+  missile_synod: number;
+  missile_kraken: number;
   // Bays & storage
   fighter_bay: number;
   fighter_storage: number;
