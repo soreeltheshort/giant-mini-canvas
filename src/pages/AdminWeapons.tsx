@@ -192,9 +192,15 @@ const AdminWeapons = () => {
                     <Input className="h-8 text-xs" value={w.special_notes} onChange={e => updateField(w.id, "special_notes", e.target.value)} />
                   </td>
                   <td className="px-1 py-1">
-                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteWeapon(w.id, w._new)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {w._deleted ? (
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => undoDelete(w.id)} title="Undo delete">
+                        <Undo2 className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteWeapon(w.id, w._new)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}
