@@ -1337,6 +1337,7 @@ export type Database = {
           sensor_rating: number
           ship_id: string | null
           supply_pod: number
+          synod: boolean
           target_preference: string
           virtual_atk_speed_attack: number
           virtual_atk_speed_attack_planet: number
@@ -1391,6 +1392,7 @@ export type Database = {
           sensor_rating?: number
           ship_id?: string | null
           supply_pod?: number
+          synod?: boolean
           target_preference?: string
           virtual_atk_speed_attack?: number
           virtual_atk_speed_attack_planet?: number
@@ -1445,6 +1447,7 @@ export type Database = {
           sensor_rating?: number
           ship_id?: string | null
           supply_pod?: number
+          synod?: boolean
           target_preference?: string
           virtual_atk_speed_attack?: number
           virtual_atk_speed_attack_planet?: number

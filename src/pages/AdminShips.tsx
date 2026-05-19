@@ -28,6 +28,7 @@ interface ShipType {
   target_preference: string;
   flavor_description: string;
   ship_id: string | null;
+  synod: boolean;
   // Weapons
   laser_2_5cm: number;
   laser_4_5cm: number;
@@ -217,6 +218,7 @@ const AdminShips = () => {
     sensor_rating: "sensor_rating", target_preference: "target_preference",
     flavor_description: "flavor_description",
     ship_id: "ship_id", id: "ship_id", index: "ship_id",
+    synod: "synod",
     laser_2_5cm: "laser_2_5cm", "laser_2.5cm": "laser_2_5cm",
     laser_4_5cm: "laser_4_5cm", "laser_4.5cm": "laser_4_5cm",
     laser_6_5cm: "laser_6_5cm", "laser_6.5cm": "laser_6_5cm",
@@ -307,6 +309,8 @@ const AdminShips = () => {
           row[mapped] = parseInt(val) || 0;
         } else if (mapped === "ship_id") {
           row[mapped] = val || null;
+        } else if (mapped === "synod") {
+          row[mapped] = /^(true|1|yes|y)$/i.test(val) as any;
         } else {
           row[mapped] = val;
         }
@@ -410,7 +414,7 @@ const AdminShips = () => {
       id: crypto.randomUUID(),
       name: "New Ship", class: "DD", hull_class: "Escort", hull: 10, armor: 0,
       point_cost: 1, maintenance: 0, cbt_speed: 0, map_speed: 0, sensor_rating: 0,
-      target_preference: "", flavor_description: "", ship_id: null,
+      target_preference: "", flavor_description: "", ship_id: null, synod: false,
       laser_2_5cm: 0, laser_4_5cm: 0, laser_6_5cm: 0, laser_10cm: 0,
       laser_14cm: 0, laser_20cm: 0, laser_28cm: 0, laser_50cm: 0,
       missile_10kg: 0, missile_50kg: 0, missile_100kg: 0, missile_half_kt: 0,
@@ -478,7 +482,7 @@ const AdminShips = () => {
       "virtual_atk_speed_attack_planet", "virtual_atk_speed_outflank", "virtual_atk_speed_skirmish", "virtual_atk_speed_cover_retreat", "virtual_atk_speed_flank",
       "virtual_def_speed_attack", "virtual_def_speed_core", "virtual_def_speed_rear", "virtual_def_speed_retreat",
       "virtual_def_speed_attack_planet", "virtual_def_speed_outflank", "virtual_def_speed_skirmish", "virtual_def_speed_cover_retreat", "virtual_def_speed_flank",
-      "flavor_description",
+      "flavor_description", "synod",
     ];
     // Category row matching upload format
     const catRow = CSV_COLUMNS.map(c => {
@@ -556,6 +560,7 @@ const AdminShips = () => {
                 {VIRTUAL_DEF_FIELDS.map(f => (
                   <th key={f.key} className="px-1 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap bg-muted border-l border-border">D.{f.label}</th>
                 ))}
+                <th className="px-2 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap bg-muted border-l border-border">Synod</th>
                 <th className="px-2 py-2 w-10 bg-muted"></th>
               </tr>
             </thead>
@@ -604,6 +609,10 @@ const AdminShips = () => {
                         onChange={e => updateField(s.id, f.key, parseFloat(e.target.value) || 0)} />
                     </td>
                   ))}
+                  <td className="px-2 py-1 border-l border-border text-center">
+                    <input type="checkbox" checked={!!s.synod}
+                      onChange={e => updateField(s.id, "synod", e.target.checked as any)} />
+                  </td>
                   <td className="px-1 py-1">
                     <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteShip(s.id, s._new)}>
                       <Trash2 className="h-3 w-3" />
