@@ -135,7 +135,7 @@ const AdminWeapons = () => {
           <h1 className="font-heading text-2xl font-bold text-foreground">Weapons Catalog (Admin)</h1>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={addWeapon}><Plus className="mr-1 h-4 w-4" /> Add Weapon</Button>
-            <Button size="sm" onClick={saveAll} disabled={saving || !weapons.some(w => w._dirty)}>
+            <Button size="sm" onClick={saveAll} disabled={saving || !weapons.some(w => w._dirty || w._deleted)}>
               <Save className="mr-1 h-4 w-4" /> {saving ? "Saving..." : "Save All"}
             </Button>
           </div>
