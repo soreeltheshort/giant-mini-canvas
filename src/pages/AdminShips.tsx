@@ -494,6 +494,8 @@ const AdminShips = () => {
       "cbt_speed", "map_speed", "sensor_rating", "target_preference",
       "laser_2_5cm", "laser_4_5cm", "laser_6_5cm", "laser_10cm", "laser_14cm", "laser_20cm", "laser_28cm", "laser_50cm",
       "missile_10kg", "missile_50kg", "missile_100kg", "missile_half_kt",
+      "laser_light", "laser_medium", "laser_heavy", "laser_hull_breaker",
+      "missile_synod", "missile_kraken",
       "fighter_bay", "fighter_storage", "gun_ship_link", "gunship_storage",
       "scout_sensors", "supply_pod", "repair_pod", "ground_invasion",
       "virtual_atk_speed_attack", "virtual_atk_speed_core", "virtual_atk_speed_rear", "virtual_atk_speed_retreat",
