@@ -482,7 +482,7 @@ const AdminShips = () => {
       "virtual_atk_speed_attack_planet", "virtual_atk_speed_outflank", "virtual_atk_speed_skirmish", "virtual_atk_speed_cover_retreat", "virtual_atk_speed_flank",
       "virtual_def_speed_attack", "virtual_def_speed_core", "virtual_def_speed_rear", "virtual_def_speed_retreat",
       "virtual_def_speed_attack_planet", "virtual_def_speed_outflank", "virtual_def_speed_skirmish", "virtual_def_speed_cover_retreat", "virtual_def_speed_flank",
-      "flavor_description",
+      "flavor_description", "synod",
     ];
     // Category row matching upload format
     const catRow = CSV_COLUMNS.map(c => {
