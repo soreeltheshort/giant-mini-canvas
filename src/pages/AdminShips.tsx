@@ -560,6 +560,7 @@ const AdminShips = () => {
                 {VIRTUAL_DEF_FIELDS.map(f => (
                   <th key={f.key} className="px-1 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap bg-muted border-l border-border">D.{f.label}</th>
                 ))}
+                <th className="px-2 py-2 text-left font-medium text-muted-foreground text-xs whitespace-nowrap bg-muted border-l border-border">Synod</th>
                 <th className="px-2 py-2 w-10 bg-muted"></th>
               </tr>
             </thead>
