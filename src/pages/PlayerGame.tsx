@@ -434,7 +434,9 @@ const PlayerGame = () => {
       consumed_facility_id: ft.consumed_facility_id || null,
       maintenance: ft.maintenance || 0,
     })));
-    setDbShipTypes((stData || []).map((s: any) => ({
+    // Hide Synod-flagged ships from non-admin players in any build/list screen.
+    const visibleSt = (stData || []).filter((s: any) => isAdmin || !s.synod);
+    setDbShipTypes(visibleSt.map((s: any) => ({
       id: s.id,
       name: s.name,
       hull_class: s.hull_class,
