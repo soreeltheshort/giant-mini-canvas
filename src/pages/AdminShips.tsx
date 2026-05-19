@@ -309,6 +309,8 @@ const AdminShips = () => {
           row[mapped] = parseInt(val) || 0;
         } else if (mapped === "ship_id") {
           row[mapped] = val || null;
+        } else if (mapped === "synod") {
+          row[mapped] = /^(true|1|yes|y)$/i.test(val) as any;
         } else {
           row[mapped] = val;
         }
