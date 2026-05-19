@@ -609,6 +609,10 @@ const AdminShips = () => {
                         onChange={e => updateField(s.id, f.key, parseFloat(e.target.value) || 0)} />
                     </td>
                   ))}
+                  <td className="px-2 py-1 border-l border-border text-center">
+                    <input type="checkbox" checked={!!s.synod}
+                      onChange={e => updateField(s.id, "synod", e.target.checked as any)} />
+                  </td>
                   <td className="px-1 py-1">
                     <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteShip(s.id, s._new)}>
                       <Trash2 className="h-3 w-3" />
