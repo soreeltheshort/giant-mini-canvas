@@ -594,7 +594,52 @@ const PlayerGame = () => {
   // these still execute unconditionally on every render and before any early
   // return below.
   const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
-  const { live: liveHexKeys, everSeen: everSeenHexKeys } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+  const { live: liveHexKeysBase, everSeen: everSeenHexKeysBase } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+
+  // Hexes revealed because an enemy fleet attacked us last turn.
+  // Rule: "If I am attacked by another fleet, that fleet's hex is visible to me
+  // irrespective of my sensor range." Pulls battle_resolved logs from the most
+  // recently processed turn where the defender was this player's province and
+  // marks the attacker's hex as currently visible. Reveal lasts one turn.
+  const [attackerRevealHexKeys, setAttackerRevealHexKeys] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!player || !game) { setAttackerRevealHexKeys(new Set()); return; }
+    const ownClass = `PROVINCE_${player.player_slot}`;
+    const lastProcessedTurn = Math.max(0, (game.turn_number ?? 1) - 1);
+    if (lastProcessedTurn <= 0) { setAttackerRevealHexKeys(new Set()); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: logs } = await (supabase as any)
+        .from("game_logs")
+        .select("details_json")
+        .eq("game_id", game.id)
+        .eq("turn_number", lastProcessedTurn)
+        .eq("log_type", "battle_resolved");
+      if (cancelled) return;
+      const set = new Set<string>();
+      for (const l of (logs || []) as any[]) {
+        const d = l.details_json || {};
+        if (d.defender_owner === ownClass && typeof d.attacker_hex_x === "number" && typeof d.attacker_hex_y === "number") {
+          set.add(hexKey(d.attacker_hex_x, d.attacker_hex_y));
+        }
+      }
+      setAttackerRevealHexKeys(set);
+    })();
+    return () => { cancelled = true; };
+  }, [player?.id, game?.id, game?.turn_number]);
+
+  const liveHexKeys = useMemo(() => {
+    if (attackerRevealHexKeys.size === 0) return liveHexKeysBase;
+    const merged = new Set(liveHexKeysBase);
+    for (const k of attackerRevealHexKeys) merged.add(k);
+    return merged;
+  }, [liveHexKeysBase, attackerRevealHexKeys]);
+  const everSeenHexKeys = useMemo(() => {
+    if (attackerRevealHexKeys.size === 0) return everSeenHexKeysBase;
+    const merged = new Set(everSeenHexKeysBase);
+    for (const k of attackerRevealHexKeys) merged.add(k);
+    return merged;
+  }, [everSeenHexKeysBase, attackerRevealHexKeys]);
 
   // Admin-only override: reveal the entire map regardless of player sensor coverage.
   const [adminRevealAll, setAdminRevealAll] = useState(false);
