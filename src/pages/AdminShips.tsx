@@ -42,6 +42,12 @@ interface ShipType {
   missile_50kg: number;
   missile_100kg: number;
   missile_half_kt: number;
+  laser_light: number;
+  laser_medium: number;
+  laser_heavy: number;
+  laser_hull_breaker: number;
+  missile_synod: number;
+  missile_kraken: number;
   // Bays & storage
   fighter_bay: number;
   fighter_storage: number;
@@ -106,6 +112,12 @@ const WEAPON_FIELDS: { key: keyof ShipType; label: string }[] = [
   { key: "missile_50kg", label: "M50" },
   { key: "missile_100kg", label: "M100" },
   { key: "missile_half_kt", label: "M½kt" },
+  { key: "laser_light", label: "L-Light" },
+  { key: "laser_medium", label: "L-Med" },
+  { key: "laser_heavy", label: "L-Heavy" },
+  { key: "laser_hull_breaker", label: "L-HB" },
+  { key: "missile_synod", label: "M-Synod" },
+  { key: "missile_kraken", label: "M-Kraken" },
 ];
 
 const UTILITY_FIELDS: { key: keyof ShipType; label: string }[] = [
@@ -227,6 +239,8 @@ const AdminShips = () => {
     missile_10kg: "missile_10kg", missile_50kg: "missile_50kg",
     missile_100kg: "missile_100kg", missile_half_kt: "missile_half_kt",
     "missile_1/2kt": "missile_half_kt",
+    laser_light: "laser_light", laser_medium: "laser_medium", laser_heavy: "laser_heavy",
+    laser_hull_breaker: "laser_hull_breaker", missile_synod: "missile_synod", missile_kraken: "missile_kraken",
     fighter_bay: "fighter_bay", fighter_storage: "fighter_storage",
     gun_ship_link: "gun_ship_link", gunship_storage: "gunship_storage",
     scout_sensors: "scout_sensors", supply_pod: "supply_pod",
@@ -271,6 +285,8 @@ const AdminShips = () => {
     "missile_100kg", "missile_half_kt", "fighter_bay", "fighter_storage",
     "gun_ship_link", "gunship_storage", "scout_sensors", "supply_pod",
     "repair_pod", "ground_invasion",
+    "laser_light", "laser_medium", "laser_heavy", "laser_hull_breaker",
+    "missile_synod", "missile_kraken",
   ]);
 
   const parseCSV = (text: string) => {
@@ -418,6 +434,8 @@ const AdminShips = () => {
       laser_2_5cm: 0, laser_4_5cm: 0, laser_6_5cm: 0, laser_10cm: 0,
       laser_14cm: 0, laser_20cm: 0, laser_28cm: 0, laser_50cm: 0,
       missile_10kg: 0, missile_50kg: 0, missile_100kg: 0, missile_half_kt: 0,
+      laser_light: 0, laser_medium: 0, laser_heavy: 0, laser_hull_breaker: 0,
+      missile_synod: 0, missile_kraken: 0,
       fighter_bay: 0, fighter_storage: 0, gun_ship_link: 0, gunship_storage: 0,
       scout_sensors: 0, supply_pod: 0, repair_pod: 0, ground_invasion: 0,
       virtual_atk_speed_attack: 0, virtual_atk_speed_core: 0, virtual_atk_speed_rear: 0,
@@ -476,6 +494,8 @@ const AdminShips = () => {
       "cbt_speed", "map_speed", "sensor_rating", "target_preference",
       "laser_2_5cm", "laser_4_5cm", "laser_6_5cm", "laser_10cm", "laser_14cm", "laser_20cm", "laser_28cm", "laser_50cm",
       "missile_10kg", "missile_50kg", "missile_100kg", "missile_half_kt",
+      "laser_light", "laser_medium", "laser_heavy", "laser_hull_breaker",
+      "missile_synod", "missile_kraken",
       "fighter_bay", "fighter_storage", "gun_ship_link", "gunship_storage",
       "scout_sensors", "supply_pod", "repair_pod", "ground_invasion",
       "virtual_atk_speed_attack", "virtual_atk_speed_core", "virtual_atk_speed_rear", "virtual_atk_speed_retreat",

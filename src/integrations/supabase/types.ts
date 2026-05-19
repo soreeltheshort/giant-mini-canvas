@@ -1324,12 +1324,18 @@ export type Database = {
           laser_4_5cm: number
           laser_50cm: number
           laser_6_5cm: number
+          laser_heavy: number
+          laser_hull_breaker: number
+          laser_light: number
+          laser_medium: number
           maintenance: number
           map_speed: number
           missile_100kg: number
           missile_10kg: number
           missile_50kg: number
           missile_half_kt: number
+          missile_kraken: number
+          missile_synod: number
           name: string
           point_cost: number
           repair_pod: number
@@ -1379,12 +1385,18 @@ export type Database = {
           laser_4_5cm?: number
           laser_50cm?: number
           laser_6_5cm?: number
+          laser_heavy?: number
+          laser_hull_breaker?: number
+          laser_light?: number
+          laser_medium?: number
           maintenance?: number
           map_speed?: number
           missile_100kg?: number
           missile_10kg?: number
           missile_50kg?: number
           missile_half_kt?: number
+          missile_kraken?: number
+          missile_synod?: number
           name: string
           point_cost: number
           repair_pod?: number
@@ -1434,12 +1446,18 @@ export type Database = {
           laser_4_5cm?: number
           laser_50cm?: number
           laser_6_5cm?: number
+          laser_heavy?: number
+          laser_hull_breaker?: number
+          laser_light?: number
+          laser_medium?: number
           maintenance?: number
           map_speed?: number
           missile_100kg?: number
           missile_10kg?: number
           missile_50kg?: number
           missile_half_kt?: number
+          missile_kraken?: number
+          missile_synod?: number
           name?: string
           point_cost?: number
           repair_pod?: number
