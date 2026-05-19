@@ -218,6 +218,7 @@ const AdminShips = () => {
     sensor_rating: "sensor_rating", target_preference: "target_preference",
     flavor_description: "flavor_description",
     ship_id: "ship_id", id: "ship_id", index: "ship_id",
+    synod: "synod",
     laser_2_5cm: "laser_2_5cm", "laser_2.5cm": "laser_2_5cm",
     laser_4_5cm: "laser_4_5cm", "laser_4.5cm": "laser_4_5cm",
     laser_6_5cm: "laser_6_5cm", "laser_6.5cm": "laser_6_5cm",
