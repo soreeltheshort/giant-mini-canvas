@@ -69,19 +69,28 @@ const AdminWeapons = () => {
     setWeapons(prev => [...prev, newWeapon]);
   };
 
-  const deleteWeapon = async (id: string, isNew?: boolean) => {
-    if (!isNew) {
-      const { error } = await supabase.from("weapons").delete().eq("id", id);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+  const deleteWeapon = (id: string, isNew?: boolean) => {
+    if (isNew) {
+      setWeapons(prev => prev.filter(w => w.id !== id));
+    } else {
+      setWeapons(prev => prev.map(w => w.id === id ? { ...w, _deleted: true } : w));
     }
-    setWeapons(prev => prev.filter(w => w.id !== id));
-    toast({ title: "Deleted" });
+  };
+
+  const undoDelete = (id: string) => {
+    setWeapons(prev => prev.map(w => w.id === id ? { ...w, _deleted: false } : w));
   };
 
   const saveAll = async () => {
     setSaving(true);
-    const dirty = weapons.filter(w => w._dirty);
+    const dirty = weapons.filter(w => w._dirty && !w._deleted);
+    const toDelete = weapons.filter(w => w._deleted && !w._new);
     let errors = 0;
+
+    for (const w of toDelete) {
+      const { error } = await supabase.from("weapons").delete().eq("id", w.id);
+      if (error) { errors++; console.error(error); }
+    }
 
     for (const w of dirty) {
       const payload = {
@@ -109,7 +118,7 @@ const AdminWeapons = () => {
     if (errors) {
       toast({ title: "Some saves failed", description: `${errors} error(s)`, variant: "destructive" });
     } else {
-      toast({ title: "Saved", description: `${dirty.length} weapon(s) updated` });
+      toast({ title: "Saved", description: `${dirty.length} updated, ${toDelete.length} deleted` });
     }
 
     await loadWeapons();
