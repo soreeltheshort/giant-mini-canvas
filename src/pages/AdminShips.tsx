@@ -285,6 +285,8 @@ const AdminShips = () => {
     "missile_100kg", "missile_half_kt", "fighter_bay", "fighter_storage",
     "gun_ship_link", "gunship_storage", "scout_sensors", "supply_pod",
     "repair_pod", "ground_invasion",
+    "laser_light", "laser_medium", "laser_heavy", "laser_hull_breaker",
+    "missile_synod", "missile_kraken",
   ]);
 
   const parseCSV = (text: string) => {
