@@ -159,7 +159,7 @@ const AdminWeapons = () => {
             </thead>
             <tbody>
               {weapons.map(w => (
-                <tr key={w.id} className={`border-b border-border ${w._dirty ? "bg-primary/5" : ""}`}>
+                <tr key={w.id} className={`border-b border-border ${w._deleted ? "bg-destructive/10 line-through opacity-60" : w._dirty ? "bg-primary/5" : ""}`}>
                   <td className="px-1 py-1">
                     <Input className="h-8 text-xs" value={w.name} onChange={e => updateField(w.id, "name", e.target.value)} />
                   </td>
