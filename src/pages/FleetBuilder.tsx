@@ -97,6 +97,7 @@ const FleetBuilder = () => {
   const [filterSupply, setFilterSupply] = useState(false);
   const [filterRepair, setFilterRepair] = useState(false);
   const [filterScout, setFilterScout] = useState(false);
+  const [filterSynod, setFilterSynod] = useState(false);
   const [expandedHull, setExpandedHull] = useState<string | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
@@ -248,8 +249,9 @@ const FleetBuilder = () => {
     if (filterSupply) ships = ships.filter(s => (s.supply_pod || 0) > 0);
     if (filterRepair) ships = ships.filter(s => (s.repair_pod || 0) > 0);
     if (filterScout) ships = ships.filter(s => (s.scout_sensors || 0) > 0);
+    if (filterSynod) ships = ships.filter(s => (s as any).synod === true);
     return ships;
-  }, [shipTypes, filterClass, searchTerm, filterGI, filterSupply, filterRepair, filterScout]);
+  }, [shipTypes, filterClass, searchTerm, filterGI, filterSupply, filterRepair, filterScout, filterSynod]);
 
   const groupedShips = useMemo(() => {
     const groups: Record<string, ShipType[]> = {};
@@ -569,6 +571,7 @@ const FleetBuilder = () => {
                   ["Supply", filterSupply, setFilterSupply],
                   ["Repair", filterRepair, setFilterRepair],
                   ["Scout", filterScout, setFilterScout],
+                  ["Synod", filterSynod, setFilterSynod],
                 ] as const).map(([label, val, setter]) => (
                   <button
                     key={label}
@@ -589,7 +592,7 @@ const FleetBuilder = () => {
                       <span>{HULL_LABELS[hc] || hc} ({groupedShips[hc].length})</span>
                       <ChevronDown className={`h-3 w-3 transition-transform ${expandedHull === hc ? "rotate-180" : ""}`} />
                     </button>
-                    {(expandedHull === hc || filterClass !== "all" || searchTerm || filterGI || filterSupply || filterRepair || filterScout) && (
+                    {(expandedHull === hc || filterClass !== "all" || searchTerm || filterGI || filterSupply || filterRepair || filterScout || filterSynod) && (
                       <div className="space-y-1 mb-2">
                         {groupedShips[hc].map(st => (
                           <button
