@@ -291,18 +291,29 @@ const AdminShips = () => {
 
   const parseCSV = (text: string) => {
     const allLines = text.split(/\r?\n/).filter(l => l.trim());
-    if (allLines.length < 3) return [];
-    // Row 1 is category row (Virtual Attack Speed / Virtual Defense Speed), row 2 is column names, row 3+ is data
-    const catRow = allLines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
-    const nameRow = allLines[1].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
-    // Build merged headers: for virtual speed cols, prefix with category
-    const headers = nameRow.map((h, i) => {
-      const cat = catRow[i] || "";
-      if (cat.includes("virtual_attack_speed")) return `virtual_attack_speed_${h}`;
-      if (cat.includes("virtual_defense_speed")) return `virtual_defense_speed_${h}`;
-      return h;
-    });
-    return allLines.slice(2).map(line => {
+    if (allLines.length < 2) return [];
+    const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "_");
+    const row1 = allLines[0].split(",").map(normalize);
+    // Single-header mode: row 1 already contains real column names like ship_id, name, ...
+    const singleHeader = row1.includes("ship_id") && row1.includes("name");
+    let headers: string[];
+    let dataStart: number;
+    if (singleHeader) {
+      headers = row1;
+      dataStart = 1;
+    } else {
+      if (allLines.length < 3) return [];
+      const catRow = row1;
+      const nameRow = allLines[1].split(",").map(normalize);
+      headers = nameRow.map((h, i) => {
+        const cat = catRow[i] || "";
+        if (cat.includes("virtual_attack_speed")) return `virtual_attack_speed_${h}`;
+        if (cat.includes("virtual_defense_speed")) return `virtual_defense_speed_${h}`;
+        return h;
+      });
+      dataStart = 2;
+    }
+    return allLines.slice(dataStart).map(line => {
       // Handle quoted fields with commas
       const values: string[] = [];
       let current = "";
@@ -357,7 +368,7 @@ const AdminShips = () => {
       const text = ev.target?.result as string;
       const parsed = parseCSV(text);
       if (parsed.length === 0) {
-        toast({ title: "Error", description: "No valid ship rows found in CSV", variant: "destructive" });
+        toast({ title: "Error", description: "No valid ship rows found. CSV header must include ship_id and name.", variant: "destructive" });
         return;
       }
       setCsvPending(parsed);
