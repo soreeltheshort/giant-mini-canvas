@@ -26,7 +26,13 @@ interface Props {
   onSelectHex: (hexKey: string) => void;
 }
 
-const OWNER_OPTIONS = ALL_CLASSIFICATIONS.filter(c => c.startsWith("PROVINCE_") || c === "CORE");
+const OWNER_CLASSIFICATIONS = ALL_CLASSIFICATIONS.filter(c => c.startsWith("PROVINCE_") || c === "CORE");
+
+interface FactionRow {
+  id: string;
+  name: string;
+  color: string;
+}
 
 const FleetsPanel: React.FC<Props> = ({
   fleets,
