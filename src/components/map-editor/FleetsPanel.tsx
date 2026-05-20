@@ -174,9 +174,9 @@ const FleetsPanel: React.FC<Props> = ({
               onChange={e => setOwnerClassification(e.target.value)}
               className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs text-foreground"
             >
-              {OWNER_OPTIONS.map(c => (
-                <option key={c} value={c}>
-                  {CLASSIFICATION_LABELS[c]}
+              {ownerOptions.map(o => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
                 </option>
               ))}
             </select>
