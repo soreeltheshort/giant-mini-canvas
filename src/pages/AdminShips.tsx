@@ -368,7 +368,7 @@ const AdminShips = () => {
       const text = ev.target?.result as string;
       const parsed = parseCSV(text);
       if (parsed.length === 0) {
-        toast({ title: "Error", description: "No valid ship rows found in CSV", variant: "destructive" });
+        toast({ title: "Error", description: "No valid ship rows found. CSV header must include ship_id and name.", variant: "destructive" });
         return;
       }
       setCsvPending(parsed);
