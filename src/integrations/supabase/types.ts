@@ -14,6 +14,494 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_decision_log: {
+        Row: {
+          created_at: string
+          details_json: Json
+          game_id: string
+          id: string
+          phase: string
+          player_id: string
+          summary: string
+          turn_number: number
+        }
+        Insert: {
+          created_at?: string
+          details_json?: Json
+          game_id: string
+          id?: string
+          phase: string
+          player_id: string
+          summary?: string
+          turn_number?: number
+        }
+        Update: {
+          created_at?: string
+          details_json?: Json
+          game_id?: string
+          id?: string
+          phase?: string
+          player_id?: string
+          summary?: string
+          turn_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_decision_log_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_decision_log_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_goals: {
+        Row: {
+          created_at: string
+          created_turn: number
+          game_id: string
+          goal_type: string
+          id: string
+          parent_goal_id: string | null
+          player_id: string
+          priority: number
+          resolved_turn: number | null
+          status: string
+          target_json: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_turn?: number
+          game_id: string
+          goal_type: string
+          id?: string
+          parent_goal_id?: string | null
+          player_id: string
+          priority?: number
+          resolved_turn?: number | null
+          status?: string
+          target_json?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_turn?: number
+          game_id?: string
+          goal_type?: string
+          id?: string
+          parent_goal_id?: string | null
+          player_id?: string
+          priority?: number
+          resolved_turn?: number | null
+          status?: string
+          target_json?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_goals_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_goals_parent_goal_id_fkey"
+            columns: ["parent_goal_id"]
+            isOneToOne: false
+            referencedRelation: "ai_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_goals_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_persona_goal_weights: {
+        Row: {
+          base_weight: number
+          created_at: string
+          goal_type: string
+          id: string
+          persona_id: string
+          threshold_json: Json
+          updated_at: string
+          urgency_multiplier: number
+        }
+        Insert: {
+          base_weight?: number
+          created_at?: string
+          goal_type: string
+          id?: string
+          persona_id: string
+          threshold_json?: Json
+          updated_at?: string
+          urgency_multiplier?: number
+        }
+        Update: {
+          base_weight?: number
+          created_at?: string
+          goal_type?: string
+          id?: string
+          persona_id?: string
+          threshold_json?: Json
+          updated_at?: string
+          urgency_multiplier?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_persona_goal_weights_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "ai_personas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_personas: {
+        Row: {
+          aggression: number
+          created_at: string
+          description: string
+          economic_focus: number
+          expansionism: number
+          id: string
+          loyalty: number
+          model_key: string
+          name: string
+          risk_tolerance: number
+          system_prompt: string
+          updated_at: string
+        }
+        Insert: {
+          aggression?: number
+          created_at?: string
+          description?: string
+          economic_focus?: number
+          expansionism?: number
+          id?: string
+          loyalty?: number
+          model_key?: string
+          name: string
+          risk_tolerance?: number
+          system_prompt?: string
+          updated_at?: string
+        }
+        Update: {
+          aggression?: number
+          created_at?: string
+          description?: string
+          economic_focus?: number
+          expansionism?: number
+          id?: string
+          loyalty?: number
+          model_key?: string
+          name?: string
+          risk_tolerance?: number
+          system_prompt?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_plan_steps: {
+        Row: {
+          created_at: string
+          executed_turn: number | null
+          id: string
+          payload_json: Json
+          plan_id: string
+          scheduled_turn: number
+          status: string
+          step_order: number
+          step_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          executed_turn?: number | null
+          id?: string
+          payload_json?: Json
+          plan_id: string
+          scheduled_turn?: number
+          status?: string
+          step_order?: number
+          step_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          executed_turn?: number | null
+          id?: string
+          payload_json?: Json
+          plan_id?: string
+          scheduled_turn?: number
+          status?: string
+          step_order?: number
+          step_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_plan_steps_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "ai_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_plans: {
+        Row: {
+          created_at: string
+          created_turn: number
+          game_id: string
+          goal_id: string
+          id: string
+          player_id: string
+          rationale: string
+          status: string
+          target_completion_turn: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_turn?: number
+          game_id: string
+          goal_id: string
+          id?: string
+          player_id: string
+          rationale?: string
+          status?: string
+          target_completion_turn?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_turn?: number
+          game_id?: string
+          goal_id?: string
+          id?: string
+          player_id?: string
+          rationale?: string
+          status?: string
+          target_completion_turn?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_plans_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_plans_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "ai_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_plans_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_relationship_events: {
+        Row: {
+          created_at: string
+          details_json: Json
+          event_type: string
+          fear_delta: number
+          game_id: string
+          id: string
+          opinion_delta: number
+          player_id: string
+          target_player_id: string
+          trust_delta: number
+          turn_number: number
+        }
+        Insert: {
+          created_at?: string
+          details_json?: Json
+          event_type: string
+          fear_delta?: number
+          game_id: string
+          id?: string
+          opinion_delta?: number
+          player_id: string
+          target_player_id: string
+          trust_delta?: number
+          turn_number?: number
+        }
+        Update: {
+          created_at?: string
+          details_json?: Json
+          event_type?: string
+          fear_delta?: number
+          game_id?: string
+          id?: string
+          opinion_delta?: number
+          player_id?: string
+          target_player_id?: string
+          trust_delta?: number
+          turn_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_relationship_events_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_relationship_events_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_relationship_events_target_player_id_fkey"
+            columns: ["target_player_id"]
+            isOneToOne: false
+            referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_relationships: {
+        Row: {
+          created_at: string
+          fear: number
+          game_id: string
+          id: string
+          last_interaction_turn: number
+          notes_json: Json
+          opinion: number
+          player_id: string
+          target_player_id: string
+          trust: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fear?: number
+          game_id: string
+          id?: string
+          last_interaction_turn?: number
+          notes_json?: Json
+          opinion?: number
+          player_id: string
+          target_player_id: string
+          trust?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fear?: number
+          game_id?: string
+          id?: string
+          last_interaction_turn?: number
+          notes_json?: Json
+          opinion?: number
+          player_id?: string
+          target_player_id?: string
+          trust?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_relationships_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_relationships_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_relationships_target_player_id_fkey"
+            columns: ["target_player_id"]
+            isOneToOne: false
+            referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_world_beliefs: {
+        Row: {
+          belief_key: string
+          confidence: number
+          created_at: string
+          game_id: string
+          id: string
+          player_id: string
+          turn_number: number
+          updated_at: string
+          value_json: Json
+        }
+        Insert: {
+          belief_key: string
+          confidence?: number
+          created_at?: string
+          game_id: string
+          id?: string
+          player_id: string
+          turn_number?: number
+          updated_at?: string
+          value_json?: Json
+        }
+        Update: {
+          belief_key?: string
+          confidence?: number
+          created_at?: string
+          game_id?: string
+          id?: string
+          player_id?: string
+          turn_number?: number
+          updated_at?: string
+          value_json?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_world_beliefs_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_world_beliefs_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           default_map_id: string | null
@@ -802,6 +1290,7 @@ export type Database = {
         Row: {
           admin_capability: number
           admin_points_remaining: number
+          ai_persona_id: string | null
           combat_capability: number
           combat_points_remaining: number
           created_at: string
@@ -809,6 +1298,7 @@ export type Database = {
           game_id: string
           id: string
           initialized: boolean
+          is_ai: boolean
           last_maintenance: number
           last_tribute: number
           orders_locked: boolean
@@ -820,6 +1310,7 @@ export type Database = {
         Insert: {
           admin_capability?: number
           admin_points_remaining?: number
+          ai_persona_id?: string | null
           combat_capability?: number
           combat_points_remaining?: number
           created_at?: string
@@ -827,6 +1318,7 @@ export type Database = {
           game_id: string
           id?: string
           initialized?: boolean
+          is_ai?: boolean
           last_maintenance?: number
           last_tribute?: number
           orders_locked?: boolean
@@ -838,6 +1330,7 @@ export type Database = {
         Update: {
           admin_capability?: number
           admin_points_remaining?: number
+          ai_persona_id?: string | null
           combat_capability?: number
           combat_points_remaining?: number
           created_at?: string
@@ -845,6 +1338,7 @@ export type Database = {
           game_id?: string
           id?: string
           initialized?: boolean
+          is_ai?: boolean
           last_maintenance?: number
           last_tribute?: number
           orders_locked?: boolean
@@ -854,6 +1348,13 @@ export type Database = {
           visible_system_ids?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "game_players_ai_persona_id_fkey"
+            columns: ["ai_persona_id"]
+            isOneToOne: false
+            referencedRelation: "ai_personas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "game_players_faction_id_fkey"
             columns: ["faction_id"]
@@ -1118,6 +1619,7 @@ export type Database = {
           order_json: Json
           order_type: Database["public"]["Enums"]["order_type"]
           player_id: string
+          source_plan_step_id: string | null
           submitted_at: string
           turn_number: number
         }
@@ -1128,6 +1630,7 @@ export type Database = {
           order_json?: Json
           order_type?: Database["public"]["Enums"]["order_type"]
           player_id: string
+          source_plan_step_id?: string | null
           submitted_at?: string
           turn_number: number
         }
@@ -1138,6 +1641,7 @@ export type Database = {
           order_json?: Json
           order_type?: Database["public"]["Enums"]["order_type"]
           player_id?: string
+          source_plan_step_id?: string | null
           submitted_at?: string
           turn_number?: number
         }
@@ -1154,6 +1658,13 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "game_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_orders_source_plan_step_id_fkey"
+            columns: ["source_plan_step_id"]
+            isOneToOne: false
+            referencedRelation: "ai_plan_steps"
             referencedColumns: ["id"]
           },
         ]
