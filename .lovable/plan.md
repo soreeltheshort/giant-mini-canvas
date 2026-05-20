@@ -1,46 +1,42 @@
-# Why the upload fails
+## Goal
 
-`src/pages/AdminShips.tsx` → `parseCSV` (lines 292–350) hard-codes a **two-row header**:
+In ship combat, when a weapon's `damage + armorPenetration < target.armor` (i.e. even a clean hit would deal 0 damage), the firing gun should skip that target and pick the next-best one from the weapon's preference table instead of wasting the shot.
 
-- Row 1 = category row (e.g. blank cells + `Virtual Attack Speed` / `Virtual Defense Speed`)
-- Row 2 = the real column names
-- Row 3+ = data
+## Effort: very small
 
-Your `ship_catalog_1_-_ship_catalog_1.csv` only has **one** header row (`ship_id,name,class,…`) followed by data. The parser therefore:
+One localized change inside `selectTarget()` in `src/lib/battleEngine.ts`. No schema changes, no UI, no migrations, no config table additions. Existing weapon-preference plumbing (`weaponPrefs`, `getWeaponTargetPriority`, mount stats with `damage` + `armorPenetration`) already gives us everything we need.
 
-1. Treats your real header row as the "category" row.
-2. Treats the first ship row (`BB03,Aurelian,…`) as the "header" row, so derived headers become `bb03`, `aurelian`, `bb`, `128`, …
-3. None of those match `CSV_FIELD_MAP`, so every row ends up with no `name` and is dropped by the final `.filter(r => r.name)`.
-4. UI shows the toast **"No valid ship rows found in CSV."**
+## Change
 
-The virtual-speed columns in your file (`virtual_atk_speed_attack`, `virtual_def_speed_flank`, …) already match the DB column names, so the category-row prefixing logic isn't actually needed for this file.
+`selectTarget(attacker, enemies, weaponKey)` currently filters enemies only by `!crippled && currentHull > 0`. Add an "effective" filter parameter so we can also exclude targets the chosen weapon mount cannot meaningfully hurt.
 
-# Plan
+### Technical detail
 
-Make `parseCSV` accept either format.
+1. Add a helper in `battleEngine.ts`:
+   ```ts
+   function canDamage(mount: WeaponMount, target: ShipInstance): boolean {
+     // A clean (non-crit) hit deals max(0, damage - max(armor - AP, 0)).
+     // If that is <= 0, the weapon cannot hurt this target.
+     return mount.damage > Math.max(target.armor - mount.armorPenetration, 0);
+   }
+   ```
+2. Change `selectTarget` to accept the `mount` (not just `weaponKey`) and apply `canDamage(mount, e)` as part of `isValidTarget` for both the "damaged first" pass and the "any" pass over the weapon's hull-class priority.
+3. Fallback ordering when nothing in the priority list is damageable:
+   - First, try any enemy (any hull class) the weapon CAN damage — pick from the closest hull class in `priority` order.
+   - Only if no enemy anywhere can be damaged by this mount, fall back to the current "any remaining enemy" behaviour. This preserves today's behaviour of always firing if a target exists (avoids silent no-ops), while still letting the log show "wasted shot" cases.
+4. Update the single caller in `fireWeaponsOfType` to pass `mount` instead of `mount.key`. `getWeaponTargetPriority(mount.key, ...)` still drives the priority list; only the per-shot filter changes.
+5. Extend the `target_selected` / hit / miss event `payload_json` and admin-explain text with a `weaponCanDamage: boolean` flag and, when relevant, a note like `"skipped <hull> targets — AP+dmg < armor"`, so admins can see why a target was chosen.
 
-### Code changes (single file)
+### What I will NOT touch
 
-`src/pages/AdminShips.tsx` → `parseCSV`:
+- Hull-class preference logic, weapon prefs DB table, RNG ordering for equally valid targets, ground combat, fleet cleanup, or any UI.
+- Crit math (a crit could in theory exceed armor) — kept out intentionally; weapons that only ever damage via crit should not be considered "effective" picks. Happy to change this if you prefer.
 
-1. Read all non-empty lines.
-2. Detect header style by looking at row 1:
-   - If row 1 normalised contains both `ship_id` and `name` → **single-header mode**. Use row 1 as headers, data starts at row 2. No category prefixing.
-   - Otherwise → keep current **two-header mode** (row 1 = categories, row 2 = headers, data from row 3).
-3. Everything downstream (`CSV_FIELD_MAP` lookup, FLOAT/NUM coercion, class/hull derivation, dedupe, upsert) stays unchanged.
+## Verification
 
-### Optional polish (same edit)
+- Existing battle simulator at `/battle`: run a fight with a small-laser ship vs a heavy-armor capital plus a frigate — confirm the small lasers now target the frigate instead of pinging 0-damage shots at the capital.
+- Run a turn or two through the in-game combat phase (same engine via `battleSetup`) to confirm parity and that no regressions appear in `battle_runs` / `battle_events`.
 
-- When parsing returns 0 rows, include a hint in the toast: *"CSV header must include ship_id and name"* — easier to diagnose future bad files.
+## Estimated size
 
-### Out of scope
-
-- No DB migration.
-- No changes to the export button (it can keep emitting the two-row format).
-- No changes to upsert / dedupe logic.
-
-### Verification
-
-After the edit:
-1. Re-upload `ship_catalog_1_-_ship_catalog_1.csv` on `/admin/ships`. The confirm dialog should show **72 ships** (73 lines − 1 header).
-2. Re-upload an export produced by the in-app "Download CSV" button to confirm two-header mode still works.
+~20–30 lines of code in one file, plus a couple of new fields in the event payload. ~10 minutes to implement, ~5 to sanity-check in the simulator.
