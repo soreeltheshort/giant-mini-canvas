@@ -487,7 +487,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         // Re-pick a target for every shot — ships do not maintain a fixed target
         // between guns or between attackers; each shot randomly chooses from the
         // currently valid favorite-class targets.
-        const target = selectTarget(attacker, enemies, mount.key);
+        const target = selectTarget(attacker, enemies, mount);
         if (!target) continue;
 
         const admiralDefBonus = target.fleet === "A" ? admiralBonusA : admiralBonusB;
