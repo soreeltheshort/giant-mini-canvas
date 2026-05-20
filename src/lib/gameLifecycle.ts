@@ -130,8 +130,11 @@ export async function startGame(supabase: SupabaseClient, gameId: string) {
     ]);
     const maintMap = new Map<string, number>((allSt || []).map((s: any) => [s.id, Number(s.maintenance)]));
     for (const gf of gameFleets) {
-      const slot = nameToSlot.get((gf.owner_classification || "").toLowerCase());
+      const ownerRaw = (gf.owner_classification || "").toLowerCase();
+      const ownerStripped = ownerRaw.replace(/_int\d*$/i, "");
+      const slot = nameToSlot.get(ownerRaw) ?? nameToSlot.get(ownerStripped);
       if (slot === undefined) continue;
+
       const ships = (fs || []).filter((x: any) => x.game_fleet_id === gf.id);
       let maint = 0;
       for (const s of ships) maint += (maintMap.get(s.ship_type_id) || 0) * s.quantity;
