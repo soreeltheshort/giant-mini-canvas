@@ -27,7 +27,7 @@ const Header = () => {
   const isCombatTestingMode = location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/fleet-builder") || location.pathname.startsWith("/battle") || location.pathname.startsWith("/admin/battle") || location.pathname.startsWith("/admin/weapons") || location.pathname.startsWith("/admin/ships");
   const isMapTestingMode = location.pathname.startsWith("/map-testing");
   const isPlanetTestingMode = location.pathname.startsWith("/planet-testing");
-  const isFleetTestingMode = location.pathname.startsWith("/fleet-testing");
+  
   const isGameMode = location.pathname.startsWith("/admin/games");
   const isForumActive = location.pathname.startsWith("/blog") || location.pathname === "/admin/blog" || location.pathname === "/unsubscribe";
 
