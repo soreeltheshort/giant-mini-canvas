@@ -45,6 +45,7 @@ const FleetsPanel: React.FC<Props> = ({
 }) => {
   const [savedFleets, setSavedFleets] = useState<SavedFleet[]>([]);
   const [fleetActualPoints, setFleetActualPoints] = useState<Map<string, number>>(new Map());
+  const [factions, setFactions] = useState<FactionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSourceFleet, setSelectedSourceFleet] = useState("");
   const [fleetName, setFleetName] = useState("");
@@ -53,13 +54,14 @@ const FleetsPanel: React.FC<Props> = ({
   // Load saved fleets from combat testing along with actual point totals
   useEffect(() => {
     (async () => {
-      const [{ data: fleetData }, { data: shipRows }, { data: shipTypes }] = await Promise.all([
+      const [{ data: fleetData }, { data: shipRows }, { data: shipTypes }, { data: factionData }] = await Promise.all([
         supabase
           .from("fleets")
           .select("id, name, owner_user_id, points_budget, readiness, standing_order")
           .order("name", { ascending: true }),
         supabase.from("fleet_ships").select("fleet_id, ship_type_id, quantity"),
         supabase.from("ship_types").select("id, point_cost"),
+        supabase.from("factions").select("id, name, color").order("name", { ascending: true }),
       ]);
       const costById = new Map<string, number>();
       for (const st of shipTypes || []) costById.set(st.id, st.point_cost || 0);
@@ -70,9 +72,26 @@ const FleetsPanel: React.FC<Props> = ({
       }
       setFleetActualPoints(totals);
       setSavedFleets(fleetData || []);
+      setFactions(factionData || []);
       setLoading(false);
     })();
   }, []);
+
+  // Build owner dropdown options by matching DB faction names to classification labels.
+  // Falls back to the hardcoded label if no matching faction exists in the DB.
+  const ownerOptions = useMemo(() => {
+    const byName = new Map(factions.map(f => [f.name.toLowerCase(), f]));
+    return OWNER_CLASSIFICATIONS.map(c => {
+      const fallback = CLASSIFICATION_LABELS[c];
+      const match = byName.get(fallback.toLowerCase());
+      return {
+        value: c,
+        label: match?.name || fallback,
+        color: match?.color,
+      };
+    });
+  }, [factions]);
+
 
   const selectedHex = selectedHexKey ? hexes.get(selectedHexKey) : null;
 
