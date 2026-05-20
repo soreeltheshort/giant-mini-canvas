@@ -249,8 +249,9 @@ const FleetBuilder = () => {
     if (filterSupply) ships = ships.filter(s => (s.supply_pod || 0) > 0);
     if (filterRepair) ships = ships.filter(s => (s.repair_pod || 0) > 0);
     if (filterScout) ships = ships.filter(s => (s.scout_sensors || 0) > 0);
+    if (filterSynod) ships = ships.filter(s => (s as any).synod === true);
     return ships;
-  }, [shipTypes, filterClass, searchTerm, filterGI, filterSupply, filterRepair, filterScout]);
+  }, [shipTypes, filterClass, searchTerm, filterGI, filterSupply, filterRepair, filterScout, filterSynod]);
 
   const groupedShips = useMemo(() => {
     const groups: Record<string, ShipType[]> = {};
