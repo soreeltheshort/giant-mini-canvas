@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { MapFleet, HexData, hexKey } from "@/lib/mapTypes";
-import { CLASSIFICATION_LABELS, ALL_CLASSIFICATIONS } from "@/lib/mapTypes";
+import { CLASSIFICATION_LABELS } from "@/lib/mapTypes";
 import { Plus, Trash2, MapPin, Anchor } from "lucide-react";
 
 interface SavedFleet {
