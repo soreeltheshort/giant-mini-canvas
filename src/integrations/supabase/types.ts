@@ -998,6 +998,7 @@ export type Database = {
       }
       factions: {
         Row: {
+          code_name: string
           color: string
           created_at: string
           id: string
@@ -1005,6 +1006,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          code_name: string
           color?: string
           created_at?: string
           id?: string
@@ -1012,6 +1014,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          code_name?: string
           color?: string
           created_at?: string
           id?: string
