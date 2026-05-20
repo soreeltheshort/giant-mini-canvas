@@ -434,23 +434,39 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
     return { priority: getTargetPriority(shipTargetPref), source: "ship" };
   }
 
-  function selectTarget(attacker: ShipInstance, enemies: ShipInstance[], weaponKey?: string): ShipInstance | null {
+  function canDamage(mount: WeaponMount, target: ShipInstance): boolean {
+    // A clean (non-crit) hit deals max(0, damage - max(armor - AP, 0)).
+    // If that is 0, the weapon cannot meaningfully hurt this target.
+    return mount.damage > Math.max(target.armor - mount.armorPenetration, 0);
+  }
+
+  function selectTarget(attacker: ShipInstance, enemies: ShipInstance[], mount?: WeaponMount): ShipInstance | null {
+    const weaponKey = mount?.key;
     const { priority } = weaponKey
       ? getWeaponTargetPriority(weaponKey, attacker.target_preference)
       : { priority: getTargetPriority(attacker.target_preference) };
     // A ship at 0 hull is effectively destroyed even if its `crippled` flag has
     // not yet been set (deferred crippling runs at end of weapon pass). Exclude
     // such ships so attackers don't waste shots on already-dead targets.
-    const isValidTarget = (e: ShipInstance) => !e.crippled && e.currentHull > 0;
+    const alive = (e: ShipInstance) => !e.crippled && e.currentHull > 0;
+    const effective = (e: ShipInstance) => alive(e) && (!mount || canDamage(mount, e));
+    // Pass 1: weapon priority, damaged-first, only targets we can damage.
     for (const hullClass of priority) {
-      const damaged = enemies.filter(e => e.hull_class === hullClass && isValidTarget(e) && e.currentHull < e.maxHull);
+      const damaged = enemies.filter(e => e.hull_class === hullClass && effective(e) && e.currentHull < e.maxHull);
       if (damaged.length > 0) return damaged[Math.floor(rng() * damaged.length)];
     }
+    // Pass 2: weapon priority, any damageable target.
     for (const hullClass of priority) {
-      const targets = enemies.filter(e => e.hull_class === hullClass && isValidTarget(e));
+      const targets = enemies.filter(e => e.hull_class === hullClass && effective(e));
       if (targets.length > 0) return targets[Math.floor(rng() * targets.length)];
     }
-    const remaining = enemies.filter(isValidTarget);
+    // Pass 3: any damageable enemy off-preference (only meaningful when mount is set).
+    if (mount) {
+      const anyDamageable = enemies.filter(e => alive(e) && canDamage(mount, e));
+      if (anyDamageable.length > 0) return anyDamageable[Math.floor(rng() * anyDamageable.length)];
+    }
+    // Pass 4 (fallback): no damageable target anywhere — fire at whatever is left.
+    const remaining = enemies.filter(alive);
     return remaining.length > 0 ? remaining[Math.floor(rng() * remaining.length)] : null;
   }
 
@@ -471,7 +487,7 @@ export function runBattle(fleetA: FleetSnapshot, fleetB: FleetSnapshot, seedStr:
         // Re-pick a target for every shot — ships do not maintain a fixed target
         // between guns or between attackers; each shot randomly chooses from the
         // currently valid favorite-class targets.
-        const target = selectTarget(attacker, enemies, mount.key);
+        const target = selectTarget(attacker, enemies, mount);
         if (!target) continue;
 
         const admiralDefBonus = target.fleet === "A" ? admiralBonusA : admiralBonusB;
