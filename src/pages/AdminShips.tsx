@@ -390,25 +390,39 @@ const AdminShips = () => {
       }
     }
 
-    // Merge existing UUIDs into parsed rows and deduplicate by ship_id (last wins)
+    // Merge existing UUIDs into parsed rows and deduplicate by ship_id (last wins).
+    // New rows (ship_id not yet in DB) get a fresh UUID so the NOT NULL "id" column is satisfied.
     const deduped = new Map<string, Record<string, any>>();
     for (const row of csvPending) {
       const sid = row.ship_id as string | null;
       const key = sid || crypto.randomUUID();
-      const merged = sid && shipIdToUuid.has(sid) ? { ...row, id: shipIdToUuid.get(sid) } : row;
+      const existingId = sid ? shipIdToUuid.get(sid) : undefined;
+      const merged = { ...row, id: existingId ?? crypto.randomUUID() };
       deduped.set(key, merged);
     }
     const rows = Array.from(deduped.values());
 
     // Upsert in batches of 50 (avoids FK constraint errors from fleet_ships references)
-    let errors = 0;
+    const errorDetails: { batch: number; message: string; sampleShipId?: string }[] = [];
+    let imported = 0;
     for (let i = 0; i < rows.length; i += 50) {
+      const batchNum = Math.floor(i / 50) + 1;
       const batch = rows.slice(i, i + 50);
       const { error } = await supabase.from("ship_types").upsert(batch as any, { onConflict: "id" });
-      if (error) { errors++; console.error(error); }
+      if (error) {
+        errorDetails.push({ batch: batchNum, message: error.message, sampleShipId: batch[0]?.ship_id });
+        console.error(`Batch ${batchNum} failed:`, error, "Sample row:", batch[0]);
+      } else {
+        imported += batch.length;
+      }
     }
-    if (errors) {
-      toast({ title: "Upload partially failed", description: `${errors} batch error(s)`, variant: "destructive" });
+    if (errorDetails.length) {
+      const first = errorDetails[0];
+      toast({
+        title: `Upload partially failed (${imported}/${rows.length} imported)`,
+        description: `${errorDetails.length} batch error(s). First: batch ${first.batch} near ship_id "${first.sampleShipId ?? "?"}": ${first.message}`,
+        variant: "destructive",
+      });
     } else {
       toast({ title: "Upload complete", description: `${rows.length} ships imported` });
     }
