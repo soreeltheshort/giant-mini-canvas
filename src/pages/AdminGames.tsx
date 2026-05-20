@@ -382,8 +382,11 @@ const AdminGames = () => {
           for (const st of allShipTypes) shipMaintMap.set(st.id, Number(st.maintenance));
 
           for (const gf of gameFleets) {
-            const ownerSlot = nameToSlot.get((gf.owner_classification || "").toLowerCase());
+            const ownerRaw = (gf.owner_classification || "").toLowerCase();
+            const ownerStripped = ownerRaw.replace(/_int\d*$/i, "");
+            const ownerSlot = nameToSlot.get(ownerRaw) ?? nameToSlot.get(ownerStripped);
             if (ownerSlot === undefined) continue;
+
             const ships = fleetShips.filter((fs: any) => fs.game_fleet_id === gf.id);
             let fleetMaint = 0;
             for (const fs of ships) {

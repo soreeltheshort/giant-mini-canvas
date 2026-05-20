@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { MapFleet, HexData, hexKey } from "@/lib/mapTypes";
-import { CLASSIFICATION_LABELS, ALL_CLASSIFICATIONS } from "@/lib/mapTypes";
+import { CLASSIFICATION_LABELS } from "@/lib/mapTypes";
 import { Plus, Trash2, MapPin, Anchor } from "lucide-react";
 
 interface SavedFleet {
@@ -26,13 +26,13 @@ interface Props {
   onSelectHex: (hexKey: string) => void;
 }
 
-const OWNER_CLASSIFICATIONS = ALL_CLASSIFICATIONS.filter(c => c.startsWith("PROVINCE_") || c === "CORE");
-
 interface FactionRow {
   id: string;
   name: string;
   color: string;
+  code_name: string;
 }
+
 
 const FleetsPanel: React.FC<Props> = ({
   fleets,
@@ -49,7 +49,7 @@ const FleetsPanel: React.FC<Props> = ({
   const [loading, setLoading] = useState(true);
   const [selectedSourceFleet, setSelectedSourceFleet] = useState("");
   const [fleetName, setFleetName] = useState("");
-  const [ownerClassification, setOwnerClassification] = useState("PROVINCE_1");
+  const [ownerClassification, setOwnerClassification] = useState("");
 
   // Load saved fleets from combat testing along with actual point totals
   useEffect(() => {
@@ -61,7 +61,7 @@ const FleetsPanel: React.FC<Props> = ({
           .order("name", { ascending: true }),
         supabase.from("fleet_ships").select("fleet_id, ship_type_id, quantity"),
         supabase.from("ship_types").select("id, point_cost"),
-        supabase.from("factions").select("id, name, color").order("name", { ascending: true }),
+        (supabase as any).from("factions").select("id, name, color, code_name").order("code_name", { ascending: true }),
       ]);
       const costById = new Map<string, number>();
       for (const st of shipTypes || []) costById.set(st.id, st.point_cost || 0);
@@ -73,24 +73,27 @@ const FleetsPanel: React.FC<Props> = ({
       setFleetActualPoints(totals);
       setSavedFleets(fleetData || []);
       setFactions(factionData || []);
+      if ((factionData || []).length > 0 && !ownerClassification) {
+        setOwnerClassification((factionData as any[])[0].code_name);
+      }
       setLoading(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Build owner dropdown options by matching DB faction names to classification labels.
-  // Falls back to the hardcoded label if no matching faction exists in the DB.
+  // Owner dropdown lists every faction, identified by its internal code_name.
+  // The code_name is what gets persisted on the fleet so that multiple
+  // factions sharing a display name (e.g. several Synod factions) remain
+  // distinguishable on the map.
   const ownerOptions = useMemo(() => {
-    const byName = new Map(factions.map(f => [f.name.toLowerCase(), f]));
-    return OWNER_CLASSIFICATIONS.map(c => {
-      const fallback = CLASSIFICATION_LABELS[c];
-      const match = byName.get(fallback.toLowerCase());
-      return {
-        value: c,
-        label: match?.name || fallback,
-        color: match?.color,
-      };
-    });
+    return factions.map(f => ({
+      value: f.code_name,
+      label: f.code_name,
+      color: f.color,
+    }));
   }, [factions]);
+
+
 
 
   const selectedHex = selectedHexKey ? hexes.get(selectedHexKey) : null;
