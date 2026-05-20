@@ -1,29 +1,46 @@
-# Mini Giant Games Studio Homepage
+# Why the upload fails
 
-## Goal
-Replace the current `/` page with a focused studio homepage anchored by the uploaded logo, presenting Third Republic as the studio's first game in development.
+`src/pages/AdminShips.tsx` → `parseCSV` (lines 292–350) hard-codes a **two-row header**:
 
-## Layout (top to bottom)
+- Row 1 = category row (e.g. blank cells + `Virtual Attack Speed` / `Virtual Defense Speed`)
+- Row 2 = the real column names
+- Row 3+ = data
 
-1. **Header** — existing site header (already shows "Mini Giant Games" on `/`).
-2. **Studio mark** — the uploaded logo, centered, large but not full-bleed. Sits on the ivory background. Since the logo art has a dark navy backdrop baked in, it reads as a framed plaque on the ivory page rather than a dark-mode section.
-3. **"Now in Development" section** — single feature card for Third Republic:
-   - Cover art (left), title + short pitch (right)
-   - Primary CTA → `/games/third-republic`
-   - Secondary text link → "View all games" (`/games`)
-4. **Footer** — existing footer.
+Your `ship_catalog_1_-_ship_catalog_1.csv` only has **one** header row (`ship_id,name,class,…`) followed by data. The parser therefore:
 
-No hero copy, no tagline, no About section, no social links — per project conventions.
+1. Treats your real header row as the "category" row.
+2. Treats the first ship row (`BB03,Aurelian,…`) as the "header" row, so derived headers become `bb03`, `aurelian`, `bb`, `128`, …
+3. None of those match `CSV_FIELD_MAP`, so every row ends up with no `name` and is dropped by the final `.filter(r => r.name)`.
+4. UI shows the toast **"No valid ship rows found in CSV."**
 
-## Assets
-- Copy `user-uploads://1c6d595e-aef1-43cb-a008-41243de05d8f.png` → `src/assets/mini-giant-games-logo.png`
-- Import as ES6 module in `Index.tsx`
+The virtual-speed columns in your file (`virtual_atk_speed_attack`, `virtual_def_speed_flank`, …) already match the DB column names, so the category-row prefixing logic isn't actually needed for this file.
 
-## Files to change
-- **`src/pages/Index.tsx`** — rewrite with the logo + single in-development game card (currently a generic games grid).
-- **`src/assets/mini-giant-games-logo.png`** — new file.
+# Plan
 
-## Out of scope
-- Header/Footer changes
-- Third Republic detail page (already holds the rich content moved last turn)
-- Any new routes or backend work
+Make `parseCSV` accept either format.
+
+### Code changes (single file)
+
+`src/pages/AdminShips.tsx` → `parseCSV`:
+
+1. Read all non-empty lines.
+2. Detect header style by looking at row 1:
+   - If row 1 normalised contains both `ship_id` and `name` → **single-header mode**. Use row 1 as headers, data starts at row 2. No category prefixing.
+   - Otherwise → keep current **two-header mode** (row 1 = categories, row 2 = headers, data from row 3).
+3. Everything downstream (`CSV_FIELD_MAP` lookup, FLOAT/NUM coercion, class/hull derivation, dedupe, upsert) stays unchanged.
+
+### Optional polish (same edit)
+
+- When parsing returns 0 rows, include a hint in the toast: *"CSV header must include ship_id and name"* — easier to diagnose future bad files.
+
+### Out of scope
+
+- No DB migration.
+- No changes to the export button (it can keep emitting the two-row format).
+- No changes to upsert / dedupe logic.
+
+### Verification
+
+After the edit:
+1. Re-upload `ship_catalog_1_-_ship_catalog_1.csv` on `/admin/ships`. The confirm dialog should show **72 ships** (73 lines − 1 header).
+2. Re-upload an export produced by the in-app "Download CSV" button to confirm two-header mode still works.
