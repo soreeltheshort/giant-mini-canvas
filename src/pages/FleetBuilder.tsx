@@ -571,6 +571,7 @@ const FleetBuilder = () => {
                   ["Supply", filterSupply, setFilterSupply],
                   ["Repair", filterRepair, setFilterRepair],
                   ["Scout", filterScout, setFilterScout],
+                  ["Synod", filterSynod, setFilterSynod],
                 ] as const).map(([label, val, setter]) => (
                   <button
                     key={label}
