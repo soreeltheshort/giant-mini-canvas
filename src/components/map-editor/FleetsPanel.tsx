@@ -151,7 +151,7 @@ const FleetsPanel: React.FC<Props> = ({
             <label className="text-[10px] text-muted-foreground uppercase">Source Fleet</label>
             <select
               value={selectedSourceFleet}
-              onChange={e => setSelectedSourceFleet(e.target.value)}
+              onChange={e => handleSourceFleetChange(e.target.value)}
               className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs text-foreground"
             >
               <option value="">Select a fleet...</option>
