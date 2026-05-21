@@ -98,6 +98,15 @@ const FleetsPanel: React.FC<Props> = ({
 
   const selectedHex = selectedHexKey ? hexes.get(selectedHexKey) : null;
 
+  // When user picks a source fleet, pre-fill the editable name with it
+  // so they can clearly see and modify the actual fleet name (instead of
+  // staring at a placeholder that looks like a value).
+  const handleSourceFleetChange = (id: string) => {
+    setSelectedSourceFleet(id);
+    const src = savedFleets.find(f => f.id === id);
+    setFleetName(src?.name ?? "");
+  };
+
   const handlePlaceFleet = () => {
     if (!selectedHex || !selectedSourceFleet) return;
     const sourceFleet = savedFleets.find(f => f.id === selectedSourceFleet);
@@ -105,7 +114,7 @@ const FleetsPanel: React.FC<Props> = ({
 
     const newFleet: MapFleet = {
       fleet_id: `mf-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      fleet_name: fleetName || sourceFleet.name,
+      fleet_name: fleetName.trim() || sourceFleet.name,
       owner_classification: ownerClassification,
       hex_x: selectedHex.x,
       hex_y: selectedHex.y,
