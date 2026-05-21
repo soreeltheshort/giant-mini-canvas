@@ -17,7 +17,7 @@ export function useFactions() {
   const fetchAll = useCallback(async () => {
     const { data, error } = await (supabase as any)
       .from("factions")
-      .select("id, name, color")
+      .select("id, name, code_name, color")
       .order("created_at", { ascending: true });
     if (error) {
       console.error("[Factions] fetch error", error);
