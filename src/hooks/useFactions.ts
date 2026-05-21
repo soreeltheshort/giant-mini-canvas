@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 export interface DbFaction {
   id: string;
   name: string;
+  code_name?: string | null;
   color: string;
 }
 
@@ -16,7 +17,7 @@ export function useFactions() {
   const fetchAll = useCallback(async () => {
     const { data, error } = await (supabase as any)
       .from("factions")
-      .select("id, name, color")
+      .select("id, name, code_name, color")
       .order("created_at", { ascending: true });
     if (error) {
       console.error("[Factions] fetch error", error);

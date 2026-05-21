@@ -145,9 +145,10 @@ const PlanetEditorCard: React.FC<Props> = ({
           className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
         >
           <option value="">— None —</option>
-          {factions.map((f) => (
-            <option key={f.id} value={f.name}>{f.name}</option>
-          ))}
+          {factions.map((f) => {
+            const code = f.code_name || f.name;
+            return <option key={f.id} value={code}>{code}</option>;
+          })}
         </select>
       </div>
 
