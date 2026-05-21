@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 export interface DbFaction {
   id: string;
   name: string;
+  code_name?: string | null;
   color: string;
 }
 
