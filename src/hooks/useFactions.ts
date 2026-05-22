@@ -29,13 +29,13 @@ export function useFactions() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const addFaction = useCallback(async (name: string, color: string) => {
-    const { error } = await (supabase as any).from("factions").insert({ name, color });
+  const addFaction = useCallback(async (name: string, color: string, code_name?: string) => {
+    const { error } = await (supabase as any).from("factions").insert({ name, color, code_name: code_name || null });
     if (error) toast({ title: "Failed to add faction", description: error.message, variant: "destructive" });
     else await fetchAll();
   }, [fetchAll, toast]);
 
-  const updateFaction = useCallback(async (id: string, updates: Partial<Pick<DbFaction, "name" | "color">>) => {
+  const updateFaction = useCallback(async (id: string, updates: Partial<Pick<DbFaction, "name" | "color" | "code_name">>) => {
     const { error } = await (supabase as any).from("factions").update(updates).eq("id", id);
     if (error) toast({ title: "Failed to update", description: error.message, variant: "destructive" });
     else await fetchAll();

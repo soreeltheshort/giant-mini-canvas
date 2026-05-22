@@ -33,7 +33,9 @@ const MapTestingConfig = () => {
 
   // Faction form
   const [newFacName, setNewFacName] = useState("");
+  const [newFacCode, setNewFacCode] = useState("");
   const [newFacColor, setNewFacColor] = useState("#888888");
+
 
   // Action form
   const [newActName, setNewActName] = useState("");
@@ -95,9 +97,10 @@ const MapTestingConfig = () => {
               <p className="text-xs font-medium text-muted-foreground">Add New Faction</p>
               <div className="flex gap-2">
                 <Input type="color" value={newFacColor} onChange={(e) => setNewFacColor(e.target.value)} className="h-9 w-12 p-1 cursor-pointer" />
-                <Input value={newFacName} onChange={(e) => setNewFacName(e.target.value)} className="h-9 flex-1" placeholder="Faction name" />
+                <Input value={newFacName} onChange={(e) => setNewFacName(e.target.value)} className="h-9 flex-1" placeholder="Display name" />
+                <Input value={newFacCode} onChange={(e) => setNewFacCode(e.target.value)} className="h-9 flex-1" placeholder="Internal name" />
               </div>
-              <Button size="sm" disabled={!newFacName.trim()} onClick={async () => { await addFaction(newFacName.trim(), newFacColor); setNewFacName(""); setNewFacColor("#888888"); }}>
+              <Button size="sm" disabled={!newFacName.trim()} onClick={async () => { await addFaction(newFacName.trim(), newFacColor, newFacCode.trim() || undefined); setNewFacName(""); setNewFacCode(""); setNewFacColor("#888888"); }}>
                 Add Faction
               </Button>
             </div>
@@ -325,20 +328,26 @@ function AddPlanetTypeForm({ onAdd }: { onAdd: (fields: Omit<DbPlanetType, "id">
 
 /* ── Faction row ── */
 function FactionRow({ faction, isAdmin, onUpdate, onRemove }: {
-  faction: { id: string; name: string; color: string };
+  faction: { id: string; name: string; code_name?: string | null; color: string };
   isAdmin: boolean;
-  onUpdate: (id: string, updates: Partial<{ name: string; color: string }>) => Promise<void>;
+  onUpdate: (id: string, updates: Partial<{ name: string; color: string; code_name: string | null }>) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(faction.name);
+  const [codeName, setCodeName] = useState(faction.code_name ?? "");
   const [color, setColor] = useState(faction.color);
 
   if (!editing) {
     return (
       <div className="flex items-center gap-3 rounded border border-border px-3 py-2">
         <span className="h-4 w-4 rounded-full shrink-0" style={{ backgroundColor: faction.color }} />
-        <span className="text-sm font-medium text-foreground flex-1">{faction.name}</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground">{faction.name}</p>
+          {faction.code_name && (
+            <p className="text-xs text-muted-foreground font-mono">{faction.code_name}</p>
+          )}
+        </div>
         {isAdmin && (
           <div className="flex gap-1">
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(true)}>Edit</Button>
@@ -353,10 +362,11 @@ function FactionRow({ faction, isAdmin, onUpdate, onRemove }: {
     <div className="rounded border border-primary/50 px-3 py-2 space-y-2">
       <div className="flex gap-2">
         <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-8 w-12 p-1 cursor-pointer" />
-        <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 flex-1" />
+        <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 flex-1" placeholder="Display name" />
+        <Input value={codeName} onChange={(e) => setCodeName(e.target.value)} className="h-8 flex-1" placeholder="Internal name" />
       </div>
       <div className="flex gap-1">
-        <Button size="sm" className="h-7 text-xs" onClick={async () => { await onUpdate(faction.id, { name, color }); setEditing(false); }}>Save</Button>
+        <Button size="sm" className="h-7 text-xs" onClick={async () => { await onUpdate(faction.id, { name, color, code_name: codeName.trim() || null }); setEditing(false); }}>Save</Button>
         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(false)}>Cancel</Button>
       </div>
     </div>
