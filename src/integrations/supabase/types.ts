@@ -175,12 +175,14 @@ export type Database = {
           aggression: number
           created_at: string
           description: string
+          diplomacy: number
           economic_focus: number
           expansionism: number
           id: string
           loyalty: number
           model_key: string
           name: string
+          paranoia: number
           risk_tolerance: number
           system_prompt: string
           updated_at: string
@@ -189,12 +191,14 @@ export type Database = {
           aggression?: number
           created_at?: string
           description?: string
+          diplomacy?: number
           economic_focus?: number
           expansionism?: number
           id?: string
           loyalty?: number
           model_key?: string
           name: string
+          paranoia?: number
           risk_tolerance?: number
           system_prompt?: string
           updated_at?: string
@@ -203,12 +207,14 @@ export type Database = {
           aggression?: number
           created_at?: string
           description?: string
+          diplomacy?: number
           economic_focus?: number
           expansionism?: number
           id?: string
           loyalty?: number
           model_key?: string
           name?: string
+          paranoia?: number
           risk_tolerance?: number
           system_prompt?: string
           updated_at?: string

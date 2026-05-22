@@ -1,0 +1,3 @@
+ALTER TABLE public.ai_personas
+  ADD COLUMN IF NOT EXISTS paranoia numeric NOT NULL DEFAULT 0.5,
+  ADD COLUMN IF NOT EXISTS diplomacy numeric NOT NULL DEFAULT 0.5;
