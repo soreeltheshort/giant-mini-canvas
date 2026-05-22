@@ -104,7 +104,7 @@ const MapTestingConfig = () => {
           ) : (
             <div className="space-y-2">
               {factions.map((f) => (
-                <FactionRow key={f.id} faction={f} isAdmin={isAdmin} personas={personas} onUpdate={updateFaction} onRemove={removeFaction} />
+                <FactionRow key={f.id} faction={f} isAdmin={isAdmin} personas={personas} namingConventions={namingConventions} onUpdate={updateFaction} onRemove={removeFaction} />
               ))}
 
             </div>
