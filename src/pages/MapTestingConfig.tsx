@@ -33,7 +33,9 @@ const MapTestingConfig = () => {
 
   // Faction form
   const [newFacName, setNewFacName] = useState("");
+  const [newFacCode, setNewFacCode] = useState("");
   const [newFacColor, setNewFacColor] = useState("#888888");
+
 
   // Action form
   const [newActName, setNewActName] = useState("");
