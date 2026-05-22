@@ -10,9 +10,11 @@ export interface DbFaction {
   ai_persona_id?: string | null;
   planet_naming_convention?: string;
   fleet_naming_convention?: string;
+  planet_naming_convention_id?: string | null;
+  fleet_naming_convention_id?: string | null;
 }
 
-const SELECT_COLS = "id, name, code_name, color, ai_persona_id, planet_naming_convention, fleet_naming_convention";
+const SELECT_COLS = "id, name, code_name, color, ai_persona_id, planet_naming_convention, fleet_naming_convention, planet_naming_convention_id, fleet_naming_convention_id";
 
 export function useFactions() {
   const [factions, setFactions] = useState<DbFaction[]>([]);
@@ -42,7 +44,7 @@ export function useFactions() {
 
   const updateFaction = useCallback(async (
     id: string,
-    updates: Partial<Pick<DbFaction, "name" | "color" | "code_name" | "ai_persona_id" | "planet_naming_convention" | "fleet_naming_convention">>,
+    updates: Partial<Pick<DbFaction, "name" | "color" | "code_name" | "ai_persona_id" | "planet_naming_convention" | "fleet_naming_convention" | "planet_naming_convention_id" | "fleet_naming_convention_id">>,
   ) => {
     const { error } = await (supabase as any).from("factions").update(updates).eq("id", id);
     if (error) toast({ title: "Failed to update", description: error.message, variant: "destructive" });

@@ -1009,9 +1009,11 @@ export type Database = {
           color: string
           created_at: string
           fleet_naming_convention: string
+          fleet_naming_convention_id: string | null
           id: string
           name: string
           planet_naming_convention: string
+          planet_naming_convention_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1020,9 +1022,11 @@ export type Database = {
           color?: string
           created_at?: string
           fleet_naming_convention?: string
+          fleet_naming_convention_id?: string | null
           id?: string
           name: string
           planet_naming_convention?: string
+          planet_naming_convention_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1031,12 +1035,29 @@ export type Database = {
           color?: string
           created_at?: string
           fleet_naming_convention?: string
+          fleet_naming_convention_id?: string | null
           id?: string
           name?: string
           planet_naming_convention?: string
+          planet_naming_convention_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "factions_fleet_naming_convention_id_fkey"
+            columns: ["fleet_naming_convention_id"]
+            isOneToOne: false
+            referencedRelation: "naming_conventions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "factions_planet_naming_convention_id_fkey"
+            columns: ["planet_naming_convention_id"]
+            isOneToOne: false
+            referencedRelation: "naming_conventions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fleet_ships: {
         Row: {
@@ -1510,6 +1531,33 @@ export type Database = {
           defense_mod?: number
           group_name?: string
           id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      naming_conventions: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          names: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          name: string
+          names?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          names?: string[]
           updated_at?: string
         }
         Relationships: []
