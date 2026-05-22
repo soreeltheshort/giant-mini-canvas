@@ -265,30 +265,17 @@ function PersonaCard({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <Label className="text-[10px] text-muted-foreground">Model (LLM — dormant, reserved for narrative)</Label>
-          <select
-            value={draft.model_key}
-            disabled={!isAdmin}
-            onChange={(e) => { patch({ model_key: e.target.value }); saveField({ model_key: e.target.value }); }}
-            className="h-9 w-full rounded border border-border bg-background px-2 text-sm"
-          >
-            {MODELS.map((m) => <option key={m} value={m}>{m}</option>)}
-            {!MODELS.includes(draft.model_key) && <option value={draft.model_key}>{draft.model_key}</option>}
-          </select>
-        </div>
-        <div>
-          <Label className="text-[10px] text-muted-foreground">Short description</Label>
-          <Input
-            value={draft.description}
-            disabled={!isAdmin}
-            onChange={(e) => patch({ description: e.target.value })}
-            onBlur={() => saveField({ description: draft.description })}
-            className="h-9"
-          />
-        </div>
+      <div>
+        <Label className="text-[10px] text-muted-foreground">Short description</Label>
+        <Input
+          value={draft.description}
+          disabled={!isAdmin}
+          onChange={(e) => patch({ description: e.target.value })}
+          onBlur={() => saveField({ description: draft.description })}
+          className="h-9"
+        />
       </div>
+
 
 
 
