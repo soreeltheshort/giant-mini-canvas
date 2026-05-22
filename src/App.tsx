@@ -20,6 +20,7 @@ import AdminBattleConfig from "./pages/AdminBattleConfig";
 import AdminUsers from "./pages/AdminUsers";
 import AdminShips from "./pages/AdminShips";
 import AdminFacilities from "./pages/AdminFacilities";
+import AdminAIConfig from "./pages/AdminAIConfig";
 import AdminGames from "./pages/AdminGames";
 import MyGames from "./pages/MyGames";
 import TesterDashboard from "./pages/TesterDashboard";
