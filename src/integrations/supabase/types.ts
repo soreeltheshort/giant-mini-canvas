@@ -1004,27 +1004,36 @@ export type Database = {
       }
       factions: {
         Row: {
+          ai_persona_id: string | null
           code_name: string
           color: string
           created_at: string
+          fleet_naming_convention: string
           id: string
           name: string
+          planet_naming_convention: string
           updated_at: string
         }
         Insert: {
+          ai_persona_id?: string | null
           code_name: string
           color?: string
           created_at?: string
+          fleet_naming_convention?: string
           id?: string
           name: string
+          planet_naming_convention?: string
           updated_at?: string
         }
         Update: {
+          ai_persona_id?: string | null
           code_name?: string
           color?: string
           created_at?: string
+          fleet_naming_convention?: string
           id?: string
           name?: string
+          planet_naming_convention?: string
           updated_at?: string
         }
         Relationships: []
