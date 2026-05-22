@@ -124,6 +124,9 @@ const MapTestingConfig = () => {
           )}
         </ConfigSection>
 
+        {/* ── Naming Conventions ── */}
+        <NamingConventionsSection isAdmin={isAdmin} />
+
         {/* ── Actions ── */}
         <ConfigSection title="System Actions" desc="Define economic actions that can be assigned to systems (e.g. Trade, Build, Mine).">
           {actions.length === 0 ? (
