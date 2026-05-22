@@ -341,16 +341,40 @@ function AddPlanetTypeForm({ onAdd }: { onAdd: (fields: Omit<DbPlanetType, "id">
 }
 
 /* ── Faction row ── */
-function FactionRow({ faction, isAdmin, onUpdate, onRemove }: {
-  faction: { id: string; name: string; code_name?: string | null; color: string };
+function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
+  faction: {
+    id: string;
+    name: string;
+    code_name?: string | null;
+    color: string;
+    ai_persona_id?: string | null;
+    planet_naming_convention?: string;
+    fleet_naming_convention?: string;
+  };
   isAdmin: boolean;
-  onUpdate: (id: string, updates: Partial<{ name: string; color: string; code_name: string | null }>) => Promise<void>;
+  personas: { id: string; name: string }[];
+  onUpdate: (
+    id: string,
+    updates: Partial<{
+      name: string;
+      color: string;
+      code_name: string | null;
+      ai_persona_id: string | null;
+      planet_naming_convention: string;
+      fleet_naming_convention: string;
+    }>,
+  ) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(faction.name);
   const [codeName, setCodeName] = useState(faction.code_name ?? "");
   const [color, setColor] = useState(faction.color);
+  const [personaId, setPersonaId] = useState<string>(faction.ai_persona_id ?? "");
+  const [planetConv, setPlanetConv] = useState(faction.planet_naming_convention ?? "");
+  const [fleetConv, setFleetConv] = useState(faction.fleet_naming_convention ?? "");
+
+  const personaName = personas.find((p) => p.id === faction.ai_persona_id)?.name;
 
   if (!editing) {
     return (
@@ -358,9 +382,12 @@ function FactionRow({ faction, isAdmin, onUpdate, onRemove }: {
         <span className="h-4 w-4 rounded-full shrink-0" style={{ backgroundColor: faction.color }} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">{faction.name}</p>
-          {faction.code_name && (
-            <p className="text-xs text-muted-foreground font-mono">{faction.code_name}</p>
-          )}
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            {faction.code_name && <span className="font-mono">{faction.code_name}</span>}
+            <span>AI: <span className="text-foreground">{personaName ?? "—"}</span></span>
+            <span>Planets: <span className="text-foreground">{faction.planet_naming_convention || "—"}</span></span>
+            <span>Fleets: <span className="text-foreground">{faction.fleet_naming_convention || "—"}</span></span>
+          </div>
         </div>
         {isAdmin && (
           <div className="flex gap-1">
@@ -379,13 +406,63 @@ function FactionRow({ faction, isAdmin, onUpdate, onRemove }: {
         <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 flex-1" placeholder="Display name" />
         <Input value={codeName} onChange={(e) => setCodeName(e.target.value)} className="h-8 flex-1" placeholder="Internal name" />
       </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div>
+          <Label className="text-[10px] text-muted-foreground">AI persona</Label>
+          <select
+            value={personaId}
+            onChange={(e) => setPersonaId(e.target.value)}
+            className="h-8 w-full rounded border border-border bg-background px-2 text-sm"
+          >
+            <option value="">— none —</option>
+            {personas.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label className="text-[10px] text-muted-foreground">Planet naming convention</Label>
+          <Input
+            value={planetConv}
+            onChange={(e) => setPlanetConv(e.target.value)}
+            placeholder='e.g. "Latin numerals" or "Greek gods"'
+            className="h-8"
+          />
+        </div>
+        <div>
+          <Label className="text-[10px] text-muted-foreground">Fleet naming convention</Label>
+          <Input
+            value={fleetConv}
+            onChange={(e) => setFleetConv(e.target.value)}
+            placeholder='e.g. "Legio {n}" or "{adjective} Fleet"'
+            className="h-8"
+          />
+        </div>
+      </div>
       <div className="flex gap-1">
-        <Button size="sm" className="h-7 text-xs" onClick={async () => { await onUpdate(faction.id, { name, color, code_name: codeName.trim() || null }); setEditing(false); }}>Save</Button>
+        <Button
+          size="sm"
+          className="h-7 text-xs"
+          onClick={async () => {
+            await onUpdate(faction.id, {
+              name,
+              color,
+              code_name: codeName.trim() || null,
+              ai_persona_id: personaId || null,
+              planet_naming_convention: planetConv,
+              fleet_naming_convention: fleetConv,
+            });
+            setEditing(false);
+          }}
+        >
+          Save
+        </Button>
         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(false)}>Cancel</Button>
       </div>
     </div>
   );
 }
+
 
 /* ── Action row ── */
 function ActionRow({ action, isAdmin, onUpdate, onRemove }: {
