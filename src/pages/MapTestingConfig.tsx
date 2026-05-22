@@ -29,6 +29,14 @@ const MapTestingConfig = () => {
   const { factions, loading: facLoading, addFaction, updateFaction, removeFaction } = useFactions();
   const { actions, loading: actLoading, addAction, updateAction, removeAction } = useSystemActions();
   const { planetTypes, loading: ptLoading, addPlanetType, updatePlanetType, removePlanetType } = usePlanetTypes();
+  const [personas, setPersonas] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("ai_personas").select("id, name").order("name");
+      setPersonas((data as any[]) ?? []);
+    })();
+  }, []);
+
 
   // facility form state removed — now in AddFacilityForm
 
