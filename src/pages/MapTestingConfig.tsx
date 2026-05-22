@@ -21,6 +21,8 @@ import {
 } from "@/lib/mapTypes";
 import { loadRandomizeParams, saveRandomizeParams } from "@/lib/randomizeSystems";
 import MapConfigSaveLoad from "@/components/MapConfigSaveLoad";
+import NamingConventionsSection from "@/components/map-config/NamingConventionsSection";
+import { useNamingConventions } from "@/hooks/useNamingConventions";
 
 const MapTestingConfig = () => {
   const { user, loading, isAdmin } = useAuth();
