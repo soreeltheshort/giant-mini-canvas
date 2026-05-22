@@ -95,9 +95,8 @@ export default function AdminAIConfig() {
     const { error } = await supabase.from("ai_personas").insert({
       name: "New Persona",
       description: "",
-      model_key: "google/gemini-2.5-flash",
-      system_prompt: "",
     } as any);
+
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Persona created");
