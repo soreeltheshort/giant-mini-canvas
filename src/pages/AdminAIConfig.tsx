@@ -17,8 +17,8 @@ interface Persona {
   id: string;
   name: string;
   description: string;
-  model_key: string;
-  system_prompt: string;
+
+
   aggression: number;
   expansionism: number;
   loyalty: number;
