@@ -37,14 +37,8 @@ interface GoalWeight {
   threshold_json: any;
 }
 
-const MODELS = [
-  "google/gemini-2.5-flash",
-  "google/gemini-2.5-flash-lite",
-  "google/gemini-2.5-pro",
-  "openai/gpt-5",
-  "openai/gpt-5-mini",
-  "openai/gpt-5-nano",
-];
+
+
 
 const TRAITS = [
   "aggression",
