@@ -86,7 +86,7 @@ export default function AIInspector() {
             <option value="">— pick player —</option>
             {players.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.display_name}
+                Slot {p.player_slot}
               </option>
             ))}
           </select>
