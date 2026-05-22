@@ -82,6 +82,10 @@ const MapTestingConfig = () => {
       <div className="container max-w-2xl py-8 space-y-10">
         <h1 className="text-xl font-semibold text-accent">Map Testing Configuration</h1>
 
+        <MapConfigSaveLoad isAdmin={isAdmin} />
+
+
+
         {/* ── Factions ── */}
         <ConfigSection title="Factions" desc="Define the factions that can own systems. These are shared across all maps.">
           {factions.length === 0 ? (
