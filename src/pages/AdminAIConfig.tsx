@@ -126,9 +126,9 @@ export default function AdminAIConfig() {
           <h1 className="text-xl font-semibold text-accent">AI Configuration</h1>
         </div>
         <p className="text-xs text-muted-foreground">
-          Configure AI personas (traits, goal weights). The in-game AI uses these heuristically — no LLM calls.
-          The Inspector tab shows what the AI thought, planned, and did on past turns.
+          Tune AI personas with trait sliders and goal-weight matrices. The Inspector tab shows what each AI thought, planned, and did on past turns.
         </p>
+
 
         <Tabs defaultValue="personas">
           <TabsList>
