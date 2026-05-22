@@ -97,9 +97,10 @@ const MapTestingConfig = () => {
               <p className="text-xs font-medium text-muted-foreground">Add New Faction</p>
               <div className="flex gap-2">
                 <Input type="color" value={newFacColor} onChange={(e) => setNewFacColor(e.target.value)} className="h-9 w-12 p-1 cursor-pointer" />
-                <Input value={newFacName} onChange={(e) => setNewFacName(e.target.value)} className="h-9 flex-1" placeholder="Faction name" />
+                <Input value={newFacName} onChange={(e) => setNewFacName(e.target.value)} className="h-9 flex-1" placeholder="Display name" />
+                <Input value={newFacCode} onChange={(e) => setNewFacCode(e.target.value)} className="h-9 flex-1" placeholder="Internal name" />
               </div>
-              <Button size="sm" disabled={!newFacName.trim()} onClick={async () => { await addFaction(newFacName.trim(), newFacColor); setNewFacName(""); setNewFacColor("#888888"); }}>
+              <Button size="sm" disabled={!newFacName.trim()} onClick={async () => { await addFaction(newFacName.trim(), newFacColor, newFacCode.trim() || undefined); setNewFacName(""); setNewFacCode(""); setNewFacColor("#888888"); }}>
                 Add Faction
               </Button>
             </div>
