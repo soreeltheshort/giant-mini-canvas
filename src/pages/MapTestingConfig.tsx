@@ -21,8 +21,6 @@ import {
 } from "@/lib/mapTypes";
 import { loadRandomizeParams, saveRandomizeParams } from "@/lib/randomizeSystems";
 import MapConfigSaveLoad from "@/components/MapConfigSaveLoad";
-import NamingConventionsSection from "@/components/map-config/NamingConventionsSection";
-import { useNamingConventions } from "@/hooks/useNamingConventions";
 
 const MapTestingConfig = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -32,7 +30,6 @@ const MapTestingConfig = () => {
   const { actions, loading: actLoading, addAction, updateAction, removeAction } = useSystemActions();
   const { planetTypes, loading: ptLoading, addPlanetType, updatePlanetType, removePlanetType } = usePlanetTypes();
   const [personas, setPersonas] = useState<{ id: string; name: string }[]>([]);
-  const { conventions: namingConventions } = useNamingConventions();
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("ai_personas").select("id, name").order("name");
@@ -104,7 +101,7 @@ const MapTestingConfig = () => {
           ) : (
             <div className="space-y-2">
               {factions.map((f) => (
-                <FactionRow key={f.id} faction={f} isAdmin={isAdmin} personas={personas} namingConventions={namingConventions} onUpdate={updateFaction} onRemove={removeFaction} />
+                <FactionRow key={f.id} faction={f} isAdmin={isAdmin} personas={personas} onUpdate={updateFaction} onRemove={removeFaction} />
               ))}
 
             </div>
@@ -123,11 +120,6 @@ const MapTestingConfig = () => {
             </div>
           )}
         </ConfigSection>
-
-        {/* ── Naming Conventions ── */}
-        <NamingConventionsSection isAdmin={isAdmin} />
-
-        {/* ── Actions ── */}
         <ConfigSection title="System Actions" desc="Define economic actions that can be assigned to systems (e.g. Trade, Build, Mine).">
           {actions.length === 0 ? (
             <p className="text-sm text-muted-foreground py-2">No actions defined yet.</p>
