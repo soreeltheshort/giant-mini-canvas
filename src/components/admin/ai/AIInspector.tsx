@@ -45,17 +45,16 @@ export default function AIInspector() {
       return;
     }
     (async () => {
-      // Pull whatever slots exist for this game; "AI" filter is opportunistic.
       const { data } = await supabase
-        .from("player_slots")
-        .select("id, display_name, game_id, is_ai")
-        .eq("game_id", gameId);
-      const rows = (data ?? []) as any[];
-      const ai = rows.filter((r) => r.is_ai !== false);
-      setPlayers(ai as any);
+        .from("game_players")
+        .select("id, player_slot, game_id, is_ai")
+        .eq("game_id", gameId)
+        .eq("is_ai", true);
+      setPlayers(((data ?? []) as any[]) as any);
       const g = games.find((g) => g.id === gameId);
       if (g) setTurn(g.turn_number);
     })();
+
   }, [gameId, games]);
 
   return (
