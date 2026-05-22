@@ -290,17 +290,8 @@ function PersonaCard({
         </div>
       </div>
 
-      <div>
-        <Label className="text-[10px] text-muted-foreground">System prompt (LLM — dormant)</Label>
-        <Textarea
-          value={draft.system_prompt}
-          disabled={!isAdmin}
-          onChange={(e) => patch({ system_prompt: e.target.value })}
-          onBlur={() => saveField({ system_prompt: draft.system_prompt })}
-          rows={3}
-          className="text-sm font-mono"
-        />
-      </div>
+
+
 
       <div className="space-y-3">
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Trait Sliders (0 – 1)</Label>
