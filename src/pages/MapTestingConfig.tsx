@@ -100,7 +100,7 @@ const MapTestingConfig = () => {
                 <Input value={newFacName} onChange={(e) => setNewFacName(e.target.value)} className="h-9 flex-1" placeholder="Display name" />
                 <Input value={newFacCode} onChange={(e) => setNewFacCode(e.target.value)} className="h-9 flex-1" placeholder="Internal name" />
               </div>
-              <Button size="sm" disabled={!newFacName.trim()} onClick={async () => { await addFaction(newFacName.trim(), newFacColor, newFacCode.trim() || undefined); setNewFacName(""); setNewFacCode(""); setNewFacColor("#888888"); }}>
+              <Button size="sm" disabled={!newFacName.trim() || !newFacCode.trim()} onClick={async () => { await addFaction(newFacName.trim(), newFacColor, newFacCode.trim() || undefined); setNewFacName(""); setNewFacCode(""); setNewFacColor("#888888"); }}>
                 Add Faction
               </Button>
             </div>
