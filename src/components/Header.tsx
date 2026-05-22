@@ -198,7 +198,7 @@ const Header = () => {
                         <Link to="/admin/battle-config">Battle Config</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/map-testing/config">Map Config</Link>
+                        <Link to="/map-testing/config">Faction Config</Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
