@@ -117,8 +117,8 @@ export async function seedDefaultPersonas(): Promise<{ inserted: number; skipped
       .insert({
         name: p.name,
         description: p.description,
-        model_key: "google/gemini-2.5-flash",
-        system_prompt: "",
+
+
         aggression: p.traits.aggression,
         expansionism: p.traits.expansionism,
         economic_focus: p.traits.economic_focus,

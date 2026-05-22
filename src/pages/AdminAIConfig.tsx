@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,8 +17,8 @@ interface Persona {
   id: string;
   name: string;
   description: string;
-  model_key: string;
-  system_prompt: string;
+
+
   aggression: number;
   expansionism: number;
   loyalty: number;
@@ -37,14 +37,8 @@ interface GoalWeight {
   threshold_json: any;
 }
 
-const MODELS = [
-  "google/gemini-2.5-flash",
-  "google/gemini-2.5-flash-lite",
-  "google/gemini-2.5-pro",
-  "openai/gpt-5",
-  "openai/gpt-5-mini",
-  "openai/gpt-5-nano",
-];
+
+
 
 const TRAITS = [
   "aggression",
@@ -95,9 +89,8 @@ export default function AdminAIConfig() {
     const { error } = await supabase.from("ai_personas").insert({
       name: "New Persona",
       description: "",
-      model_key: "google/gemini-2.5-flash",
-      system_prompt: "",
     } as any);
+
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Persona created");
@@ -133,9 +126,9 @@ export default function AdminAIConfig() {
           <h1 className="text-xl font-semibold text-accent">AI Configuration</h1>
         </div>
         <p className="text-xs text-muted-foreground">
-          Configure AI personas (traits, goal weights). The in-game AI uses these heuristically — no LLM calls.
-          The Inspector tab shows what the AI thought, planned, and did on past turns.
+          Tune AI personas with trait sliders and goal-weight matrices. The Inspector tab shows what each AI thought, planned, and did on past turns.
         </p>
+
 
         <Tabs defaultValue="personas">
           <TabsList>
@@ -211,9 +204,8 @@ function PersonaCard({
       .insert({
         name: `${persona.name} (copy)`,
         description: persona.description,
-        model_key: persona.model_key,
-        system_prompt: persona.system_prompt,
         aggression: persona.aggression,
+
         expansionism: persona.expansionism,
         loyalty: persona.loyalty,
         risk_tolerance: persona.risk_tolerance,
@@ -265,42 +257,20 @@ function PersonaCard({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <Label className="text-[10px] text-muted-foreground">Model (LLM — dormant, reserved for narrative)</Label>
-          <select
-            value={draft.model_key}
-            disabled={!isAdmin}
-            onChange={(e) => { patch({ model_key: e.target.value }); saveField({ model_key: e.target.value }); }}
-            className="h-9 w-full rounded border border-border bg-background px-2 text-sm"
-          >
-            {MODELS.map((m) => <option key={m} value={m}>{m}</option>)}
-            {!MODELS.includes(draft.model_key) && <option value={draft.model_key}>{draft.model_key}</option>}
-          </select>
-        </div>
-        <div>
-          <Label className="text-[10px] text-muted-foreground">Short description</Label>
-          <Input
-            value={draft.description}
-            disabled={!isAdmin}
-            onChange={(e) => patch({ description: e.target.value })}
-            onBlur={() => saveField({ description: draft.description })}
-            className="h-9"
-          />
-        </div>
-      </div>
-
       <div>
-        <Label className="text-[10px] text-muted-foreground">System prompt (LLM — dormant)</Label>
-        <Textarea
-          value={draft.system_prompt}
+        <Label className="text-[10px] text-muted-foreground">Short description</Label>
+        <Input
+          value={draft.description}
           disabled={!isAdmin}
-          onChange={(e) => patch({ system_prompt: e.target.value })}
-          onBlur={() => saveField({ system_prompt: draft.system_prompt })}
-          rows={3}
-          className="text-sm font-mono"
+          onChange={(e) => patch({ description: e.target.value })}
+          onBlur={() => saveField({ description: draft.description })}
+          className="h-9"
         />
       </div>
+
+
+
+
 
       <div className="space-y-3">
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Trait Sliders (0 – 1)</Label>
