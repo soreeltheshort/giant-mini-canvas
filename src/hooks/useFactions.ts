@@ -7,7 +7,12 @@ export interface DbFaction {
   name: string;
   code_name?: string | null;
   color: string;
+  ai_persona_id?: string | null;
+  planet_naming_convention?: string;
+  fleet_naming_convention?: string;
 }
+
+const SELECT_COLS = "id, name, code_name, color, ai_persona_id, planet_naming_convention, fleet_naming_convention";
 
 export function useFactions() {
   const [factions, setFactions] = useState<DbFaction[]>([]);
@@ -17,7 +22,7 @@ export function useFactions() {
   const fetchAll = useCallback(async () => {
     const { data, error } = await (supabase as any)
       .from("factions")
-      .select("id, name, code_name, color")
+      .select(SELECT_COLS)
       .order("created_at", { ascending: true });
     if (error) {
       console.error("[Factions] fetch error", error);
@@ -35,7 +40,10 @@ export function useFactions() {
     else await fetchAll();
   }, [fetchAll, toast]);
 
-  const updateFaction = useCallback(async (id: string, updates: Partial<Pick<DbFaction, "name" | "color" | "code_name">>) => {
+  const updateFaction = useCallback(async (
+    id: string,
+    updates: Partial<Pick<DbFaction, "name" | "color" | "code_name" | "ai_persona_id" | "planet_naming_convention" | "fleet_naming_convention">>,
+  ) => {
     const { error } = await (supabase as any).from("factions").update(updates).eq("id", id);
     if (error) toast({ title: "Failed to update", description: error.message, variant: "destructive" });
     else await fetchAll();
