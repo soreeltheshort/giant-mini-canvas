@@ -20,6 +20,7 @@ import {
   HexClassification,
 } from "@/lib/mapTypes";
 import { loadRandomizeParams, saveRandomizeParams } from "@/lib/randomizeSystems";
+import MapConfigSaveLoad from "@/components/MapConfigSaveLoad";
 
 const MapTestingConfig = () => {
   const { user, loading, isAdmin } = useAuth();
