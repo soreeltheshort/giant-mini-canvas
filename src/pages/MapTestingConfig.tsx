@@ -32,6 +32,7 @@ const MapTestingConfig = () => {
   const { actions, loading: actLoading, addAction, updateAction, removeAction } = useSystemActions();
   const { planetTypes, loading: ptLoading, addPlanetType, updatePlanetType, removePlanetType } = usePlanetTypes();
   const [personas, setPersonas] = useState<{ id: string; name: string }[]>([]);
+  const { conventions: namingConventions } = useNamingConventions();
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("ai_personas").select("id, name").order("name");
