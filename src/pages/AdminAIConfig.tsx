@@ -211,9 +211,8 @@ function PersonaCard({
       .insert({
         name: `${persona.name} (copy)`,
         description: persona.description,
-        model_key: persona.model_key,
-        system_prompt: persona.system_prompt,
         aggression: persona.aggression,
+
         expansionism: persona.expansionism,
         loyalty: persona.loyalty,
         risk_tolerance: persona.risk_tolerance,
