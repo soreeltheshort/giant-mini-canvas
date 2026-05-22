@@ -16,9 +16,10 @@ interface Game {
 }
 interface AIPlayer {
   id: string;
-  display_name: string;
+  player_slot: number;
   game_id: string;
 }
+
 
 export default function AIInspector() {
   const [games, setGames] = useState<Game[]>([]);
