@@ -10,6 +10,7 @@ import { loadRandomizeParams, saveRandomizeParams } from "@/lib/randomizeSystems
  * for rows that still exist.
  */
 const TABLES = [
+  "naming_conventions",
   "factions",
   "system_actions",
   "planet_types",
