@@ -339,7 +339,7 @@ function AddPlanetTypeForm({ onAdd }: { onAdd: (fields: Omit<DbPlanetType, "id">
 }
 
 /* ── Faction row ── */
-function FactionRow({ faction, isAdmin, personas, namingConventions, onUpdate, onRemove }: {
+function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
   faction: {
     id: string;
     name: string;
@@ -351,7 +351,6 @@ function FactionRow({ faction, isAdmin, personas, namingConventions, onUpdate, o
   };
   isAdmin: boolean;
   personas: { id: string; name: string }[];
-  namingConventions: { id: string; name: string; kind: "planet" | "fleet" }[];
   onUpdate: (
     id: string,
     updates: Partial<{
@@ -365,6 +364,7 @@ function FactionRow({ faction, isAdmin, personas, namingConventions, onUpdate, o
   ) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
 }) {
+  const { conventions: namingConventions } = useNamingConventions();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(faction.name);
   const [codeName, setCodeName] = useState(faction.code_name ?? "");
