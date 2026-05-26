@@ -19,6 +19,7 @@ import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { processNextTurn, DEFAULT_TURN_CONSTANTS, ShipTypeForUpkeep } from "@/lib/turnEngine";
 import { runTurnProcessor } from "@/lib/turnProcessor";
 import { runTurnZero } from "@/lib/turnZero";
+import { seedFactionPlayers } from "@/lib/gameLifecycle";
 import { SystemData, MapState } from "@/lib/mapTypes";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
 import { Badge } from "@/components/ui/badge";
@@ -417,6 +418,16 @@ const AdminGames = () => {
         }
       }
 
+      // Seed a game_players row for every AI faction (and every map-owner
+      // faction) so the AI Inspector and per-turn AI loop have something to
+      // act on. Idempotent.
+      if (mapState) {
+        try {
+          const seed = await seedFactionPlayers(supabase as any, selectedGame.id, mapState);
+          console.log(`[Game Start] seedFactionPlayers — inserted=${seed.inserted}, backfilled=${seed.backfilled}, skipped=${seed.skipped}`);
+        } catch (e) { console.warn("[Game Start] seedFactionPlayers failed", e); }
+      }
+
       const econSummary = Array.from(playerEcon.entries()).map(([s, e]) => `Slot${s}: +${e.tribute}/-${e.maintenance}`).join(", ");
       await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase. Starting treasury: ${STARTING_TREASURY} (stub default). Economics: ${econSummary || "none calculated"}`);
       setSelectedGame({ ...selectedGame, status, turn_number: 1 });
@@ -687,6 +698,23 @@ const AdminGames = () => {
                 <p className="text-sm text-muted-foreground">Turn {selectedGame.turn_number} · Status: {selectedGame.status}</p>
               </div>
               <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!mapState}
+                  title={!mapState ? "Import a map first" : "Insert a game_players row for every AI faction and every faction owning systems on this map"}
+                  onClick={async () => {
+                    if (!selectedGame || !mapState) return;
+                    try {
+                      const r = await seedFactionPlayers(supabase as any, selectedGame.id, mapState);
+                      toast({ title: "Faction players seeded", description: `Inserted ${r.inserted}, back-filled ${r.backfilled}, skipped ${r.skipped}.` });
+                    } catch (e: any) {
+                      toast({ title: "Seed failed", description: e?.message ?? String(e), variant: "destructive" });
+                    }
+                  }}
+                >
+                  Reseed faction players
+                </Button>
                 <Select value={selectedGame.status} onValueChange={updateStatus}>
                   <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                   <SelectContent>

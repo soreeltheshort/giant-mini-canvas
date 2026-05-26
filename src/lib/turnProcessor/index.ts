@@ -23,6 +23,7 @@ import { combatPhase } from "./phases/combat";
 import { groundCombatPhase } from "./phases/groundCombat";
 import { shipProductionPhase } from "./phases/shipProduction";
 import { transferShipsPhase } from "./phases/transferShips";
+import { seedFactionPlayers } from "@/lib/gameLifecycle";
 
 // Order matters:
 //   - economy: tribute, upkeep, repairs, builds.
@@ -61,6 +62,12 @@ export interface RunTurnResult {
 
 export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult> {
   const { supabase, gameId, currentTurn, mapState, facilityTypes, shipTypes } = args;
+
+  // Self-heal: ensure every AI faction (and every map-owning faction) has a
+  // game_players row before we load players. Idempotent.
+  try { await seedFactionPlayers(supabase, gameId, mapState); } catch (e) { console.warn("[turnProcessor] seedFactionPlayers failed", e); }
+
+
 
   // Load all conditional orders for this turn + players for the game
   const [{ data: ordersRaw }, { data: playersRaw }] = await Promise.all([
