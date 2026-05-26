@@ -902,20 +902,25 @@ function deserializeMapState(json: any): MapState {
 /* ── Default Map selector ── */
 function DefaultMapSelector() {
   const { toast } = useToast();
-  const [maps, setMaps] = useState<Array<{ id: string; name: string }>>([]);
+  const [maps, setMaps] = useState<Array<{ id: string; name: string; file_path: string }>>([]);
   const [currentId, setCurrentId] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
       const [{ data: mapList }, { data: settings }] = await Promise.all([
-        (supabase as any).from("saved_maps").select("id, name").order("created_at", { ascending: false }),
+        (supabase as any).from("saved_maps").select("id, name, file_path").order("created_at", { ascending: false }),
         (supabase as any).from("app_settings").select("default_map_id").eq("id", "global").maybeSingle(),
       ]);
       setMaps(mapList || []);
       setCurrentId(settings?.default_map_id || "");
     })();
   }, []);
+
+  const displayName = (m: { name: string; file_path: string }) => {
+    const fileName = m.file_path.split("/").pop() || m.file_path;
+    return m.name ? `${m.name} (${fileName})` : fileName;
+  };
 
   const save = async (newId: string) => {
     setSaving(true);
@@ -933,9 +938,9 @@ function DefaultMapSelector() {
       <h2 className="text-sm font-heading font-semibold uppercase tracking-wider text-muted-foreground">Default Map for Tester Games</h2>
       <div className="flex items-center gap-2">
         <Select value={currentId} onValueChange={save} disabled={saving || maps.length === 0}>
-          <SelectTrigger className="w-72"><SelectValue placeholder={maps.length === 0 ? "No saved maps" : "Select default map"} /></SelectTrigger>
+          <SelectTrigger className="w-96"><SelectValue placeholder={maps.length === 0 ? "No saved maps" : "Select default map"} /></SelectTrigger>
           <SelectContent>
-            {maps.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+            {maps.map(m => <SelectItem key={m.id} value={m.id}>{displayName(m)}</SelectItem>)}
           </SelectContent>
         </Select>
         {currentId && <span className="text-xs text-muted-foreground">Testers will load this map when creating a new game.</span>}
