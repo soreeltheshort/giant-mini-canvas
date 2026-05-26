@@ -157,7 +157,7 @@ const AdminGames = () => {
   const loadGame = useCallback(async (game: GameRow) => {
     setSelectedGame(game);
     // players
-    const { data: pData } = await (supabase as any).from("game_factions").select("*").eq("game_id", game.id).order("player_slot");
+    const { data: pData } = await (supabase as any).from("game_factions").select("*, factions:faction_id(id, name, code_name, is_player_faction)").eq("game_id", game.id).order("player_slot");
     setPlayers(pData || []);
     // logs
     const { data: lData } = await (supabase as any).from("game_logs").select("id, turn_number, log_type, message, created_at").eq("game_id", game.id).order("created_at", { ascending: false }).limit(100);
