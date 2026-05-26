@@ -605,7 +605,8 @@ const AdminGames = () => {
     setLogRefreshKey(k => k + 1);
   };
 
-  const getProfileLabel = (userId: string) => {
+  const getProfileLabel = (userId: string | null | undefined) => {
+    if (!userId) return "AI";
     const p = profiles.find(pr => pr.user_id === userId);
     return p?.display_name || p?.email || userId.slice(0, 8);
   };
