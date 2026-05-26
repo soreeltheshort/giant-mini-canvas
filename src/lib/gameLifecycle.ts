@@ -100,6 +100,12 @@ export async function startGame(supabase: SupabaseClient, gameId: string) {
   await (supabase as any).from("games").update({ status: "active", turn_number: 1, turn_phase: "orders" }).eq("id", gameId);
   await (supabase as any).from("player_orders").update({ turn_number: 1 }).eq("game_id", gameId).eq("turn_number", 0);
 
+  // Seed game_players rows for every faction present on the map (AI + neutral
+  // included). Human-player rows already exist from the lobby join flow and
+  // get their faction_id back-filled here. This lets non-player factions
+  // process turns and appear in the AI Inspector dropdown.
+  await seedFactionPlayers(supabase, gameId, mapState);
+
   // Per-system tribute & maintenance
   const nameToSlot = new Map<string, number>();
   for (const [slot, name] of Object.entries(PROVINCE_NAMES)) nameToSlot.set(name.toLowerCase(), parseInt(slot, 10));
