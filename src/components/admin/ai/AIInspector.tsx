@@ -138,7 +138,7 @@ export default function AIInspector() {
       </div>
 
       {!gameId || !playerId ? (
-        <p className="text-xs text-muted-foreground">Pick a game and AI player to inspect.</p>
+        <p className="text-xs text-muted-foreground">Pick a game and faction to inspect.</p>
       ) : (
         <div className="space-y-6">
           <InspectorSection
