@@ -1,0 +1,1 @@
+UPDATE public.factions SET is_player_faction = true WHERE code_name IN ('Valerian_int','Aurelian_int','Cassian_int','Dravian_int','Marcellan_int','Octavian_int');
