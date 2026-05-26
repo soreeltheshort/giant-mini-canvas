@@ -766,10 +766,14 @@ const AdminGames = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {players.map(p => (
+                  {players.map(p => {
+                    const factionLabel = p.factions?.name
+                      || (p.player_slot != null ? (PROVINCE_NAMES[p.player_slot] || `Slot ${p.player_slot}`) : "—");
+                    const operatorLabel = p.user_id ? getProfileLabel(p.user_id) : p.ai_persona_id ? "AI" : "—";
+                    return (
                     <TableRow key={p.id}>
-                      <TableCell>{PROVINCE_NAMES[p.player_slot] || `Slot ${p.player_slot}`}</TableCell>
-                      <TableCell>{getProfileLabel(p.user_id)}</TableCell>
+                      <TableCell>{factionLabel}</TableCell>
+                      <TableCell>{operatorLabel}</TableCell>
                       <TableCell>
                         {p.orders_locked ? (
                           <Badge variant="default">Submitted</Badge>
@@ -778,11 +782,12 @@ const AdminGames = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button size="sm" variant="secondary" disabled={selectedGame.status !== "active"} title={selectedGame.status !== "active" ? "Game must be active" : undefined} onClick={() => loginAsPlayer(p)}>Log in as</Button>
+                        <Button size="sm" variant="secondary" disabled={selectedGame.status !== "active"} title={selectedGame.status !== "active" ? "Game must be active" : "Enter the game as this faction"} onClick={() => loginAsPlayer(p)}>Log in as</Button>
                         <Button size="sm" variant="destructive" onClick={() => removePlayer(p.id)}>Remove</Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
               {availableSlots.length > 0 && availableUsers.length > 0 && (
