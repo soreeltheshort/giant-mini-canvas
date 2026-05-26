@@ -44,10 +44,12 @@ interface GameRow {
 interface GamePlayerRow {
   id: string;
   game_id: string;
-  user_id: string;
+  user_id: string | null;
+  ai_persona_id: string | null;
   faction_id: string | null;
-  player_slot: number;
+  player_slot: number | null;
   orders_locked?: boolean;
+  factions?: { id: string; name: string; code_name: string | null; is_player_faction: boolean | null } | null;
 }
 
 interface ProfileRow {
