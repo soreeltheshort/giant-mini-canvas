@@ -6,27 +6,26 @@ import { supabase } from "@/integrations/supabase/client";
 const TITLE_BG =
   "https://komjfcrtwzxssugvsbyc.supabase.co/storage/v1/object/public/images/TitleScreenBackground.png";
 
-const PROVINCE_NAMES: Record<number, string> = {
-  1: "Valerian", 2: "Aurelian", 3: "Cassian",
-  4: "Dravian", 5: "Marcellan", 6: "Octavian",
-};
-
-interface PlayerGameInfo {
+interface GameRowInfo {
   game_id: string;
   game_name: string;
   game_status: string;
   turn_number: number;
-  player_slot: number;
+  faction_id: string | null;
+  faction_name: string;
+  is_player_faction: boolean;
   initialized: boolean;
+  isOwnAssignment: boolean;
 }
 
 const HEX_CLIP =
   "polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%)";
 
 const MyGames = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [games, setGames] = useState<PlayerGameInfo[]>([]);
+  const [playerRows, setPlayerRows] = useState<GameRowInfo[]>([]);
+  const [aiRows, setAiRows] = useState<GameRowInfo[]>([]);
   const [loadingGames, setLoadingGames] = useState(true);
 
   useEffect(() => {
@@ -37,31 +36,30 @@ const MyGames = () => {
     if (!user) return;
     const load = async () => {
       setLoadingGames(true);
-      const { data: players } = await (supabase as any)
+
+      // 1. Find games where the current user is assigned to a faction
+      const { data: myAssignments } = await (supabase as any)
         .from("game_factions")
-        .select("game_id, player_slot, initialized")
+        .select("game_id, faction_id, player_slot, initialized, factions:faction_id(name, is_player_faction)")
         .eq("user_id", user.id);
 
-      if (!players || players.length === 0) {
-        setGames([]);
+      const gameIds = Array.from(new Set((myAssignments ?? []).map((p: any) => p.game_id)));
+
+      if (gameIds.length === 0) {
+        setPlayerRows([]);
+        setAiRows([]);
         setLoadingGames(false);
         return;
       }
 
-      const gameIds = players.map((p: any) => p.game_id);
       const { data: gameRows } = await (supabase as any)
         .from("games")
         .select("id, name, status, turn_number")
         .in("id", gameIds);
+      const gameMap = new Map((gameRows ?? []).map((g: any) => [g.id, g]));
 
-      if (!gameRows) {
-        setGames([]);
-        setLoadingGames(false);
-        return;
-      }
-
-      const gameMap = new Map(gameRows.map((g: any) => [g.id, g]));
-      const merged: PlayerGameInfo[] = players
+      // 2. Player section: user's own assignments
+      const myRows: GameRowInfo[] = (myAssignments ?? [])
         .map((p: any) => {
           const g = gameMap.get(p.game_id) as any;
           if (!g) return null;
@@ -70,17 +68,49 @@ const MyGames = () => {
             game_name: g.name,
             game_status: g.status,
             turn_number: g.turn_number,
-            player_slot: p.player_slot,
+            faction_id: p.faction_id,
+            faction_name: p.factions?.name ?? "—",
+            is_player_faction: !!p.factions?.is_player_faction,
             initialized: p.initialized,
+            isOwnAssignment: true,
           };
         })
-        .filter(Boolean) as PlayerGameInfo[];
+        .filter(Boolean) as GameRowInfo[];
 
-      setGames(merged);
+      // 3. Non-player factions section (admin only): all AI factions in those same games
+      let nonPlayerRows: GameRowInfo[] = [];
+      if (isAdmin) {
+        const { data: allInGames } = await (supabase as any)
+          .from("game_factions")
+          .select("game_id, faction_id, initialized, ai_persona_id, user_id, factions:faction_id(name, is_player_faction)")
+          .in("game_id", gameIds);
+
+        nonPlayerRows = (allInGames ?? [])
+          .filter((p: any) => !p.factions?.is_player_faction && p.ai_persona_id)
+          .map((p: any) => {
+            const g = gameMap.get(p.game_id) as any;
+            if (!g) return null;
+            return {
+              game_id: g.id,
+              game_name: g.name,
+              game_status: g.status,
+              turn_number: g.turn_number,
+              faction_id: p.faction_id,
+              faction_name: p.factions?.name ?? "—",
+              is_player_faction: false,
+              initialized: p.initialized,
+              isOwnAssignment: false,
+            };
+          })
+          .filter(Boolean) as GameRowInfo[];
+      }
+
+      setPlayerRows(myRows);
+      setAiRows(nonPlayerRows);
       setLoadingGames(false);
     };
     load();
-  }, [user]);
+  }, [user, isAdmin]);
 
   if (loading || !user) {
     return (
@@ -89,6 +119,61 @@ const MyGames = () => {
       </div>
     );
   }
+
+  const renderRow = (g: GameRowInfo) => {
+    const isActive = g.game_status === "active";
+    const actionLabel = !isActive
+      ? "Awaiting"
+      : g.isOwnAssignment
+      ? g.initialized ? "Resume" : "Begin"
+      : "Log in as";
+
+    const target = g.isOwnAssignment
+      ? `/play/${g.game_id}`
+      : `/play/${g.game_id}?asFaction=${g.faction_id}`;
+
+    return (
+      <button
+        key={`${g.game_id}-${g.faction_id}-${g.isOwnAssignment ? "own" : "ai"}`}
+        disabled={!isActive}
+        onClick={() => isActive && navigate(target)}
+        className={`group relative w-full text-left px-7 py-3
+          border border-bronze/60
+          bg-gradient-to-b from-black/70 via-black/60 to-black/80
+          shadow-[inset_0_1px_0_hsl(var(--bronze)/0.35),0_4px_18px_-6px_rgba(0,0,0,0.8)]
+          backdrop-blur-[2px]
+          transition-all
+          ${
+            isActive
+              ? "hover:border-gold hover:from-black/80 hover:to-black/90 hover:shadow-[inset_0_1px_0_hsl(var(--gold)/0.5),0_6px_24px_-6px_hsl(var(--gold)/0.35)] cursor-pointer"
+              : "opacity-50 cursor-not-allowed"
+          }`}
+        style={{ clipPath: HEX_CLIP }}
+      >
+        <div className="flex items-center justify-between gap-4 px-2">
+          <div className="min-w-0">
+            <div className="font-heading uppercase tracking-[0.22em] text-lg text-gold drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)] truncate">
+              {g.game_name}
+            </div>
+            <div className="font-heading text-[11px] uppercase tracking-[0.3em] text-bronze mt-0.5">
+              {g.faction_name} · Turn {g.turn_number} · {g.game_status}
+            </div>
+          </div>
+          <div className="font-heading uppercase tracking-[0.25em] text-xs text-gold/90 shrink-0 pl-3 border-l border-bronze/40">
+            {actionLabel}
+          </div>
+        </div>
+      </button>
+    );
+  };
+
+  const SectionHeader = ({ label }: { label: string }) => (
+    <h2 className="font-heading uppercase tracking-[0.35em] text-sm text-bronze text-center mt-4 mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]">
+      {label}
+    </h2>
+  );
+
+  const nothing = playerRows.length === 0 && aiRows.length === 0;
 
   return (
     <div className="min-h-screen flex flex-col bg-black">
@@ -108,53 +193,25 @@ const MyGames = () => {
               <p className="font-heading uppercase tracking-[0.3em] text-bronze text-center text-sm">
                 Loading games…
               </p>
-            ) : games.length === 0 ? (
+            ) : nothing ? (
               <p className="font-heading uppercase tracking-[0.3em] text-bronze text-center text-sm">
                 No campaigns assigned to your name.
               </p>
             ) : (
-              games.map((g) => {
-                const isActive = g.game_status === "active";
-                const actionLabel = !isActive
-                  ? "Awaiting"
-                  : g.initialized
-                  ? "Resume"
-                  : "Begin";
-
-                return (
-                  <button
-                    key={g.game_id}
-                    disabled={!isActive}
-                    onClick={() => isActive && navigate(`/play/${g.game_id}`)}
-                    className={`group relative w-full text-left px-7 py-3
-                      border border-bronze/60
-                      bg-gradient-to-b from-black/70 via-black/60 to-black/80
-                      shadow-[inset_0_1px_0_hsl(var(--bronze)/0.35),0_4px_18px_-6px_rgba(0,0,0,0.8)]
-                      backdrop-blur-[2px]
-                      transition-all
-                      ${
-                        isActive
-                          ? "hover:border-gold hover:from-black/80 hover:to-black/90 hover:shadow-[inset_0_1px_0_hsl(var(--gold)/0.5),0_6px_24px_-6px_hsl(var(--gold)/0.35)] cursor-pointer"
-                          : "opacity-50 cursor-not-allowed"
-                      }`}
-                    style={{ clipPath: HEX_CLIP }}
-                  >
-                    <div className="flex items-center justify-between gap-4 px-2">
-                      <div className="min-w-0">
-                        <div className="font-heading uppercase tracking-[0.22em] text-lg text-gold drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)] truncate">
-                          {g.game_name}
-                        </div>
-                        <div className="font-heading text-[11px] uppercase tracking-[0.3em] text-bronze mt-0.5">
-                          {PROVINCE_NAMES[g.player_slot] || `Slot ${g.player_slot}`} · Turn {g.turn_number} · {g.game_status}
-                        </div>
-                      </div>
-                      <div className="font-heading uppercase tracking-[0.25em] text-xs text-gold/90 shrink-0 pl-3 border-l border-bronze/40">
-                        {actionLabel}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
+              <>
+                {playerRows.length > 0 && (
+                  <>
+                    <SectionHeader label="Players" />
+                    {playerRows.map(renderRow)}
+                  </>
+                )}
+                {aiRows.length > 0 && (
+                  <>
+                    <SectionHeader label="Non-Player Factions" />
+                    {aiRows.map(renderRow)}
+                  </>
+                )}
+              </>
             )}
 
             <button
