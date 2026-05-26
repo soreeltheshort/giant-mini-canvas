@@ -19,6 +19,7 @@ import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { processNextTurn, DEFAULT_TURN_CONSTANTS, ShipTypeForUpkeep } from "@/lib/turnEngine";
 import { runTurnProcessor } from "@/lib/turnProcessor";
 import { runTurnZero } from "@/lib/turnZero";
+import { seedFactionPlayers } from "@/lib/gameLifecycle";
 import { SystemData, MapState } from "@/lib/mapTypes";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
 import { Badge } from "@/components/ui/badge";
