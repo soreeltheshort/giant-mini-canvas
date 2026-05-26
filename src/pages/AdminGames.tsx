@@ -417,6 +417,16 @@ const AdminGames = () => {
         }
       }
 
+      // Seed a game_players row for every AI faction (and every map-owner
+      // faction) so the AI Inspector and per-turn AI loop have something to
+      // act on. Idempotent.
+      if (mapState) {
+        try {
+          const seed = await seedFactionPlayers(supabase as any, selectedGame.id, mapState);
+          console.log(`[Game Start] seedFactionPlayers — inserted=${seed.inserted}, backfilled=${seed.backfilled}, skipped=${seed.skipped}`);
+        } catch (e) { console.warn("[Game Start] seedFactionPlayers failed", e); }
+      }
+
       const econSummary = Array.from(playerEcon.entries()).map(([s, e]) => `Slot${s}: +${e.tribute}/-${e.maintenance}`).join(", ");
       await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase. Starting treasury: ${STARTING_TREASURY} (stub default). Economics: ${econSummary || "none calculated"}`);
       setSelectedGame({ ...selectedGame, status, turn_number: 1 });
