@@ -108,7 +108,7 @@ const AdminGames = () => {
     // Fetch player rosters for all games so the list can show participants
     if (list.length > 0) {
       const ids = list.map(g => g.id);
-      const { data: pData } = await (supabase as any).from("game_players").select("game_id, user_id, player_slot, ai_persona_id").in("game_id", ids);
+      const { data: pData } = await (supabase as any).from("game_factions").select("game_id, user_id, player_slot, ai_persona_id").in("game_id", ids);
       const map = new Map<string, { user_id: string | null; player_slot: number | null; ai_persona_id: string | null }[]>();
       for (const row of (pData || [])) {
         const arr = map.get(row.game_id) || [];
@@ -141,7 +141,7 @@ const AdminGames = () => {
       .channel(`admin-game-players-${selectedGame.id}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "game_players", filter: `game_id=eq.${selectedGame.id}` },
+        { event: "UPDATE", schema: "public", table: "game_factions", filter: `game_id=eq.${selectedGame.id}` },
         (payload: any) => {
           const updated = payload.new as GamePlayerRow;
           setPlayers(prev => prev.map(p => (p.id === updated.id ? { ...p, ...updated } : p)));
@@ -155,7 +155,7 @@ const AdminGames = () => {
   const loadGame = useCallback(async (game: GameRow) => {
     setSelectedGame(game);
     // players
-    const { data: pData } = await (supabase as any).from("game_players").select("*").eq("game_id", game.id).order("player_slot");
+    const { data: pData } = await (supabase as any).from("game_factions").select("*").eq("game_id", game.id).order("player_slot");
     setPlayers(pData || []);
     // logs
     const { data: lData } = await (supabase as any).from("game_logs").select("id, turn_number, log_type, message, created_at").eq("game_id", game.id).order("created_at", { ascending: false }).limit(100);
@@ -233,7 +233,7 @@ const AdminGames = () => {
   /* ── player management ── */
   const addPlayer = async (userId: string, slot: number) => {
     if (!selectedGame) return;
-    const { error } = await (supabase as any).from("game_players").insert({ game_id: selectedGame.id, user_id: userId, player_slot: slot });
+    const { error } = await (supabase as any).from("game_factions").insert({ game_id: selectedGame.id, user_id: userId, player_slot: slot });
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     const profile = profiles.find(p => p.user_id === userId);
     await addLog(selectedGame.id, "player_added", `Player ${profile?.display_name || profile?.email || userId} assigned to slot ${slot}`);
@@ -242,7 +242,7 @@ const AdminGames = () => {
 
   const removePlayer = async (playerId: string) => {
     if (!selectedGame) return;
-    await (supabase as any).from("game_players").delete().eq("id", playerId);
+    await (supabase as any).from("game_factions").delete().eq("id", playerId);
     await addLog(selectedGame.id, "player_removed", `Player removed from game`);
     await loadGame(selectedGame);
   };
@@ -402,12 +402,12 @@ const AdminGames = () => {
       }
 
       // Set starting treasury + Turn 1 income/costs for each player
-      const { data: gps } = await (supabase as any).from("game_players").select("id, player_slot, admin_capability, combat_capability").eq("game_id", selectedGame.id);
+      const { data: gps } = await (supabase as any).from("game_factions").select("id, player_slot, admin_capability, combat_capability").eq("game_id", selectedGame.id);
       if (gps) {
         for (const gp of gps) {
           const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
           console.log(`[Game Start] Player slot=${gp.player_slot} treasury=${STARTING_TREASURY} tribute=${econ.tribute} maintenance=${econ.maintenance}`);
-          await (supabase as any).from("game_players").update({
+          await (supabase as any).from("game_factions").update({
             orders_locked: false,
             treasury: STARTING_TREASURY, // STUB: default starting treasury
             last_tribute: econ.tribute,
@@ -469,14 +469,14 @@ const AdminGames = () => {
   const syncVisibilityToPlayers = async (gameId: string, ms: MapState) => {
     const visibleIds = buildVisibleSystemIds(ms);
     const { data: gamePlayers } = await (supabase as any)
-      .from("game_players")
+      .from("game_factions")
       .select("id")
       .eq("game_id", gameId);
 
     if (gamePlayers && gamePlayers.length > 0) {
       for (const gp of gamePlayers) {
         await (supabase as any)
-          .from("game_players")
+          .from("game_factions")
           .update({ visible_system_ids: visibleIds })
           .eq("id", gp.id);
       }
@@ -551,14 +551,14 @@ const AdminGames = () => {
 
       // Apply per-player econ deltas + reset action points and order locks
       const { data: gps } = await (supabase as any)
-        .from("game_players")
+        .from("game_factions")
         .select("id, player_slot, treasury, admin_capability, combat_capability")
         .eq("game_id", selectedGame.id);
       if (gps) {
         for (const gp of gps) {
           const econ = result.playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
           const newTreasury = (gp.treasury || 0) + econ.tribute - econ.maintenance;
-          await (supabase as any).from("game_players").update({
+          await (supabase as any).from("game_factions").update({
             orders_locked: false,
             treasury: newTreasury,
             last_tribute: econ.tribute,

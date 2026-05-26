@@ -128,7 +128,7 @@ export async function seedFactionPlayers(
   };
 
   const { data: existing } = await (supabase as any)
-    .from("game_players")
+    .from("game_factions")
     .select("id, player_slot, faction_id, user_id")
     .eq("game_id", gameId);
   const existingRows = (existing || []) as Array<{ id: string; player_slot: number | null; faction_id: string | null; user_id: string | null }>;
@@ -145,7 +145,7 @@ export async function seedFactionPlayers(
   let skipped = 0;
 
   const insertFactionRow = async (faction: { id: string; ai_persona_id: string | null }, isAi: boolean) => {
-    const { error } = await (supabase as any).from("game_players").insert({
+    const { error } = await (supabase as any).from("game_factions").insert({
       game_id: gameId,
       faction_id: faction.id,
       ai_persona_id: faction.ai_persona_id,
@@ -175,7 +175,7 @@ export async function seedFactionPlayers(
     if (slot != null && bySlot.has(slot)) {
       const row = bySlot.get(slot)!;
       if (!row.faction_id) {
-        await (supabase as any).from("game_players").update({
+        await (supabase as any).from("game_factions").update({
           faction_id: faction.id, ai_persona_id: faction.ai_persona_id,
         }).eq("id", row.id);
         backfilled++;
@@ -203,7 +203,7 @@ export async function seedFactionPlayers(
     if (slot != null && bySlot.has(slot)) {
       const row = bySlot.get(slot)!;
       if (!row.faction_id) {
-        await (supabase as any).from("game_players").update({
+        await (supabase as any).from("game_factions").update({
           faction_id: faction.id, ai_persona_id: faction.ai_persona_id,
         }).eq("id", row.id);
         backfilled++;
@@ -281,10 +281,10 @@ export async function startGame(supabase: SupabaseClient, gameId: string) {
   }
 
   // Apply starting treasury & econ to each player
-  const { data: gps } = await (supabase as any).from("game_players").select("id, player_slot, admin_capability, combat_capability").eq("game_id", gameId);
+  const { data: gps } = await (supabase as any).from("game_factions").select("id, player_slot, admin_capability, combat_capability").eq("game_id", gameId);
   for (const gp of (gps || [])) {
     const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
-    await (supabase as any).from("game_players").update({
+    await (supabase as any).from("game_factions").update({
       orders_locked: false,
       treasury: STARTING_TREASURY,
       last_tribute: econ.tribute,
@@ -325,11 +325,11 @@ export async function processTurn(supabase: SupabaseClient, gameId: string) {
     turn_phase: "orders",
   }).eq("id", gameId);
 
-  const { data: gps } = await (supabase as any).from("game_players").select("id, player_slot, treasury, admin_capability, combat_capability").eq("game_id", gameId);
+  const { data: gps } = await (supabase as any).from("game_factions").select("id, player_slot, treasury, admin_capability, combat_capability").eq("game_id", gameId);
   for (const gp of (gps || [])) {
     const econ = result.playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
     const newTreasury = (gp.treasury || 0) + econ.tribute - econ.maintenance;
-    await (supabase as any).from("game_players").update({
+    await (supabase as any).from("game_factions").update({
       orders_locked: false,
       treasury: newTreasury,
       last_tribute: econ.tribute,

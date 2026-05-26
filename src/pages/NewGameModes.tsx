@@ -174,7 +174,7 @@ function JoinPanel({ onBack }: { onBack: () => void }) {
     const mineMap: Record<string, number> = {};
     if (ids.length > 0) {
       const { data: gp } = await (supabase as any)
-        .from("game_players")
+        .from("game_factions")
         .select("game_id, player_slot, user_id")
         .in("game_id", ids);
       (gp || []).forEach((row: any) => {
@@ -203,7 +203,7 @@ function JoinPanel({ onBack }: { onBack: () => void }) {
     const key = `${gameId}:${slot}`;
     setJoiningKey(key);
     const { error } = await (supabase as any)
-      .from("game_players")
+      .from("game_factions")
       .insert({ game_id: gameId, user_id: user.id, player_slot: slot });
     setJoiningKey(null);
     if (error) {
@@ -338,7 +338,7 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
 
       setStage("Seating you in the senate…");
       const { error: joinErr } = await (supabase as any)
-        .from("game_players").insert({ game_id: g.id, user_id: user.id, player_slot: slot });
+        .from("game_factions").insert({ game_id: g.id, user_id: user.id, player_slot: slot });
       if (joinErr) throw joinErr;
 
       setStage("Starting game…");

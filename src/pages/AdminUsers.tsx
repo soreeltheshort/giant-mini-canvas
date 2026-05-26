@@ -348,7 +348,7 @@ const UserDetailPanel = ({ row, isSelf, onRoleToggle, onImpersonate, onChanged }
     let cancelled = false;
     (async () => {
       const { data } = await supabase
-        .from("game_players")
+        .from("game_factions")
         .select("player_slot, treasury, orders_locked, faction_id, factions(name), games!inner(id, name, status, turn_number)")
         .eq("user_id", row.user_id);
       if (cancelled) return;

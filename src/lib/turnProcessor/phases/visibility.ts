@@ -48,7 +48,7 @@ export const visibilityPhase: Phase = {
     for (const gp of players) {
       const prior = Array.isArray(gp.visible_system_ids) ? gp.visible_system_ids as number[] : [];
       const merged = Array.from(new Set<number>([...prior, ...baselineIds]));
-      await (supabase as any).from("game_players")
+      await (supabase as any).from("game_factions")
         .update({ visible_system_ids: merged }).eq("id", gp.id);
     }
 

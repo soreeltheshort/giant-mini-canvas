@@ -82,14 +82,14 @@ export async function runTurnZero(
 
   // 3. Push to every player in the game.
   const { data: gamePlayers } = await (supabase as any)
-    .from("game_players")
+    .from("game_factions")
     .select("id")
     .eq("game_id", gameId);
 
   const players = (gamePlayers ?? []) as Array<{ id: string }>;
   for (const gp of players) {
     await (supabase as any)
-      .from("game_players")
+      .from("game_factions")
       .update({ visible_system_ids: visibleIds })
       .eq("id", gp.id);
   }
