@@ -551,7 +551,7 @@ const PlayerGame = () => {
     });
 
     setLoading(false);
-  }, [user, gameId, navigate, toast, isAdmin]);
+  }, [user, gameId, navigate, toast, isAdmin, asFactionId]);
 
   useEffect(() => { load(); }, [load]);
 
