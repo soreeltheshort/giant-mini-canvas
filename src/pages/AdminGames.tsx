@@ -250,10 +250,19 @@ const AdminGames = () => {
   };
 
 
-  /* ── login as player ── */
+  /* ── enter the game as this faction ──
+   * Player factions: route through /play directly (faction is resolved via user_id).
+   * AI / non-player factions: include ?asFaction=<faction_id> so PlayerGame loads
+   * the row by faction_id (admin override path). */
   const loginAsPlayer = (player: GamePlayerRow) => {
     if (!selectedGame) return;
-    navigate(`/my-games`);
+    if (player.user_id) {
+      navigate(`/play/${selectedGame.id}`);
+    } else if (player.faction_id) {
+      navigate(`/play/${selectedGame.id}?asFaction=${player.faction_id}`);
+    } else {
+      toast({ title: "Cannot enter", description: "Row has no faction or user.", variant: "destructive" });
+    }
   };
 
   /* ── snapshot management ── */
