@@ -698,6 +698,23 @@ const AdminGames = () => {
                 <p className="text-sm text-muted-foreground">Turn {selectedGame.turn_number} · Status: {selectedGame.status}</p>
               </div>
               <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!mapState}
+                  title={!mapState ? "Import a map first" : "Insert a game_players row for every AI faction and every faction owning systems on this map"}
+                  onClick={async () => {
+                    if (!selectedGame || !mapState) return;
+                    try {
+                      const r = await seedFactionPlayers(supabase as any, selectedGame.id, mapState);
+                      toast({ title: "Faction players seeded", description: `Inserted ${r.inserted}, back-filled ${r.backfilled}, skipped ${r.skipped}.` });
+                    } catch (e: any) {
+                      toast({ title: "Seed failed", description: e?.message ?? String(e), variant: "destructive" });
+                    }
+                  }}
+                >
+                  Reseed faction players
+                </Button>
                 <Select value={selectedGame.status} onValueChange={updateStatus}>
                   <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                   <SelectContent>
