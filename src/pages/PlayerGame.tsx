@@ -318,6 +318,11 @@ function logAppliedRules({
 
 const PlayerGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
+  const [searchParams] = useSearchParams();
+  /** Admin-only impersonation: when set, load the game_factions row keyed by
+   *  faction_id rather than the current user_id. Allows admins to "enter" an
+   *  AI-operated faction directly (bypassing the load-game screen). */
+  const asFactionId = searchParams.get("asFaction");
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
