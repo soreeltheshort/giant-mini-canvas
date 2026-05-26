@@ -38,7 +38,7 @@ const MyGames = () => {
     const load = async () => {
       setLoadingGames(true);
       const { data: players } = await (supabase as any)
-        .from("game_players")
+        .from("game_factions")
         .select("game_id, player_slot, initialized")
         .eq("user_id", user.id);
 

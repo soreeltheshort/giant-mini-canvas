@@ -75,7 +75,7 @@ const TesterDashboard = () => {
 
   const loadPlayers = useCallback(async (gameId: string) => {
     const { data } = await (supabase as any)
-      .from("game_players").select("id, game_id, user_id, player_slot")
+      .from("game_factions").select("id, game_id, user_id, player_slot")
       .eq("game_id", gameId).order("player_slot");
     setPlayers(data || []);
   }, []);
@@ -147,7 +147,7 @@ const TesterDashboard = () => {
 
   const addSelfToSlot = async (slot: number) => {
     if (!selected || !user) return;
-    const { error } = await (supabase as any).from("game_players").insert({
+    const { error } = await (supabase as any).from("game_factions").insert({
       game_id: selected.id, user_id: user.id, player_slot: slot,
     });
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
@@ -155,7 +155,7 @@ const TesterDashboard = () => {
   };
 
   const removePlayerRow = async (rowId: string) => {
-    await (supabase as any).from("game_players").delete().eq("id", rowId);
+    await (supabase as any).from("game_factions").delete().eq("id", rowId);
     if (selected) await loadPlayers(selected.id);
   };
 

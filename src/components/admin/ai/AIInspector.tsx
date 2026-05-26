@@ -66,7 +66,7 @@ export default function AIInspector() {
     }
     (async () => {
       const { data } = await supabase
-        .from("game_players")
+        .from("game_factions")
         .select("id, player_slot, game_id, is_ai, user_id, faction_id, factions:faction_id(name, code_name, ai_persona_id)")
         .eq("game_id", gameId);
       const rows: PlayerRow[] = ((data ?? []) as any[]).map((r) => ({
@@ -154,7 +154,7 @@ export default function AIInspector() {
               // refresh players
               setGameId((id) => id);
               const { data } = await supabase
-                .from("game_players")
+                .from("game_factions")
                 .select("id, player_slot, game_id, is_ai, user_id, faction_id, factions:faction_id(name, code_name, ai_persona_id)")
                 .eq("game_id", gameId);
               const rows: PlayerRow[] = ((data ?? []) as any[]).map((r) => ({

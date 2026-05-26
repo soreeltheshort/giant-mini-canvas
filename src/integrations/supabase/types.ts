@@ -57,7 +57,7 @@ export type Database = {
             foreignKeyName: "ai_decision_log_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
-            referencedRelation: "game_players"
+            referencedRelation: "game_factions"
             referencedColumns: ["id"]
           },
         ]
@@ -124,7 +124,7 @@ export type Database = {
             foreignKeyName: "ai_goals_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
-            referencedRelation: "game_players"
+            referencedRelation: "game_factions"
             referencedColumns: ["id"]
           },
         ]
@@ -324,7 +324,7 @@ export type Database = {
             foreignKeyName: "ai_plans_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
-            referencedRelation: "game_players"
+            referencedRelation: "game_factions"
             referencedColumns: ["id"]
           },
         ]
@@ -381,14 +381,14 @@ export type Database = {
             foreignKeyName: "ai_relationship_events_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
-            referencedRelation: "game_players"
+            referencedRelation: "game_factions"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "ai_relationship_events_target_player_id_fkey"
             columns: ["target_player_id"]
             isOneToOne: false
-            referencedRelation: "game_players"
+            referencedRelation: "game_factions"
             referencedColumns: ["id"]
           },
         ]
@@ -445,14 +445,14 @@ export type Database = {
             foreignKeyName: "ai_relationships_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
-            referencedRelation: "game_players"
+            referencedRelation: "game_factions"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "ai_relationships_target_player_id_fkey"
             columns: ["target_player_id"]
             isOneToOne: false
-            referencedRelation: "game_players"
+            referencedRelation: "game_factions"
             referencedColumns: ["id"]
           },
         ]
@@ -503,7 +503,7 @@ export type Database = {
             foreignKeyName: "ai_world_beliefs_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
-            referencedRelation: "game_players"
+            referencedRelation: "game_factions"
             referencedColumns: ["id"]
           },
         ]
@@ -1021,6 +1021,7 @@ export type Database = {
           fleet_naming_convention: string
           fleet_naming_convention_id: string | null
           id: string
+          is_player_faction: boolean
           name: string
           ship_naming_convention_id: string | null
           updated_at: string
@@ -1033,6 +1034,7 @@ export type Database = {
           fleet_naming_convention?: string
           fleet_naming_convention_id?: string | null
           id?: string
+          is_player_faction?: boolean
           name: string
           ship_naming_convention_id?: string | null
           updated_at?: string
@@ -1045,6 +1047,7 @@ export type Database = {
           fleet_naming_convention?: string
           fleet_naming_convention_id?: string | null
           id?: string
+          is_player_faction?: boolean
           name?: string
           ship_naming_convention_id?: string | null
           updated_at?: string
@@ -1189,6 +1192,91 @@ export type Database = {
         }
         Relationships: []
       }
+      game_factions: {
+        Row: {
+          admin_capability: number
+          admin_points_remaining: number
+          ai_persona_id: string | null
+          combat_capability: number
+          combat_points_remaining: number
+          created_at: string
+          faction_id: string | null
+          game_id: string
+          id: string
+          initialized: boolean
+          is_ai: boolean
+          last_maintenance: number
+          last_tribute: number
+          orders_locked: boolean
+          player_slot: number | null
+          treasury: number
+          user_id: string | null
+          visible_system_ids: Json
+        }
+        Insert: {
+          admin_capability?: number
+          admin_points_remaining?: number
+          ai_persona_id?: string | null
+          combat_capability?: number
+          combat_points_remaining?: number
+          created_at?: string
+          faction_id?: string | null
+          game_id: string
+          id?: string
+          initialized?: boolean
+          is_ai?: boolean
+          last_maintenance?: number
+          last_tribute?: number
+          orders_locked?: boolean
+          player_slot?: number | null
+          treasury?: number
+          user_id?: string | null
+          visible_system_ids?: Json
+        }
+        Update: {
+          admin_capability?: number
+          admin_points_remaining?: number
+          ai_persona_id?: string | null
+          combat_capability?: number
+          combat_points_remaining?: number
+          created_at?: string
+          faction_id?: string | null
+          game_id?: string
+          id?: string
+          initialized?: boolean
+          is_ai?: boolean
+          last_maintenance?: number
+          last_tribute?: number
+          orders_locked?: boolean
+          player_slot?: number | null
+          treasury?: number
+          user_id?: string | null
+          visible_system_ids?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_players_ai_persona_id_fkey"
+            columns: ["ai_persona_id"]
+            isOneToOne: false
+            referencedRelation: "ai_personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_players_faction_id_fkey"
+            columns: ["faction_id"]
+            isOneToOne: false
+            referencedRelation: "factions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_players_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_fleet_ships: {
         Row: {
           crippled: boolean
@@ -1325,91 +1413,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "game_logs_game_id_fkey"
-            columns: ["game_id"]
-            isOneToOne: false
-            referencedRelation: "games"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      game_players: {
-        Row: {
-          admin_capability: number
-          admin_points_remaining: number
-          ai_persona_id: string | null
-          combat_capability: number
-          combat_points_remaining: number
-          created_at: string
-          faction_id: string | null
-          game_id: string
-          id: string
-          initialized: boolean
-          is_ai: boolean
-          last_maintenance: number
-          last_tribute: number
-          orders_locked: boolean
-          player_slot: number | null
-          treasury: number
-          user_id: string | null
-          visible_system_ids: Json
-        }
-        Insert: {
-          admin_capability?: number
-          admin_points_remaining?: number
-          ai_persona_id?: string | null
-          combat_capability?: number
-          combat_points_remaining?: number
-          created_at?: string
-          faction_id?: string | null
-          game_id: string
-          id?: string
-          initialized?: boolean
-          is_ai?: boolean
-          last_maintenance?: number
-          last_tribute?: number
-          orders_locked?: boolean
-          player_slot?: number | null
-          treasury?: number
-          user_id?: string | null
-          visible_system_ids?: Json
-        }
-        Update: {
-          admin_capability?: number
-          admin_points_remaining?: number
-          ai_persona_id?: string | null
-          combat_capability?: number
-          combat_points_remaining?: number
-          created_at?: string
-          faction_id?: string | null
-          game_id?: string
-          id?: string
-          initialized?: boolean
-          is_ai?: boolean
-          last_maintenance?: number
-          last_tribute?: number
-          orders_locked?: boolean
-          player_slot?: number | null
-          treasury?: number
-          user_id?: string | null
-          visible_system_ids?: Json
-        }
-        Relationships: [
-          {
-            foreignKeyName: "game_players_ai_persona_id_fkey"
-            columns: ["ai_persona_id"]
-            isOneToOne: false
-            referencedRelation: "ai_personas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_players_faction_id_fkey"
-            columns: ["faction_id"]
-            isOneToOne: false
-            referencedRelation: "factions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_players_game_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "games"
@@ -1672,7 +1675,7 @@ export type Database = {
             foreignKeyName: "player_fleet_intel_observer_player_id_fkey"
             columns: ["observer_player_id"]
             isOneToOne: false
-            referencedRelation: "game_players"
+            referencedRelation: "game_factions"
             referencedColumns: ["id"]
           },
           {
@@ -1730,7 +1733,7 @@ export type Database = {
             foreignKeyName: "player_orders_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
-            referencedRelation: "game_players"
+            referencedRelation: "game_factions"
             referencedColumns: ["id"]
           },
           {
@@ -1785,7 +1788,7 @@ export type Database = {
             foreignKeyName: "player_system_intel_observer_player_id_fkey"
             columns: ["observer_player_id"]
             isOneToOne: false
-            referencedRelation: "game_players"
+            referencedRelation: "game_factions"
             referencedColumns: ["id"]
           },
         ]

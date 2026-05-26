@@ -368,7 +368,7 @@ const PlayerGame = () => {
 
     const [{ data: gData }, { data: pData }, { data: prData }, { data: ftData }, { data: stData }] = await Promise.all([
       (supabase as any).from("games").select("id, name, turn_number, status").eq("id", gameId).single(),
-      (supabase as any).from("game_players").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, orders_locked").eq("game_id", gameId).eq("user_id", user.id).single(),
+      (supabase as any).from("game_factions").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, orders_locked, faction_id, factions:faction_id(id, name, code_name, is_player_faction)").eq("game_id", gameId).eq("user_id", user.id).single(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
       (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity, cost, turns_to_build, max_per_system, consumed_facility_id, maintenance, synod"),
       (supabase as any).from("ship_types").select("id, name, hull_class, ship_id, class, point_cost, maintenance, map_speed, repair_pod, supply_pod, hull, ground_invasion, scout_sensors, fighter_bay, gun_ship_link, flavor_description, synod, laser_2_5cm, laser_4_5cm, laser_6_5cm, laser_10cm, laser_14cm, laser_20cm, laser_28cm, laser_50cm, missile_10kg, missile_50kg, missile_100kg, missile_half_kt"),
@@ -384,6 +384,15 @@ const PlayerGame = () => {
       navigate("/my-games");
       return;
     }
+    // Defensive guard: players can only operate player factions. Admins may
+    // impersonate any faction (covered by the isAdmin override).
+    const joinedFaction = (pData as any).factions || null;
+    const factionIsPlayer = joinedFaction ? !!joinedFaction.is_player_faction : true; // pre-seeding rows have no faction yet
+    if (joinedFaction && !factionIsPlayer && !isAdmin) {
+      toast({ title: "Faction not playable", description: "Players cannot operate non-player factions.", variant: "destructive" });
+      navigate("/my-games");
+      return;
+    }
 
     setGame(gData);
     setPlayer(pData);
@@ -392,13 +401,13 @@ const PlayerGame = () => {
 
     // Determine if this is a solo game (only one player joined)
     const { count: playerCount } = await (supabase as any)
-      .from("game_players")
+      .from("game_factions")
       .select("id", { count: "exact", head: true })
       .eq("game_id", gameId);
     setIsSolo((playerCount ?? 0) <= 1);
     (async () => {
       const { data: gpRows } = await supabase
-        .from("game_players")
+        .from("game_factions")
         .select("game_id, player_slot, games!inner(id, name, status)")
         .eq("user_id", user.id)
         .neq("games.status", "completed");
@@ -816,7 +825,7 @@ const PlayerGame = () => {
   const refreshOrders = useCallback(() => {
     setOrderRefreshTick(t => t + 1);
     if (player?.orders_locked && player?.id) {
-      (supabase as any).from("game_players").update({ orders_locked: false }).eq("id", player.id);
+      (supabase as any).from("game_factions").update({ orders_locked: false }).eq("id", player.id);
       setPlayer(p => (p ? { ...p, orders_locked: false } : p));
     }
   }, [player?.id, player?.orders_locked]);
@@ -837,7 +846,7 @@ const PlayerGame = () => {
       if (processingTurn) return;
       setProcessingTurn(true);
       try {
-        await (supabase as any).from("game_players").update({ orders_locked: true }).eq("id", player.id);
+        await (supabase as any).from("game_factions").update({ orders_locked: true }).eq("id", player.id);
         playOrdersSubmitted();
         await processTurn(supabase as any, game.id);
         await load();
@@ -852,7 +861,7 @@ const PlayerGame = () => {
 
     // Multiplayer flow: toggle the submitted flag.
     const next = !player.orders_locked;
-    const { error } = await (supabase as any).from("game_players").update({ orders_locked: next }).eq("id", player.id);
+    const { error } = await (supabase as any).from("game_factions").update({ orders_locked: next }).eq("id", player.id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setPlayer(p => (p ? { ...p, orders_locked: next } : p));
     if (next) playOrdersSubmitted();
@@ -868,7 +877,7 @@ const PlayerGame = () => {
       return;
     }
     if (player) {
-      await (supabase as any).from("game_players").update({ initialized: true }).eq("id", player.id);
+      await (supabase as any).from("game_factions").update({ initialized: true }).eq("id", player.id);
       setPlayer({ ...player, initialized: true });
       setInitStep(0);
     }
@@ -957,7 +966,7 @@ const PlayerGame = () => {
       };
       await (supabase as any).from("games").update({ map_data_json: serialized }).eq("id", game.id);
       const newCP = Math.max(0, (player.combat_points_remaining ?? 0) - 1);
-      await (supabase as any).from("game_players").update({ combat_points_remaining: newCP }).eq("id", player.id);
+      await (supabase as any).from("game_factions").update({ combat_points_remaining: newCP }).eq("id", player.id);
       setMapState(updated);
       setPlayer({ ...player, combat_points_remaining: newCP });
       playOrderPlaced();
@@ -1220,7 +1229,7 @@ const PlayerGame = () => {
     if (newlySeen.length === 0) return;
     const merged = Array.from(new Set([...persisted, ...newlySeen]));
     (supabase as any)
-      .from("game_players")
+      .from("game_factions")
       .update({ visible_system_ids: merged })
       .eq("id", player.id)
       .then(() => {

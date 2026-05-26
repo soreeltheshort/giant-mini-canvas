@@ -72,7 +72,7 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
   // Load all conditional orders for this turn + players for the game
   const [{ data: ordersRaw }, { data: playersRaw }] = await Promise.all([
     (supabase as any).from("player_orders").select("*").eq("game_id", gameId).eq("turn_number", currentTurn),
-    (supabase as any).from("game_players")
+    (supabase as any).from("game_factions")
       .select("id, user_id, player_slot, treasury, admin_capability, combat_capability, visible_system_ids")
       .eq("game_id", gameId),
   ]);
