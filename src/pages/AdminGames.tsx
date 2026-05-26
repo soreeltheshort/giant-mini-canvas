@@ -662,7 +662,12 @@ const AdminGames = () => {
               ) : games.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No games yet</TableCell></TableRow>
               ) : games.map(g => {
-                const roster = (gamePlayersMap.get(g.id) || []).slice().sort((a, b) => a.player_slot - b.player_slot);
+                const roster = (gamePlayersMap.get(g.id) || []).slice().sort((a, b) => (a.player_slot ?? 99) - (b.player_slot ?? 99));
+                const labelFor = (r: { user_id: string | null; ai_persona_id: string | null }) =>
+                  r.user_id ? getProfileLabel(r.user_id) : r.ai_persona_id ? "AI" : "inactive";
+                const rank = (r: { user_id: string | null; ai_persona_id: string | null }) =>
+                  r.user_id ? 0 : r.ai_persona_id ? 1 : 2;
+                const sortedRoster = roster.slice().sort((a, b) => rank(a) - rank(b));
                 return (
                 <TableRow key={g.id} className={selectedGame?.id === g.id ? "bg-accent/30" : ""}>
                   <TableCell className="font-medium">{g.name}</TableCell>
@@ -670,11 +675,11 @@ const AdminGames = () => {
                   <TableCell>{g.turn_number}</TableCell>
                   <TableCell className="text-xs">{getProfileLabel(g.created_by)}</TableCell>
                   <TableCell className="text-xs">
-                    {roster.length === 0 ? (
+                    {sortedRoster.length === 0 ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
-                      <span title={roster.map(r => `${PROVINCE_NAMES[r.player_slot] || `Slot ${r.player_slot}`}: ${getProfileLabel(r.user_id)}`).join("\n")}>
-                        {roster.map(r => getProfileLabel(r.user_id)).join(", ")}
+                      <span title={sortedRoster.map(r => `${r.player_slot != null ? (PROVINCE_NAMES[r.player_slot] || `Slot ${r.player_slot}`) : "—"}: ${labelFor(r)}`).join("\n")}>
+                        {sortedRoster.map(r => labelFor(r)).join(", ")}
                       </span>
                     )}
                   </TableCell>
