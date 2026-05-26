@@ -109,7 +109,7 @@ function useComputedVisibility(
       return { live: [], everSeen: persisted };
     }
 
-    const ownProvince = `PROVINCE_${player.player_slot}`;
+    const ownProvince = player.own_classification;
     const SENSOR_RADIUS = 1;
 
     // hex_id → HexData lookup
@@ -187,7 +187,7 @@ function useVisibleHexKeys(
     const everSeen = new Set<string>();
     if (!player || !mapState) return { live, everSeen };
 
-    const ownProvince = `PROVINCE_${player.player_slot}`;
+    const ownProvince = player.own_classification;
     const SENSOR_RADIUS = 1;
 
     // 1. Core + Explored Marches + own-province hexes are always live
@@ -619,7 +619,7 @@ const PlayerGame = () => {
   const [attackerRevealHexKeys, setAttackerRevealHexKeys] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (!player || !game) { setAttackerRevealHexKeys(new Set()); return; }
-    const ownClass = `PROVINCE_${player.player_slot}`;
+    const ownClass = player.own_classification;
     const lastProcessedTurn = Math.max(0, (game.turn_number ?? 1) - 1);
     if (lastProcessedTurn <= 0) { setAttackerRevealHexKeys(new Set()); return; }
     let cancelled = false;
@@ -678,7 +678,7 @@ const PlayerGame = () => {
   // dispatches in the news feed.
   useEffect(() => {
     if (!player || !game) return;
-    const ownClass = `PROVINCE_${player.player_slot}`;
+    const ownClass = player.own_classification;
     const factionLc = (PROVINCE_NAMES[player.player_slot] || "").toLowerCase();
     let cancelled = false;
     (async () => {
@@ -728,7 +728,7 @@ const PlayerGame = () => {
   // FleetCompositionEditor shows in fleet detail.
   useEffect(() => {
     if (!player || !game || !mapState) return;
-    const ownClass = `PROVINCE_${player.player_slot}`;
+    const ownClass = player.own_classification;
     const myFleets = mapState.fleets.filter(f => f.owner_classification === ownClass);
     if (myFleets.length === 0) {
       setSubmissionIssues([]);
@@ -925,7 +925,7 @@ const PlayerGame = () => {
       toast({ title: "No combat points", description: "Creating a fleet costs 1 combat point.", variant: "destructive" });
       return;
     }
-    const ownClass = `PROVINCE_${player.player_slot}`;
+    const ownClass = player.own_classification;
     const hex = mapState.hexes.get(hexKey(hexX, hexY));
     if (!hex) {
       toast({ title: "Invalid hex", description: "That hex does not exist.", variant: "destructive" });
@@ -1354,7 +1354,7 @@ const PlayerGame = () => {
               shipTypes: dbShipTypes,
               hexes: mapState.hexes,
             } : undefined,
-            playerOwnerClassification: `PROVINCE_${player.player_slot}`,
+            playerOwnerClassification: player.own_classification,
             fleetOrderContext: { gameId: game.id, playerId: player.id, turnNumber: game.turn_number },
             onStartTargeting: setTargeting,
             combatPointsAvailable,
@@ -1403,7 +1403,7 @@ const PlayerGame = () => {
               debugVisibleHexKeys={effectiveLiveHexKeys}
               everSeenHexKeys={effectiveEverSeenHexKeys}
               orderArrow={orderArrow}
-              ownClassification={`PROVINCE_${player.player_slot}`}
+              ownClassification={player.own_classification}
               className="flex-1"
             />
           ) : (
