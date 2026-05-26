@@ -61,6 +61,7 @@ function ConventionRow({
         >
           <option value="planet">planet</option>
           <option value="fleet">fleet</option>
+          <option value="ship">ship</option>
         </select>
       </div>
       <Textarea
@@ -95,12 +96,13 @@ export default function NamingConventionsSection({ isAdmin }: { isAdmin: boolean
 
   const planetConvs = conventions.filter((c) => c.kind === "planet");
   const fleetConvs = conventions.filter((c) => c.kind === "fleet");
+  const shipConvs = conventions.filter((c) => c.kind === "ship");
 
   return (
     <div className="space-y-4">
       <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Naming Conventions</h2>
       <p className="text-xs text-muted-foreground">
-        Reusable lists of names for planets and fleets. Assign one to each faction to drive auto-naming.
+        Reusable lists of names for planets, fleets and ships. Planet lists are assigned at the map level; fleet and ship lists are assigned per faction.
       </p>
 
       {loading ? (
@@ -129,6 +131,16 @@ export default function NamingConventionsSection({ isAdmin }: { isAdmin: boolean
               ))
             )}
           </div>
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ship lists</p>
+            {shipConvs.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">None</p>
+            ) : (
+              shipConvs.map((c) => (
+                <ConventionRow key={c.id} c={c} isAdmin={isAdmin} onUpdate={update} onRemove={remove} />
+              ))
+            )}
+          </div>
         </div>
       )}
 
@@ -149,6 +161,7 @@ export default function NamingConventionsSection({ isAdmin }: { isAdmin: boolean
             >
               <option value="planet">planet</option>
               <option value="fleet">fleet</option>
+              <option value="ship">ship</option>
             </select>
           </div>
           <Textarea

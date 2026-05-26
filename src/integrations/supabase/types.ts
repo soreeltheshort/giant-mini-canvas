@@ -512,16 +512,19 @@ export type Database = {
         Row: {
           default_map_id: string | null
           id: string
+          planet_naming_convention_id: string | null
           updated_at: string
         }
         Insert: {
           default_map_id?: string | null
           id?: string
+          planet_naming_convention_id?: string | null
           updated_at?: string
         }
         Update: {
           default_map_id?: string | null
           id?: string
+          planet_naming_convention_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -530,6 +533,13 @@ export type Database = {
             columns: ["default_map_id"]
             isOneToOne: false
             referencedRelation: "saved_maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_settings_planet_naming_convention_id_fkey"
+            columns: ["planet_naming_convention_id"]
+            isOneToOne: false
+            referencedRelation: "naming_conventions"
             referencedColumns: ["id"]
           },
         ]
@@ -1012,8 +1022,7 @@ export type Database = {
           fleet_naming_convention_id: string | null
           id: string
           name: string
-          planet_naming_convention: string
-          planet_naming_convention_id: string | null
+          ship_naming_convention_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1025,8 +1034,7 @@ export type Database = {
           fleet_naming_convention_id?: string | null
           id?: string
           name: string
-          planet_naming_convention?: string
-          planet_naming_convention_id?: string | null
+          ship_naming_convention_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1038,8 +1046,7 @@ export type Database = {
           fleet_naming_convention_id?: string | null
           id?: string
           name?: string
-          planet_naming_convention?: string
-          planet_naming_convention_id?: string | null
+          ship_naming_convention_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1051,8 +1058,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "factions_planet_naming_convention_id_fkey"
-            columns: ["planet_naming_convention_id"]
+            foreignKeyName: "factions_ship_naming_convention_id_fkey"
+            columns: ["ship_naming_convention_id"]
             isOneToOne: false
             referencedRelation: "naming_conventions"
             referencedColumns: ["id"]

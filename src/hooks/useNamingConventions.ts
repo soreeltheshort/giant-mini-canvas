@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-export type NamingConventionKind = "planet" | "fleet";
+export type NamingConventionKind = "planet" | "fleet" | "ship";
 
 export interface NamingConvention {
   id: string;
