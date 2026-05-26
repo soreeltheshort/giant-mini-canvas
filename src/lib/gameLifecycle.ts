@@ -27,7 +27,7 @@ function serializeMapState(state: MapState): any {
   };
 }
 
-function deserializeMapState(json: any): MapState {
+export function deserializeMapState(json: any): MapState {
   const systems = new Map<number, SystemData>();
   const rawEntries: Array<[any, SystemData]> = Array.isArray(json.systems) ? json.systems : [];
   for (const [, sys] of rawEntries) {
