@@ -1109,7 +1109,7 @@ const PlayerGame = () => {
       ? Array.from(mapState!.systems.values()).find(s => s.hex_id === destHex.hex_id)
       : undefined;
     if (destHex) {
-      const check = isHexBlockedForPlayer(destHex, destSystem, player.player_slot);
+      const check = isHexBlockedForPlayer(destHex, destSystem, player.player_slot ?? -1);
       if (check.blocked) {
         toast({ title: "Destination blocked", description: check.message, variant: "destructive" });
         setTargeting(null);
