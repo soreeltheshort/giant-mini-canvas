@@ -23,6 +23,7 @@ import { combatPhase } from "./phases/combat";
 import { groundCombatPhase } from "./phases/groundCombat";
 import { shipProductionPhase } from "./phases/shipProduction";
 import { transferShipsPhase } from "./phases/transferShips";
+import { seedFactionPlayers } from "@/lib/gameLifecycle";
 
 // Order matters:
 //   - economy: tribute, upkeep, repairs, builds.
