@@ -73,6 +73,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   everSeenHexKeys,
   orderArrow = null,
   ownClassification,
+  revealAllFleets = false,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
