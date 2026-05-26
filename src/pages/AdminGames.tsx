@@ -108,11 +108,11 @@ const AdminGames = () => {
     // Fetch player rosters for all games so the list can show participants
     if (list.length > 0) {
       const ids = list.map(g => g.id);
-      const { data: pData } = await (supabase as any).from("game_players").select("game_id, user_id, player_slot").in("game_id", ids);
-      const map = new Map<string, { user_id: string; player_slot: number }[]>();
+      const { data: pData } = await (supabase as any).from("game_players").select("game_id, user_id, player_slot, ai_persona_id").in("game_id", ids);
+      const map = new Map<string, { user_id: string | null; player_slot: number | null; ai_persona_id: string | null }[]>();
       for (const row of (pData || [])) {
         const arr = map.get(row.game_id) || [];
-        arr.push({ user_id: row.user_id, player_slot: row.player_slot });
+        arr.push({ user_id: row.user_id, player_slot: row.player_slot, ai_persona_id: row.ai_persona_id });
         map.set(row.game_id, arr);
       }
       setGamePlayersMap(map);
