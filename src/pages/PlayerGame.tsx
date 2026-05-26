@@ -41,7 +41,7 @@ interface GameInfo {
 
 interface PlayerInfo {
   id: string;
-  player_slot: number;
+  player_slot: number | null;
   initialized: boolean;
   visible_system_ids: number[];
   treasury: number;
@@ -52,6 +52,12 @@ interface PlayerInfo {
   admin_points_remaining: number;
   combat_points_remaining: number;
   orders_locked: boolean;
+  /** Owner-classification string used by map filters/orders.
+   *  For Roman provinces: `PROVINCE_${player_slot}`. For non-player factions
+   *  (admin-impersonated AI), the faction's `code_name` (e.g. "Synod_int1"). */
+  own_classification: string;
+  /** Display name for header / intro screens. */
+  faction_name: string;
 }
 
 interface ProfileInfo {
