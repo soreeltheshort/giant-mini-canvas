@@ -161,6 +161,9 @@ const Header = () => {
                         <Link to="/map-testing">Map Testing</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
+                        <Link to="/map-testing/config">Map Testing Config</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link to="/planet-testing">Planet Testing</Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
