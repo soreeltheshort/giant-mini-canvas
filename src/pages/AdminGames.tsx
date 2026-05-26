@@ -622,8 +622,8 @@ const AdminGames = () => {
     return p?.display_name || p?.email || userId.slice(0, 8);
   };
 
-  const usedSlots = players.map(p => p.player_slot);
-  const usedUserIds = players.map(p => p.user_id);
+  const usedSlots = players.map(p => p.player_slot).filter((s): s is number => s != null);
+  const usedUserIds = players.map(p => p.user_id).filter((u): u is string => !!u);
   const availableSlots = [1, 2, 3, 4, 5, 6].filter(s => !usedSlots.includes(s));
   const availableUsers = profiles.filter(p => !usedUserIds.includes(p.user_id));
 
