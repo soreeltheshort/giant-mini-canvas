@@ -14,16 +14,33 @@ interface Game {
   name: string;
   turn_number: number;
 }
-interface AIPlayer {
+interface PlayerRow {
   id: string;
-  player_slot: number;
+  player_slot: number | null;
   game_id: string;
+  is_ai: boolean;
+  user_id: string | null;
+  faction_id: string | null;
+  faction_name: string | null;
+  faction_code_name: string | null;
+  has_ai_persona: boolean;
 }
 
+const PROVINCE_NAMES: Record<number, string> = {
+  1: "Valerian", 2: "Aurelian", 3: "Cassian",
+  4: "Dravian", 5: "Marcellan", 6: "Octavian",
+};
+
+function labelForPlayer(p: PlayerRow): string {
+  const fname = p.faction_code_name || p.faction_name || (p.player_slot != null ? PROVINCE_NAMES[p.player_slot] : null) || "(unassigned)";
+  const tag = p.is_ai ? "AI" : p.user_id ? "Player" : "Neutral";
+  const slot = p.player_slot != null ? ` · slot ${p.player_slot}` : "";
+  return `${fname} — ${tag}${slot}`;
+}
 
 export default function AIInspector() {
   const [games, setGames] = useState<Game[]>([]);
-  const [players, setPlayers] = useState<AIPlayer[]>([]);
+  const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [gameId, setGameId] = useState<string>("");
   const [playerId, setPlayerId] = useState<string>("");
   const [turn, setTurn] = useState<number>(0);
@@ -47,10 +64,27 @@ export default function AIInspector() {
     (async () => {
       const { data } = await supabase
         .from("game_players")
-        .select("id, player_slot, game_id, is_ai")
-        .eq("game_id", gameId)
-        .eq("is_ai", true);
-      setPlayers(((data ?? []) as any[]) as any);
+        .select("id, player_slot, game_id, is_ai, user_id, faction_id, factions:faction_id(name, code_name, ai_persona_id)")
+        .eq("game_id", gameId);
+      const rows: PlayerRow[] = ((data ?? []) as any[]).map((r) => ({
+        id: r.id,
+        player_slot: r.player_slot,
+        game_id: r.game_id,
+        is_ai: r.is_ai,
+        user_id: r.user_id,
+        faction_id: r.faction_id,
+        faction_name: r.factions?.name ?? null,
+        faction_code_name: r.factions?.code_name ?? null,
+        has_ai_persona: !!r.factions?.ai_persona_id,
+      }));
+      // Sort: factions with AI persona first, then other player factions, then neutrals.
+      rows.sort((a, b) => {
+        const ra = a.has_ai_persona ? 0 : a.user_id ? 1 : 2;
+        const rb = b.has_ai_persona ? 0 : b.user_id ? 1 : 2;
+        if (ra !== rb) return ra - rb;
+        return labelForPlayer(a).localeCompare(labelForPlayer(b));
+      });
+      setPlayers(rows);
       const g = games.find((g) => g.id === gameId);
       if (g) setTurn(g.turn_number);
     })();
@@ -76,17 +110,17 @@ export default function AIInspector() {
           </select>
         </div>
         <div>
-          <Label className="text-[10px] text-muted-foreground">AI player</Label>
+          <Label className="text-[10px] text-muted-foreground">Faction</Label>
           <select
             value={playerId}
             onChange={(e) => setPlayerId(e.target.value)}
             disabled={!gameId}
             className="h-9 w-full rounded border border-border bg-background px-2 text-sm"
           >
-            <option value="">— pick player —</option>
+            <option value="">— pick faction —</option>
             {players.map((p) => (
               <option key={p.id} value={p.id}>
-                Slot {p.player_slot}
+                {labelForPlayer(p)}
               </option>
             ))}
           </select>
