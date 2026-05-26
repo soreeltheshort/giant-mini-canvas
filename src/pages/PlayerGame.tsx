@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -41,7 +41,7 @@ interface GameInfo {
 
 interface PlayerInfo {
   id: string;
-  player_slot: number;
+  player_slot: number | null;
   initialized: boolean;
   visible_system_ids: number[];
   treasury: number;
@@ -52,6 +52,12 @@ interface PlayerInfo {
   admin_points_remaining: number;
   combat_points_remaining: number;
   orders_locked: boolean;
+  /** Owner-classification string used by map filters/orders.
+   *  For Roman provinces: `PROVINCE_${player_slot}`. For non-player factions
+   *  (admin-impersonated AI), the faction's `code_name` (e.g. "Synod_int1"). */
+  own_classification: string;
+  /** Display name for header / intro screens. */
+  faction_name: string;
 }
 
 interface ProfileInfo {
@@ -103,7 +109,7 @@ function useComputedVisibility(
       return { live: [], everSeen: persisted };
     }
 
-    const ownProvince = `PROVINCE_${player.player_slot}`;
+    const ownProvince = player.own_classification;
     const SENSOR_RADIUS = 1;
 
     // hex_id → HexData lookup
@@ -181,7 +187,7 @@ function useVisibleHexKeys(
     const everSeen = new Set<string>();
     if (!player || !mapState) return { live, everSeen };
 
-    const ownProvince = `PROVINCE_${player.player_slot}`;
+    const ownProvince = player.own_classification;
     const SENSOR_RADIUS = 1;
 
     // 1. Core + Explored Marches + own-province hexes are always live
@@ -248,7 +254,7 @@ function logAppliedRules({
   profile: any;
   mapState: MapState | null;
 }) {
-  const factionName = PROVINCE_NAMES[player.player_slot] || `Faction ${player.player_slot}`;
+  const factionName = player.faction_name || `Faction ${player.player_slot ?? "?"}`;
   const playerName = profile?.display_name || profile?.email || "Unknown";
   const visibleIds: number[] = (player.visible_system_ids || []) as number[];
 
@@ -312,6 +318,11 @@ function logAppliedRules({
 
 const PlayerGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
+  const [searchParams] = useSearchParams();
+  /** Admin-only impersonation: when set, load the game_factions row keyed by
+   *  faction_id rather than the current user_id. Allows admins to "enter" an
+   *  AI-operated faction directly (bypassing the load-game screen). */
+  const asFactionId = searchParams.get("asFaction");
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -366,15 +377,25 @@ const PlayerGame = () => {
   const load = useCallback(async () => {
     if (!user || !gameId) return;
 
-    const [{ data: gData }, { data: pData }, { data: prData }, { data: ftData }, { data: stData }] = await Promise.all([
+    const useAdminImpersonation = !!(asFactionId && isAdmin);
+    const factionSelect = "id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, orders_locked, faction_id, user_id, factions:faction_id(id, name, code_name, is_player_faction)";
+    let factionQuery = (supabase as any)
+      .from("game_factions")
+      .select(factionSelect)
+      .eq("game_id", gameId);
+    factionQuery = useAdminImpersonation
+      ? factionQuery.eq("faction_id", asFactionId)
+      : factionQuery.eq("user_id", user.id);
+
+    const [{ data: gData }, { data: pDataRaw }, { data: prData }, { data: ftData }, { data: stData }] = await Promise.all([
       (supabase as any).from("games").select("id, name, turn_number, status").eq("id", gameId).single(),
-      (supabase as any).from("game_factions").select("id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, orders_locked, faction_id, factions:faction_id(id, name, code_name, is_player_faction)").eq("game_id", gameId).eq("user_id", user.id).single(),
+      factionQuery.maybeSingle(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
       (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity, cost, turns_to_build, max_per_system, consumed_facility_id, maintenance, synod"),
       (supabase as any).from("ship_types").select("id, name, hull_class, ship_id, class, point_cost, maintenance, map_speed, repair_pod, supply_pod, hull, ground_invasion, scout_sensors, fighter_bay, gun_ship_link, flavor_description, synod, laser_2_5cm, laser_4_5cm, laser_6_5cm, laser_10cm, laser_14cm, laser_20cm, laser_28cm, laser_50cm, missile_10kg, missile_50kg, missile_100kg, missile_half_kt"),
     ]);
 
-    if (!gData || !pData) {
+    if (!gData || !pDataRaw) {
       toast({ title: "Access denied", description: "You are not a player in this game.", variant: "destructive" });
       navigate("/");
       return;
@@ -386,13 +407,31 @@ const PlayerGame = () => {
     }
     // Defensive guard: players can only operate player factions. Admins may
     // impersonate any faction (covered by the isAdmin override).
-    const joinedFaction = (pData as any).factions || null;
+    const joinedFaction = (pDataRaw as any).factions || null;
     const factionIsPlayer = joinedFaction ? !!joinedFaction.is_player_faction : true; // pre-seeding rows have no faction yet
     if (joinedFaction && !factionIsPlayer && !isAdmin) {
       toast({ title: "Faction not playable", description: "Players cannot operate non-player factions.", variant: "destructive" });
       navigate("/my-games");
       return;
     }
+
+    // Derive owner-classification + display name once. For Roman provinces with
+    // a numeric seat we still use `PROVINCE_<slot>` (matches legacy map data);
+    // for AI factions we fall back to the faction code_name.
+    const slot = (pDataRaw as any).player_slot as number | null;
+    const fallbackName = slot != null ? (PROVINCE_NAMES[slot] || `Faction ${slot}`) : "Faction";
+    const ownClassification =
+      slot != null ? `PROVINCE_${slot}` : (joinedFaction?.code_name || joinedFaction?.name || "");
+    const factionName = joinedFaction?.name || fallbackName;
+    // When admin is impersonating an AI faction, skip the first-login intro.
+    const initialized = useAdminImpersonation ? true : !!(pDataRaw as any).initialized;
+    const pData: PlayerInfo = {
+      ...(pDataRaw as any),
+      player_slot: slot,
+      initialized,
+      own_classification: ownClassification,
+      faction_name: factionName,
+    };
 
     setGame(gData);
     setPlayer(pData);
@@ -512,7 +551,7 @@ const PlayerGame = () => {
     });
 
     setLoading(false);
-  }, [user, gameId, navigate, toast, isAdmin]);
+  }, [user, gameId, navigate, toast, isAdmin, asFactionId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -613,7 +652,7 @@ const PlayerGame = () => {
   const [attackerRevealHexKeys, setAttackerRevealHexKeys] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (!player || !game) { setAttackerRevealHexKeys(new Set()); return; }
-    const ownClass = `PROVINCE_${player.player_slot}`;
+    const ownClass = player.own_classification;
     const lastProcessedTurn = Math.max(0, (game.turn_number ?? 1) - 1);
     if (lastProcessedTurn <= 0) { setAttackerRevealHexKeys(new Set()); return; }
     let cancelled = false;
@@ -672,8 +711,8 @@ const PlayerGame = () => {
   // dispatches in the news feed.
   useEffect(() => {
     if (!player || !game) return;
-    const ownClass = `PROVINCE_${player.player_slot}`;
-    const factionLc = (PROVINCE_NAMES[player.player_slot] || "").toLowerCase();
+    const ownClass = player.own_classification;
+    const factionLc = (player.faction_name || "").toLowerCase();
     let cancelled = false;
     (async () => {
       const { data: logs } = await (supabase as any)
@@ -722,7 +761,7 @@ const PlayerGame = () => {
   // FleetCompositionEditor shows in fleet detail.
   useEffect(() => {
     if (!player || !game || !mapState) return;
-    const ownClass = `PROVINCE_${player.player_slot}`;
+    const ownClass = player.own_classification;
     const myFleets = mapState.fleets.filter(f => f.owner_classification === ownClass);
     if (myFleets.length === 0) {
       setSubmissionIssues([]);
@@ -919,7 +958,7 @@ const PlayerGame = () => {
       toast({ title: "No combat points", description: "Creating a fleet costs 1 combat point.", variant: "destructive" });
       return;
     }
-    const ownClass = `PROVINCE_${player.player_slot}`;
+    const ownClass = player.own_classification;
     const hex = mapState.hexes.get(hexKey(hexX, hexY));
     if (!hex) {
       toast({ title: "Invalid hex", description: "That hex does not exist.", variant: "destructive" });
@@ -1070,7 +1109,7 @@ const PlayerGame = () => {
       ? Array.from(mapState!.systems.values()).find(s => s.hex_id === destHex.hex_id)
       : undefined;
     if (destHex) {
-      const check = isHexBlockedForPlayer(destHex, destSystem, player.player_slot);
+      const check = isHexBlockedForPlayer(destHex, destSystem, player.player_slot ?? -1);
       if (check.blocked) {
         toast({ title: "Destination blocked", description: check.message, variant: "destructive" });
         setTargeting(null);
@@ -1253,7 +1292,7 @@ const PlayerGame = () => {
 
   if (!game || !player) return null;
 
-  const factionName = PROVINCE_NAMES[player.player_slot] || `Faction ${player.player_slot}`;
+  const factionName = player.faction_name || `Faction ${player.player_slot ?? "?"}`;
   const playerName = profile?.display_name || profile?.email || "Unknown";
 
   // Derive an arrow for the currently selected fleet if it has a pending move/attack order.
@@ -1348,7 +1387,7 @@ const PlayerGame = () => {
               shipTypes: dbShipTypes,
               hexes: mapState.hexes,
             } : undefined,
-            playerOwnerClassification: `PROVINCE_${player.player_slot}`,
+            playerOwnerClassification: player.own_classification,
             fleetOrderContext: { gameId: game.id, playerId: player.id, turnNumber: game.turn_number },
             onStartTargeting: setTargeting,
             combatPointsAvailable,
@@ -1397,7 +1436,7 @@ const PlayerGame = () => {
               debugVisibleHexKeys={effectiveLiveHexKeys}
               everSeenHexKeys={effectiveEverSeenHexKeys}
               orderArrow={orderArrow}
-              ownClassification={`PROVINCE_${player.player_slot}`}
+              ownClassification={player.own_classification}
               className="flex-1"
             />
           ) : (

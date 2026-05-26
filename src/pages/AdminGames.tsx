@@ -44,10 +44,12 @@ interface GameRow {
 interface GamePlayerRow {
   id: string;
   game_id: string;
-  user_id: string;
+  user_id: string | null;
+  ai_persona_id: string | null;
   faction_id: string | null;
-  player_slot: number;
+  player_slot: number | null;
   orders_locked?: boolean;
+  factions?: { id: string; name: string; code_name: string | null; is_player_faction: boolean | null } | null;
 }
 
 interface ProfileRow {
@@ -155,7 +157,7 @@ const AdminGames = () => {
   const loadGame = useCallback(async (game: GameRow) => {
     setSelectedGame(game);
     // players
-    const { data: pData } = await (supabase as any).from("game_factions").select("*").eq("game_id", game.id).order("player_slot");
+    const { data: pData } = await (supabase as any).from("game_factions").select("*, factions:faction_id(id, name, code_name, is_player_faction)").eq("game_id", game.id).order("player_slot");
     setPlayers(pData || []);
     // logs
     const { data: lData } = await (supabase as any).from("game_logs").select("id, turn_number, log_type, message, created_at").eq("game_id", game.id).order("created_at", { ascending: false }).limit(100);
@@ -248,10 +250,19 @@ const AdminGames = () => {
   };
 
 
-  /* ── login as player ── */
+  /* ── enter the game as this faction ──
+   * Player factions: route through /play directly (faction is resolved via user_id).
+   * AI / non-player factions: include ?asFaction=<faction_id> so PlayerGame loads
+   * the row by faction_id (admin override path). */
   const loginAsPlayer = (player: GamePlayerRow) => {
     if (!selectedGame) return;
-    navigate(`/my-games`);
+    if (player.user_id) {
+      navigate(`/play/${selectedGame.id}`);
+    } else if (player.faction_id) {
+      navigate(`/play/${selectedGame.id}?asFaction=${player.faction_id}`);
+    } else {
+      toast({ title: "Cannot enter", description: "Row has no faction or user.", variant: "destructive" });
+    }
   };
 
   /* ── snapshot management ── */
@@ -611,8 +622,8 @@ const AdminGames = () => {
     return p?.display_name || p?.email || userId.slice(0, 8);
   };
 
-  const usedSlots = players.map(p => p.player_slot);
-  const usedUserIds = players.map(p => p.user_id);
+  const usedSlots = players.map(p => p.player_slot).filter((s): s is number => s != null);
+  const usedUserIds = players.map(p => p.user_id).filter((u): u is string => !!u);
   const availableSlots = [1, 2, 3, 4, 5, 6].filter(s => !usedSlots.includes(s));
   const availableUsers = profiles.filter(p => !usedUserIds.includes(p.user_id));
 
@@ -755,10 +766,14 @@ const AdminGames = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {players.map(p => (
+                  {players.map(p => {
+                    const factionLabel = p.factions?.name
+                      || (p.player_slot != null ? (PROVINCE_NAMES[p.player_slot] || `Slot ${p.player_slot}`) : "—");
+                    const operatorLabel = p.user_id ? getProfileLabel(p.user_id) : p.ai_persona_id ? "AI" : "—";
+                    return (
                     <TableRow key={p.id}>
-                      <TableCell>{PROVINCE_NAMES[p.player_slot] || `Slot ${p.player_slot}`}</TableCell>
-                      <TableCell>{getProfileLabel(p.user_id)}</TableCell>
+                      <TableCell>{factionLabel}</TableCell>
+                      <TableCell>{operatorLabel}</TableCell>
                       <TableCell>
                         {p.orders_locked ? (
                           <Badge variant="default">Submitted</Badge>
@@ -767,11 +782,12 @@ const AdminGames = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button size="sm" variant="secondary" disabled={selectedGame.status !== "active"} title={selectedGame.status !== "active" ? "Game must be active" : undefined} onClick={() => loginAsPlayer(p)}>Log in as</Button>
+                        <Button size="sm" variant="secondary" disabled={selectedGame.status !== "active"} title={selectedGame.status !== "active" ? "Game must be active" : "Enter the game as this faction"} onClick={() => loginAsPlayer(p)}>Log in as</Button>
                         <Button size="sm" variant="destructive" onClick={() => removePlayer(p.id)}>Remove</Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
               {availableSlots.length > 0 && availableUsers.length > 0 && (
