@@ -140,6 +140,41 @@ export default function AIInspector() {
         </div>
       </div>
 
+      {gameId && players.filter((p) => p.has_ai_persona).length === 0 && (
+        <div className="rounded border border-dashed border-border p-3 text-xs text-muted-foreground flex items-center justify-between gap-3">
+          <span>No AI faction rows for this game. Click to insert one for every faction in Map Testing Config that has an AI persona assigned.</span>
+          <Button size="sm" variant="outline" onClick={async () => {
+            try {
+              const { data: g } = await supabase.from("games").select("map_data_json").eq("id", gameId).single();
+              if (!g?.map_data_json) { toast.error("Game has no map"); return; }
+              const { deserializeMapState } = await import("@/lib/gameLifecycle");
+              const ms = deserializeMapState(g.map_data_json as any);
+              const r = await seedFactionPlayers(supabase as any, gameId, ms);
+              toast.success(`Seeded — inserted ${r.inserted}, back-filled ${r.backfilled}, skipped ${r.skipped}`);
+              // refresh players
+              setGameId((id) => id);
+              const { data } = await supabase
+                .from("game_players")
+                .select("id, player_slot, game_id, is_ai, user_id, faction_id, factions:faction_id(name, code_name, ai_persona_id)")
+                .eq("game_id", gameId);
+              const rows: PlayerRow[] = ((data ?? []) as any[]).map((r) => ({
+                id: r.id, player_slot: r.player_slot, game_id: r.game_id, is_ai: r.is_ai, user_id: r.user_id,
+                faction_id: r.faction_id, faction_name: r.factions?.name ?? null,
+                faction_code_name: r.factions?.code_name ?? null, has_ai_persona: !!r.factions?.ai_persona_id,
+              }));
+              rows.sort((a, b) => {
+                const ra = a.has_ai_persona ? 0 : a.user_id ? 1 : 2;
+                const rb = b.has_ai_persona ? 0 : b.user_id ? 1 : 2;
+                return ra !== rb ? ra - rb : labelForPlayer(a).localeCompare(labelForPlayer(b));
+              });
+              setPlayers(rows);
+            } catch (e: any) {
+              toast.error(e?.message ?? "Seed failed");
+            }
+          }}>Seed faction players</Button>
+        </div>
+      )}
+
       {!gameId || !playerId ? (
         <p className="text-xs text-muted-foreground">Pick a game and faction to inspect.</p>
       ) : (
