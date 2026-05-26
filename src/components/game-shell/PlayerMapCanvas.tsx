@@ -39,6 +39,8 @@ interface Props {
   } | null;
   /** The viewing player's owner classification (e.g. "PROVINCE_3"). Own fleets are always shown. */
   ownClassification?: string;
+  /** Admin override: show every fleet on the map regardless of sensor visibility. */
+  revealAllFleets?: boolean;
   className?: string;
 }
 
