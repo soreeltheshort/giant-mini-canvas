@@ -63,6 +63,12 @@ export interface RunTurnResult {
 export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult> {
   const { supabase, gameId, currentTurn, mapState, facilityTypes, shipTypes } = args;
 
+  // Self-heal: ensure every AI faction (and every map-owning faction) has a
+  // game_players row before we load players. Idempotent.
+  try { await seedFactionPlayers(supabase, gameId, mapState); } catch (e) { console.warn("[turnProcessor] seedFactionPlayers failed", e); }
+
+
+
   // Load all conditional orders for this turn + players for the game
   const [{ data: ordersRaw }, { data: playersRaw }] = await Promise.all([
     (supabase as any).from("player_orders").select("*").eq("game_id", gameId).eq("turn_number", currentTurn),
