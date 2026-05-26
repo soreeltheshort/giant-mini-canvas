@@ -88,27 +88,25 @@ async function addLog(supabase: SupabaseClient, gameId: string, turn: number, ty
 }
 
 /**
- * Make sure every faction that owns at least one system on the map has a
- * row in game_players. Human-player rows already exist (inserted when a
- * user joined a slot) but typically lack faction_id — we back-fill that.
- * AI/neutral factions get fresh rows with user_id = null and is_ai
- * derived from the faction's ai_persona_id.
+ * Make sure every faction that should have a turn in this game has a row in
+ * `game_players`:
+ *  - Every faction with an `ai_persona_id` gets a row, regardless of whether
+ *    it owns systems on this map (AI factions always process turns; the
+ *    per-turn pipeline takes a no-op fast path when they have no holdings).
+ *  - Every map-owner classification that resolves to a faction also gets a
+ *    row. For human-player slots we back-fill `faction_id` / `ai_persona_id`
+ *    on the row the lobby join flow already inserted.
+ *  - Idempotent: AI/neutral rows are keyed by `(game_id, faction_id)` via the
+ *    existing unique index; human rows are keyed by `player_slot`.
  */
-async function seedFactionPlayers(supabase: SupabaseClient, gameId: string, mapState: MapState) {
+export async function seedFactionPlayers(
+  supabase: SupabaseClient,
+  gameId: string,
+  mapState: MapState,
+): Promise<{ inserted: number; backfilled: number; skipped: number }> {
   const nameToSlot = new Map<string, number>();
   for (const [slot, name] of Object.entries(PROVINCE_NAMES)) nameToSlot.set(name.toLowerCase(), parseInt(slot, 10));
 
-  // Distinct owner classifications present on the map (skip Unowned / empty).
-  const owners = new Set<string>();
-  for (const sys of mapState.systems.values()) {
-    const o = (sys.owner || "").trim();
-    if (!o || o.toLowerCase() === "unowned") continue;
-    owners.add(o);
-  }
-  if (owners.size === 0) return;
-
-  // Load all factions once; match owner classifications to factions by
-  // code_name (case-insensitive), then by name.
   const { data: factionRows } = await (supabase as any)
     .from("factions")
     .select("id, name, code_name, ai_persona_id");
@@ -122,8 +120,6 @@ async function seedFactionPlayers(supabase: SupabaseClient, gameId: string, mapS
       null
     );
   };
-
-  // Owner → slot (if it's a player province).
   const ownerSlot = (ownerClass: string): number | null => {
     const m = ownerClass.match(/PROVINCE_(\d+)/i);
     if (m) return parseInt(m[1], 10);
@@ -144,30 +140,16 @@ async function seedFactionPlayers(supabase: SupabaseClient, gameId: string, mapS
     if (r.faction_id && !r.user_id) byFactionNoUser.set(r.faction_id, r);
   }
 
-  for (const owner of owners) {
-    const faction = findFaction(owner);
-    if (!faction) continue;
-    const slot = ownerSlot(owner);
+  let inserted = 0;
+  let backfilled = 0;
+  let skipped = 0;
 
-    if (slot != null && bySlot.has(slot)) {
-      // Human player slot — back-fill faction_id / ai_persona_id if missing.
-      const row = bySlot.get(slot)!;
-      if (!row.faction_id) {
-        await (supabase as any).from("game_players").update({
-          faction_id: faction.id,
-          ai_persona_id: faction.ai_persona_id,
-        }).eq("id", row.id);
-      }
-      continue;
-    }
-
-    // Non-player faction — insert if not already present.
-    if (byFactionNoUser.has(faction.id)) continue;
-    await (supabase as any).from("game_players").insert({
+  const insertFactionRow = async (faction: { id: string; ai_persona_id: string | null }, isAi: boolean) => {
+    const { error } = await (supabase as any).from("game_players").insert({
       game_id: gameId,
       faction_id: faction.id,
       ai_persona_id: faction.ai_persona_id,
-      is_ai: !!faction.ai_persona_id,
+      is_ai: isAi,
       user_id: null,
       player_slot: null,
       treasury: 0,
@@ -179,7 +161,60 @@ async function seedFactionPlayers(supabase: SupabaseClient, gameId: string, mapS
       initialized: true,
       visible_system_ids: [],
     });
+    if (!error) {
+      inserted++;
+      byFactionNoUser.set(faction.id, { id: "", player_slot: null, faction_id: faction.id, user_id: null });
+    }
+  };
+
+  // Pass A — every AI-bearing faction must have a row, regardless of holdings.
+  for (const faction of factions) {
+    if (!faction.ai_persona_id) continue;
+    if (byFactionNoUser.has(faction.id)) { skipped++; continue; }
+    const slot = nameToSlot.get((faction.code_name || faction.name).toLowerCase()) ?? null;
+    if (slot != null && bySlot.has(slot)) {
+      const row = bySlot.get(slot)!;
+      if (!row.faction_id) {
+        await (supabase as any).from("game_players").update({
+          faction_id: faction.id, ai_persona_id: faction.ai_persona_id,
+        }).eq("id", row.id);
+        backfilled++;
+      } else {
+        skipped++;
+      }
+      continue;
+    }
+    await insertFactionRow(faction, true);
   }
+
+  // Pass B — map-owner classifications (neutral factions owning systems, plus
+  // faction_id back-fill for human player slots).
+  const owners = new Set<string>();
+  for (const sys of mapState.systems.values()) {
+    const o = (sys.owner || "").trim();
+    if (!o || o.toLowerCase() === "unowned") continue;
+    owners.add(o);
+  }
+  for (const owner of owners) {
+    const faction = findFaction(owner);
+    if (!faction) continue;
+    const slot = ownerSlot(owner);
+
+    if (slot != null && bySlot.has(slot)) {
+      const row = bySlot.get(slot)!;
+      if (!row.faction_id) {
+        await (supabase as any).from("game_players").update({
+          faction_id: faction.id, ai_persona_id: faction.ai_persona_id,
+        }).eq("id", row.id);
+        backfilled++;
+      }
+      continue;
+    }
+    if (byFactionNoUser.has(faction.id)) continue;
+    await insertFactionRow(faction, !!faction.ai_persona_id);
+  }
+
+  return { inserted, backfilled, skipped };
 }
 
 /**
