@@ -1292,7 +1292,7 @@ const PlayerGame = () => {
 
   if (!game || !player) return null;
 
-  const factionName = PROVINCE_NAMES[player.player_slot] || `Faction ${player.player_slot}`;
+  const factionName = player.faction_name || `Faction ${player.player_slot ?? "?"}`;
   const playerName = profile?.display_name || profile?.email || "Unknown";
 
   // Derive an arrow for the currently selected fleet if it has a pending move/attack order.
