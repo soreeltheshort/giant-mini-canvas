@@ -131,6 +131,16 @@ export default function NamingConventionsSection({ isAdmin }: { isAdmin: boolean
               ))
             )}
           </div>
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ship lists</p>
+            {shipConvs.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">None</p>
+            ) : (
+              shipConvs.map((c) => (
+                <ConventionRow key={c.id} c={c} isAdmin={isAdmin} onUpdate={update} onRemove={remove} />
+              ))
+            )}
+          </div>
         </div>
       )}
 
@@ -151,6 +161,7 @@ export default function NamingConventionsSection({ isAdmin }: { isAdmin: boolean
             >
               <option value="planet">planet</option>
               <option value="fleet">fleet</option>
+              <option value="ship">ship</option>
             </select>
           </div>
           <Textarea
