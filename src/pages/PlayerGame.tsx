@@ -1437,6 +1437,7 @@ const PlayerGame = () => {
               everSeenHexKeys={effectiveEverSeenHexKeys}
               orderArrow={orderArrow}
               ownClassification={player.own_classification}
+              revealAllFleets={isAdmin && adminRevealAll}
               className="flex-1"
             />
           ) : (

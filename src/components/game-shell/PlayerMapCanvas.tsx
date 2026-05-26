@@ -39,6 +39,8 @@ interface Props {
   } | null;
   /** The viewing player's owner classification (e.g. "PROVINCE_3"). Own fleets are always shown. */
   ownClassification?: string;
+  /** Admin override: show every fleet on the map regardless of sensor visibility. */
+  revealAllFleets?: boolean;
   className?: string;
 }
 
@@ -71,6 +73,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   everSeenHexKeys,
   orderArrow = null,
   ownClassification,
+  revealAllFleets = false,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -112,11 +115,12 @@ const PlayerMapCanvas: React.FC<Props> = ({
   //  - The player's own fleets are ALWAYS visible (regardless of sensor view).
   //  - Other fleets are visible only when they sit in a hex inside live sensor view.
   const visibleFleets = React.useMemo(() => {
+    if (revealAllFleets) return fleets;
     return fleets.filter(f => {
       if (ownClassification && f.owner_classification === ownClassification) return true;
       return visibleHexKeys.has(hexKey(f.hex_x, f.hex_y));
     });
-  }, [fleets, visibleHexKeys, ownClassification]);
+  }, [fleets, visibleHexKeys, ownClassification, revealAllFleets]);
 
   // Resize
   useEffect(() => {
