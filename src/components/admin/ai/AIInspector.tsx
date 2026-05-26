@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { seedFactionPlayers } from "@/lib/gameLifecycle";
 
 /**
  * Read-only inspector that shows what the deterministic AI did on a given
