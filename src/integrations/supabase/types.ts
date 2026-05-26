@@ -1348,9 +1348,9 @@ export type Database = {
           last_maintenance: number
           last_tribute: number
           orders_locked: boolean
-          player_slot: number
+          player_slot: number | null
           treasury: number
-          user_id: string
+          user_id: string | null
           visible_system_ids: Json
         }
         Insert: {
@@ -1368,9 +1368,9 @@ export type Database = {
           last_maintenance?: number
           last_tribute?: number
           orders_locked?: boolean
-          player_slot: number
+          player_slot?: number | null
           treasury?: number
-          user_id: string
+          user_id?: string | null
           visible_system_ids?: Json
         }
         Update: {
@@ -1388,9 +1388,9 @@ export type Database = {
           last_maintenance?: number
           last_tribute?: number
           orders_locked?: boolean
-          player_slot?: number
+          player_slot?: number | null
           treasury?: number
-          user_id?: string
+          user_id?: string | null
           visible_system_ids?: Json
         }
         Relationships: [
