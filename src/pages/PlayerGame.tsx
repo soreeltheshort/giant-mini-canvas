@@ -712,7 +712,7 @@ const PlayerGame = () => {
   useEffect(() => {
     if (!player || !game) return;
     const ownClass = player.own_classification;
-    const factionLc = (PROVINCE_NAMES[player.player_slot] || "").toLowerCase();
+    const factionLc = (player.faction_name || "").toLowerCase();
     let cancelled = false;
     (async () => {
       const { data: logs } = await (supabase as any)
