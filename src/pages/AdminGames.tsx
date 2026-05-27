@@ -101,6 +101,7 @@ const AdminGames = () => {
 
   // new game form
   const [newGameName, setNewGameName] = useState("");
+  const [newGameConfigId, setNewGameConfigId] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [snapshotLabel, setSnapshotLabel] = useState("");
 
