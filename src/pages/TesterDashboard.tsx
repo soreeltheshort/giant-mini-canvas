@@ -32,7 +32,7 @@ interface PlayerRow {
   user_id: string;
   player_slot: number;
 }
-interface SavedMapRow { id: string; name: string; file_path: string; }
+
 
 const SLOTS = [1, 2, 3, 4, 5, 6];
 
