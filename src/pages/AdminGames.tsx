@@ -182,6 +182,10 @@ const AdminGames = () => {
   /* ── create game ── */
   const createGame = async () => {
     if (!newGameName.trim()) return;
+    if (newGameConfigId) {
+      try { await applyAndSetDefaultFactionsConfig(newGameConfigId); }
+      catch (e: any) { toast({ title: "Config apply failed", description: e.message || String(e), variant: "destructive" }); return; }
+    }
     const { error } = await (supabase as any).from("games").insert({ name: newGameName.trim(), created_by: user!.id });
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setNewGameName("");
