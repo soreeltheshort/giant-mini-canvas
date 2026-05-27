@@ -1,160 +1,57 @@
-## Goal
+# Factions Config & Game Creation Defaults
 
-Turns are processed **per faction**, not per player slot. A faction is "active" in a game when it has a player **or** an AI persona. Operators are uniform (player or AI) but **assignment is asymmetric**:
+## 1. Rename "Map Testing Config" → "Factions Config", move to Assets
 
-- **Players** in lobby/setup can only join **player factions** (the 6 Roman provinces today).
-- **AIs** can be attached to any faction — player or non-player.
-- **Admin impersonation** is the only path to "log in as" a non-player faction.
+- `src/components/Header.tsx`
+  - Remove the `Map Testing Config` item from the **Testing** dropdown.
+  - Add `Factions Config` to the **Assets** dropdown (admin-only, same dropdown as Map Config / AI Config). Link still points to `/map-testing/config` (no route rename — keeps existing bookmarks/links alive).
+- `src/pages/MapTestingConfig.tsx`
+  - Change page `<h1>` from "Map Testing Configuration" to "Factions Config".
+  - Update `<title>` / any header text on the page accordingly.
 
----
+(File names and the route stay the same to avoid a noisy refactor; only the user-facing label changes.)
 
-## Current state (recap of what to refactor)
+## 2. Persist & reuse the last-loaded Factions Config
 
-- `game_players` mixes faction identity + operator + per-turn state on one row.
-- `player_slot` (1–6, hard-coded to PROVINCE_NAMES) is the *de-facto* faction key everywhere: economy aggregation (`Map<number, …>`), `owner_classification = "PROVINCE_<slot>"`, visibility, fleet ownership, `PlayerGame.tsx` labels.
-- AI factions outside slots 1–6 (Synod_int1, Lost Colonies, …) have `player_slot = null`, so the per-turn pipeline silently no-ops them.
-- "Neutral map-owner" rows (no player, no AI) live in the same table and pollute the admin Players column.
-- Nothing in the schema marks a faction as "player-eligible" vs "non-player" — today it's implicit (a faction has a Roman-province `code_name` ⇒ it's a player faction).
+Goal: when an admin imports a Factions Config JSON via `MapConfigSaveLoad`, store the file in cloud storage and record it as the global default. Then every game-creation surface offers it as the prefilled default, plus lets the creator pick a different file.
 
----
+### 2a. Backend
 
-## Target model
+- New storage bucket: **`config-files`** (private). RLS:
+  - Admins/testers can upload & read.
+  - Authenticated users can read (so non-admin players creating a game can download the default).
+- `app_settings` migration: add `default_factions_config_id uuid` (nullable, FK loosely to a new `saved_factions_configs` table).
+- New table **`saved_factions_configs`**
+  - `id uuid pk`, `name text`, `file_path text` (path in `config-files` bucket), `uploaded_by uuid`, `created_at timestamptz`.
+  - GRANTs: `authenticated` SELECT; admins/testers full; `service_role` ALL.
+  - RLS: admins/testers manage; authenticated read.
 
-### 1. Mark faction eligibility explicitly
+### 2b. Save/Load component changes
 
-Add `factions.is_player_faction boolean NOT NULL DEFAULT false`. Backfill `true` for the six Roman provinces (`Valerian`, `Aurelian`, `Cassian`, `Dravian`, `Marcellan`, `Octavian`) by `code_name`. Everything else (Synod_int1, Lost Colonies, etc.) stays `false`.
+- `src/components/MapConfigSaveLoad.tsx`
+  - On **Import**: in addition to upserting rows into Supabase tables, also upload the raw JSON to `config-files/{uuid}.json`, insert a `saved_factions_configs` row, and `app_settings.default_factions_config_id = <new id>`.
+  - Add a "Loaded config: <name>" indicator pulled from `app_settings` + `saved_factions_configs`.
 
-This becomes the single source of truth for "can a human player be assigned here?". The 1–6 slot numbering is preserved as a UI label (`player_slot`) but no longer authoritative.
+## 3. Game creation surfaces
 
-### 2. Rename `game_players` → `game_factions`
+All three creation flows get the same UX block:
 
-One row per **active faction** in a game. Keep the same PK so `player_orders.player_id`, `ai_*` tables, and logs don't move.
+- **Factions Config**: select dropdown of saved configs (default = global `default_factions_config_id`). Optional "Upload new..." opens file picker, which uploads to bucket, creates a row, sets it as the new default, then applies it (upsert into tables) before creating the game.
+- **Map**: a select dropdown of `saved_maps` rows (default = `default_map_id`). Already implicit today — make it explicit so users can override and so the default is clearly surfaced.
 
-| column | meaning |
-|---|---|
-| `game_id`, `faction_id` | unique together, the spine |
-| `user_id` | player operator, or null |
-| `ai_persona_id` | AI operator, or null |
-| `player_slot` | **seat label only** (1–6 for Roman provinces); nullable; not a join key |
-| treasury / capability / visibility / orders_locked / initialized | unchanged per-turn faction state |
+Touched files:
+- `src/pages/NewGameModes.tsx` — `SinglePlayerPanel`.
+- `src/pages/TesterDashboard.tsx` — `createGame`.
+- `src/pages/AdminGames.tsx` — game create form (currently just name + status; add the same two pickers).
 
-Invariant: `user_id IS NOT NULL OR ai_persona_id IS NOT NULL`. Enforced by `CHECK` after we delete today's orphan neutral rows.
+Behavior: before calling `games.insert`, if the chosen config differs from the currently-applied one, upsert its rows into the tables (same logic as the existing import path), then proceed.
 
-### 3. Assignment rules (enforced in code + DB)
+## 4. Out of scope
 
-- **Player join (lobby, `status = 'setup'`)**: only allowed when target `factions.is_player_faction = true`. Enforced by:
-  - UI: lobby faction picker shows only player factions.
-  - RLS: tighten the existing `"Users can join setup games"` policy to also require `EXISTS (SELECT 1 FROM factions f WHERE f.id = game_factions.faction_id AND f.is_player_faction = true)`.
-- **AI attach**: any faction — admin sets `factions.ai_persona_id` in Map Testing Config; seeder creates the `game_factions` row regardless of `is_player_faction`.
-- **Admin impersonation**: the only way to "log in as" a non-player faction. The `impersonate` edge function continues to mint a session for an admin into any `game_factions` row.
-- **Players cannot switch** to a non-player faction post-join: handled by the same RLS check on UPDATE-of-self.
+- No engine/data logic changes.
+- No rename of `MapTestingConfig.tsx` file or `/map-testing/config` route.
+- No changes to default-map management UI (it already lives in AdminGames).
 
-### 4. Owner string resolution
+## Open question
 
-Map data still stores `owner_classification` as a free-text label (`"PROVINCE_4"`, `"Synod_int1"`, `"Cassian"`). Add `src/lib/factionUtils.ts` helpers:
-
-- `resolveOwnerToFaction(ownerClass, factions): Faction | null` — central resolver.
-- `factionOwnerStrings(faction): Set<string>` — the strings that mean "this faction owns it" (`PROVINCE_<seat>` if seated, `code_name`, `name`).
-
-Every turn-processor phase resolves owner → `faction_id` once at the top and operates on `faction_id` thereafter. No mass rewrite of stored owner strings.
-
-### 5. Operator abstraction
-
-Replace `PlayerCtx` with `FactionCtx`:
-
-```ts
-interface FactionCtx {
-  id: string;                // game_factions.id
-  faction_id: string;
-  faction_code_name: string;
-  faction_name: string;
-  is_player_faction: boolean;
-  operator: "player" | "ai";
-  user_id: string | null;
-  ai_persona_id: string | null;
-  player_slot: number | null;
-  // …existing economy + visibility fields
-}
-```
-
-`turnProcessor/index.ts` loads `game_factions` joined to `factions`, builds `Map<faction_id, FactionCtx>`, every phase iterates that map. `playerEcon` → `factionEcon: Map<string, …>` keyed by `faction_id`.
-
----
-
-## File-by-file changes
-
-1. **Migrations** (single migration call)
-   - `ALTER TABLE factions ADD COLUMN is_player_faction boolean NOT NULL DEFAULT false;`
-   - `UPDATE factions SET is_player_faction = true WHERE code_name IN ('Valerian','Aurelian','Cassian','Dravian','Marcellan','Octavian');`
-   - `DELETE FROM game_players WHERE user_id IS NULL AND ai_persona_id IS NULL;`
-   - `ALTER TABLE game_players RENAME TO game_factions;` (FKs and the existing unique index follow the rename automatically).
-   - Replace partial unique index with `CREATE UNIQUE INDEX game_factions_game_faction_uniq ON game_factions(game_id, faction_id);`
-   - `ALTER TABLE game_factions ADD CONSTRAINT game_factions_has_operator CHECK (user_id IS NOT NULL OR ai_persona_id IS NOT NULL);`
-   - Drop old `"Users can join setup games"` policy on the renamed table; recreate as: same check + `AND EXISTS (SELECT 1 FROM factions f WHERE f.id = faction_id AND f.is_player_faction = true)`.
-   - Re-grant table privileges under the new name.
-
-2. **`src/lib/factionUtils.ts`** — add `resolveOwnerToFaction`, `factionOwnerStrings`, `isPlayerFaction(faction)`.
-
-3. **`src/lib/gameLifecycle.ts`**
-   - Rename `seedFactionPlayers` → `seedGameFactions`.
-   - Pass A (AI factions) unchanged in intent — works for any faction with `ai_persona_id`.
-   - Pass B: only insert rows where the map-owner resolves to a faction *and* it has an operator (player back-fill or AI persona). Do not insert pure-neutral rows.
-   - `startGame` / `processTurn`: aggregate economy by `faction_id` via `factionOwnerStrings(faction)`.
-
-4. **`src/lib/turnProcessor/{index,types}.ts`** — `PlayerCtx` → `FactionCtx`; `players` → `factions`; `playerEcon` → `factionEcon` (string keys).
-
-5. **`src/lib/turnProcessor/phases/*.ts`** — each phase resolves owner strings to `faction_id` at the top, operates on `faction_id` from then on. Visibility writes keyed by `faction_id`.
-
-6. **`src/lib/turnZero.ts`, `src/lib/hexAccess.ts`** — accept `FactionCtx` / `faction_id`; keep `player_slot` only where a UI uses it as a label.
-
-7. **`src/pages/PlayerGame.tsx`**
-   - Fetch the calling user's `game_factions` row joined to `factions`.
-   - Refuse to render (redirect to `/my-games`) if the resolved faction is not `is_player_faction = true` *and* the session is not an admin impersonation. This is a defensive client-side guard; RLS is the real wall.
-   - Replace `\`PROVINCE_${player.player_slot}\`` with the seat string from the faction (uses `player_slot` when set, otherwise `code_name`).
-   - Ownership comparisons use `ownerStrings.has(f.owner_classification)`.
-
-8. **`src/pages/TesterDashboard.tsx`** (lobby join flow)
-   - Faction picker queries `factions` filtered by `is_player_faction = true`.
-   - Insert into `game_factions` with `(game_id, user_id, faction_id, player_slot)` — `player_slot` derived from the chosen Roman-province seat.
-
-9. **`src/pages/AdminGames.tsx`**
-   - Players column: rows are now only Player + AI (no "inactive" placeholders, since they were deleted).
-   - Reseed button calls `seedGameFactions`.
-   - Admin "Add player" UI continues to allow assigning any user to any **player faction** seat; a separate "Attach AI" affordance handles non-player factions (already covered by Map Testing Config `ai_persona_id`).
-
-10. **`src/pages/AdminUsers.tsx` / impersonate edge function**
-    - Admin impersonation dropdown lists **all** active `game_factions` rows for a game (player + AI factions). This is the only route by which a session targets a non-player faction.
-
-11. **`src/components/admin/ai/AIInspector.tsx`**, **`src/pages/MyGames.tsx`**
-    - Rename queries from `game_players` → `game_factions`.
-    - Inspector dropdown lists every row with `ai_persona_id IS NOT NULL` — Synod_int1 now appears.
-    - MyGames "My faction" label uses `faction.name`, falling back to `PROVINCE_NAMES[player_slot]`.
-
-12. **`src/integrations/supabase/types.ts`** — regenerated by the migration.
-
----
-
-## Migration safety
-
-- Single migration: column add → backfill → orphan delete → rename → check constraint → re-policy → re-grant. Atomic.
-- All FKs (`player_orders.player_id`, AI tables' `player_id`) keep resolving because PKs are stable.
-- `is_ai` and the old partial index are left in place for now; a follow-up migration can drop them once code is fully off them.
-
----
-
-## Out of scope
-
-- AI decision logic (goals, plans, orders).
-- Battle/combat code beyond owner-string resolution.
-- Redesign of the Players column UI — same layout, fewer rows.
-- Adding new non-player factions to seed data.
-
----
-
-## Verification
-
-- Test047 (Synod_int1 AI, owns 0 systems): post-migration `game_factions` has 1 player row (Dravian/DOn) + 1 AI row (Synod_int1). Players column shows `DOn, AI`.
-- AI Inspector dropdown lists `Synod_int1`. Running a turn produces a per-faction log row for it (no-op economy).
-- Tester lobby: faction picker shows only the 6 Roman provinces. Direct INSERT attempt against a non-player faction id is blocked by RLS.
-- Admin impersonation: dropdown lists Synod_int1; selecting it loads PlayerGame as that faction. A non-admin user hitting the same URL is bounced.
-- Existing 6-player active game: tribute/upkeep numbers unchanged before/after migration.
+Should the "last loaded config" be **global** (like `default_map_id` today — every user sees the same default) or **per-user** (each admin remembers their own last)? The wording "non admin players who create a game" suggests **global**, which is what this plan implements. Confirm before I build.
