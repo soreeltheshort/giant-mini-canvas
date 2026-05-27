@@ -201,23 +201,27 @@ const TesterDashboard = () => {
       <div className="container py-6 space-y-6">
         <div className="flex items-baseline justify-between">
           <h1 className="text-2xl font-heading font-bold">Tester Dashboard</h1>
-          <p className="text-xs text-muted-foreground">
-            Default map: {defaultMap ? <span className="text-bronze font-semibold">{defaultMap.name}</span> : <span className="text-crimson">none set</span>}
-          </p>
         </div>
 
-        <div className="flex gap-2 items-end">
-          <Input
-            placeholder="New test game name..."
-            value={newGameName}
-            onChange={e => setNewGameName(e.target.value)}
-            className="max-w-xs"
-            disabled={busy}
-          />
-          <Button onClick={createGame} disabled={busy || !newGameName.trim() || !defaultMap}>
-            Create Test Game
-          </Button>
-          {!defaultMap && <span className="text-xs text-crimson">Admin must set a default map first.</span>}
+        <div className="border border-border rounded-md p-4 space-y-4 bg-card">
+          <h2 className="text-sm font-heading font-semibold uppercase tracking-wider text-muted-foreground">New Test Game</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <MapPicker value={chosenMap?.id ?? null} onChange={setChosenMap} disabled={busy} />
+            <FactionsConfigPicker value={factionsConfigId} onChange={setFactionsConfigId} disabled={busy} />
+          </div>
+          <div className="flex gap-2 items-end">
+            <Input
+              placeholder="New test game name..."
+              value={newGameName}
+              onChange={e => setNewGameName(e.target.value)}
+              className="max-w-xs"
+              disabled={busy}
+            />
+            <Button onClick={createGame} disabled={busy || !newGameName.trim() || !chosenMap}>
+              Create Test Game
+            </Button>
+            {!chosenMap && <span className="text-xs text-crimson">Choose a map to continue.</span>}
+          </div>
         </div>
 
         <div className="border border-border rounded-md">
