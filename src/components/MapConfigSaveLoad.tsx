@@ -1,58 +1,43 @@
-import { useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { loadRandomizeParams, saveRandomizeParams } from "@/lib/randomizeSystems";
-
-/**
- * Tables backing the Map Config page. Order matters only for readability;
- * import does per-row upsert by id so referential integrity is preserved
- * for rows that still exist.
- */
-const TABLES = [
-  "naming_conventions",
-  "factions",
-  "system_actions",
-  "planet_types",
-  "facility_types",
-  "combat_constants",
-  "fleet_size_categories",
-] as const;
-
-type TableName = (typeof TABLES)[number];
-
-interface ConfigBundle {
-  version: 1;
-  exported_at: string;
-  randomize_params: ReturnType<typeof loadRandomizeParams>;
-  tables: Record<TableName, any[]>;
-}
+import { useAuth } from "@/hooks/useAuth";
+import {
+  applyFactionsConfigBundle,
+  exportCurrentFactionsConfig,
+  FactionsConfigBundle,
+  getDefaultFactionsConfigId,
+  listSavedFactionsConfigs,
+  SavedFactionsConfigRow,
+  setDefaultFactionsConfigId,
+  uploadFactionsConfigFile,
+} from "@/lib/factionsConfig";
 
 export default function MapConfigSaveLoad({ isAdmin }: { isAdmin: boolean }) {
+  const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<"export" | "import" | null>(null);
+  const [activeConfig, setActiveConfig] = useState<SavedFactionsConfigRow | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const id = await getDefaultFactionsConfigId().catch(() => null);
+      if (!id) return;
+      const list = await listSavedFactionsConfigs().catch(() => [] as SavedFactionsConfigRow[]);
+      setActiveConfig(list.find((c) => c.id === id) || null);
+    })();
+  }, []);
 
   const handleExport = async () => {
     setBusy("export");
     try {
-      const tables: Record<string, any[]> = {};
-      for (const t of TABLES) {
-        const { data, error } = await (supabase as any).from(t).select("*");
-        if (error) throw new Error(`${t}: ${error.message}`);
-        tables[t] = data ?? [];
-      }
-      const bundle: ConfigBundle = {
-        version: 1,
-        exported_at: new Date().toISOString(),
-        randomize_params: loadRandomizeParams(),
-        tables: tables as ConfigBundle["tables"],
-      };
+      const bundle = await exportCurrentFactionsConfig();
       const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      a.download = `map-config-${stamp}.json`;
+      a.download = `factions-config-${stamp}.json`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success("Configuration exported");
@@ -68,25 +53,23 @@ export default function MapConfigSaveLoad({ isAdmin }: { isAdmin: boolean }) {
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file) return;
+    if (!file || !user) return;
     if (!confirm("Import configuration? Existing rows with matching IDs will be overwritten. New rows from the file will be inserted. No rows will be deleted.")) {
       return;
     }
     setBusy("import");
     try {
       const text = await file.text();
-      const bundle: ConfigBundle = JSON.parse(text);
-      if (!bundle || bundle.version !== 1 || !bundle.tables) {
-        throw new Error("Unrecognized config file format");
-      }
-      for (const t of TABLES) {
-        const rows = bundle.tables[t];
-        if (!Array.isArray(rows) || rows.length === 0) continue;
-        const { error } = await (supabase as any).from(t).upsert(rows, { onConflict: "id" });
-        if (error) throw new Error(`${t}: ${error.message}`);
-      }
-      if (bundle.randomize_params) saveRandomizeParams(bundle.randomize_params);
-      toast.success("Configuration imported. Reloading...");
+      const bundle: FactionsConfigBundle = JSON.parse(text);
+      await applyFactionsConfigBundle(bundle);
+      const row = await uploadFactionsConfigFile({
+        name: file.name.replace(/\.json$/i, ""),
+        bundle,
+        uploadedBy: user.id,
+      });
+      await setDefaultFactionsConfigId(row.id);
+      setActiveConfig(row);
+      toast.success("Configuration imported and saved as default. Reloading…");
       setTimeout(() => window.location.reload(), 600);
     } catch (err: any) {
       toast.error(`Import failed: ${err.message ?? err}`);
@@ -102,7 +85,14 @@ export default function MapConfigSaveLoad({ isAdmin }: { isAdmin: boolean }) {
         <p className="text-xs text-muted-foreground mt-1">
           Export all settings on this page (factions, actions, planet types, facility types, turn constants,
           fleet size tiers, randomize params) to a JSON file, or restore from a previously exported file.
-          Import upserts by id and does not delete rows.
+          Import upserts by id and does not delete rows. Imported files are stored in the cloud and become
+          the default Factions Config offered when creating a new game.
+        </p>
+        <p className="text-xs text-muted-foreground mt-2">
+          Current default config:{" "}
+          <span className="text-foreground font-medium">
+            {activeConfig?.name ?? "— none —"}
+          </span>
         </p>
       </div>
       <div className="flex gap-2">
