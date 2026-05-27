@@ -655,9 +655,13 @@ const AdminGames = () => {
         <DefaultMapSelector />
 
         {/* ── Create Game ── */}
-        <div className="flex gap-2 items-end">
-          <Input placeholder="New game name..." value={newGameName} onChange={e => setNewGameName(e.target.value)} className="max-w-xs" />
-          <Button onClick={createGame} disabled={!newGameName.trim()}>Create Game</Button>
+        <div className="border border-border rounded-md p-4 bg-card space-y-3">
+          <h2 className="text-sm font-heading font-semibold uppercase tracking-wider text-muted-foreground">New Game</h2>
+          <FactionsConfigPicker value={newGameConfigId} onChange={setNewGameConfigId} />
+          <div className="flex gap-2 items-end">
+            <Input placeholder="New game name..." value={newGameName} onChange={e => setNewGameName(e.target.value)} className="max-w-xs" />
+            <Button onClick={createGame} disabled={!newGameName.trim()}>Create Game</Button>
+          </div>
         </div>
 
         {/* ── Games List ── */}
