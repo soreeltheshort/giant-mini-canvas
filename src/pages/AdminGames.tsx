@@ -25,6 +25,8 @@ import { buildSystemSnapshot } from "@/lib/systemIntel";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TurnLogViewer from "@/components/game-shell/TurnLogViewer";
+import FactionsConfigPicker from "@/components/FactionsConfigPicker";
+import { applyAndSetDefaultFactionsConfig } from "@/lib/factionsConfig";
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
