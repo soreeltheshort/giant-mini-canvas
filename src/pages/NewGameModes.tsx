@@ -7,6 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { importFromSqlite } from "@/lib/mapDatabase";
 import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { PROVINCE_NAMES, startGame } from "@/lib/gameLifecycle";
+import FactionsConfigPicker from "@/components/FactionsConfigPicker";
+import MapPicker, { SavedMapRow } from "@/components/MapPicker";
+import { applyAndSetDefaultFactionsConfig } from "@/lib/factionsConfig";
 
 const TITLE_BG =
   "https://komjfcrtwzxssugvsbyc.supabase.co/storage/v1/object/public/images/TitleScreenBackground.png";
