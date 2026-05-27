@@ -76,9 +76,8 @@ const TesterDashboard = () => {
 
   useEffect(() => {
     if (!canUse || !user) return;
-    fetchDefaultMap();
     fetchGames();
-  }, [canUse, user, fetchDefaultMap, fetchGames]);
+  }, [canUse, user, fetchGames]);
 
   useEffect(() => { if (selected) loadPlayers(selected.id); }, [selected, loadPlayers]);
 
@@ -90,9 +89,15 @@ const TesterDashboard = () => {
 
   const createGame = async () => {
     if (!newGameName.trim() || !user) return;
-    if (!defaultMap) { toast({ title: "No default map set", description: "Ask an admin to choose one in Game Management.", variant: "destructive" }); return; }
+    if (!chosenMap) { toast({ title: "Pick a map first", variant: "destructive" }); return; }
     setBusy(true);
     try {
+      if (factionsConfigId) {
+        await applyAndSetDefaultFactionsConfig(factionsConfigId).catch((e) => {
+          console.warn("Factions config apply failed", e);
+        });
+      }
+
       const { data: g, error } = await (supabase as any)
         .from("games")
         .insert({ name: newGameName.trim(), created_by: user.id })
@@ -100,8 +105,7 @@ const TesterDashboard = () => {
         .single();
       if (error) throw error;
 
-      // Download default map sqlite, materialize fleets, persist to map_data_json.
-      const { data: file, error: dlErr } = await (supabase as any).storage.from("map-files").download(defaultMap.file_path);
+      const { data: file, error: dlErr } = await (supabase as any).storage.from("map-files").download(chosenMap.file_path);
       if (dlErr) throw dlErr;
       const f = new File([file], "map.sqlite");
       const state = await importFromSqlite(f);
@@ -117,7 +121,7 @@ const TesterDashboard = () => {
       await (supabase as any).from("games").update({ map_data_json: serialized }).eq("id", g.id);
       await (supabase as any).from("game_logs").insert({
         game_id: g.id, turn_number: 0, log_type: "game_created",
-        message: `Test game "${g.name}" created from default map "${defaultMap.name}"`, details_json: {},
+        message: `Test game "${g.name}" created from map "${chosenMap.name}"`, details_json: {},
       });
 
       setNewGameName("");
