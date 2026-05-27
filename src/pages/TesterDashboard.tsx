@@ -48,7 +48,8 @@ const TesterDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [defaultMap, setDefaultMap] = useState<SavedMapRow | null>(null);
+  const [chosenMap, setChosenMap] = useState<SavedMapRow | null>(null);
+  const [factionsConfigId, setFactionsConfigId] = useState<string | null>(null);
   const [games, setGames] = useState<GameRow[]>([]);
   const [selected, setSelected] = useState<GameRow | null>(null);
   const [players, setPlayers] = useState<PlayerRow[]>([]);
@@ -57,16 +58,6 @@ const TesterDashboard = () => {
   const [logRefreshKey, setLogRefreshKey] = useState(0);
 
   const canUse = isAdmin || isTester;
-
-  const fetchDefaultMap = useCallback(async () => {
-    const { data: settings } = await (supabase as any)
-      .from("app_settings").select("default_map_id").eq("id", "global").maybeSingle();
-    const mapId = settings?.default_map_id;
-    if (!mapId) { setDefaultMap(null); return; }
-    const { data: map } = await (supabase as any)
-      .from("saved_maps").select("id, name, file_path").eq("id", mapId).maybeSingle();
-    setDefaultMap(map || null);
-  }, []);
 
   const fetchGames = useCallback(async () => {
     if (!user) return;
