@@ -14,6 +14,9 @@ import { importFromSqlite } from "@/lib/mapDatabase";
 import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { startGame, processTurn, PROVINCE_NAMES } from "@/lib/gameLifecycle";
 import TurnLogViewer from "@/components/game-shell/TurnLogViewer";
+import FactionsConfigPicker from "@/components/FactionsConfigPicker";
+import MapPicker, { SavedMapRow } from "@/components/MapPicker";
+import { applyAndSetDefaultFactionsConfig } from "@/lib/factionsConfig";
 
 interface GameRow {
   id: string;
