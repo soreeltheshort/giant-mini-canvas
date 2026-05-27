@@ -7,6 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { importFromSqlite } from "@/lib/mapDatabase";
 import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { PROVINCE_NAMES, startGame } from "@/lib/gameLifecycle";
+import FactionsConfigPicker from "@/components/FactionsConfigPicker";
+import MapPicker, { SavedMapRow } from "@/components/MapPicker";
+import { applyAndSetDefaultFactionsConfig } from "@/lib/factionsConfig";
 
 const TITLE_BG =
   "https://komjfcrtwzxssugvsbyc.supabase.co/storage/v1/object/public/images/TitleScreenBackground.png";
@@ -287,35 +290,32 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [slot, setSlot] = useState<number>(1);
-  const [defaultMap, setDefaultMap] = useState<{ id: string; name: string; file_path: string } | null>(null);
+  const [chosenMap, setChosenMap] = useState<SavedMapRow | null>(null);
+  const [factionsConfigId, setFactionsConfigId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
 
-  useEffect(() => {
-    (async () => {
-      const { data: settings } = await (supabase as any)
-        .from("app_settings").select("default_map_id").eq("id", "global").maybeSingle();
-      const mapId = settings?.default_map_id;
-      if (!mapId) return;
-      const { data: map } = await (supabase as any)
-        .from("saved_maps").select("id, name, file_path").eq("id", mapId).maybeSingle();
-      setDefaultMap(map || null);
-    })();
-  }, []);
-
   const create = async () => {
-    if (!user || !name.trim() || !defaultMap) return;
+    if (!user || !name.trim() || !chosenMap) return;
     setBusy(true);
     try {
+      if (factionsConfigId) {
+        setStage("Applying Factions Config…");
+        await applyAndSetDefaultFactionsConfig(factionsConfigId).catch((e) => {
+          // Non-fatal — log but continue
+          console.warn("Factions config apply failed", e);
+        });
+      }
+
       setStage("Creating game…");
       const { data: g, error } = await (supabase as any)
         .from("games").insert({ name: name.trim(), created_by: user.id })
         .select("id, name").single();
       if (error) throw error;
 
-      setStage("Loading default map…");
+      setStage("Loading map…");
       const { data: file, error: dlErr } = await (supabase as any)
-        .storage.from("map-files").download(defaultMap.file_path);
+        .storage.from("map-files").download(chosenMap.file_path);
       if (dlErr) throw dlErr;
       const f = new File([file], "map.sqlite");
       const state = await importFromSqlite(f);
@@ -333,7 +333,7 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
       await (supabase as any).from("games").update({ map_data_json: serialized }).eq("id", g.id);
       await (supabase as any).from("game_logs").insert({
         game_id: g.id, turn_number: 0, log_type: "game_created",
-        message: `Test game "${g.name}" created from default map "${defaultMap.name}"`, details_json: {},
+        message: `Test game "${g.name}" created from map "${chosenMap.name}"`, details_json: {},
       });
 
       setStage("Seating you in the senate…");
@@ -361,7 +361,7 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
           ⚠ Test Mode
         </div>
         <p className="font-body text-sm text-ivory/85">
-          Single player games are experimental. State, balance, and rules may change at any time. The default map will be used.
+          Single player games are experimental. State, balance, and rules may change at any time.
         </p>
       </div>
 
@@ -379,6 +379,14 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
               focus:outline-none focus:border-gold"
           />
         </div>
+
+        <MapPicker value={chosenMap?.id ?? null} onChange={setChosenMap} disabled={busy} />
+
+        <FactionsConfigPicker
+          value={factionsConfigId}
+          onChange={setFactionsConfigId}
+          disabled={busy}
+        />
 
         <div>
           <label className="font-heading uppercase tracking-[0.25em] text-xs text-bronze block mb-2">
@@ -404,16 +412,9 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
           </div>
         </div>
 
-        <div className="font-body text-xs text-bronze/80">
-          Default map:{" "}
-          <span className="text-ivory">
-            {defaultMap ? defaultMap.name : "— none configured —"}
-          </span>
-        </div>
-
         <button
           onClick={create}
-          disabled={busy || !name.trim() || !defaultMap}
+          disabled={busy || !name.trim() || !chosenMap}
           className="w-full font-heading uppercase tracking-[0.3em] text-sm py-3 border border-gold/70
             bg-gradient-to-b from-gold/20 to-gold/5 text-gold hover:bg-gold/15
             disabled:opacity-40 disabled:cursor-not-allowed transition-colors"

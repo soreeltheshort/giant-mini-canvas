@@ -510,18 +510,21 @@ export type Database = {
       }
       app_settings: {
         Row: {
+          default_factions_config_id: string | null
           default_map_id: string | null
           id: string
           planet_naming_convention_id: string | null
           updated_at: string
         }
         Insert: {
+          default_factions_config_id?: string | null
           default_map_id?: string | null
           id?: string
           planet_naming_convention_id?: string | null
           updated_at?: string
         }
         Update: {
+          default_factions_config_id?: string | null
           default_map_id?: string | null
           id?: string
           planet_naming_convention_id?: string | null
@@ -1835,6 +1838,30 @@ export type Database = {
           last_seen_at?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      saved_factions_configs: {
+        Row: {
+          created_at: string
+          file_path: string
+          id: string
+          name: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          id?: string
+          name: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          id?: string
+          name?: string
+          uploaded_by?: string | null
         }
         Relationships: []
       }

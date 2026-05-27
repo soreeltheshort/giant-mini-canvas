@@ -25,6 +25,8 @@ import { buildSystemSnapshot } from "@/lib/systemIntel";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TurnLogViewer from "@/components/game-shell/TurnLogViewer";
+import FactionsConfigPicker from "@/components/FactionsConfigPicker";
+import { applyAndSetDefaultFactionsConfig } from "@/lib/factionsConfig";
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
@@ -99,6 +101,7 @@ const AdminGames = () => {
 
   // new game form
   const [newGameName, setNewGameName] = useState("");
+  const [newGameConfigId, setNewGameConfigId] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [snapshotLabel, setSnapshotLabel] = useState("");
 
@@ -179,6 +182,10 @@ const AdminGames = () => {
   /* ── create game ── */
   const createGame = async () => {
     if (!newGameName.trim()) return;
+    if (newGameConfigId) {
+      try { await applyAndSetDefaultFactionsConfig(newGameConfigId); }
+      catch (e: any) { toast({ title: "Config apply failed", description: e.message || String(e), variant: "destructive" }); return; }
+    }
     const { error } = await (supabase as any).from("games").insert({ name: newGameName.trim(), created_by: user!.id });
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     setNewGameName("");
@@ -648,9 +655,13 @@ const AdminGames = () => {
         <DefaultMapSelector />
 
         {/* ── Create Game ── */}
-        <div className="flex gap-2 items-end">
-          <Input placeholder="New game name..." value={newGameName} onChange={e => setNewGameName(e.target.value)} className="max-w-xs" />
-          <Button onClick={createGame} disabled={!newGameName.trim()}>Create Game</Button>
+        <div className="border border-border rounded-md p-4 bg-card space-y-3">
+          <h2 className="text-sm font-heading font-semibold uppercase tracking-wider text-muted-foreground">New Game</h2>
+          <FactionsConfigPicker value={newGameConfigId} onChange={setNewGameConfigId} />
+          <div className="flex gap-2 items-end">
+            <Input placeholder="New game name..." value={newGameName} onChange={e => setNewGameName(e.target.value)} className="max-w-xs" />
+            <Button onClick={createGame} disabled={!newGameName.trim()}>Create Game</Button>
+          </div>
         </div>
 
         {/* ── Games List ── */}

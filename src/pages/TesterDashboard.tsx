@@ -14,6 +14,9 @@ import { importFromSqlite } from "@/lib/mapDatabase";
 import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { startGame, processTurn, PROVINCE_NAMES } from "@/lib/gameLifecycle";
 import TurnLogViewer from "@/components/game-shell/TurnLogViewer";
+import FactionsConfigPicker from "@/components/FactionsConfigPicker";
+import MapPicker, { SavedMapRow } from "@/components/MapPicker";
+import { applyAndSetDefaultFactionsConfig } from "@/lib/factionsConfig";
 
 interface GameRow {
   id: string;
@@ -29,7 +32,7 @@ interface PlayerRow {
   user_id: string;
   player_slot: number;
 }
-interface SavedMapRow { id: string; name: string; file_path: string; }
+
 
 const SLOTS = [1, 2, 3, 4, 5, 6];
 
@@ -45,7 +48,8 @@ const TesterDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [defaultMap, setDefaultMap] = useState<SavedMapRow | null>(null);
+  const [chosenMap, setChosenMap] = useState<SavedMapRow | null>(null);
+  const [factionsConfigId, setFactionsConfigId] = useState<string | null>(null);
   const [games, setGames] = useState<GameRow[]>([]);
   const [selected, setSelected] = useState<GameRow | null>(null);
   const [players, setPlayers] = useState<PlayerRow[]>([]);
@@ -54,16 +58,6 @@ const TesterDashboard = () => {
   const [logRefreshKey, setLogRefreshKey] = useState(0);
 
   const canUse = isAdmin || isTester;
-
-  const fetchDefaultMap = useCallback(async () => {
-    const { data: settings } = await (supabase as any)
-      .from("app_settings").select("default_map_id").eq("id", "global").maybeSingle();
-    const mapId = settings?.default_map_id;
-    if (!mapId) { setDefaultMap(null); return; }
-    const { data: map } = await (supabase as any)
-      .from("saved_maps").select("id, name, file_path").eq("id", mapId).maybeSingle();
-    setDefaultMap(map || null);
-  }, []);
 
   const fetchGames = useCallback(async () => {
     if (!user) return;
@@ -82,9 +76,8 @@ const TesterDashboard = () => {
 
   useEffect(() => {
     if (!canUse || !user) return;
-    fetchDefaultMap();
     fetchGames();
-  }, [canUse, user, fetchDefaultMap, fetchGames]);
+  }, [canUse, user, fetchGames]);
 
   useEffect(() => { if (selected) loadPlayers(selected.id); }, [selected, loadPlayers]);
 
@@ -96,9 +89,15 @@ const TesterDashboard = () => {
 
   const createGame = async () => {
     if (!newGameName.trim() || !user) return;
-    if (!defaultMap) { toast({ title: "No default map set", description: "Ask an admin to choose one in Game Management.", variant: "destructive" }); return; }
+    if (!chosenMap) { toast({ title: "Pick a map first", variant: "destructive" }); return; }
     setBusy(true);
     try {
+      if (factionsConfigId) {
+        await applyAndSetDefaultFactionsConfig(factionsConfigId).catch((e) => {
+          console.warn("Factions config apply failed", e);
+        });
+      }
+
       const { data: g, error } = await (supabase as any)
         .from("games")
         .insert({ name: newGameName.trim(), created_by: user.id })
@@ -106,8 +105,7 @@ const TesterDashboard = () => {
         .single();
       if (error) throw error;
 
-      // Download default map sqlite, materialize fleets, persist to map_data_json.
-      const { data: file, error: dlErr } = await (supabase as any).storage.from("map-files").download(defaultMap.file_path);
+      const { data: file, error: dlErr } = await (supabase as any).storage.from("map-files").download(chosenMap.file_path);
       if (dlErr) throw dlErr;
       const f = new File([file], "map.sqlite");
       const state = await importFromSqlite(f);
@@ -123,7 +121,7 @@ const TesterDashboard = () => {
       await (supabase as any).from("games").update({ map_data_json: serialized }).eq("id", g.id);
       await (supabase as any).from("game_logs").insert({
         game_id: g.id, turn_number: 0, log_type: "game_created",
-        message: `Test game "${g.name}" created from default map "${defaultMap.name}"`, details_json: {},
+        message: `Test game "${g.name}" created from map "${chosenMap.name}"`, details_json: {},
       });
 
       setNewGameName("");
@@ -203,23 +201,27 @@ const TesterDashboard = () => {
       <div className="container py-6 space-y-6">
         <div className="flex items-baseline justify-between">
           <h1 className="text-2xl font-heading font-bold">Tester Dashboard</h1>
-          <p className="text-xs text-muted-foreground">
-            Default map: {defaultMap ? <span className="text-bronze font-semibold">{defaultMap.name}</span> : <span className="text-crimson">none set</span>}
-          </p>
         </div>
 
-        <div className="flex gap-2 items-end">
-          <Input
-            placeholder="New test game name..."
-            value={newGameName}
-            onChange={e => setNewGameName(e.target.value)}
-            className="max-w-xs"
-            disabled={busy}
-          />
-          <Button onClick={createGame} disabled={busy || !newGameName.trim() || !defaultMap}>
-            Create Test Game
-          </Button>
-          {!defaultMap && <span className="text-xs text-crimson">Admin must set a default map first.</span>}
+        <div className="border border-border rounded-md p-4 space-y-4 bg-card">
+          <h2 className="text-sm font-heading font-semibold uppercase tracking-wider text-muted-foreground">New Test Game</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <MapPicker value={chosenMap?.id ?? null} onChange={setChosenMap} disabled={busy} />
+            <FactionsConfigPicker value={factionsConfigId} onChange={setFactionsConfigId} disabled={busy} />
+          </div>
+          <div className="flex gap-2 items-end">
+            <Input
+              placeholder="New test game name..."
+              value={newGameName}
+              onChange={e => setNewGameName(e.target.value)}
+              className="max-w-xs"
+              disabled={busy}
+            />
+            <Button onClick={createGame} disabled={busy || !newGameName.trim() || !chosenMap}>
+              Create Test Game
+            </Button>
+            {!chosenMap && <span className="text-xs text-crimson">Choose a map to continue.</span>}
+          </div>
         </div>
 
         <div className="border border-border rounded-md">
