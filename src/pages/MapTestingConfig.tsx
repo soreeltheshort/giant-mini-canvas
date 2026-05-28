@@ -380,6 +380,7 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
   const [personaId, setPersonaId] = useState<string>(faction.ai_persona_id ?? "");
   const [fleetConvId, setFleetConvId] = useState<string>(faction.fleet_naming_convention_id ?? "");
   const [shipConvId, setShipConvId] = useState<string>(faction.ship_naming_convention_id ?? "");
+  const [infect, setInfect] = useState<boolean>(!!faction.infect);
 
   const personaName = personas.find((p) => p.id === faction.ai_persona_id)?.name;
   const fleetConvs = namingConventions.filter((c) => c.kind === "fleet");
