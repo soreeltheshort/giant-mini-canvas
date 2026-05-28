@@ -1,10 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
+import { GOAL_CODES, RECOMMENDED_GOAL_WEIGHTS } from "./goalCatalog";
+import { RECOMMENDED_FOLLOWTHROUGH, DEFAULT_FOLLOWTHROUGH_QUEUE } from "./followthroughCatalog";
 
 /**
  * Default persona library for the deterministic in-game AI.
- * Traits are 0..1. Goal weights bias `runAITurn` scoring (later phases).
+ * Traits are 0..1. Goal weights bias goal scoring (later phases).
  * Re-running `seedDefaultPersonas` is safe — it skips any persona whose
- * `name` already exists.
+ * `name` already exists for trait insertion, but it always backfills any
+ * missing goal-weight rows and follow-through queue rows.
  */
 export interface DefaultPersona {
   name: string;
@@ -18,12 +21,6 @@ export interface DefaultPersona {
     paranoia: number;
     diplomacy: number;
   };
-  weights: Array<{
-    goal_type: string;
-    base_weight: number;
-    urgency_multiplier: number;
-    threshold_json?: Record<string, unknown>;
-  }>;
 }
 
 export const DEFAULT_PERSONAS: DefaultPersona[] = [
@@ -39,15 +36,6 @@ export const DEFAULT_PERSONAS: DefaultPersona[] = [
       paranoia: 0.4,
       diplomacy: 0.2,
     },
-    weights: [
-      { goal_type: "capture_system", base_weight: 1.4, urgency_multiplier: 1.2 },
-      { goal_type: "eliminate_player", base_weight: 1.2, urgency_multiplier: 1.3 },
-      { goal_type: "build_fleet", base_weight: 1.1, urgency_multiplier: 1.1 },
-      { goal_type: "defend_system", base_weight: 0.8, urgency_multiplier: 1.4 },
-      { goal_type: "accumulate_treasury", base_weight: 0.4, urgency_multiplier: 0.8, threshold_json: { min_treasury: 50 } },
-      { goal_type: "survey_region", base_weight: 0.5, urgency_multiplier: 1.0 },
-      { goal_type: "maintain_alliance", base_weight: 0.3, urgency_multiplier: 0.8 },
-    ],
   },
   {
     name: "Trade Senator",
@@ -61,15 +49,6 @@ export const DEFAULT_PERSONAS: DefaultPersona[] = [
       paranoia: 0.3,
       diplomacy: 0.9,
     },
-    weights: [
-      { goal_type: "accumulate_treasury", base_weight: 1.4, urgency_multiplier: 1.1, threshold_json: { min_treasury: 200 } },
-      { goal_type: "maintain_alliance", base_weight: 1.2, urgency_multiplier: 1.1 },
-      { goal_type: "survey_region", base_weight: 1.0, urgency_multiplier: 1.0 },
-      { goal_type: "build_fleet", base_weight: 0.7, urgency_multiplier: 1.0 },
-      { goal_type: "defend_system", base_weight: 1.0, urgency_multiplier: 1.3 },
-      { goal_type: "capture_system", base_weight: 0.4, urgency_multiplier: 0.9 },
-      { goal_type: "eliminate_player", base_weight: 0.2, urgency_multiplier: 0.8 },
-    ],
   },
   {
     name: "Paranoid Isolationist",
@@ -83,66 +62,90 @@ export const DEFAULT_PERSONAS: DefaultPersona[] = [
       paranoia: 0.9,
       diplomacy: 0.3,
     },
-    weights: [
-      { goal_type: "defend_system", base_weight: 1.5, urgency_multiplier: 1.4 },
-      { goal_type: "build_fleet", base_weight: 1.2, urgency_multiplier: 1.2 },
-      { goal_type: "survey_region", base_weight: 1.0, urgency_multiplier: 1.1 },
-      { goal_type: "accumulate_treasury", base_weight: 1.0, urgency_multiplier: 1.0, threshold_json: { min_treasury: 150 } },
-      { goal_type: "capture_system", base_weight: 0.4, urgency_multiplier: 0.9 },
-      { goal_type: "maintain_alliance", base_weight: 0.3, urgency_multiplier: 0.8 },
-      { goal_type: "eliminate_player", base_weight: 0.3, urgency_multiplier: 1.1 },
-    ],
   },
 ];
 
-export async function seedDefaultPersonas(): Promise<{ inserted: number; skipped: number }> {
+async function backfillGoalWeights(personaId: string, personaName: string) {
+  const recommended = RECOMMENDED_GOAL_WEIGHTS[personaName];
+  const { data: existing } = await supabase
+    .from("ai_persona_goal_weights")
+    .select("goal_type")
+    .eq("persona_id", personaId);
+  const have = new Set((existing ?? []).map((r: any) => r.goal_type));
+  const rows = GOAL_CODES.filter((c) => !have.has(c)).map((code) => ({
+    persona_id: personaId,
+    goal_type: code,
+    base_weight: recommended?.[code] ?? 1.0,
+    urgency_multiplier: 1.0,
+    threshold_json: {},
+  }));
+  if (rows.length > 0) {
+    const { error } = await supabase.from("ai_persona_goal_weights").insert(rows as any);
+    if (error) throw error;
+  }
+}
+
+async function backfillFollowthrough(personaId: string, personaName: string) {
+  const { data: existing } = await supabase
+    .from("ai_persona_followthrough")
+    .select("id")
+    .eq("persona_id", personaId)
+    .limit(1);
+  if ((existing?.length ?? 0) > 0) return;
+  const queue = RECOMMENDED_FOLLOWTHROUGH[personaName] ?? DEFAULT_FOLLOWTHROUGH_QUEUE;
+  const rows = queue.map((activity_code, idx) => ({
+    persona_id: personaId,
+    step_order: idx + 1,
+    activity_code,
+    enabled: true,
+    params_json: {},
+  }));
+  const { error } = await supabase.from("ai_persona_followthrough" as any).insert(rows as any);
+  if (error) throw error;
+}
+
+export async function seedDefaultPersonas(): Promise<{ inserted: number; skipped: number; backfilled: number }> {
   const names = DEFAULT_PERSONAS.map((p) => p.name);
   const { data: existing, error: exErr } = await supabase
     .from("ai_personas")
     .select("id, name")
     .in("name", names);
   if (exErr) throw exErr;
-  const existingByName = new Map((existing ?? []).map((r: any) => [r.name, r.id]));
+  const existingByName = new Map((existing ?? []).map((r: any) => [r.name, r.id as string]));
 
   let inserted = 0;
   let skipped = 0;
+  let backfilled = 0;
 
   for (const p of DEFAULT_PERSONAS) {
-    if (existingByName.has(p.name)) {
+    let personaId = existingByName.get(p.name);
+    if (personaId) {
       skipped++;
-      continue;
+    } else {
+      const { data: created, error } = await supabase
+        .from("ai_personas")
+        .insert({
+          name: p.name,
+          description: p.description,
+          aggression: p.traits.aggression,
+          expansionism: p.traits.expansionism,
+          economic_focus: p.traits.economic_focus,
+          risk_tolerance: p.traits.risk_tolerance,
+          loyalty: p.traits.loyalty,
+          paranoia: p.traits.paranoia,
+          diplomacy: p.traits.diplomacy,
+        } as any)
+        .select("id")
+        .single();
+      if (error || !created) throw error ?? new Error("Insert failed");
+      personaId = (created as any).id;
+      inserted++;
     }
-    const { data: created, error } = await supabase
-      .from("ai_personas")
-      .insert({
-        name: p.name,
-        description: p.description,
 
-
-        aggression: p.traits.aggression,
-        expansionism: p.traits.expansionism,
-        economic_focus: p.traits.economic_focus,
-        risk_tolerance: p.traits.risk_tolerance,
-        loyalty: p.traits.loyalty,
-        paranoia: p.traits.paranoia,
-        diplomacy: p.traits.diplomacy,
-      } as any)
-      .select("id")
-      .single();
-    if (error || !created) throw error ?? new Error("Insert failed");
-
-    const personaId = (created as any).id;
-    const rows = p.weights.map((w) => ({
-      persona_id: personaId,
-      goal_type: w.goal_type,
-      base_weight: w.base_weight,
-      urgency_multiplier: w.urgency_multiplier,
-      threshold_json: w.threshold_json ?? {},
-    }));
-    const { error: wErr } = await supabase.from("ai_persona_goal_weights").insert(rows as any);
-    if (wErr) throw wErr;
-    inserted++;
+    await backfillGoalWeights(personaId!, p.name);
+    await backfillFollowthrough(personaId!, p.name);
+    backfilled++;
   }
 
-  return { inserted, skipped };
+  return { inserted, skipped, backfilled };
 }

@@ -22,6 +22,7 @@ import {
 } from "@/lib/mapTypes";
 import { loadRandomizeParams, saveRandomizeParams } from "@/lib/randomizeSystems";
 import MapConfigSaveLoad from "@/components/MapConfigSaveLoad";
+import RelationshipOverridesPanel from "@/components/factions-config/RelationshipOverridesPanel";
 
 const MapTestingConfig = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -120,6 +121,10 @@ const MapTestingConfig = () => {
               </Button>
             </div>
           )}
+        </ConfigSection>
+
+        <ConfigSection title="Hard-coded Relationships" desc="Lock how a faction views another (friend or enemy). Directional — add a second row to lock both sides. Pairs not listed default to competitor.">
+          <RelationshipOverridesPanel factions={factions as any} isAdmin={isAdmin} />
         </ConfigSection>
         <ConfigSection title="System Actions" desc="Define economic actions that can be assigned to systems (e.g. Trade, Build, Mine).">
           {actions.length === 0 ? (
