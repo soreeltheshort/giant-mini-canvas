@@ -110,6 +110,28 @@ export const groundCombatPhase: Phase = {
       .maybeSingle();
     const killChance = kcRow ? Number(kcRow.value) : 0.8;
 
+    // Load faction INFECT flags so we can route invasions through the
+    // alternate (Synod-style) logic when the attacking faction has INFECT=true.
+    // Build a lookup keyed by every owner-classification variant (name,
+    // code_name, lower-cased) so the runtime string on a fleet matches.
+    const infectByOwner = new Map<string, boolean>();
+    {
+      const { data: facRows } = await (supabase as any)
+        .from("factions")
+        .select("name, code_name, infect");
+      for (const f of (facRows || [])) {
+        const v = !!f.infect;
+        if (f.name) infectByOwner.set(String(f.name).toLowerCase(), v);
+        if (f.code_name) infectByOwner.set(String(f.code_name).toLowerCase(), v);
+      }
+    }
+    const isInfectOwner = (owner: string | null | undefined) => {
+      const k = (owner || "").trim().toLowerCase();
+      if (!k) return false;
+      return infectByOwner.get(k) === true;
+    };
+
+
     // 2. Map hex (x,y) -> system on that hex (only ones we can invade).
     const systemsByHex = new Map<string, any>();
     for (const sys of mapState.systems.values()) {
