@@ -354,6 +354,7 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
     ai_persona_id?: string | null;
     fleet_naming_convention_id?: string | null;
     ship_naming_convention_id?: string | null;
+    infect?: boolean;
   };
   isAdmin: boolean;
   personas: { id: string; name: string }[];
