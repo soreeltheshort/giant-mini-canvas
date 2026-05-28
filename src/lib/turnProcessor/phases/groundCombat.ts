@@ -102,13 +102,20 @@ export const groundCombatPhase: Phase = {
   async run(ctx: TurnContext) {
     const { supabase, gameId, currentTurn, mapState, orders } = ctx;
 
-    // 1. Load the kill chance from combat_constants (fallback 0.8).
-    const { data: kcRow } = await (supabase as any)
+    // 1. Load constants from combat_constants.
+    //    - ground_combat_kill_chance (default 0.8)
+    //    - infect_survivor_multiplier (default 5) — applied to an INFECT
+    //      invader's surviving GI when both sides still have ground forces
+    //      after a Phase B round.
+    const { data: kcRows } = await (supabase as any)
       .from("combat_constants")
-      .select("value")
-      .eq("key", "ground_combat_kill_chance")
-      .maybeSingle();
-    const killChance = kcRow ? Number(kcRow.value) : 0.8;
+      .select("key, value")
+      .in("key", ["ground_combat_kill_chance", "infect_survivor_multiplier"]);
+    const constByKey = new Map<string, number>();
+    for (const r of (kcRows || [])) constByKey.set(r.key, Number(r.value));
+    const killChance = constByKey.has("ground_combat_kill_chance") ? constByKey.get("ground_combat_kill_chance")! : 0.8;
+    const infectMultiplier = constByKey.has("infect_survivor_multiplier") ? constByKey.get("infect_survivor_multiplier")! : 5;
+
 
     // Load faction INFECT flags so we can route invasions through the
     // alternate (Synod-style) logic when the attacking faction has INFECT=true.
