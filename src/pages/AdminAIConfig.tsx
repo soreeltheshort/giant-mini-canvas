@@ -11,7 +11,9 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import AIInspector from "@/components/admin/ai/AIInspector";
+import FollowthroughEditor from "@/components/admin/ai/FollowthroughEditor";
 import { seedDefaultPersonas } from "@/lib/ai/seedDefaultPersonas";
+import { GOAL_CODES } from "@/lib/ai/goalCatalog";
 
 interface Persona {
   id: string;
@@ -51,6 +53,8 @@ const TRAITS = [
 ] as const;
 
 const GOAL_TYPES = [
+  ...GOAL_CODES,
+  // Legacy types kept selectable for back-compat with older personas:
   "defend_system",
   "capture_system",
   "eliminate_player",
@@ -300,6 +304,7 @@ function PersonaCard({
       </div>
 
       <GoalWeights personaId={persona.id} weights={weights} isAdmin={isAdmin} onChanged={onChanged} />
+      <FollowthroughEditor personaId={persona.id} isAdmin={isAdmin} />
     </div>
   );
 }
