@@ -354,6 +354,7 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
     ai_persona_id?: string | null;
     fleet_naming_convention_id?: string | null;
     ship_naming_convention_id?: string | null;
+    infect?: boolean;
   };
   isAdmin: boolean;
   personas: { id: string; name: string }[];
@@ -366,6 +367,7 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
       ai_persona_id: string | null;
       fleet_naming_convention_id: string | null;
       ship_naming_convention_id: string | null;
+      infect: boolean;
     }>,
   ) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
@@ -378,6 +380,7 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
   const [personaId, setPersonaId] = useState<string>(faction.ai_persona_id ?? "");
   const [fleetConvId, setFleetConvId] = useState<string>(faction.fleet_naming_convention_id ?? "");
   const [shipConvId, setShipConvId] = useState<string>(faction.ship_naming_convention_id ?? "");
+  const [infect, setInfect] = useState<boolean>(!!faction.infect);
 
   const personaName = personas.find((p) => p.id === faction.ai_persona_id)?.name;
   const fleetConvs = namingConventions.filter((c) => c.kind === "fleet");
@@ -396,6 +399,7 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
             <span>AI: <span className="text-foreground">{personaName ?? "—"}</span></span>
             <span>Fleets: <span className="text-foreground">{fleetConvName ?? "—"}</span></span>
             <span>Ships: <span className="text-foreground">{shipConvName ?? "—"}</span></span>
+            {faction.infect && <span className="text-destructive font-semibold uppercase tracking-wider">Infect</span>}
           </div>
         </div>
         {isAdmin && (
@@ -456,6 +460,16 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
           </select>
         </div>
       </div>
+      <label className="flex items-center gap-2 text-xs text-foreground select-none cursor-pointer">
+        <input
+          type="checkbox"
+          checked={infect}
+          onChange={(e) => setInfect(e.target.checked)}
+          className="h-4 w-4 accent-destructive"
+        />
+        <span className="font-semibold uppercase tracking-wider text-destructive">Infect</span>
+        <span className="text-muted-foreground font-normal normal-case">— routes ground invasions through the alternate (Synod) logic.</span>
+      </label>
       <div className="flex gap-1">
         <Button
           size="sm"
@@ -468,6 +482,7 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
               ai_persona_id: personaId || null,
               fleet_naming_convention_id: fleetConvId || null,
               ship_naming_convention_id: shipConvId || null,
+              infect,
             });
             setEditing(false);
           }}
