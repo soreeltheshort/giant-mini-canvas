@@ -367,6 +367,7 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
       ai_persona_id: string | null;
       fleet_naming_convention_id: string | null;
       ship_naming_convention_id: string | null;
+      infect: boolean;
     }>,
   ) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
