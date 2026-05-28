@@ -44,7 +44,7 @@ export function useFactions() {
 
   const updateFaction = useCallback(async (
     id: string,
-    updates: Partial<Pick<DbFaction, "name" | "color" | "code_name" | "ai_persona_id" | "fleet_naming_convention" | "fleet_naming_convention_id" | "ship_naming_convention_id">>,
+    updates: Partial<Pick<DbFaction, "name" | "color" | "code_name" | "ai_persona_id" | "fleet_naming_convention" | "fleet_naming_convention_id" | "ship_naming_convention_id" | "infect">>,
   ) => {
     const { error } = await (supabase as any).from("factions").update(updates).eq("id", id);
     if (error) toast({ title: "Failed to update", description: error.message, variant: "destructive" });
