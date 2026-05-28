@@ -512,6 +512,8 @@ export const groundCombatPhase: Phase = {
             ending_defenses: newDefenses,
           },
           outcome,
+          invader_infect: championInfects,
+          rule_path: championInfects ? "infect" : "standard",
         },
       });
 
