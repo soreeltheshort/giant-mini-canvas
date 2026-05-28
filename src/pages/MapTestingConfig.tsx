@@ -482,6 +482,7 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
               ai_persona_id: personaId || null,
               fleet_naming_convention_id: fleetConvId || null,
               ship_naming_convention_id: shipConvId || null,
+              infect,
             });
             setEditing(false);
           }}
