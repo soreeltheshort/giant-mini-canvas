@@ -23,6 +23,7 @@ import { combatPhase } from "./phases/combat";
 import { groundCombatPhase } from "./phases/groundCombat";
 import { shipProductionPhase } from "./phases/shipProduction";
 import { transferShipsPhase } from "./phases/transferShips";
+import { infectIntelLeechPhase } from "./phases/infectIntelLeech";
 import { seedFactionPlayers } from "@/lib/gameLifecycle";
 
 // Order matters:
@@ -34,6 +35,9 @@ import { seedFactionPlayers } from "@/lib/gameLifecycle";
 //   - ground_combat: any fleet that ended movement on an enemy/unowned planet
 //     with current_ground_invasion > 0 invades. Must run AFTER movement (so
 //     positions are final) and BEFORE visibility (so new ownership propagates).
+//   - infect_intel_leech: INFECT factions that survived combat absorb the
+//     loser's full intel. Must run AFTER combat and BEFORE visibility (so
+//     newly granted systems get fresh snapshots).
 //   - visibility: scout/intel updates pick up the new owner.
 export const PHASE_ORDER: Phase[] = [
   economyPhase,
@@ -42,8 +46,10 @@ export const PHASE_ORDER: Phase[] = [
   movementPhase,
   transferShipsPhase,
   groundCombatPhase,
+  infectIntelLeechPhase,
   visibilityPhase,
 ];
+
 
 export interface RunTurnArgs {
   supabase: SupabaseClient;
