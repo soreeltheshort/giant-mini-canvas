@@ -1119,6 +1119,7 @@ export type Database = {
           fleet_naming_convention: string
           fleet_naming_convention_id: string | null
           id: string
+          infect: boolean
           is_player_faction: boolean
           name: string
           ship_naming_convention_id: string | null
@@ -1132,6 +1133,7 @@ export type Database = {
           fleet_naming_convention?: string
           fleet_naming_convention_id?: string | null
           id?: string
+          infect?: boolean
           is_player_faction?: boolean
           name: string
           ship_naming_convention_id?: string | null
@@ -1145,6 +1147,7 @@ export type Database = {
           fleet_naming_convention?: string
           fleet_naming_convention_id?: string | null
           id?: string
+          infect?: boolean
           is_player_faction?: boolean
           name?: string
           ship_naming_convention_id?: string | null
