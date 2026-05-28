@@ -413,7 +413,14 @@ export const groundCombatPhase: Phase = {
       const startingDefenses = Number(sys.current_ground_defenses) || 0;
       const planetWasUnpopulated = (Number(sys.current_population) || 0) <= 0;
       const previousOwner = sys.owner || "";
+      const championInfects = isInfectOwner(champion.owner_classification);
 
+      // ── INFECT route ──
+      // Factions flagged INFECT (e.g. Synod) bypass conventional ground
+      // combat. PLACEHOLDER: until the Synod-specific rule is specified,
+      // the mechanical resolution is the same single-round attrition, but
+      // the outcome is tagged so logs/UI can distinguish it and the actual
+      // rule can be swapped in here without touching the rest of the phase.
       const round = resolveRound(champion.gi, startingDefenses, killChance, rng);
       champion.gi = round.aLeft;
       const newDefenses = round.bLeft;
