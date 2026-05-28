@@ -424,15 +424,43 @@ export const groundCombatPhase: Phase = {
       const previousOwner = sys.owner || "";
       const championInfects = isInfectOwner(champion.owner_classification);
 
-      // ── INFECT route ──
-      // Factions flagged INFECT (e.g. Synod) bypass conventional ground
-      // combat. PLACEHOLDER: until the Synod-specific rule is specified,
-      // the mechanical resolution is the same single-round attrition, but
-      // the outcome is tagged so logs/UI can distinguish it and the actual
-      // rule can be swapped in here without touching the rest of the phase.
+      // Notify the defender that the planet is under attack THIS turn.
+      // INFECT factions show "planet_infected"; everyone else "planet_invaded".
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+        log_type: championInfects ? "planet_infected" : "planet_invaded",
+        message: championInfects
+          ? `${sys.system_name} is being infected by ${champion.owner_classification || "an INFECT force"}.`
+          : `${sys.system_name} is being invaded by ${champion.owner_classification || "an enemy force"}.`,
+        details_json: {
+          system_id: systemId,
+          system_name: sys.system_name,
+          defender_owner: previousOwner,
+          attacker_owner: champion.owner_classification,
+          attacker_fleet: champion.fleet_name,
+          invader_infect: championInfects,
+        },
+      });
+
+      // Run the regular ground combat round (same engine for both routes).
       const round = resolveRound(champion.gi, startingDefenses, killChance, rng);
       champion.gi = round.aLeft;
-      const newDefenses = round.bLeft;
+      let newDefenses = round.bLeft;
+
+      // ── INFECT route ──
+      // If the INFECT invader and the defender both have surviving ground
+      // forces after the round, the INFECT side's survivors multiply by
+      // `infect_survivor_multiplier` (configurable in Map Config). This
+      // represents the infection spreading from each survivor.
+      let infectMultiplied = false;
+      let preMultiplyGi = champion.gi;
+      if (championInfects && champion.gi > 0 && newDefenses > 0 && infectMultiplier > 1) {
+        champion.gi = Math.floor(champion.gi * infectMultiplier);
+        // Treat the multiplied force as the new "starting" pool for write-back
+        // accounting so we don't record negative casualties.
+        champion.starting_gi = Math.max(champion.starting_gi, champion.gi);
+        infectMultiplied = true;
+      }
       sys.current_ground_defenses = newDefenses;
 
       let outcome: "capture" | "colonize" | "repulsed" | "stalemate" = "stalemate";
@@ -478,6 +506,41 @@ export const groundCombatPhase: Phase = {
       } else if (champion.gi <= 0) {
         outcome = "repulsed";
       }
+
+      // Ground troops landed — destroy the champion's ground-transport ships
+      // (every Attack-Planet group ship with ground_invasion > 0). Each such
+      // ship is consumed in the drop, regardless of outcome.
+      let transportsDestroyed = 0;
+      {
+        const { data: shipRows } = await (supabase as any)
+          .from("game_fleet_ships")
+          .select("id, ship_types(ground_invasion)")
+          .eq("game_fleet_id", champion.game_fleet_id)
+          .eq("tactical_group", "Attack Planet");
+        const toDelete = (shipRows || [])
+          .filter((r: any) => (Number(r.ship_types?.ground_invasion) || 0) > 0)
+          .map((r: any) => r.id);
+        if (toDelete.length > 0) {
+          await (supabase as any).from("game_fleet_ships").delete().in("id", toDelete);
+          transportsDestroyed = toDelete.length;
+          // If the fleet now has zero ships, remove it from the map.
+          const { count } = await (supabase as any)
+            .from("game_fleet_ships")
+            .select("id", { count: "exact", head: true })
+            .eq("game_fleet_id", champion.game_fleet_id);
+          if ((count || 0) <= 0) {
+            await destroyFleet({
+              ctx,
+              gameFleetId: champion.game_fleet_id,
+              sourceFleetId: champion.source_fleet_id,
+              fleetName: champion.fleet_name,
+              reason: "ground_transports_expended",
+              phase: "ground_combat",
+            });
+          }
+        }
+      }
+
 
       // Write back surviving GI for every invader involved at this system.
       for (const inv of invaders) writeBackGi(inv);
