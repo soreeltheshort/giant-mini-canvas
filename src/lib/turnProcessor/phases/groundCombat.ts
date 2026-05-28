@@ -445,7 +445,7 @@ export const groundCombatPhase: Phase = {
       // Run the regular ground combat round (same engine for both routes).
       const round = resolveRound(champion.gi, startingDefenses, killChance, rng);
       champion.gi = round.aLeft;
-      let newDefenses = round.bLeft;
+      const newDefenses = round.bLeft;
 
       // ── INFECT route ──
       // If the INFECT invader and the defender both have surviving ground
