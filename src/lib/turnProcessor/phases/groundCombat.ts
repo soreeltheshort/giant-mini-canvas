@@ -582,10 +582,15 @@ export const groundCombatPhase: Phase = {
             losses_to_defenses: round.aKilled,
             ending_invader_gi: champion.gi,
             ending_defenses: newDefenses,
+            infect_multiplied: infectMultiplied,
+            infect_multiplier: infectMultiplied ? infectMultiplier : null,
+            invader_gi_before_multiplier: infectMultiplied ? preMultiplyGi : null,
+            transports_destroyed: transportsDestroyed,
           },
           outcome,
           invader_infect: championInfects,
           rule_path: championInfects ? "infect" : "standard",
+
         },
       });
 
