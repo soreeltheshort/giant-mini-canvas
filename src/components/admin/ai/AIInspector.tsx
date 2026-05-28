@@ -204,11 +204,12 @@ export default function AIInspector() {
             columns={["belief_key", "confidence", "turn_number"]}
           />
           <InspectorSection
-            title="Relationships"
+            title="Relationships (this faction's view of others)"
             table="ai_relationships"
             filter={{ game_id: gameId, player_id: playerId }}
-            columns={["target_player_id", "opinion", "trust", "fear", "last_interaction_turn"]}
+            columns={["target_player_id", "derived_class", "class_source", "opinion", "trust", "fear", "class_updated_turn"]}
           />
+          <PersonaFollowthroughSection playerId={playerId} />
         </div>
       )}
     </div>
