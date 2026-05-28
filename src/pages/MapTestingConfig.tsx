@@ -399,6 +399,7 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
             <span>AI: <span className="text-foreground">{personaName ?? "—"}</span></span>
             <span>Fleets: <span className="text-foreground">{fleetConvName ?? "—"}</span></span>
             <span>Ships: <span className="text-foreground">{shipConvName ?? "—"}</span></span>
+            {faction.infect && <span className="text-destructive font-semibold uppercase tracking-wider">Infect</span>}
           </div>
         </div>
         {isAdmin && (
