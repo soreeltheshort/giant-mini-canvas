@@ -460,6 +460,16 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
           </select>
         </div>
       </div>
+      <label className="flex items-center gap-2 text-xs text-foreground select-none cursor-pointer">
+        <input
+          type="checkbox"
+          checked={infect}
+          onChange={(e) => setInfect(e.target.checked)}
+          className="h-4 w-4 accent-destructive"
+        />
+        <span className="font-semibold uppercase tracking-wider text-destructive">Infect</span>
+        <span className="text-muted-foreground font-normal normal-case">— routes ground invasions through the alternate (Synod) logic.</span>
+      </label>
       <div className="flex gap-1">
         <Button
           size="sm"
