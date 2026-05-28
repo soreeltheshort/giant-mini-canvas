@@ -507,11 +507,13 @@ export const groundCombatPhase: Phase = {
         outcome = "repulsed";
       }
 
-      // Ground troops landed — destroy the champion's ground-transport ships
-      // (every Attack-Planet group ship with ground_invasion > 0). Each such
-      // ship is consumed in the drop, regardless of outcome.
+      // Ground troops landed — INFECT only: destroy the champion's
+      // ground-transport ships (every Attack-Planet group ship with
+      // ground_invasion > 0). Each such ship is consumed in the drop.
+      // Non-INFECT invasions leave their transports intact.
       let transportsDestroyed = 0;
-      {
+      if (championInfects) {
+
         const { data: shipRows } = await (supabase as any)
           .from("game_fleet_ships")
           .select("id, ship_types(ground_invasion)")
