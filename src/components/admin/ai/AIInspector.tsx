@@ -293,3 +293,68 @@ function formatCell(v: any): string {
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }
+
+function PersonaFollowthroughSection({ playerId }: { playerId: string }) {
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [personaName, setPersonaName] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setRows(null);
+      setPersonaName("");
+      const { data: pf } = await supabase
+        .from("game_factions")
+        .select("factions:faction_id(ai_persona_id, ai_personas:ai_persona_id(name))")
+        .eq("id", playerId)
+        .maybeSingle();
+      const personaId = (pf as any)?.factions?.ai_persona_id as string | undefined;
+      const pname = (pf as any)?.factions?.ai_personas?.name as string | undefined;
+      if (cancelled) return;
+      setPersonaName(pname ?? "");
+      if (!personaId) { setRows([]); return; }
+      const { data } = await supabase
+        .from("ai_persona_followthrough" as any)
+        .select("step_order, activity_code, enabled, params_json")
+        .eq("persona_id", personaId)
+        .order("step_order");
+      if (!cancelled) setRows((data as any[]) ?? []);
+    })();
+    return () => { cancelled = true; };
+  }, [playerId]);
+
+  return (
+    <div className="rounded border border-border">
+      <div className="border-b border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+        <span>Persona follow-through queue</span>
+        {personaName && <span className="font-mono normal-case tracking-normal text-[10px]">{personaName}</span>}
+      </div>
+      {rows === null ? (
+        <p className="p-3 text-xs text-muted-foreground">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="p-3 text-xs text-muted-foreground">No follow-through queue defined for this faction's persona.</p>
+      ) : (
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border bg-muted/20">
+              <th className="px-2 py-1 text-left font-medium text-muted-foreground">#</th>
+              <th className="px-2 py-1 text-left font-medium text-muted-foreground">activity_code</th>
+              <th className="px-2 py-1 text-left font-medium text-muted-foreground">enabled</th>
+              <th className="px-2 py-1 text-left font-medium text-muted-foreground">params_json</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.step_order} className="border-b border-border/50">
+                <td className="px-2 py-1 font-mono">{r.step_order}</td>
+                <td className="px-2 py-1 font-mono">{r.activity_code}</td>
+                <td className="px-2 py-1 font-mono">{r.enabled ? "yes" : "no"}</td>
+                <td className="px-2 py-1 font-mono">{JSON.stringify(r.params_json ?? {})}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
