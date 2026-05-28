@@ -129,6 +129,47 @@ export type Database = {
           },
         ]
       }
+      ai_persona_followthrough: {
+        Row: {
+          activity_code: string
+          created_at: string
+          enabled: boolean
+          id: string
+          params_json: Json
+          persona_id: string
+          step_order: number
+          updated_at: string
+        }
+        Insert: {
+          activity_code: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          params_json?: Json
+          persona_id: string
+          step_order: number
+          updated_at?: string
+        }
+        Update: {
+          activity_code?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          params_json?: Json
+          persona_id?: string
+          step_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_persona_followthrough_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "ai_personas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_persona_goal_weights: {
         Row: {
           base_weight: number
@@ -395,7 +436,10 @@ export type Database = {
       }
       ai_relationships: {
         Row: {
+          class_source: string
+          class_updated_turn: number
           created_at: string
+          derived_class: string
           fear: number
           game_id: string
           id: string
@@ -408,7 +452,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          class_source?: string
+          class_updated_turn?: number
           created_at?: string
+          derived_class?: string
           fear?: number
           game_id: string
           id?: string
@@ -421,7 +468,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          class_source?: string
+          class_updated_turn?: number
           created_at?: string
+          derived_class?: string
           fear?: number
           game_id?: string
           id?: string
@@ -1011,6 +1061,51 @@ export type Database = {
             columns: ["consumed_facility_id"]
             isOneToOne: false
             referencedRelation: "facility_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faction_relationship_overrides: {
+        Row: {
+          created_at: string
+          forced_class: string
+          id: string
+          notes: string
+          target_faction_id: string
+          updated_at: string
+          viewer_faction_id: string
+        }
+        Insert: {
+          created_at?: string
+          forced_class: string
+          id?: string
+          notes?: string
+          target_faction_id: string
+          updated_at?: string
+          viewer_faction_id: string
+        }
+        Update: {
+          created_at?: string
+          forced_class?: string
+          id?: string
+          notes?: string
+          target_faction_id?: string
+          updated_at?: string
+          viewer_faction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faction_relationship_overrides_target_faction_id_fkey"
+            columns: ["target_faction_id"]
+            isOneToOne: false
+            referencedRelation: "factions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faction_relationship_overrides_viewer_faction_id_fkey"
+            columns: ["viewer_faction_id"]
+            isOneToOne: false
+            referencedRelation: "factions"
             referencedColumns: ["id"]
           },
         ]
