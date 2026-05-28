@@ -38,6 +38,8 @@
 import type { Phase, TurnContext } from "../types";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
 import { applyPopulationStep } from "@/lib/turnEngine";
+import { destroyFleet } from "../fleetCleanup";
+
 
 
 // Inline mulberry32 RNG (kept in sync with battleEngine.ts so ground combat
