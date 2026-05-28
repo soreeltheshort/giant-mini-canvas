@@ -1,57 +1,191 @@
-# Factions Config & Game Creation Defaults
+# Phase 2a — Slice 1: Alignments, Goal Catalog, Persona Follow-through
 
-## 1. Rename "Map Testing Config" → "Factions Config", move to Assets
+Scoped subset of the Phase 2a plan. Implements the data model and config surface for three things: faction alignment, the goal catalog with priority weights, and persona-driven fall-through ("follow-through") activities. Scoring/runtime, slate building, fingerprint, known fleets, and goal-failure memory are **deferred** to a later slice.
 
-- `src/components/Header.tsx`
-  - Remove the `Map Testing Config` item from the **Testing** dropdown.
-  - Add `Factions Config` to the **Assets** dropdown (admin-only, same dropdown as Map Config / AI Config). Link still points to `/map-testing/config` (no route rename — keeps existing bookmarks/links alive).
-- `src/pages/MapTestingConfig.tsx`
-  - Change page `<h1>` from "Map Testing Configuration" to "Factions Config".
-  - Update `<title>` / any header text on the page accordingly.
+---
 
-(File names and the route stay the same to avoid a noisy refactor; only the user-facing label changes.)
+## 1. Faction Alignment Table (directional)
 
-## 2. Persist & reuse the last-loaded Factions Config
+Each row is `viewer → target`. One-sided: a row stores how the viewer regards the target.
 
-Goal: when an admin imports a Factions Config JSON via `MapConfigSaveLoad`, store the file in cloud storage and record it as the global default. Then every game-creation surface offers it as the prefilled default, plus lets the creator pick a different file.
+### 1a. Admin override config table (new)
+`faction_relationship_overrides`
+- `id uuid pk`
+- `viewer_faction_id uuid` → `factions.id`
+- `target_faction_id uuid` → `factions.id`
+- `forced_class enum ('friend','enemy')`
+- `notes text`
+- `created_at`, `updated_at`
+- Unique on `(viewer_faction_id, target_faction_id)`
+- Self-pair forbidden (CHECK)
+- GRANTs: authenticated SELECT; admins full; service_role ALL.
+- RLS: admins manage; authenticated read.
 
-### 2a. Backend
+Admin must add the reciprocal row separately to lock both directions.
 
-- New storage bucket: **`config-files`** (private). RLS:
-  - Admins/testers can upload & read.
-  - Authenticated users can read (so non-admin players creating a game can download the default).
-- `app_settings` migration: add `default_factions_config_id uuid` (nullable, FK loosely to a new `saved_factions_configs` table).
-- New table **`saved_factions_configs`**
-  - `id uuid pk`, `name text`, `file_path text` (path in `config-files` bucket), `uploaded_by uuid`, `created_at timestamptz`.
-  - GRANTs: `authenticated` SELECT; admins/testers full; `service_role` ALL.
-  - RLS: admins/testers manage; authenticated read.
+### 1b. Per-game derived alignment on `ai_relationships`
+Add columns:
+- `derived_class text not null default 'competitor'` — one of `friend | competitor | neutral | enemy`
+- `class_source text not null default 'dynamic'` — `'override' | 'dynamic'`
+- `class_updated_turn int not null default 0`
 
-### 2b. Save/Load component changes
+Initial values on row creation: `competitor` / `dynamic`. Override resolution happens at runtime (next slice); column is in place now so the inspector can read it.
 
-- `src/components/MapConfigSaveLoad.tsx`
-  - On **Import**: in addition to upserting rows into Supabase tables, also upload the raw JSON to `config-files/{uuid}.json`, insert a `saved_factions_configs` row, and `app_settings.default_factions_config_id = <new id>`.
-  - Add a "Loaded config: <name>" indicator pulled from `app_settings` + `saved_factions_configs`.
+### 1c. UI — Factions Config screen
+New section "Hard-coded Relationships" on `src/pages/MapTestingConfig.tsx` (now titled Factions Config).
+- Lists existing overrides as rows: Viewer faction · Target faction · Class · Notes · Delete.
+- "Add" row picks two factions (different) + class.
+- Inline component `src/components/factions-config/RelationshipOverridesPanel.tsx`.
 
-## 3. Game creation surfaces
+---
 
-All three creation flows get the same UX block:
+## 2. Goal Catalog + Priority Weights
 
-- **Factions Config**: select dropdown of saved configs (default = global `default_factions_config_id`). Optional "Upload new..." opens file picker, which uploads to bucket, creates a row, sets it as the new default, then applies it (upsert into tables) before creating the game.
-- **Map**: a select dropdown of `saved_maps` rows (default = `default_map_id`). Already implicit today — make it explicit so users can override and so the default is clearly surfaced.
+Six goal types live as constants in code (`src/lib/ai/goalCatalog.ts`):
 
-Touched files:
-- `src/pages/NewGameModes.tsx` — `SinglePlayerPanel`.
-- `src/pages/TesterDashboard.tsx` — `createGame`.
-- `src/pages/AdminGames.tsx` — game create form (currently just name + status; add the same two pickers).
+| code | label | description |
+|---|---|---|
+| `colonize` | Colonize System | Take an unowned habitable system. |
+| `expand_economy` | Expand Economy | Build econ facilities on an owned system below median production. |
+| `enhance_offense` | Enhance Offensive Power | Grow own offensive power band. |
+| `bolster_defense` | Bolster Defense | Raise defense band of the weakest owned system. |
+| `degrade_enemy` | Degrade Enemy | Reduce a specific enemy's believed military power. |
+| `conquer` | Conquer System | Take a specific enemy-owned system. |
 
-Behavior: before calling `games.insert`, if the chosen config differs from the currently-applied one, upsert its rows into the tables (same logic as the existing import path), then proceed.
+Each persona scores candidates as `persona_base_weight * urgency_multiplier * opportunity_score`. The first two factors live on the existing `ai_persona_goal_weights` table — **we extend it with the new codes** for every persona via a data migration, using these recommended defaults:
 
-## 4. Out of scope
+| persona | colonize | expand_economy | enhance_offense | bolster_defense | degrade_enemy | conquer |
+|---|---|---|---|---|---|---|
+| Warlord | 0.6 | 0.5 | 1.3 | 0.7 | 1.2 | 1.4 |
+| Trade Senator | 1.1 | 1.4 | 0.5 | 1.0 | 0.3 | 0.4 |
+| Paranoid Isolationist | 0.7 | 0.9 | 0.9 | 1.5 | 0.5 | 0.3 |
 
-- No engine/data logic changes.
-- No rename of `MapTestingConfig.tsx` file or `/map-testing/config` route.
-- No changes to default-map management UI (it already lives in AdminGames).
+Urgency multipliers default to `1.0`. Each weight row gets a `threshold_json` placeholder (e.g. `{ min_systems_owned: 1 }`) that the scoring slice will read.
 
-## Open question
+`AdminAIConfig.tsx` already edits `ai_persona_goal_weights`; no UI work needed beyond confirming the new rows surface.
 
-Should the "last loaded config" be **global** (like `default_map_id` today — every user sees the same default) or **per-user** (each admin remembers their own last)? The wording "non admin players who create a game" suggests **global**, which is what this plan implements. Confirm before I build.
+---
+
+## 3. Persona-Configurable Follow-through Activities
+
+When a tick has unspent production share (slate gaps or unfunded goals), the AI runs a **follow-through queue** defined per persona.
+
+### 3a. New table `ai_persona_followthrough`
+- `id uuid pk`
+- `persona_id uuid` → `ai_personas.id`
+- `step_order int not null` (1-based)
+- `activity_code text not null` — see catalog below
+- `enabled boolean not null default true`
+- `params_json jsonb not null default '{}'` — per-activity tuning (e.g. `{ "hull_class": "destroyer" }`)
+- `created_at`, `updated_at`
+- Unique on `(persona_id, step_order)`
+- GRANTs: authenticated SELECT; admins full; service_role ALL.
+- RLS: admins manage; authenticated read.
+
+### 3b. Activity codes (constants in `src/lib/ai/followthroughCatalog.ts`)
+
+| code | description |
+|---|---|
+| `garrison_ground_forces` | Build ground forces at owned system with lowest garrison. |
+| `build_defensive_strikecraft` | Build fighters/gunships at owned system with lowest defensive strikecraft. |
+| `repair_damaged_hulls` | Allocate production to repair crippled/damaged ships. |
+| `build_cheapest_defense_hull` | Construct cheapest defense-tagged hull at weakest-defense system. |
+| `build_cheapest_offense_hull` | Construct cheapest offense-tagged hull at highest-production system. |
+| `stockpile_treasury` | Skip production spend; bank the cinders. |
+
+### 3c. Recommended default queue (seeded per persona)
+
+**Warlord**
+1. `repair_damaged_hulls`
+2. `build_cheapest_offense_hull`
+3. `build_cheapest_defense_hull`
+4. `build_defensive_strikecraft`
+5. `garrison_ground_forces`
+6. `stockpile_treasury`
+
+**Trade Senator**
+1. `stockpile_treasury` (enabled = true; treasury-first economy)
+2. `repair_damaged_hulls`
+3. `build_defensive_strikecraft`
+4. `garrison_ground_forces`
+5. `build_cheapest_defense_hull`
+6. `build_cheapest_offense_hull`
+
+**Paranoid Isolationist**
+1. `garrison_ground_forces`
+2. `build_defensive_strikecraft`
+3. `build_cheapest_defense_hull`
+4. `repair_damaged_hulls`
+5. `stockpile_treasury`
+6. `build_cheapest_offense_hull`
+
+Seeded via a data migration that backfills any persona missing rows. `seedDefaultPersonas` is also extended to write the queue for newly created personas.
+
+### 3d. Admin UI
+`src/pages/AdminAIConfig.tsx` already edits personas; add a "Follow-through Queue" subsection per persona with: drag-handle reorder, enabled toggle, activity dropdown (catalog), params textarea (JSON), add/remove rows. Component: `src/components/admin/ai/FollowthroughEditor.tsx`.
+
+---
+
+## 4. Inspector Read-out
+
+Extend `src/components/admin/ai/AIInspector.tsx`:
+- Add a "Relationships (derived class)" mini-section reading the new columns from `ai_relationships`.
+- Add a "Persona follow-through" read-only section showing the selected faction's persona queue.
+
+No "Compute Tick" button this slice — runtime evaluation lives in the next slice.
+
+---
+
+## 5. Migrations
+
+Single migration:
+1. `CREATE TABLE faction_relationship_overrides` + GRANTs + RLS + policies.
+2. `CREATE TABLE ai_persona_followthrough` + GRANTs + RLS + policies.
+3. `ALTER TABLE ai_relationships ADD COLUMN derived_class / class_source / class_updated_turn`.
+4. Data migration: insert any missing `ai_persona_goal_weights` rows for the 6 new goal codes per existing persona using the table above; insert the recommended follow-through queue for each existing persona.
+
+---
+
+## 6. Files Touched
+
+**New**
+- `src/lib/ai/goalCatalog.ts`
+- `src/lib/ai/followthroughCatalog.ts`
+- `src/components/factions-config/RelationshipOverridesPanel.tsx`
+- `src/components/admin/ai/FollowthroughEditor.tsx`
+
+**Modified**
+- `src/lib/ai/seedDefaultPersonas.ts` — also seed follow-through queue + new goal weights for new personas.
+- `src/pages/MapTestingConfig.tsx` — mount `RelationshipOverridesPanel`.
+- `src/pages/AdminAIConfig.tsx` — mount `FollowthroughEditor` per persona.
+- `src/components/admin/ai/AIInspector.tsx` — render derived class + persona follow-through queue.
+
+---
+
+## 7. Updated Phase 2a Plan Status
+
+**Implemented this slice**
+- Faction alignment override config (directional).
+- `derived_class` columns on `ai_relationships` (initialised, not yet computed at runtime).
+- Goal catalog (6 types) + persona priority weights seeded for all personas.
+- Persona-configurable follow-through queue + seeded defaults.
+- Inspector read-outs for the above.
+
+**Still deferred to next slices**
+- Runtime derivation of `derived_class` (dynamic rules engine + override resolution).
+- Slate builder (up to 3 slots, threshold-gated).
+- Worldview fingerprint + stability-gated re-plan.
+- `ai_known_fleets` table + visibility refresh.
+- `ai_goal_failures` table + effort multiplier.
+- `ai_revision_constants` singleton.
+- Follow-through **execution** (this slice only configures the queue).
+- "Compute Tick" inspector button + turn-loop integration.
+- Per-goal-type planner bodies that emit orders.
+
+---
+
+## 8. Out of Scope
+
+- Any change to `factions` table.
+- Any change to existing weight rows (only inserts for missing `(persona, goal_type)` pairs).
+- Engine wiring — nothing in this slice affects gameplay yet.
