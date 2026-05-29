@@ -128,10 +128,12 @@ export const threatAssessmentPhase: Phase = {
       }
 
       // Owned planet hexes
+      const hexByHexId = new Map<number, { x: number; y: number }>();
+      for (const h of mapState.hexes.values()) hexByHexId.set(h.hex_id, { x: h.x, y: h.y });
       const ownedHexes: Array<[number, number]> = [];
       for (const sys of mapState.systems.values()) {
         if ((sys.owner || "").trim() === factionCode) {
-          const hex = mapState.hexes.get(`${sys.hex_id}`) || Array.from(mapState.hexes.values()).find((h) => h.hex_id === sys.hex_id);
+          const hex = hexByHexId.get(sys.hex_id);
           if (hex) ownedHexes.push([hex.x, hex.y]);
         }
       }
