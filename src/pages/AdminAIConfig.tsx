@@ -28,6 +28,8 @@ interface Persona {
   economic_focus: number;
   paranoia: number;
   diplomacy: number;
+  enemy_strength_total_tolerance_pct: number;
+  enemy_strength_nearby_tolerance_pct: number;
 }
 
 interface GoalWeight {
