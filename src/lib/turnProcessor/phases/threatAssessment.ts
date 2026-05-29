@@ -208,7 +208,7 @@ export const threatAssessmentPhase: Phase = {
       ctx.logs.push({
         game_id: gameId,
         turn_number: currentTurn,
-        phase: "threat_assessment" as any,
+        phase: "threat_assessment",
         log_type: "threat_assessment",
         message:
           `${factionCode}: known enemy strength ${totalPoints} pts (${totalFleetCount} fleet${totalFleetCount === 1 ? "" : "s"}), ` +
