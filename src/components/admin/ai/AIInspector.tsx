@@ -359,3 +359,112 @@ function PersonaFollowthroughSection({ playerId }: { playerId: string }) {
     </div>
   );
 }
+
+function ThreatAssessmentSection({ gameId, playerId, turn }: { gameId: string; playerId: string; turn: number }) {
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [tol, setTol] = useState<{ total: number; nearby: number } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setRows(null);
+      // Latest belief rows up to & including this turn
+      const { data } = await supabase
+        .from("ai_world_beliefs")
+        .select("belief_key, value_json, turn_number")
+        .eq("game_id", gameId)
+        .eq("player_id", playerId)
+        .in("belief_key", [
+          "enemy_strength_total",
+          "enemy_strength_nearby",
+          "enemy_strength_total_baseline",
+          "enemy_strength_nearby_baseline",
+        ])
+        .lte("turn_number", turn)
+        .order("turn_number", { ascending: false })
+        .limit(40);
+      if (cancelled) return;
+      setRows((data as any[]) ?? []);
+
+      // Persona tolerances
+      const { data: pf } = await supabase
+        .from("game_factions")
+        .select("ai_persona_id, factions:faction_id(ai_persona_id)")
+        .eq("id", playerId)
+        .maybeSingle();
+      const pid = (pf as any)?.ai_persona_id || (pf as any)?.factions?.ai_persona_id;
+      if (!pid) { setTol(null); return; }
+      const { data: persona } = await supabase
+        .from("ai_personas")
+        .select("enemy_strength_total_tolerance_pct, enemy_strength_nearby_tolerance_pct")
+        .eq("id", pid)
+        .maybeSingle();
+      if (!cancelled && persona) {
+        setTol({
+          total: Number((persona as any).enemy_strength_total_tolerance_pct) || 0,
+          nearby: Number((persona as any).enemy_strength_nearby_tolerance_pct) || 0,
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [gameId, playerId, turn]);
+
+  const latest = (key: string) => (rows || []).find((r) => r.belief_key === key);
+  const total = latest("enemy_strength_total");
+  const nearby = latest("enemy_strength_nearby");
+  const totalBase = latest("enemy_strength_total_baseline");
+  const nearbyBase = latest("enemy_strength_nearby_baseline");
+
+  const pct = (cur: number, base: number) => {
+    if (!base) return cur > 0 ? Infinity : 0;
+    return Math.abs(cur - base) / base;
+  };
+  const totalCur = Number(total?.value_json?.points) || 0;
+  const nearbyCur = Number(nearby?.value_json?.points) || 0;
+  const totalBaseVal = Number(totalBase?.value_json?.points) || 0;
+  const nearbyBaseVal = Number(nearbyBase?.value_json?.points) || 0;
+  const totalDelta = pct(totalCur, totalBaseVal);
+  const nearbyDelta = pct(nearbyCur, nearbyBaseVal);
+
+  const cell = (cur: number, base: number, baseTurn: number | undefined, delta: number, tolPct: number | undefined, fleetCount: number) => {
+    const over = tolPct !== undefined && delta >= tolPct;
+    return (
+      <div className="space-y-1">
+        <div className="text-2xl font-mono font-semibold">{cur.toLocaleString()}<span className="ml-1 text-xs font-normal text-muted-foreground">pts</span></div>
+        <div className="text-[11px] text-muted-foreground font-mono">
+          {fleetCount} fleet{fleetCount === 1 ? "" : "s"} · baseline {base.toLocaleString()}{baseTurn != null ? ` @ t${baseTurn}` : ""}
+        </div>
+        <div className={`text-[11px] font-mono ${over ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+          Δ {isFinite(delta) ? `${(delta * 100).toFixed(1)}%` : "n/a"}
+          {tolPct !== undefined ? ` / tol ${(tolPct * 100).toFixed(0)}%` : ""}
+          {over ? " — RECOMPUTE" : ""}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="rounded border border-border">
+      <div className="border-b border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Threat assessment
+      </div>
+      {rows === null ? (
+        <p className="p-3 text-xs text-muted-foreground">Loading…</p>
+      ) : !total && !nearby ? (
+        <p className="p-3 text-xs text-muted-foreground">No threat-assessment beliefs recorded yet. Process a turn for this game.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Known enemy strength (total, fog-aware)</div>
+            {cell(totalCur, totalBaseVal, totalBase?.value_json?.baseline_turn, totalDelta, tol?.total, Number(total?.value_json?.fleet_count) || 0)}
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Enemy strength within 8 hexes of an owned planet (current)</div>
+            {cell(nearbyCur, nearbyBaseVal, nearbyBase?.value_json?.baseline_turn, nearbyDelta, tol?.nearby, Number(nearby?.value_json?.fleet_count) || 0)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
