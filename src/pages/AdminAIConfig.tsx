@@ -334,6 +334,8 @@ function PersonaCard({
           ))}
         </div>
       </div>
+
+      <GoalWeights personaId={persona.id} weights={weights} isAdmin={isAdmin} onChanged={onChanged} />
       <FollowthroughEditor personaId={persona.id} isAdmin={isAdmin} />
     </div>
   );
