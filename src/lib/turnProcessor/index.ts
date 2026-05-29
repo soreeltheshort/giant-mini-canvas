@@ -24,6 +24,7 @@ import { groundCombatPhase } from "./phases/groundCombat";
 import { shipProductionPhase } from "./phases/shipProduction";
 import { transferShipsPhase } from "./phases/transferShips";
 import { infectIntelLeechPhase } from "./phases/infectIntelLeech";
+import { threatAssessmentPhase } from "./phases/threatAssessment";
 import { seedFactionPlayers } from "@/lib/gameLifecycle";
 
 // Order matters:
