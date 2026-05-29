@@ -218,6 +218,8 @@ export type Database = {
           description: string
           diplomacy: number
           economic_focus: number
+          enemy_strength_nearby_tolerance_pct: number
+          enemy_strength_total_tolerance_pct: number
           expansionism: number
           id: string
           loyalty: number
@@ -234,6 +236,8 @@ export type Database = {
           description?: string
           diplomacy?: number
           economic_focus?: number
+          enemy_strength_nearby_tolerance_pct?: number
+          enemy_strength_total_tolerance_pct?: number
           expansionism?: number
           id?: string
           loyalty?: number
@@ -250,6 +254,8 @@ export type Database = {
           description?: string
           diplomacy?: number
           economic_focus?: number
+          enemy_strength_nearby_tolerance_pct?: number
+          enemy_strength_total_tolerance_pct?: number
           expansionism?: number
           id?: string
           loyalty?: number

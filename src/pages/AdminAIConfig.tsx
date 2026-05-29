@@ -28,6 +28,8 @@ interface Persona {
   economic_focus: number;
   paranoia: number;
   diplomacy: number;
+  enemy_strength_total_tolerance_pct: number;
+  enemy_strength_nearby_tolerance_pct: number;
 }
 
 interface GoalWeight {
@@ -297,6 +299,36 @@ function PersonaCard({
                   await saveField({ [t]: v / 100 } as Partial<Persona>);
                   setSavingTrait(false);
                 }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          Goal-Recompute Tolerances (% change required to re-plan)
+        </Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+          {([
+            ["enemy_strength_total_tolerance_pct", "Known enemy strength total"],
+            ["enemy_strength_nearby_tolerance_pct", "Enemy strength within 8 hexes"],
+          ] as const).map(([field, label]) => (
+            <div key={field} className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs">{label}</span>
+                <span className="text-xs font-mono">{(Number(draft[field] ?? 0) * 100).toFixed(0)}%</span>
+              </div>
+              <Input
+                type="number"
+                min={0}
+                max={5}
+                step={0.05}
+                disabled={!isAdmin}
+                value={Number(draft[field] ?? 0)}
+                onChange={(e) => patch({ [field]: Number(e.target.value) } as any)}
+                onBlur={() => saveField({ [field]: Number(draft[field]) } as Partial<Persona>)}
+                className="h-9 font-mono"
               />
             </div>
           ))}

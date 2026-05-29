@@ -10,7 +10,7 @@ import type { MapState } from "@/lib/mapTypes";
 import type { DbFacilityType } from "@/hooks/useFacilityTypes";
 import type { ShipTypeForUpkeep } from "@/lib/turnEngine";
 
-export type PhaseName = "economy" | "movement" | "visibility" | "combat" | "ground_combat" | "infect_intel_leech";
+export type PhaseName = "economy" | "movement" | "visibility" | "combat" | "ground_combat" | "infect_intel_leech" | "threat_assessment";
 
 /** A single conditional order, as stored in player_orders. */
 export interface ConditionalOrder {
