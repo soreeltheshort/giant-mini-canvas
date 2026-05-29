@@ -1,50 +1,59 @@
-# Phase 2a — Plan Status
+# AI Threat-Assessment Beliefs
 
-## Slice 1 — DONE (this iteration)
+Add two first-class AI world beliefs the deterministic AI will use to decide when to re-plan, plus persona-level recompute tolerances and admin/log surfaces.
 
-- **Faction alignment override config (`faction_relationship_overrides`)** — directional viewer→target rows, friend/enemy, admin-managed via new "Hard-coded Relationships" section on Factions Config (`src/components/factions-config/RelationshipOverridesPanel.tsx`). Pairs not listed default to `competitor`.
-- **Derived alignment columns on `ai_relationships`** — `derived_class` (`friend|competitor|neutral|enemy`, default `competitor`), `class_source` (`override|dynamic`, default `dynamic`), `class_updated_turn` (default 0). Initialised on row creation; runtime derivation not yet wired.
-- **Goal catalog (`src/lib/ai/goalCatalog.ts`)** — 6 codes: `colonize`, `expand_economy`, `enhance_offense`, `bolster_defense`, `degrade_enemy`, `conquer`. Includes `RECOMMENDED_GOAL_WEIGHTS` for each default persona. Catalog codes are now the leading "+ add" buttons in the persona editor; legacy codes remain available for back-compat.
-- **Follow-through catalog (`src/lib/ai/followthroughCatalog.ts`)** — 6 activity codes: `garrison_ground_forces`, `build_defensive_strikecraft`, `repair_damaged_hulls`, `build_cheapest_defense_hull`, `build_cheapest_offense_hull`, `stockpile_treasury`. Includes `RECOMMENDED_FOLLOWTHROUGH` per default persona + a neutral `DEFAULT_FOLLOWTHROUGH_QUEUE` for custom personas.
-- **`ai_persona_followthrough` table** — per-persona ordered queue (`step_order` unique per persona), `enabled` toggle, free-form `params_json`. Admin RLS write, public read.
-- **Admin UI — `FollowthroughEditor`** — mounted inside each persona card on `AdminAIConfig`. Reorder ↑/↓, enable toggle, activity dropdown, params JSON.
-- **Inspector additions** — Relationships table now shows `derived_class` / `class_source` / `class_updated_turn`. New "Persona follow-through queue" section reads the selected faction's persona queue.
-- **`seedDefaultPersonas` refactor** — now also backfills any missing goal-weight rows (6 codes) and inserts the recommended follow-through queue. Safe to re-run; the function returns `{inserted, skipped, backfilled}`.
-- **Backfill for the existing "Synod Standard" persona** — applied via insert: 6 new goal-weight rows at neutral defaults, default 6-step follow-through queue.
+## The two beliefs
 
-## Still deferred (later slices)
+For every AI faction, computed each turn at the end of the turn processor:
 
-- Runtime derivation of `derived_class` (dynamic rules + override resolution at tick start).
-- Slate builder — up to 3 slots, threshold-gated, persona-weighted scoring.
-- Worldview fingerprint + stability-gated re-plan.
-- `ai_known_fleets` table + visibility/decay refresh.
-- `ai_goal_failures` table + effort-multiplier memory.
-- `ai_revision_constants` singleton (thresholds, decay rates).
-- **Execution** of follow-through activities (this slice only configures the queue).
-- Per-goal-type planner bodies that emit orders.
-- Inspector "Compute Tick" button + turn-loop integration.
+1. **`enemy_strength_total`** — running total of believed military strength of all known enemies (fog-aware).
+   - For each enemy fleet ever seen (`player_fleet_intel` rows owned by this faction), sum `quantity_seen × ship_type.points` across all ship-type rows for that fleet.
+   - Use the **last-seen** snapshot — if the fleet hasn't been re-spotted this turn, the previous belief stands. If it has been re-spotted, the intel row was already overwritten this turn by the visibility/combat phases, so simply re-summing intel naturally implements "remember + update on re-sighting."
+   - Exclude friendly factions (own faction + same `derived_class = 'friend'` in `ai_relationships`, if present; otherwise just self).
 
-## Files added/modified this slice
+2. **`enemy_strength_nearby`** — point value of enemy fleets **currently visible this turn** within **8 hexes** of any planet owned by the faction.
+   - "Currently visible" = `player_fleet_intel.last_seen_turn = currentTurn`.
+   - Distance = hex distance (use existing `hexUtils` helper) between the enemy fleet's hex and any owned-system hex; min over owned planets ≤ 8.
+   - Owned planets come from `mapState.systems` filtered by owner = this faction.
 
-**New**
-- `src/lib/ai/goalCatalog.ts`
-- `src/lib/ai/followthroughCatalog.ts`
-- `src/components/factions-config/RelationshipOverridesPanel.tsx`
-- `src/components/admin/ai/FollowthroughEditor.tsx`
+## Persistence
 
-**Modified**
-- `src/lib/ai/seedDefaultPersonas.ts` — drops embedded weights, uses catalog, seeds follow-through.
-- `src/pages/MapTestingConfig.tsx` — mounts `RelationshipOverridesPanel` under a new section.
-- `src/pages/AdminAIConfig.tsx` — mounts `FollowthroughEditor` per persona; new goal codes are first in the "+ add" list.
-- `src/components/admin/ai/AIInspector.tsx` — extended relationships columns; new persona follow-through read-out.
+Write one `ai_world_beliefs` row per (game, player, turn, belief_key) for both keys with `value_json = { points, fleet_count, breakdown }`. Existing table is reused — no schema change for beliefs.
 
-**Database** (one migration)
-- `faction_relationship_overrides` table + RLS + GRANTs + updated_at trigger.
-- `ai_persona_followthrough` table + RLS + GRANTs + updated_at trigger.
-- `ai_relationships` extended with `derived_class`, `class_source`, `class_updated_turn`.
+## Persona tolerances (schema change)
 
-## Out of scope (unchanged)
+Add two columns to `ai_personas`:
+- `enemy_strength_total_tolerance_pct numeric NOT NULL DEFAULT 0.15`
+- `enemy_strength_nearby_tolerance_pct numeric NOT NULL DEFAULT 0.25`
 
-- No change to `factions` table.
-- No change to existing weight rows (only inserts for missing pairs).
-- No engine wiring — nothing in this slice affects gameplay yet.
+Semantics: if `|new − last_recompute_baseline| / max(last_baseline, 1) ≥ tolerance`, mark goals for recompute. For this iteration we **flag** the event (a log entry + `needs_goal_recompute` belief row) — actual goal recomputation is downstream and out of scope.
+
+The "last recompute baseline" is the value of the belief at the last turn that triggered a recompute (or first turn for that faction). Store it as a third belief row `enemy_strength_total_baseline` / `enemy_strength_nearby_baseline` updated only when a trigger fires.
+
+## New phase
+
+Add `src/lib/turnProcessor/phases/threatAssessment.ts`, registered in `PHASE_ORDER` **after `visibilityPhase`** (so intel rows are fresh). Phase:
+1. Loads `ai_personas` for personas attached to AI factions in this game.
+2. Loads `player_fleet_intel` + `ship_types.points` for each AI faction.
+3. Computes the two metrics, writes `ai_world_beliefs`, compares vs baseline, and emits:
+   - one `threat_assessment` game-log entry per AI faction with both numbers and whether either trigger fired,
+   - and updates the baseline rows when a trigger fires.
+
+## Admin UI surfacing
+
+`AIInspector.tsx` already has a "World beliefs (latest)" section. Add a dedicated **"Threat assessment"** card above it that pulls the latest row for `enemy_strength_total`, `enemy_strength_nearby`, their baselines, the persona tolerances, and the delta % — color the delta when over tolerance.
+
+`AdminAIConfig.tsx` persona editor: add two number inputs (0–1, step 0.05) for the two tolerances next to the existing trait sliders.
+
+## Files
+
+- **New**: `src/lib/turnProcessor/phases/threatAssessment.ts`
+- **Edit**: `src/lib/turnProcessor/index.ts` (register phase), `src/lib/turnProcessor/types.ts` (add `threat_assessment` to `PhaseName`)
+- **Edit**: `src/components/admin/ai/AIInspector.tsx` (new section)
+- **Edit**: `src/pages/AdminAIConfig.tsx` (two tolerance inputs)
+- **Migration**: add two columns to `ai_personas` with defaults; backfill is automatic via DEFAULT.
+
+## Out of scope (call out)
+
+- Actually re-running goal selection on a trigger — only the trigger flag/log is produced now.
+- Treating "friend" factions specially beyond excluding self (no `ai_relationships` integration this pass unless you want it).
