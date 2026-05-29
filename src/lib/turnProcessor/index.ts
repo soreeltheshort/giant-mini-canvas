@@ -49,6 +49,7 @@ export const PHASE_ORDER: Phase[] = [
   groundCombatPhase,
   infectIntelLeechPhase,
   visibilityPhase,
+  threatAssessmentPhase,
 ];
 
 
