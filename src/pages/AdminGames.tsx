@@ -742,6 +742,7 @@ const AdminGames = () => {
                     if (!selectedGame || !mapState) return;
                     try {
                       const r = await seedFactionPlayers(supabase as any, selectedGame.id, mapState);
+                      setReseedDone(true);
                       toast({ title: "Faction players seeded", description: `Inserted ${r.inserted}, back-filled ${r.backfilled}, skipped ${r.skipped}.` });
                     } catch (e: any) {
                       toast({ title: "Seed failed", description: e?.message ?? String(e), variant: "destructive" });
