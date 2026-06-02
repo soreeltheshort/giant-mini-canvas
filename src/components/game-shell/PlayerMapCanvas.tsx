@@ -41,6 +41,8 @@ interface Props {
   ownClassification?: string;
   /** Admin override: show every fleet on the map regardless of sensor visibility. */
   revealAllFleets?: boolean;
+  /** Current map selection id (e.g. "fleet-<uuid>" or "sys-<id>"). Used to cycle through stacked objects on a hex on repeated clicks. */
+  currentSelectionId?: string | null;
   className?: string;
 }
 
@@ -74,6 +76,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   orderArrow = null,
   ownClassification,
   revealAllFleets = false,
+  currentSelectionId = null,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -463,14 +466,24 @@ const PlayerMapCanvas: React.FC<Props> = ({
     return map;
   }, [systems, visibleSet]);
 
-  // Build hex_key -> fleet lookup for click/hover detection
-  const hexKeyToFleet = React.useMemo(() => {
-    const map = new Map<string, MapFleet>();
+  // Build hex_key -> fleet lookup for hover (first fleet on hex).
+  // Also keep an array variant for click cycling through stacked fleets.
+  const hexKeyToFleets = React.useMemo(() => {
+    const map = new Map<string, MapFleet[]>();
     for (const f of visibleFleets) {
-      map.set(hexKey(f.hex_x, f.hex_y), f);
+      const k = hexKey(f.hex_x, f.hex_y);
+      const arr = map.get(k);
+      if (arr) arr.push(f); else map.set(k, [f]);
     }
+    // Stable ordering by fleet_id so cycling is deterministic across renders.
+    for (const arr of map.values()) arr.sort((a, b) => String(a.fleet_id).localeCompare(String(b.fleet_id)));
     return map;
   }, [visibleFleets]);
+  const hexKeyToFleet = React.useMemo(() => {
+    const map = new Map<string, MapFleet>();
+    for (const [k, arr] of hexKeyToFleets) map.set(k, arr[0]);
+    return map;
+  }, [hexKeyToFleets]);
 
   const getHexCoordsAtMouse = useCallback(
     (e: React.MouseEvent): [number, number] | null => {
@@ -575,21 +588,35 @@ const PlayerMapCanvas: React.FC<Props> = ({
           return;
         }
 
-        // Check fleet first
-        const fleet = hexKeyToFleet.get(hk);
-        if (fleet && onFleetClick) {
-          onFleetClick(fleet);
-          return;
-        }
+        // Cycle through all selectable objects on this hex (fleets + system).
+        // Order: fleets (stable by id) followed by the system. Each click on
+        // the same hex advances to the next object; clicking a different hex
+        // selects the first object there.
+        const fleetsHere = hexKeyToFleets.get(hk) ?? [];
+        const sysHere = hex && hex.has_system ? hexIdToSystem.get(hex.hex_id) ?? null : null;
+        type Stop =
+          | { kind: "fleet"; fleet: MapFleet; id: string }
+          | { kind: "system"; sys: SystemData; id: string };
+        const stops: Stop[] = [
+          ...fleetsHere.map((f) => ({ kind: "fleet" as const, fleet: f, id: `fleet-${f.fleet_id}` })),
+          ...(sysHere ? [{ kind: "system" as const, sys: sysHere, id: `sys-${sysHere.system_id}` }] : []),
+        ];
+        if (stops.length === 0) return;
 
-        // Then system
-        if (hex && hex.has_system) {
-          const sys = hexIdToSystem.get(hex.hex_id);
-          if (sys && onSystemClick) onSystemClick(sys);
+        let idx = 0;
+        if (currentSelectionId) {
+          const found = stops.findIndex((s) => s.id === currentSelectionId);
+          if (found >= 0) idx = (found + 1) % stops.length;
+        }
+        const next = stops[idx];
+        if (next.kind === "fleet") {
+          onFleetClick?.(next.fleet);
+        } else {
+          onSystemClick?.(next.sys);
         }
       }
     },
-    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, onSystemClick, onFleetClick, targetingMode, onHexTargetPicked, onFleetTargetPicked, onSystemTargetPicked]
+    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, hexKeyToFleets, currentSelectionId, onSystemClick, onFleetClick, targetingMode, onHexTargetPicked, onFleetTargetPicked, onSystemTargetPicked]
   );
 
   const handleMouseLeave = useCallback(() => {
