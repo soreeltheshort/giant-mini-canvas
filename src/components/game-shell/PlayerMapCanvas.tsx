@@ -41,6 +41,8 @@ interface Props {
   ownClassification?: string;
   /** Admin override: show every fleet on the map regardless of sensor visibility. */
   revealAllFleets?: boolean;
+  /** Current map selection id (e.g. "fleet-<uuid>" or "sys-<id>"). Used to cycle through stacked objects on a hex on repeated clicks. */
+  currentSelectionId?: string | null;
   className?: string;
 }
 
