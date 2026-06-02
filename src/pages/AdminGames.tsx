@@ -426,15 +426,20 @@ const AdminGames = () => {
       if (gps) {
         for (const gp of gps) {
           const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
-          console.log(`[Game Start] Player slot=${gp.player_slot} treasury=${STARTING_TREASURY} tribute=${econ.tribute} maintenance=${econ.maintenance}`);
-          await (supabase as any).from("game_factions").update({
+          // last_tribute/last_maintenance/treasury are integer columns. Ship maintenance
+          // is numeric — round before write or Postgres rejects the whole row silently.
+          const tributeInt = Math.round(econ.tribute);
+          const maintInt = Math.round(econ.maintenance);
+          console.log(`[Game Start] Player slot=${gp.player_slot} treasury=${STARTING_TREASURY} tribute=${tributeInt} maintenance=${maintInt}`);
+          const { error: updErr } = await (supabase as any).from("game_factions").update({
             orders_locked: false,
-            treasury: STARTING_TREASURY, // STUB: default starting treasury
-            last_tribute: econ.tribute,
-            last_maintenance: econ.maintenance,
+            treasury: STARTING_TREASURY,
+            last_tribute: tributeInt,
+            last_maintenance: maintInt,
             admin_points_remaining: gp.admin_capability || 3,
             combat_points_remaining: gp.combat_capability || 3,
           }).eq("id", gp.id);
+          if (updErr) console.warn(`[Game Start] update failed for slot=${gp.player_slot}:`, updErr.message);
         }
       }
 
