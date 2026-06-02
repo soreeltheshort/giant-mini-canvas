@@ -440,12 +440,17 @@ const AdminGames = () => {
 
       // Seed a game_players row for every AI faction (and every map-owner
       // faction) so the AI Inspector and per-turn AI loop have something to
-      // act on. Idempotent.
-      if (mapState) {
+      // act on. Idempotent. Auto-runs only if the "Reseed faction players"
+      // button has not already been pressed for this selected game.
+      if (mapState && !reseedDone) {
         try {
           const seed = await seedFactionPlayers(supabase as any, selectedGame.id, mapState);
-          console.log(`[Game Start] seedFactionPlayers — inserted=${seed.inserted}, backfilled=${seed.backfilled}, skipped=${seed.skipped}`);
+          console.log(`[Game Start] seedFactionPlayers (auto on setup→active) — inserted=${seed.inserted}, backfilled=${seed.backfilled}, skipped=${seed.skipped}`);
+          setReseedDone(true);
+          toast({ title: "Faction players auto-seeded", description: `Inserted ${seed.inserted}, back-filled ${seed.backfilled}, skipped ${seed.skipped}.` });
         } catch (e) { console.warn("[Game Start] seedFactionPlayers failed", e); }
+      } else if (reseedDone) {
+        console.log("[Game Start] Skipping auto-seed — Reseed faction players already pressed.");
       }
 
       const econSummary = Array.from(playerEcon.entries()).map(([s, e]) => `Slot${s}: +${e.tribute}/-${e.maintenance}`).join(", ");
