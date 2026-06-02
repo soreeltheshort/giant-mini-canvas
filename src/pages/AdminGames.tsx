@@ -98,6 +98,7 @@ const AdminGames = () => {
   const [shipTypes, setShipTypes] = useState<ShipTypeForUpkeep[]>([]);
   const [snapshots, setSnapshots] = useState<GameSnapshotRow[]>([]);
   const [logRefreshKey, setLogRefreshKey] = useState(0);
+  const [reseedDone, setReseedDone] = useState(false);
 
   // new game form
   const [newGameName, setNewGameName] = useState("");
