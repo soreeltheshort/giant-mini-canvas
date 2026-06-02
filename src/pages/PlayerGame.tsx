@@ -1438,6 +1438,7 @@ const PlayerGame = () => {
               orderArrow={orderArrow}
               ownClassification={player.own_classification}
               revealAllFleets={isAdmin && adminRevealAll}
+              currentSelectionId={selection.type === "army" || selection.type === "region" ? selection.id : null}
               className="flex-1"
             />
           ) : (
