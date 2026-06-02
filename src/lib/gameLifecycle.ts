@@ -284,14 +284,17 @@ export async function startGame(supabase: SupabaseClient, gameId: string) {
   const { data: gps } = await (supabase as any).from("game_factions").select("id, player_slot, admin_capability, combat_capability").eq("game_id", gameId);
   for (const gp of (gps || [])) {
     const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
-    await (supabase as any).from("game_factions").update({
+    const tributeInt = Math.round(econ.tribute);
+    const maintInt = Math.round(econ.maintenance);
+    const { error: updErr } = await (supabase as any).from("game_factions").update({
       orders_locked: false,
       treasury: STARTING_TREASURY,
-      last_tribute: econ.tribute,
-      last_maintenance: econ.maintenance,
+      last_tribute: tributeInt,
+      last_maintenance: maintInt,
       admin_points_remaining: gp.admin_capability || 3,
       combat_points_remaining: gp.combat_capability || 3,
     }).eq("id", gp.id);
+    if (updErr) console.warn(`[startGame] update failed slot=${gp.player_slot}:`, updErr.message);
   }
 
   await addLog(supabase, gameId, 1, "status_changed", `Game started — Turn 1 orders phase. Starting treasury: ${STARTING_TREASURY}.`);
