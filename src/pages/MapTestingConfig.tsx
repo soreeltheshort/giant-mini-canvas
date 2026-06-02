@@ -256,7 +256,7 @@ function PlanetTypeRow({ pt, isAdmin, onUpdate, onRemove }: {
         {isAdmin && (
           <div className="flex gap-1">
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(true)}>Edit</Button>
-            <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={() => onRemove(pt.id)}>Delete</Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs text-alert" onClick={() => onRemove(pt.id)}>Delete</Button>
           </div>
         )}
       </div>
@@ -399,13 +399,13 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
             <span>AI: <span className="text-foreground">{personaName ?? "—"}</span></span>
             <span>Fleets: <span className="text-foreground">{fleetConvName ?? "—"}</span></span>
             <span>Ships: <span className="text-foreground">{shipConvName ?? "—"}</span></span>
-            {faction.infect && <span className="text-destructive font-semibold uppercase tracking-wider">Infect</span>}
+            {faction.infect && <span className="text-alert font-semibold uppercase tracking-wider">Infect</span>}
           </div>
         </div>
         {isAdmin && (
           <div className="flex gap-1">
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(true)}>Edit</Button>
-            <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={() => onRemove(faction.id)}>Delete</Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs text-alert" onClick={() => onRemove(faction.id)}>Delete</Button>
           </div>
         )}
       </div>
@@ -465,9 +465,9 @@ function FactionRow({ faction, isAdmin, personas, onUpdate, onRemove }: {
           type="checkbox"
           checked={infect}
           onChange={(e) => setInfect(e.target.checked)}
-          className="h-4 w-4 accent-destructive"
+          className="h-4 w-4 accent-alert"
         />
-        <span className="font-semibold uppercase tracking-wider text-destructive">Infect</span>
+        <span className="font-semibold uppercase tracking-wider text-alert">Infect</span>
         <span className="text-muted-foreground font-normal normal-case">— routes ground invasions through the alternate (Synod) logic.</span>
       </label>
       <div className="flex gap-1">
@@ -519,7 +519,7 @@ function ActionRow({ action, isAdmin, onUpdate, onRemove }: {
         {isAdmin && (
           <div className="flex gap-1">
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(true)}>Edit</Button>
-            <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={() => onRemove(action.id)}>Delete</Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs text-alert" onClick={() => onRemove(action.id)}>Delete</Button>
           </div>
         )}
       </div>
@@ -602,7 +602,7 @@ function FacilityTypeRow({ ft, isAdmin, onUpdate, onRemove, allFacilityTypes }: 
         {isAdmin && (
           <div className="flex gap-1">
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditing(true)}>Edit</Button>
-            <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={() => onRemove(ft.id)}>Delete</Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs text-alert" onClick={() => onRemove(ft.id)}>Delete</Button>
           </div>
         )}
       </div>
@@ -886,7 +886,7 @@ function FleetSizeCategoriesSection({ isAdmin }: { isAdmin: boolean }) {
               />
             </div>
             {isAdmin && (
-              <Button size="sm" variant="ghost" className="h-8 text-xs text-destructive" onClick={() => remove(row)}>
+              <Button size="sm" variant="ghost" className="h-8 text-xs text-alert" onClick={() => remove(row)}>
                 Delete
               </Button>
             )}

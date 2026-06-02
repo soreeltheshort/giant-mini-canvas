@@ -96,13 +96,13 @@ export default function RelationshipOverridesPanel({
               <span className="font-mono flex-1 min-w-0 truncate">
                 {factionLabel(r.viewer_faction_id)} <span className="text-muted-foreground">views</span>{" "}
                 {factionLabel(r.target_faction_id)} <span className="text-muted-foreground">as</span>{" "}
-                <span className={r.forced_class === "enemy" ? "text-destructive font-semibold" : "text-accent font-semibold"}>
+                <span className={r.forced_class === "enemy" ? "text-alert font-semibold" : "text-accent font-semibold"}>
                   {r.forced_class}
                 </span>
               </span>
               {r.notes && <span className="text-muted-foreground italic truncate max-w-[40%]">{r.notes}</span>}
               {isAdmin && (
-                <Button size="sm" variant="ghost" className="h-7 text-destructive" onClick={() => remove(r.id)}>×</Button>
+                <Button size="sm" variant="ghost" className="h-7 text-alert" onClick={() => remove(r.id)}>×</Button>
               )}
             </div>
           ))}
