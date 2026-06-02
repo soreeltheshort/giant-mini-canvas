@@ -98,6 +98,7 @@ const AdminGames = () => {
   const [shipTypes, setShipTypes] = useState<ShipTypeForUpkeep[]>([]);
   const [snapshots, setSnapshots] = useState<GameSnapshotRow[]>([]);
   const [logRefreshKey, setLogRefreshKey] = useState(0);
+  const [reseedDone, setReseedDone] = useState(false);
 
   // new game form
   const [newGameName, setNewGameName] = useState("");
@@ -159,6 +160,7 @@ const AdminGames = () => {
   /* ── load a game ── */
   const loadGame = useCallback(async (game: GameRow) => {
     setSelectedGame(game);
+    setReseedDone(false);
     // players
     const { data: pData } = await (supabase as any).from("game_factions").select("*, factions:faction_id(id, name, code_name, is_player_faction)").eq("game_id", game.id).order("player_slot");
     setPlayers(pData || []);
@@ -438,12 +440,17 @@ const AdminGames = () => {
 
       // Seed a game_players row for every AI faction (and every map-owner
       // faction) so the AI Inspector and per-turn AI loop have something to
-      // act on. Idempotent.
-      if (mapState) {
+      // act on. Idempotent. Auto-runs only if the "Reseed faction players"
+      // button has not already been pressed for this selected game.
+      if (mapState && !reseedDone) {
         try {
           const seed = await seedFactionPlayers(supabase as any, selectedGame.id, mapState);
-          console.log(`[Game Start] seedFactionPlayers — inserted=${seed.inserted}, backfilled=${seed.backfilled}, skipped=${seed.skipped}`);
+          console.log(`[Game Start] seedFactionPlayers (auto on setup→active) — inserted=${seed.inserted}, backfilled=${seed.backfilled}, skipped=${seed.skipped}`);
+          setReseedDone(true);
+          toast({ title: "Faction players auto-seeded", description: `Inserted ${seed.inserted}, back-filled ${seed.backfilled}, skipped ${seed.skipped}.` });
         } catch (e) { console.warn("[Game Start] seedFactionPlayers failed", e); }
+      } else if (reseedDone) {
+        console.log("[Game Start] Skipping auto-seed — Reseed faction players already pressed.");
       }
 
       const econSummary = Array.from(playerEcon.entries()).map(([s, e]) => `Slot${s}: +${e.tribute}/-${e.maintenance}`).join(", ");
@@ -735,6 +742,7 @@ const AdminGames = () => {
                     if (!selectedGame || !mapState) return;
                     try {
                       const r = await seedFactionPlayers(supabase as any, selectedGame.id, mapState);
+                      setReseedDone(true);
                       toast({ title: "Faction players seeded", description: `Inserted ${r.inserted}, back-filled ${r.backfilled}, skipped ${r.skipped}.` });
                     } catch (e: any) {
                       toast({ title: "Seed failed", description: e?.message ?? String(e), variant: "destructive" });
