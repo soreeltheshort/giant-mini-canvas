@@ -588,21 +588,35 @@ const PlayerMapCanvas: React.FC<Props> = ({
           return;
         }
 
-        // Check fleet first
-        const fleet = hexKeyToFleet.get(hk);
-        if (fleet && onFleetClick) {
-          onFleetClick(fleet);
-          return;
-        }
+        // Cycle through all selectable objects on this hex (fleets + system).
+        // Order: fleets (stable by id) followed by the system. Each click on
+        // the same hex advances to the next object; clicking a different hex
+        // selects the first object there.
+        const fleetsHere = hexKeyToFleets.get(hk) ?? [];
+        const sysHere = hex && hex.has_system ? hexIdToSystem.get(hex.hex_id) ?? null : null;
+        type Stop =
+          | { kind: "fleet"; fleet: MapFleet; id: string }
+          | { kind: "system"; sys: SystemData; id: string };
+        const stops: Stop[] = [
+          ...fleetsHere.map((f) => ({ kind: "fleet" as const, fleet: f, id: `fleet-${f.fleet_id}` })),
+          ...(sysHere ? [{ kind: "system" as const, sys: sysHere, id: `sys-${sysHere.system_id}` }] : []),
+        ];
+        if (stops.length === 0) return;
 
-        // Then system
-        if (hex && hex.has_system) {
-          const sys = hexIdToSystem.get(hex.hex_id);
-          if (sys && onSystemClick) onSystemClick(sys);
+        let idx = 0;
+        if (currentSelectionId) {
+          const found = stops.findIndex((s) => s.id === currentSelectionId);
+          if (found >= 0) idx = (found + 1) % stops.length;
+        }
+        const next = stops[idx];
+        if (next.kind === "fleet") {
+          onFleetClick?.(next.fleet);
+        } else {
+          onSystemClick?.(next.sys);
         }
       }
     },
-    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, onSystemClick, onFleetClick, targetingMode, onHexTargetPicked, onFleetTargetPicked, onSystemTargetPicked]
+    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, hexKeyToFleets, currentSelectionId, onSystemClick, onFleetClick, targetingMode, onHexTargetPicked, onFleetTargetPicked, onSystemTargetPicked]
   );
 
   const handleMouseLeave = useCallback(() => {
