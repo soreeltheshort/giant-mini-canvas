@@ -466,14 +466,24 @@ const PlayerMapCanvas: React.FC<Props> = ({
     return map;
   }, [systems, visibleSet]);
 
-  // Build hex_key -> fleet lookup for click/hover detection
-  const hexKeyToFleet = React.useMemo(() => {
-    const map = new Map<string, MapFleet>();
+  // Build hex_key -> fleet lookup for hover (first fleet on hex).
+  // Also keep an array variant for click cycling through stacked fleets.
+  const hexKeyToFleets = React.useMemo(() => {
+    const map = new Map<string, MapFleet[]>();
     for (const f of visibleFleets) {
-      map.set(hexKey(f.hex_x, f.hex_y), f);
+      const k = hexKey(f.hex_x, f.hex_y);
+      const arr = map.get(k);
+      if (arr) arr.push(f); else map.set(k, [f]);
     }
+    // Stable ordering by fleet_id so cycling is deterministic across renders.
+    for (const arr of map.values()) arr.sort((a, b) => String(a.fleet_id).localeCompare(String(b.fleet_id)));
     return map;
   }, [visibleFleets]);
+  const hexKeyToFleet = React.useMemo(() => {
+    const map = new Map<string, MapFleet>();
+    for (const [k, arr] of hexKeyToFleets) map.set(k, arr[0]);
+    return map;
+  }, [hexKeyToFleets]);
 
   const getHexCoordsAtMouse = useCallback(
     (e: React.MouseEvent): [number, number] | null => {
