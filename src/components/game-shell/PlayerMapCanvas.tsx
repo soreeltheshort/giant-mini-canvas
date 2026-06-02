@@ -76,6 +76,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   orderArrow = null,
   ownClassification,
   revealAllFleets = false,
+  currentSelectionId = null,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
