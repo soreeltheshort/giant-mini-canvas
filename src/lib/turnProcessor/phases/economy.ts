@@ -141,17 +141,17 @@ export const economyPhase: Phase = {
       for (const st of (allShipTypes || [])) shipMaintMap.set(st.id, Number(st.maintenance));
 
       for (const gf of gameFleets) {
-        const slot = ownerToSlot(gf.owner_classification);
-        if (slot === undefined) continue;
+        const key = ownerToEconKey(gf.owner_classification, ctx.factions);
+        if (!key) continue;
         const ships = (fleetShips || []).filter((fs: any) => fs.game_fleet_id === gf.id);
         const fleetMaint = ships.reduce(
           (sum: number, fs: any) => sum + (shipMaintMap.get(fs.ship_type_id) || 0) * fs.quantity,
           0
         );
         if (fleetMaint > 0) {
-          const econ = ctx.playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+          const econ = ctx.playerEcon.get(key) || { tribute: 0, maintenance: 0 };
           econ.maintenance += fleetMaint;
-          ctx.playerEcon.set(slot, econ);
+          ctx.playerEcon.set(key, econ);
         }
       }
     }
