@@ -12,22 +12,7 @@
  */
 import { processNextTurn, DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
 import type { Phase, TurnContext } from "../types";
-
-const PROVINCE_NAMES: Record<number, string> = {
-  1: "Valerian", 2: "Aurelian", 3: "Cassian",
-  4: "Dravian", 5: "Marcellan", 6: "Octavian",
-};
-
-function ownerToSlot(owner: string | undefined | null): number | undefined {
-  if (!owner) return undefined;
-  const m = owner.match(/PROVINCE_(\d+)/);
-  if (m) return parseInt(m[1], 10);
-  const lc = owner.toLowerCase();
-  for (const [slot, name] of Object.entries(PROVINCE_NAMES)) {
-    if (name.toLowerCase() === lc) return parseInt(slot, 10);
-  }
-  return undefined;
-}
+import { ownerToEconKey, rowEconKey } from "../ownerKey";
 
 export const economyPhase: Phase = {
   name: "economy",
@@ -77,12 +62,12 @@ export const economyPhase: Phase = {
       }];
       mapState.systems.set(sysId, { ...sys, facilities_in_production: list });
 
-      const slot = ownerToSlot(sys.owner);
+      const key = ownerToEconKey(sys.owner, ctx.factions);
       const upfront = Math.max(0, Number(ft.cost) || 0);
-      if (slot !== undefined && upfront > 0) {
-        const econ = ctx.playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+      if (key && upfront > 0) {
+        const econ = ctx.playerEcon.get(key) || { tribute: 0, maintenance: 0 };
         econ.maintenance += upfront;
-        ctx.playerEcon.set(slot, econ);
+        ctx.playerEcon.set(key, econ);
       }
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "economy",
@@ -116,12 +101,12 @@ export const economyPhase: Phase = {
       const result = processNextTurn(sys, facilityTypes, DEFAULT_TURN_CONSTANTS, 0, shipTypes);
       mapState.systems.set(sys.system_id, result.planet);
 
-      const slot = ownerToSlot(sys.owner);
-      if (slot !== undefined) {
-        const econ = ctx.playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+      const key = ownerToEconKey(sys.owner, ctx.factions);
+      if (key) {
+        const econ = ctx.playerEcon.get(key) || { tribute: 0, maintenance: 0 };
         econ.tribute += result.tributeBreakdown.totalTribute;
         econ.maintenance += result.upkeepBreakdown.totalUpkeep;
-        ctx.playerEcon.set(slot, econ);
+        ctx.playerEcon.set(key, econ);
       }
 
       ctx.logs.push({
@@ -156,17 +141,17 @@ export const economyPhase: Phase = {
       for (const st of (allShipTypes || [])) shipMaintMap.set(st.id, Number(st.maintenance));
 
       for (const gf of gameFleets) {
-        const slot = ownerToSlot(gf.owner_classification);
-        if (slot === undefined) continue;
+        const key = ownerToEconKey(gf.owner_classification, ctx.factions);
+        if (!key) continue;
         const ships = (fleetShips || []).filter((fs: any) => fs.game_fleet_id === gf.id);
         const fleetMaint = ships.reduce(
           (sum: number, fs: any) => sum + (shipMaintMap.get(fs.ship_type_id) || 0) * fs.quantity,
           0
         );
         if (fleetMaint > 0) {
-          const econ = ctx.playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+          const econ = ctx.playerEcon.get(key) || { tribute: 0, maintenance: 0 };
           econ.maintenance += fleetMaint;
-          ctx.playerEcon.set(slot, econ);
+          ctx.playerEcon.set(key, econ);
         }
       }
     }
@@ -281,10 +266,11 @@ export const economyPhase: Phase = {
 
         // Charge the ordering player's treasury via the maintenance accumulator.
         const orderingPlayer = ctx.players.find(p => p.id === order.player_id);
-        if (orderingPlayer && cost > 0) {
-          const econ = ctx.playerEcon.get(orderingPlayer.player_slot) || { tribute: 0, maintenance: 0 };
+        const orderingKey = orderingPlayer ? rowEconKey(orderingPlayer) : undefined;
+        if (orderingKey && cost > 0) {
+          const econ = ctx.playerEcon.get(orderingKey) || { tribute: 0, maintenance: 0 };
           econ.maintenance += cost;
-          ctx.playerEcon.set(orderingPlayer.player_slot, econ);
+          ctx.playerEcon.set(orderingKey, econ);
         }
 
         supplyApplied++;

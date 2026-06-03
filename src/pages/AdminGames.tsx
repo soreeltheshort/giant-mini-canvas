@@ -20,6 +20,7 @@ import { processNextTurn, DEFAULT_TURN_CONSTANTS, ShipTypeForUpkeep } from "@/li
 import { runTurnProcessor } from "@/lib/turnProcessor";
 import { runTurnZero } from "@/lib/turnZero";
 import { seedFactionPlayers } from "@/lib/gameLifecycle";
+import { ownerToEconKey, rowEconKey } from "@/lib/turnProcessor/ownerKey";
 import { SystemData, MapState } from "@/lib/mapTypes";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
 import { Badge } from "@/components/ui/badge";
@@ -354,26 +355,25 @@ const AdminGames = () => {
         nameToSlot.set(name.toLowerCase(), parseInt(slot, 10));
       }
 
-      const playerEcon = new Map<number, { tribute: number; maintenance: number }>();
+      // Load faction catalog for owner→faction id mapping (AI/neutral keying).
+      const { data: factionsRaw } = await (supabase as any).from("factions").select("id, name, code_name");
+      const factions = (factionsRaw || []) as Array<{ id: string; name: string; code_name: string | null }>;
+
+      // Keys: `slot:N` for province players, `faction:<UUID>` for AI/neutral.
+      const playerEcon = new Map<string, { tribute: number; maintenance: number }>();
       if (mapState) {
         const systems = Array.from(mapState.systems.values());
         const eligible = systems.filter(s => s.current_population > 0 && s.owner && s.owner !== "" && s.owner.toLowerCase() !== "unowned");
         console.log(`[Game Start] mapState loaded, ${systems.length} systems, ${eligible.length} eligible, ${facilityTypes.length} facilityTypes, ${shipTypes.length} shipTypes`);
         for (const sys of eligible) {
           const result = processNextTurn(sys, facilityTypes, DEFAULT_TURN_CONSTANTS, 0, shipTypes);
-          let slot: number | undefined;
-          const ownerMatch = sys.owner?.match(/PROVINCE_(\d+)/);
-          if (ownerMatch) {
-            slot = parseInt(ownerMatch[1], 10);
-          } else if (sys.owner) {
-            slot = nameToSlot.get(sys.owner.toLowerCase());
-          }
-          if (slot !== undefined) {
-            const existing = playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+          const key = ownerToEconKey(sys.owner, factions);
+          if (key) {
+            const existing = playerEcon.get(key) || { tribute: 0, maintenance: 0 };
             existing.tribute += result.tributeBreakdown.totalTribute;
             existing.maintenance += result.upkeepBreakdown.totalUpkeep;
-            playerEcon.set(slot, existing);
-            console.log(`[Game Start] System "${sys.system_name}" owner="${sys.owner}" slot=${slot} tribute=${result.tributeBreakdown.totalTribute} upkeep=${result.upkeepBreakdown.totalUpkeep}`);
+            playerEcon.set(key, existing);
+            console.log(`[Game Start] System "${sys.system_name}" owner="${sys.owner}" key=${key} tribute=${result.tributeBreakdown.totalTribute} upkeep=${result.upkeepBreakdown.totalUpkeep}`);
           }
         }
       } else {
@@ -403,34 +403,33 @@ const AdminGames = () => {
           for (const st of allShipTypes) shipMaintMap.set(st.id, Number(st.maintenance));
 
           for (const gf of gameFleets) {
-            const ownerRaw = (gf.owner_classification || "").toLowerCase();
-            const ownerStripped = ownerRaw.replace(/_int\d*$/i, "");
-            const ownerSlot = nameToSlot.get(ownerRaw) ?? nameToSlot.get(ownerStripped);
-            if (ownerSlot === undefined) continue;
+            const key = ownerToEconKey(gf.owner_classification, factions);
+            if (!key) continue;
 
             const ships = fleetShips.filter((fs: any) => fs.game_fleet_id === gf.id);
             let fleetMaint = 0;
             for (const fs of ships) {
               fleetMaint += (shipMaintMap.get(fs.ship_type_id) || 0) * fs.quantity;
             }
-            const existing = playerEcon.get(ownerSlot) || { tribute: 0, maintenance: 0 };
+            const existing = playerEcon.get(key) || { tribute: 0, maintenance: 0 };
             existing.maintenance += fleetMaint;
-            playerEcon.set(ownerSlot, existing);
-            console.log(`[Game Start] Fleet ${gf.fleet_id} owner="${gf.owner_classification}" slot=${ownerSlot} fleetMaint=${fleetMaint}`);
+            playerEcon.set(key, existing);
+            console.log(`[Game Start] Fleet ${gf.fleet_id} owner="${gf.owner_classification}" key=${key} fleetMaint=${fleetMaint}`);
           }
         }
       }
 
       // Set starting treasury + Turn 1 income/costs for each player
-      const { data: gps } = await (supabase as any).from("game_factions").select("id, player_slot, admin_capability, combat_capability").eq("game_id", selectedGame.id);
+      const { data: gps } = await (supabase as any).from("game_factions").select("id, player_slot, faction_id, admin_capability, combat_capability").eq("game_id", selectedGame.id);
       if (gps) {
         for (const gp of gps) {
-          const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
+          const key = rowEconKey(gp);
+          const econ = (key && playerEcon.get(key)) || { tribute: 0, maintenance: 0 };
           // last_tribute/last_maintenance/treasury are integer columns. Ship maintenance
           // is numeric — round before write or Postgres rejects the whole row silently.
           const tributeInt = Math.round(econ.tribute);
           const maintInt = Math.round(econ.maintenance);
-          console.log(`[Game Start] Player slot=${gp.player_slot} treasury=${STARTING_TREASURY} tribute=${tributeInt} maintenance=${maintInt}`);
+          console.log(`[Game Start] Faction key=${key} treasury=${STARTING_TREASURY} tribute=${tributeInt} maintenance=${maintInt}`);
           const { error: updErr } = await (supabase as any).from("game_factions").update({
             orders_locked: false,
             treasury: STARTING_TREASURY,
@@ -439,7 +438,7 @@ const AdminGames = () => {
             admin_points_remaining: gp.admin_capability || 3,
             combat_points_remaining: gp.combat_capability || 3,
           }).eq("id", gp.id);
-          if (updErr) console.warn(`[Game Start] update failed for slot=${gp.player_slot}:`, updErr.message);
+          if (updErr) console.warn(`[Game Start] update failed for key=${key}:`, updErr.message);
         }
       }
 
@@ -458,7 +457,7 @@ const AdminGames = () => {
         console.log("[Game Start] Skipping auto-seed — Reseed faction players already pressed.");
       }
 
-      const econSummary = Array.from(playerEcon.entries()).map(([s, e]) => `Slot${s}: +${e.tribute}/-${e.maintenance}`).join(", ");
+      const econSummary = Array.from(playerEcon.entries()).map(([k, e]) => `${k}: +${e.tribute}/-${e.maintenance}`).join(", ");
       await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase. Starting treasury: ${STARTING_TREASURY} (stub default). Economics: ${econSummary || "none calculated"}`);
       setSelectedGame({ ...selectedGame, status, turn_number: 1 });
       await fetchGames();
@@ -582,11 +581,12 @@ const AdminGames = () => {
       // Apply per-player econ deltas + reset action points and order locks
       const { data: gps } = await (supabase as any)
         .from("game_factions")
-        .select("id, player_slot, treasury, admin_capability, combat_capability")
+        .select("id, player_slot, faction_id, treasury, admin_capability, combat_capability")
         .eq("game_id", selectedGame.id);
       if (gps) {
         for (const gp of gps) {
-          const econ = result.playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
+          const key = rowEconKey(gp);
+          const econ = (key && result.playerEcon.get(key)) || { tribute: 0, maintenance: 0 };
           // Integer columns — ship maintenance is numeric, must round or the
           // whole row update is rejected by Postgres (silently in supabase-js).
           const tributeInt = Math.round(econ.tribute);
@@ -600,7 +600,7 @@ const AdminGames = () => {
             admin_points_remaining: gp.admin_capability || 3,
             combat_points_remaining: gp.combat_capability || 3,
           }).eq("id", gp.id);
-          if (updErr) console.warn(`[runTurn] player update failed slot=${gp.player_slot}:`, updErr.message);
+          if (updErr) console.warn(`[runTurn] player update failed key=${key}:`, updErr.message);
         }
       }
 

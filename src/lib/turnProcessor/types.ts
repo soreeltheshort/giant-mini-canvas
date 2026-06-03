@@ -9,6 +9,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import type { MapState } from "@/lib/mapTypes";
 import type { DbFacilityType } from "@/hooks/useFacilityTypes";
 import type { ShipTypeForUpkeep } from "@/lib/turnEngine";
+import type { FactionMeta } from "./ownerKey";
 
 export type PhaseName = "economy" | "movement" | "visibility" | "combat" | "ground_combat" | "infect_intel_leech" | "threat_assessment";
 
@@ -26,8 +27,9 @@ export interface ConditionalOrder {
 /** Game player record (subset used by phases). */
 export interface PlayerCtx {
   id: string;
-  user_id: string;
-  player_slot: number;
+  user_id: string | null;
+  player_slot: number | null;
+  faction_id: string | null;
   treasury: number;
   admin_capability: number;
   combat_capability: number;
@@ -64,11 +66,17 @@ export interface TurnContext {
   shipTypes: ShipTypeForUpkeep[];
 
   players: PlayerCtx[];
+  /** All factions in the game (used to map owner strings → faction id). */
+  factions: FactionMeta[];
   /** All conditional orders for currentTurn, loaded once before phases run. */
   orders: ConditionalOrder[];
 
-  /** Per-player econ deltas accumulated by phases (slot → delta). */
-  playerEcon: Map<number, PlayerEconDelta>;
+  /**
+   * Per-faction econ deltas accumulated by phases.
+   * Keys: `slot:N` for province players, `faction:<UUID>` for AI/neutral.
+   * Use ownerToEconKey / rowEconKey from ./ownerKey to compute keys.
+   */
+  playerEcon: Map<string, PlayerEconDelta>;
 
   /** Logs queued for bulk insertion at the end of processing. */
   logs: PhaseLogEntry[];
