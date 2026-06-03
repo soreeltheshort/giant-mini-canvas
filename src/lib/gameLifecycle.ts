@@ -9,6 +9,7 @@ import type { MapState, SystemData } from "./mapTypes";
 import { runTurnZero } from "./turnZero";
 import { runTurnProcessor } from "./turnProcessor";
 import { processNextTurn, DEFAULT_TURN_CONSTANTS, type ShipTypeForUpkeep } from "./turnEngine";
+import { ownerToEconKey, rowEconKey } from "./turnProcessor/ownerKey";
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
