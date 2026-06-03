@@ -62,12 +62,12 @@ export const economyPhase: Phase = {
       }];
       mapState.systems.set(sysId, { ...sys, facilities_in_production: list });
 
-      const slot = ownerToSlot(sys.owner);
+      const key = ownerToEconKey(sys.owner, ctx.factions);
       const upfront = Math.max(0, Number(ft.cost) || 0);
-      if (slot !== undefined && upfront > 0) {
-        const econ = ctx.playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+      if (key && upfront > 0) {
+        const econ = ctx.playerEcon.get(key) || { tribute: 0, maintenance: 0 };
         econ.maintenance += upfront;
-        ctx.playerEcon.set(slot, econ);
+        ctx.playerEcon.set(key, econ);
       }
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "economy",
