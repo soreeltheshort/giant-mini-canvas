@@ -237,23 +237,21 @@ export async function startGame(supabase: SupabaseClient, gameId: string) {
   // process turns and appear in the AI Inspector dropdown.
   await seedFactionPlayers(supabase, gameId, mapState);
 
-  // Per-system tribute & maintenance
-  const nameToSlot = new Map<string, number>();
-  for (const [slot, name] of Object.entries(PROVINCE_NAMES)) nameToSlot.set(name.toLowerCase(), parseInt(slot, 10));
+  // Load faction catalog (used to map owner strings → faction id for AI/neutral).
+  const { data: factionsRaw } = await (supabase as any).from("factions").select("id, name, code_name");
+  const factions = (factionsRaw || []) as Array<{ id: string; name: string; code_name: string | null }>;
 
-  const playerEcon = new Map<number, { tribute: number; maintenance: number }>();
+  // Per-system tribute & maintenance, keyed by `slot:N` or `faction:<UUID>`.
+  const playerEcon = new Map<string, { tribute: number; maintenance: number }>();
   const systems = Array.from(mapState.systems.values());
   for (const sys of systems.filter(s => s.current_population > 0 && s.owner && s.owner.toLowerCase() !== "unowned")) {
     const result = processNextTurn(sys, facilityTypes as any, DEFAULT_TURN_CONSTANTS, 0, shipTypes);
-    let slot: number | undefined;
-    const m = sys.owner?.match(/PROVINCE_(\d+)/);
-    if (m) slot = parseInt(m[1], 10);
-    else if (sys.owner) slot = nameToSlot.get(sys.owner.toLowerCase());
-    if (slot !== undefined) {
-      const e = playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+    const key = ownerToEconKey(sys.owner, factions);
+    if (key) {
+      const e = playerEcon.get(key) || { tribute: 0, maintenance: 0 };
       e.tribute += result.tributeBreakdown.totalTribute;
       e.maintenance += result.upkeepBreakdown.totalUpkeep;
-      playerEcon.set(slot, e);
+      playerEcon.set(key, e);
     }
   }
 
@@ -267,24 +265,22 @@ export async function startGame(supabase: SupabaseClient, gameId: string) {
     ]);
     const maintMap = new Map<string, number>((allSt || []).map((s: any) => [s.id, Number(s.maintenance)]));
     for (const gf of gameFleets) {
-      const ownerRaw = (gf.owner_classification || "").toLowerCase();
-      const ownerStripped = ownerRaw.replace(/_int\d*$/i, "");
-      const slot = nameToSlot.get(ownerRaw) ?? nameToSlot.get(ownerStripped);
-      if (slot === undefined) continue;
-
+      const key = ownerToEconKey(gf.owner_classification, factions);
+      if (!key) continue;
       const ships = (fs || []).filter((x: any) => x.game_fleet_id === gf.id);
       let maint = 0;
       for (const s of ships) maint += (maintMap.get(s.ship_type_id) || 0) * s.quantity;
-      const e = playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+      const e = playerEcon.get(key) || { tribute: 0, maintenance: 0 };
       e.maintenance += maint;
-      playerEcon.set(slot, e);
+      playerEcon.set(key, e);
     }
   }
 
   // Apply starting treasury & econ to each player
-  const { data: gps } = await (supabase as any).from("game_factions").select("id, player_slot, admin_capability, combat_capability").eq("game_id", gameId);
+  const { data: gps } = await (supabase as any).from("game_factions").select("id, player_slot, faction_id, admin_capability, combat_capability").eq("game_id", gameId);
   for (const gp of (gps || [])) {
-    const econ = playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
+    const key = rowEconKey(gp);
+    const econ = (key && playerEcon.get(key)) || { tribute: 0, maintenance: 0 };
     const tributeInt = Math.round(econ.tribute);
     const maintInt = Math.round(econ.maintenance);
     const { error: updErr } = await (supabase as any).from("game_factions").update({
@@ -295,7 +291,7 @@ export async function startGame(supabase: SupabaseClient, gameId: string) {
       admin_points_remaining: gp.admin_capability || 3,
       combat_points_remaining: gp.combat_capability || 3,
     }).eq("id", gp.id);
-    if (updErr) console.warn(`[startGame] update failed slot=${gp.player_slot}:`, updErr.message);
+    if (updErr) console.warn(`[startGame] update failed key=${key}:`, updErr.message);
   }
 
   await addLog(supabase, gameId, 1, "status_changed", `Game started — Turn 1 orders phase. Starting treasury: ${STARTING_TREASURY}.`);
