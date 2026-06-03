@@ -581,11 +581,12 @@ const AdminGames = () => {
       // Apply per-player econ deltas + reset action points and order locks
       const { data: gps } = await (supabase as any)
         .from("game_factions")
-        .select("id, player_slot, treasury, admin_capability, combat_capability")
+        .select("id, player_slot, faction_id, treasury, admin_capability, combat_capability")
         .eq("game_id", selectedGame.id);
       if (gps) {
         for (const gp of gps) {
-          const econ = result.playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
+          const key = rowEconKey(gp);
+          const econ = (key && result.playerEcon.get(key)) || { tribute: 0, maintenance: 0 };
           // Integer columns — ship maintenance is numeric, must round or the
           // whole row update is rejected by Postgres (silently in supabase-js).
           const tributeInt = Math.round(econ.tribute);
@@ -599,7 +600,7 @@ const AdminGames = () => {
             admin_points_remaining: gp.admin_capability || 3,
             combat_points_remaining: gp.combat_capability || 3,
           }).eq("id", gp.id);
-          if (updErr) console.warn(`[runTurn] player update failed slot=${gp.player_slot}:`, updErr.message);
+          if (updErr) console.warn(`[runTurn] player update failed key=${key}:`, updErr.message);
         }
       }
 
