@@ -101,12 +101,12 @@ export const economyPhase: Phase = {
       const result = processNextTurn(sys, facilityTypes, DEFAULT_TURN_CONSTANTS, 0, shipTypes);
       mapState.systems.set(sys.system_id, result.planet);
 
-      const slot = ownerToSlot(sys.owner);
-      if (slot !== undefined) {
-        const econ = ctx.playerEcon.get(slot) || { tribute: 0, maintenance: 0 };
+      const key = ownerToEconKey(sys.owner, ctx.factions);
+      if (key) {
+        const econ = ctx.playerEcon.get(key) || { tribute: 0, maintenance: 0 };
         econ.tribute += result.tributeBreakdown.totalTribute;
         econ.maintenance += result.upkeepBreakdown.totalUpkeep;
-        ctx.playerEcon.set(slot, econ);
+        ctx.playerEcon.set(key, econ);
       }
 
       ctx.logs.push({
