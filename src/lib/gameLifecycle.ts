@@ -325,9 +325,10 @@ export async function processTurn(supabase: SupabaseClient, gameId: string) {
     turn_phase: "orders",
   }).eq("id", gameId);
 
-  const { data: gps } = await (supabase as any).from("game_factions").select("id, player_slot, treasury, admin_capability, combat_capability").eq("game_id", gameId);
+  const { data: gps } = await (supabase as any).from("game_factions").select("id, player_slot, faction_id, treasury, admin_capability, combat_capability").eq("game_id", gameId);
   for (const gp of (gps || [])) {
-    const econ = result.playerEcon.get(gp.player_slot) || { tribute: 0, maintenance: 0 };
+    const key = rowEconKey(gp);
+    const econ = (key && result.playerEcon.get(key)) || { tribute: 0, maintenance: 0 };
     const tributeInt = Math.round(econ.tribute);
     const maintInt = Math.round(econ.maintenance);
     const newTreasury = (gp.treasury || 0) + tributeInt - maintInt;
@@ -339,7 +340,7 @@ export async function processTurn(supabase: SupabaseClient, gameId: string) {
       admin_points_remaining: gp.admin_capability || 3,
       combat_points_remaining: gp.combat_capability || 3,
     }).eq("id", gp.id);
-    if (updErr) console.warn(`[processTurn] update failed slot=${gp.player_slot}:`, updErr.message);
+    if (updErr) console.warn(`[processTurn] update failed key=${key}:`, updErr.message);
   }
 
   await addLog(supabase, gameId, currentTurn, "turn_processed",
