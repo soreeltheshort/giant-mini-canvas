@@ -20,6 +20,7 @@ import { processNextTurn, DEFAULT_TURN_CONSTANTS, ShipTypeForUpkeep } from "@/li
 import { runTurnProcessor } from "@/lib/turnProcessor";
 import { runTurnZero } from "@/lib/turnZero";
 import { seedFactionPlayers } from "@/lib/gameLifecycle";
+import { ownerToEconKey, rowEconKey } from "@/lib/turnProcessor/ownerKey";
 import { SystemData, MapState } from "@/lib/mapTypes";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
 import { Badge } from "@/components/ui/badge";
