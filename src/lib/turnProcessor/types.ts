@@ -27,8 +27,9 @@ export interface ConditionalOrder {
 /** Game player record (subset used by phases). */
 export interface PlayerCtx {
   id: string;
-  user_id: string;
-  player_slot: number;
+  user_id: string | null;
+  player_slot: number | null;
+  faction_id: string | null;
   treasury: number;
   admin_capability: number;
   combat_capability: number;
