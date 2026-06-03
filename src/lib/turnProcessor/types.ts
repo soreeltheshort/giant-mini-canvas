@@ -66,11 +66,17 @@ export interface TurnContext {
   shipTypes: ShipTypeForUpkeep[];
 
   players: PlayerCtx[];
+  /** All factions in the game (used to map owner strings → faction id). */
+  factions: FactionMeta[];
   /** All conditional orders for currentTurn, loaded once before phases run. */
   orders: ConditionalOrder[];
 
-  /** Per-player econ deltas accumulated by phases (slot → delta). */
-  playerEcon: Map<number, PlayerEconDelta>;
+  /**
+   * Per-faction econ deltas accumulated by phases.
+   * Keys: `slot:N` for province players, `faction:<UUID>` for AI/neutral.
+   * Use ownerToEconKey / rowEconKey from ./ownerKey to compute keys.
+   */
+  playerEcon: Map<string, PlayerEconDelta>;
 
   /** Logs queued for bulk insertion at the end of processing. */
   logs: PhaseLogEntry[];
