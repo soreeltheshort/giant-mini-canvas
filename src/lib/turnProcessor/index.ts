@@ -64,7 +64,12 @@ export interface RunTurnArgs {
 
 export interface RunTurnResult {
   mapState: MapState;
-  playerEcon: Map<number, { tribute: number; maintenance: number }>;
+  /**
+   * Per-faction econ deltas.
+   * Keys: `slot:N` for province players, `faction:<UUID>` for AI/neutral.
+   * Use rowEconKey from ./ownerKey to look up a game_factions row.
+   */
+  playerEcon: Map<string, { tribute: number; maintenance: number }>;
   logsInserted: number;
 }
 
@@ -77,12 +82,13 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
 
 
 
-  // Load all conditional orders for this turn + players for the game
-  const [{ data: ordersRaw }, { data: playersRaw }] = await Promise.all([
+  // Load orders, players, and faction catalog (for owner→faction id mapping).
+  const [{ data: ordersRaw }, { data: playersRaw }, { data: factionsRaw }] = await Promise.all([
     (supabase as any).from("player_orders").select("*").eq("game_id", gameId).eq("turn_number", currentTurn),
     (supabase as any).from("game_factions")
-      .select("id, user_id, player_slot, treasury, admin_capability, combat_capability, visible_system_ids")
+      .select("id, user_id, player_slot, faction_id, treasury, admin_capability, combat_capability, visible_system_ids")
       .eq("game_id", gameId),
+    (supabase as any).from("factions").select("id, name, code_name"),
   ]);
 
   const orders: ConditionalOrder[] = ordersRaw || [];
@@ -90,11 +96,13 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     id: p.id,
     user_id: p.user_id,
     player_slot: p.player_slot,
+    faction_id: p.faction_id,
     treasury: p.treasury || 0,
     admin_capability: p.admin_capability || 3,
     combat_capability: p.combat_capability || 3,
     visible_system_ids: Array.isArray(p.visible_system_ids) ? p.visible_system_ids : [],
   }));
+  const factions = (factionsRaw || []) as Array<{ id: string; name: string; code_name: string | null }>;
 
   const ctx: TurnContext = {
     supabase,
@@ -105,6 +113,7 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     facilityTypes,
     shipTypes,
     players,
+    factions,
     orders,
     playerEcon: new Map(),
     logs: [],
