@@ -266,10 +266,11 @@ export const economyPhase: Phase = {
 
         // Charge the ordering player's treasury via the maintenance accumulator.
         const orderingPlayer = ctx.players.find(p => p.id === order.player_id);
-        if (orderingPlayer && cost > 0) {
-          const econ = ctx.playerEcon.get(orderingPlayer.player_slot) || { tribute: 0, maintenance: 0 };
+        const orderingKey = orderingPlayer ? rowEconKey(orderingPlayer) : undefined;
+        if (orderingKey && cost > 0) {
+          const econ = ctx.playerEcon.get(orderingKey) || { tribute: 0, maintenance: 0 };
           econ.maintenance += cost;
-          ctx.playerEcon.set(orderingPlayer.player_slot, econ);
+          ctx.playerEcon.set(orderingKey, econ);
         }
 
         supplyApplied++;
