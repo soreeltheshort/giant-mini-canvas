@@ -12,22 +12,7 @@
  */
 import { processNextTurn, DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
 import type { Phase, TurnContext } from "../types";
-
-const PROVINCE_NAMES: Record<number, string> = {
-  1: "Valerian", 2: "Aurelian", 3: "Cassian",
-  4: "Dravian", 5: "Marcellan", 6: "Octavian",
-};
-
-function ownerToSlot(owner: string | undefined | null): number | undefined {
-  if (!owner) return undefined;
-  const m = owner.match(/PROVINCE_(\d+)/);
-  if (m) return parseInt(m[1], 10);
-  const lc = owner.toLowerCase();
-  for (const [slot, name] of Object.entries(PROVINCE_NAMES)) {
-    if (name.toLowerCase() === lc) return parseInt(slot, 10);
-  }
-  return undefined;
-}
+import { ownerToEconKey, rowEconKey } from "../ownerKey";
 
 export const economyPhase: Phase = {
   name: "economy",
