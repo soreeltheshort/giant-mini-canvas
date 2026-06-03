@@ -457,7 +457,7 @@ const AdminGames = () => {
         console.log("[Game Start] Skipping auto-seed — Reseed faction players already pressed.");
       }
 
-      const econSummary = Array.from(playerEcon.entries()).map(([s, e]) => `Slot${s}: +${e.tribute}/-${e.maintenance}`).join(", ");
+      const econSummary = Array.from(playerEcon.entries()).map(([k, e]) => `${k}: +${e.tribute}/-${e.maintenance}`).join(", ");
       await addLog(selectedGame.id, "status_changed", `Game started — Turn 1 orders phase. Starting treasury: ${STARTING_TREASURY} (stub default). Economics: ${econSummary || "none calculated"}`);
       setSelectedGame({ ...selectedGame, status, turn_number: 1 });
       await fetchGames();
