@@ -306,14 +306,19 @@ function PersonaFollowthroughSection({ playerId }: { playerId: string }) {
       setPersonaName("");
       const { data: pf } = await supabase
         .from("game_factions")
-        .select("factions:faction_id(ai_persona_id, ai_personas:ai_persona_id(name))")
+        .select("ai_persona_id, factions:faction_id(ai_persona_id)")
         .eq("id", playerId)
         .maybeSingle();
-      const personaId = (pf as any)?.factions?.ai_persona_id as string | undefined;
-      const pname = (pf as any)?.factions?.ai_personas?.name as string | undefined;
+      const personaId = ((pf as any)?.ai_persona_id || (pf as any)?.factions?.ai_persona_id) as string | undefined;
       if (cancelled) return;
-      setPersonaName(pname ?? "");
       if (!personaId) { setRows([]); return; }
+      const { data: persona } = await supabase
+        .from("ai_personas")
+        .select("name")
+        .eq("id", personaId)
+        .maybeSingle();
+      if (cancelled) return;
+      setPersonaName(((persona as any)?.name as string | undefined) ?? "");
       const { data } = await supabase
         .from("ai_persona_followthrough" as any)
         .select("step_order, activity_code, enabled, params_json")
