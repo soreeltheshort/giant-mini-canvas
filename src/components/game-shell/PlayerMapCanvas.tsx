@@ -56,6 +56,8 @@ const OWNER_COLORS: Record<string, string> = {
   PROVINCE_4: "#a855f7",
   PROVINCE_5: "#f472b6",
   PROVINCE_6: "#14b8a6",
+  // AI faction overrides — sourced from the Faction Config color values.
+  Synod_int1: "#aefb09",
 };
 
 const PlayerMapCanvas: React.FC<Props> = ({
