@@ -525,6 +525,32 @@ const PlayerGame = () => {
     if (mapRow?.map_data_json && Object.keys(mapRow.map_data_json).length > 0) {
       try {
         loadedMap = deserializeMapState(mapRow.map_data_json);
+
+        // Hydrate persistent movement waypoints from game_fleets (canonical
+        // store for dest_x/dest_y/dest_set_turn). The JSON map blob may
+        // pre-date the dest columns; reading game_fleets keeps the UI in sync
+        // with cancellations that happen between turns.
+        try {
+          const { data: dests } = await (supabase as any)
+            .from("game_fleets")
+            .select("fleet_id, dest_x, dest_y, dest_set_turn")
+            .eq("game_id", gameId);
+          if (dests && Array.isArray(dests)) {
+            const byId = new Map<string, any>();
+            for (const d of dests) byId.set(d.fleet_id, d);
+            for (const f of loadedMap.fleets) {
+              const d = byId.get(f.source_fleet_id);
+              if (d) {
+                f.dest_x = d.dest_x ?? null;
+                f.dest_y = d.dest_y ?? null;
+                f.dest_set_turn = d.dest_set_turn ?? null;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to hydrate fleet waypoints:", e);
+        }
+
         setMapState(loadedMap);
       } catch (e) {
         console.error("Failed to deserialize map:", e);
@@ -1295,28 +1321,37 @@ const PlayerGame = () => {
   const factionName = player.faction_name || `Faction ${player.player_slot ?? "?"}`;
   const playerName = profile?.display_name || profile?.email || "Unknown";
 
-  // Derive an arrow for the currently selected fleet if it has a pending move/attack order.
+  // Derive an arrow for the currently selected fleet if it has a pending
+  // move/attack order this turn, or a standing movement waypoint (carried
+  // over from a previous turn).
   const orderArrow = (() => {
     if (selection.type !== "army" || !mapState) return null;
     const fleetId = selection.id.startsWith("fleet-") ? selection.id.slice("fleet-".length) : selection.id;
     const fleet = mapState.fleets.find(f => f.fleet_id === fleetId);
     if (!fleet) return null;
     const order = pendingFleetOrders.get(fleetId);
-    if (!order) return null;
-    if (order.kind === "move" && typeof order.destX === "number" && typeof order.destY === "number") {
-      return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: order.destX, toY: order.destY, kind: "move" as const };
+    if (order) {
+      if (order.kind === "move" && typeof order.destX === "number" && typeof order.destY === "number") {
+        return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: order.destX, toY: order.destY, kind: "move" as const };
+      }
+      if (order.kind === "attack" && order.targetFleetId) {
+        const target = mapState.fleets.find(f => f.fleet_id === order.targetFleetId);
+        if (!target) return null;
+        return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: target.hex_x, toY: target.hex_y, kind: "attack" as const };
+      }
+      if (order.kind === "attack" && typeof order.targetSystemId === "number") {
+        const sys = mapState.systems.get(order.targetSystemId);
+        if (!sys) return null;
+        const hex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+        if (!hex) return null;
+        return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: hex.x, toY: hex.y, kind: "attack" as const };
+      }
+      return null;
     }
-    if (order.kind === "attack" && order.targetFleetId) {
-      const target = mapState.fleets.find(f => f.fleet_id === order.targetFleetId);
-      if (!target) return null;
-      return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: target.hex_x, toY: target.hex_y, kind: "attack" as const };
-    }
-    if (order.kind === "attack" && typeof order.targetSystemId === "number") {
-      const sys = mapState.systems.get(order.targetSystemId);
-      if (!sys) return null;
-      const hex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
-      if (!hex) return null;
-      return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: hex.x, toY: hex.y, kind: "attack" as const };
+    // Standing waypoint (no fresh order this turn — does not spend a combat point).
+    if (typeof fleet.dest_x === "number" && typeof fleet.dest_y === "number"
+        && !(fleet.dest_x === fleet.hex_x && fleet.dest_y === fleet.hex_y)) {
+      return { fromX: fleet.hex_x, fromY: fleet.hex_y, toX: fleet.dest_x, toY: fleet.dest_y, kind: "move" as const };
     }
     return null;
   })();

@@ -141,6 +141,19 @@ export interface MapFleet {
   source_fleet_id: string; // reference to the fleets table
   is_garrison?: boolean;
   system_id?: number | null;
+  /**
+   * Persistent movement waypoint. Set by the movement phase when a fleet_move
+   * order's destination is farther than one turn's map_speed. The fleet steps
+   * toward this destination automatically each subsequent turn until it
+   * arrives (cleared), the player overrides it with a new fleet_move order,
+   * or the player cancels the order from the Fleet panel. This is fleet
+   * STATE — not a per-turn player order — so it does not cost combat points
+   * after the initial issuance and does not appear as a fresh player order.
+   */
+  dest_x?: number | null;
+  dest_y?: number | null;
+  /** Turn on which the original fleet_move order was issued. Informational. */
+  dest_set_turn?: number | null;
 }
 
 export interface MapState {

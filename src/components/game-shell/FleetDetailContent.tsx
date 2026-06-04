@@ -595,6 +595,15 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const moveOrder = pendingOrders.find(o => o.order_type === "fleet_move");
   const attackOrder = pendingOrders.find(o => o.order_type === "other" && o.order_json?.kind === "fleet_attack");
 
+  // Standing movement waypoint set by a prior turn's move that didn't reach.
+  // Only surfaced when there's no fresh move order this turn (a fresh order
+  // visually OVERRIDES the waypoint).
+  const hasStandingWaypoint =
+    !moveOrder &&
+    typeof fleet.dest_x === "number" &&
+    typeof fleet.dest_y === "number" &&
+    !(fleet.dest_x === fleet.hex_x && fleet.dest_y === fleet.hex_y);
+
   const cancelMoveOrder = async () => {
     if (!moveOrder) return;
     await (supabase as any).from("player_orders").delete().eq("id", moveOrder.id);
@@ -605,6 +614,18 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     if (!attackOrder) return;
     await (supabase as any).from("player_orders").delete().eq("id", attackOrder.id);
     setPendingOrders(prev => prev.filter(o => o.id !== attackOrder.id));
+    onOrdersChanged?.();
+  };
+  const cancelStandingWaypoint = async () => {
+    await (supabase as any)
+      .from("game_fleets")
+      .update({ dest_x: null, dest_y: null, dest_set_turn: null })
+      .eq("fleet_id", fleet.source_fleet_id);
+    // Mutate the in-memory MapFleet so the UI reflects the change immediately
+    // (the parent's mapState holds a reference to the same fleet object).
+    fleet.dest_x = null;
+    fleet.dest_y = null;
+    fleet.dest_set_turn = null;
     onOrdersChanged?.();
   };
 
@@ -629,8 +650,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     return `Attack → ${targetName}`;
   })();
 
-  // Only one active order per fleet
-  const activeOrder: "move" | "attack" | null = moveOrder ? "move" : attackOrder ? "attack" : null;
+  // Only one active order per fleet — waypoint counts as an active continuation.
+  const activeOrder: "move" | "attack" | "waypoint" | null =
+    moveOrder ? "move" : attackOrder ? "attack" : hasStandingWaypoint ? "waypoint" : null;
   const noPointsLeft = (combatPointsAvailable ?? Infinity) <= 0;
 
   // ── Replenish supply order persistence ──
@@ -769,6 +791,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               Move → ({moveOrder.order_json?.dest_x}, {moveOrder.order_json?.dest_y})
             </div>
           )}
+          {hasStandingWaypoint && (
+            <div className="text-xs text-bronze-dark font-bold">
+              Move → ({fleet.dest_x}, {fleet.dest_y})
+              <span className="ml-1 font-semibold text-bronze-dark/70">— continuing from turn {fleet.dest_set_turn ?? "?"}</span>
+            </div>
+          )}
           {attackOrder && (
             <div className="text-xs text-bronze-dark font-bold">
               {attackOrderLabel}
@@ -779,7 +807,11 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
             <div className="pt-2 border-t border-border space-y-1.5">
               {activeOrder ? (
                 <button
-                  onClick={activeOrder === "move" ? cancelMoveOrder : cancelAttackOrder}
+                  onClick={
+                    activeOrder === "move" ? cancelMoveOrder
+                    : activeOrder === "attack" ? cancelAttackOrder
+                    : cancelStandingWaypoint
+                  }
                   className="w-full h-8 rounded-sm border border-crimson/60 bg-background px-2 text-xs text-crimson font-heading font-bold uppercase tracking-wider hover:bg-crimson/10"
                 >
                   Cancel Order

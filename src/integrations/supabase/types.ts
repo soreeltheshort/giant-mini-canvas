@@ -1435,6 +1435,9 @@ export type Database = {
       game_fleets: {
         Row: {
           created_at: string
+          dest_set_turn: number | null
+          dest_x: number | null
+          dest_y: number | null
           fleet_id: string
           fleet_name: string
           game_id: string
@@ -1447,6 +1450,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dest_set_turn?: number | null
+          dest_x?: number | null
+          dest_y?: number | null
           fleet_id: string
           fleet_name?: string
           game_id: string
@@ -1459,6 +1465,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dest_set_turn?: number | null
+          dest_x?: number | null
+          dest_y?: number | null
           fleet_id?: string
           fleet_name?: string
           game_id?: string
