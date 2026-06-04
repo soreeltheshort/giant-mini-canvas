@@ -181,17 +181,22 @@ export const movementPhase: Phase = {
       const update: Record<string, any> = {};
       if (curX !== fleet.hex_x) update.hex_x = curX;
       if (curY !== fleet.hex_y) update.hex_y = curY;
-      // Mirror the waypoint to game_fleets too, in case those columns exist.
-      // Wrapped so a missing column doesn't fail the whole update.
-      if (Object.keys(update).length > 0) {
-        await (supabase as any)
-          .from("game_fleets")
-          .update(update)
-          .eq("fleet_id", fleet.source_fleet_id)
-          .eq("game_id", gameId);
-        fleet.hex_x = curX;
-        fleet.hex_y = curY;
+      if (reachedDestination) {
+        update.dest_x = null;
+        update.dest_y = null;
+        update.dest_set_turn = null;
+      } else {
+        update.dest_x = destX;
+        update.dest_y = destY;
+        if (source === "order") update.dest_set_turn = currentTurn;
       }
+      await (supabase as any)
+        .from("game_fleets")
+        .update(update)
+        .eq("fleet_id", fleet.source_fleet_id)
+        .eq("game_id", gameId);
+      fleet.hex_x = curX;
+      fleet.hex_y = curY;
 
       if (reachedDestination) {
         fleet.dest_x = null;
