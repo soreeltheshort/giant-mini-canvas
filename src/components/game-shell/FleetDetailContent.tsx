@@ -791,6 +791,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
               Move → ({moveOrder.order_json?.dest_x}, {moveOrder.order_json?.dest_y})
             </div>
           )}
+          {hasStandingWaypoint && (
+            <div className="text-xs text-bronze-dark font-bold">
+              Move → ({fleet.dest_x}, {fleet.dest_y})
+              <span className="ml-1 font-semibold text-bronze-dark/70">— continuing from turn {fleet.dest_set_turn ?? "?"}</span>
+            </div>
+          )}
           {attackOrder && (
             <div className="text-xs text-bronze-dark font-bold">
               {attackOrderLabel}
@@ -801,7 +807,11 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
             <div className="pt-2 border-t border-border space-y-1.5">
               {activeOrder ? (
                 <button
-                  onClick={activeOrder === "move" ? cancelMoveOrder : cancelAttackOrder}
+                  onClick={
+                    activeOrder === "move" ? cancelMoveOrder
+                    : activeOrder === "attack" ? cancelAttackOrder
+                    : cancelStandingWaypoint
+                  }
                   className="w-full h-8 rounded-sm border border-crimson/60 bg-background px-2 text-xs text-crimson font-heading font-bold uppercase tracking-wider hover:bg-crimson/10"
                 >
                   Cancel Order
