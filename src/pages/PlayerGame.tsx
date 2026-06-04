@@ -525,6 +525,32 @@ const PlayerGame = () => {
     if (mapRow?.map_data_json && Object.keys(mapRow.map_data_json).length > 0) {
       try {
         loadedMap = deserializeMapState(mapRow.map_data_json);
+
+        // Hydrate persistent movement waypoints from game_fleets (canonical
+        // store for dest_x/dest_y/dest_set_turn). The JSON map blob may
+        // pre-date the dest columns; reading game_fleets keeps the UI in sync
+        // with cancellations that happen between turns.
+        try {
+          const { data: dests } = await (supabase as any)
+            .from("game_fleets")
+            .select("fleet_id, dest_x, dest_y, dest_set_turn")
+            .eq("game_id", gameId);
+          if (dests && Array.isArray(dests)) {
+            const byId = new Map<string, any>();
+            for (const d of dests) byId.set(d.fleet_id, d);
+            for (const f of loadedMap.fleets) {
+              const d = byId.get(f.source_fleet_id);
+              if (d) {
+                f.dest_x = d.dest_x ?? null;
+                f.dest_y = d.dest_y ?? null;
+                f.dest_set_turn = d.dest_set_turn ?? null;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to hydrate fleet waypoints:", e);
+        }
+
         setMapState(loadedMap);
       } catch (e) {
         console.error("Failed to deserialize map:", e);
