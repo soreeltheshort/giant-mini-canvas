@@ -1,19 +1,28 @@
 /**
  * Movement Phase
  *
- * Applies fleet_move and set_strategy orders.
+ * Applies fleet_move and set_strategy orders, plus auto-continues any fleet
+ * that has a standing destination (set on a previous turn whose move didn't
+ * reach its target).
  *
- * For fleet_move: orders carry { fleet_id, dest_x, dest_y } as written by the
- * player UI in PlayerGame.tsx. The destination is clamped to the fleet's
- * effective map_speed (slowest ship in the composition; defaults to 1 hex
- * per turn if no speed data is available). The fleet's position is updated
- * both in the persisted game_fleets row and in ctx.mapState so downstream
- * phases (visibility, combat) operate on post-movement state.
+ * Design rules (Active Order = player intent, dest_* = fleet state):
+ *   - A `fleet_move` order is a SINGLE-TURN player intent issued via the
+ *     player UI. It costs 1 combat point at issuance.
+ *   - The fleet's `dest_x/dest_y` is fleet STATE — a persistent waypoint.
+ *     The movement phase sets it whenever a move doesn't reach its target
+ *     in one turn, and clears it on arrival or when the player cancels.
+ *   - On every turn the movement phase first checks for a fresh
+ *     `fleet_move` order for the fleet (which OVERRIDES any prior waypoint),
+ *     and otherwise continues toward the stored waypoint.
+ *   - A continuation step does NOT insert a new `player_orders` row and
+ *     does NOT consume combat capability — it's the carry-out of an order
+ *     the player already paid for.
  *
- * For set_strategy: special1/special2 role changes are mirrored to fleets
- * for the audit log; the player UI already wrote them.
+ * Crippled ships move at HALF map_speed (round up, min 1). Fleet effective
+ * speed is the slowest non-zero ship speed in the post-combat composition.
  */
 import type { Phase, TurnContext } from "../types";
+import type { MapFleet } from "@/lib/mapTypes";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 
 /** Step one hex toward the destination using cube coordinates. */
@@ -42,10 +51,45 @@ function stepToward(
     nz += Math.sign(dz);
     if (adx >= ady) nx += Math.sign(dx); else ny += Math.sign(dy);
   }
-  // Convert cube → odd-r offset
   const col = nx + (nz - (nz & 1)) / 2;
   const row = nz;
   return { x: col, y: row };
+}
+
+/** Compute a fleet's effective map speed from its current per-game roster. */
+async function fleetEffectiveSpeed(ctx: TurnContext, fleet: MapFleet): Promise<number> {
+  try {
+    const { data: composition } = await (ctx.supabase as any)
+      .from("game_fleet_ships")
+      .select("ship_type_id, quantity, crippled")
+      .eq("game_fleet_id", fleet.fleet_id);
+    const typeIds = (composition || []).map((c: any) => c.ship_type_id).filter(Boolean);
+    if (typeIds.length === 0) return 1;
+    const { data: typeRows } = await (ctx.supabase as any)
+      .from("ship_types")
+      .select("id, map_speed")
+      .in("id", typeIds);
+    const speedById = new Map<string, number>();
+    for (const t of (typeRows || [])) speedById.set(t.id, Number(t.map_speed) || 0);
+    const speeds: number[] = [];
+    for (const c of (composition || [])) {
+      const raw = speedById.get(c.ship_type_id) || 0;
+      if (raw <= 0) continue;
+      const eff = c.crippled ? Math.max(1, Math.ceil(raw / 2)) : raw;
+      speeds.push(eff);
+    }
+    return speeds.length > 0 ? Math.min(...speeds) : 1;
+  } catch {
+    return 1;
+  }
+}
+
+interface MoveTask {
+  fleet: MapFleet;
+  destX: number;
+  destY: number;
+  /** "order" = fresh player intent this turn, "waypoint" = standing dest carried from a prior turn. */
+  source: "order" | "waypoint";
 }
 
 export const movementPhase: Phase = {
@@ -56,6 +100,11 @@ export const movementPhase: Phase = {
 
     const moveOrders = ctx.orders.filter(o => o.order_type === "fleet_move");
     const strategyOrders = ctx.orders.filter(o => o.order_type === "set_strategy");
+
+    // Build a queue of fleets to move. A fresh order overrides any stored
+    // waypoint on the same fleet.
+    const tasks: MoveTask[] = [];
+    const orderedFleetIds = new Set<string>();
 
     for (const order of moveOrders) {
       const oj = order.order_json || {};
@@ -86,36 +135,29 @@ export const movementPhase: Phase = {
         continue;
       }
 
-      // Determine effective map_speed: slowest non-zero map_speed in the fleet.
-      // Read from per-game roster (`game_fleet_ships`) so we account for ships
-      // already lost in combat — not the player's pristine saved fleet.
-      // Crippled ships move at HALF map_speed (round up, min 1).
-      let effectiveSpeed = 1;
-      try {
-        const { data: composition } = await (supabase as any)
-          .from("game_fleet_ships")
-          .select("ship_type_id, quantity, crippled")
-          .eq("game_fleet_id", fleet.fleet_id);
-        const typeIds = (composition || []).map((c: any) => c.ship_type_id).filter(Boolean);
-        if (typeIds.length > 0) {
-          const { data: typeRows } = await (supabase as any)
-            .from("ship_types")
-            .select("id, map_speed")
-            .in("id", typeIds);
-          const speedById = new Map<string, number>();
-          for (const t of (typeRows || [])) speedById.set(t.id, Number(t.map_speed) || 0);
-          const speeds: number[] = [];
-          for (const c of (composition || [])) {
-            const raw = speedById.get(c.ship_type_id) || 0;
-            if (raw <= 0) continue;
-            const eff = c.crippled ? Math.max(1, Math.ceil(raw / 2)) : raw;
-            speeds.push(eff);
-          }
-          if (speeds.length > 0) effectiveSpeed = Math.min(...speeds);
-        }
-      } catch {
-        // fall through with default speed
+      tasks.push({ fleet, destX, destY, source: "order" });
+      orderedFleetIds.add(fleetId);
+    }
+
+    // Standing waypoints — only when there's no fresh order for this fleet.
+    for (const fleet of ctx.mapState.fleets) {
+      if (orderedFleetIds.has(fleet.fleet_id)) continue;
+      const dx = (fleet as any).dest_x;
+      const dy = (fleet as any).dest_y;
+      if (typeof dx !== "number" || typeof dy !== "number") continue;
+      if (dx === fleet.hex_x && dy === fleet.hex_y) {
+        // Already there — clean up stale waypoint.
+        fleet.dest_x = null;
+        fleet.dest_y = null;
+        fleet.dest_set_turn = null;
+        continue;
       }
+      tasks.push({ fleet, destX: dx, destY: dy, source: "waypoint" });
+    }
+
+    for (const task of tasks) {
+      const { fleet, destX, destY, source } = task;
+      const effectiveSpeed = await fleetEffectiveSpeed(ctx, fleet);
 
       const [ax, ay, az] = offsetToCube(fleet.hex_x, fleet.hex_y);
       const [bx, by, bz] = offsetToCube(destX, destY);
@@ -134,56 +176,49 @@ export const movementPhase: Phase = {
       const fromX = fleet.hex_x;
       const fromY = fleet.hex_y;
 
-      // Persist + mutate in-memory state
-      if (curX !== fleet.hex_x || curY !== fleet.hex_y) {
+      // Persist position + waypoint atomically to game_fleets and to the
+      // in-memory MapFleet (which is what gets serialized into map_data_json).
+      const update: Record<string, any> = {};
+      if (curX !== fleet.hex_x) update.hex_x = curX;
+      if (curY !== fleet.hex_y) update.hex_y = curY;
+      // Mirror the waypoint to game_fleets too, in case those columns exist.
+      // Wrapped so a missing column doesn't fail the whole update.
+      if (Object.keys(update).length > 0) {
         await (supabase as any)
           .from("game_fleets")
-          .update({ hex_x: curX, hex_y: curY })
+          .update(update)
           .eq("fleet_id", fleet.source_fleet_id)
           .eq("game_id", gameId);
         fleet.hex_x = curX;
         fleet.hex_y = curY;
       }
 
-      // If the fleet didn't reach its destination, carry the move order
-      // forward to the next turn so the player sees an Active Order and the
-      // movement arrow continues to render.
-      if (!reachedDestination && (order as any).player_id) {
-        try {
-          await (supabase as any).from("player_orders").insert({
-            game_id: gameId,
-            player_id: (order as any).player_id,
-            turn_number: ctx.nextTurn,
-            order_type: "fleet_move",
-            order_json: { ...oj, fleet_id: fleetId, dest_x: destX, dest_y: destY },
-            notes: "Auto-carried from previous turn (destination not reached).",
-          });
-        } catch (e: any) {
-          ctx.logs.push({
-            game_id: gameId, turn_number: currentTurn, phase: "movement",
-            log_type: "fleet_move_carry_failed",
-            message: `Failed to carry move order for fleet ${fleetId} to turn ${ctx.nextTurn}: ${e?.message || e}`,
-            details_json: { fleet_id: fleetId, dest: { x: destX, y: destY } },
-          });
-        }
+      if (reachedDestination) {
+        fleet.dest_x = null;
+        fleet.dest_y = null;
+        fleet.dest_set_turn = null;
+      } else {
+        fleet.dest_x = destX;
+        fleet.dest_y = destY;
+        if (source === "order") fleet.dest_set_turn = currentTurn;
       }
 
       ctx.logs.push({
         game_id: gameId,
         turn_number: currentTurn,
         phase: "movement",
-        log_type: "fleet_move",
+        log_type: source === "order" ? "fleet_move" : "fleet_move_continued",
         message: reachedDestination
-          ? `Fleet ${fleet.fleet_name || String(fleetId).slice(0, 8)} arrived at (${destX}, ${destY}).`
-          : `Fleet ${fleet.fleet_name || String(fleetId).slice(0, 8)} moved ${stepsToTake} hex(es) toward (${destX}, ${destY}); now at (${curX}, ${curY}). Order continues next turn.`,
+          ? `Fleet ${fleet.fleet_name || String(fleet.fleet_id).slice(0, 8)} arrived at (${destX}, ${destY}).`
+          : `Fleet ${fleet.fleet_name || String(fleet.fleet_id).slice(0, 8)} ${source === "waypoint" ? "continued" : "moved"} ${stepsToTake} hex(es) toward (${destX}, ${destY}); now at (${curX}, ${curY}). Waypoint persists.`,
         details_json: {
-          fleet_id: fleetId,
+          fleet_id: fleet.fleet_id,
           from: { x: fromX, y: fromY },
           dest: { x: destX, y: destY },
           steps: stepsToTake,
           map_speed: effectiveSpeed,
           reached: reachedDestination,
-          carried_to_turn: reachedDestination ? null : ctx.nextTurn,
+          source,
         },
       });
     }
@@ -207,7 +242,7 @@ export const movementPhase: Phase = {
       });
     }
 
-    if (moveOrders.length === 0 && strategyOrders.length === 0) {
+    if (tasks.length === 0 && strategyOrders.length === 0) {
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "movement",
         log_type: "noop", message: "No movement or strategy orders this turn.",
