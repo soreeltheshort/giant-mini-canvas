@@ -131,6 +131,8 @@ export const movementPhase: Phase = {
       }
 
       const reachedDestination = curX === destX && curY === destY;
+      const fromX = fleet.hex_x;
+      const fromY = fleet.hex_y;
 
       // Persist + mutate in-memory state
       if (curX !== fleet.hex_x || curY !== fleet.hex_y) {
@@ -143,6 +145,29 @@ export const movementPhase: Phase = {
         fleet.hex_y = curY;
       }
 
+      // If the fleet didn't reach its destination, carry the move order
+      // forward to the next turn so the player sees an Active Order and the
+      // movement arrow continues to render.
+      if (!reachedDestination && (order as any).player_id) {
+        try {
+          await (supabase as any).from("player_orders").insert({
+            game_id: gameId,
+            player_id: (order as any).player_id,
+            turn_number: ctx.nextTurn,
+            order_type: "fleet_move",
+            order_json: { ...oj, fleet_id: fleetId, dest_x: destX, dest_y: destY },
+            notes: "Auto-carried from previous turn (destination not reached).",
+          });
+        } catch (e: any) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "movement",
+            log_type: "fleet_move_carry_failed",
+            message: `Failed to carry move order for fleet ${fleetId} to turn ${ctx.nextTurn}: ${e?.message || e}`,
+            details_json: { fleet_id: fleetId, dest: { x: destX, y: destY } },
+          });
+        }
+      }
+
       ctx.logs.push({
         game_id: gameId,
         turn_number: currentTurn,
@@ -150,14 +175,15 @@ export const movementPhase: Phase = {
         log_type: "fleet_move",
         message: reachedDestination
           ? `Fleet ${fleet.fleet_name || String(fleetId).slice(0, 8)} arrived at (${destX}, ${destY}).`
-          : `Fleet ${fleet.fleet_name || String(fleetId).slice(0, 8)} moved ${stepsToTake} hex(es) toward (${destX}, ${destY}); now at (${curX}, ${curY}).`,
+          : `Fleet ${fleet.fleet_name || String(fleetId).slice(0, 8)} moved ${stepsToTake} hex(es) toward (${destX}, ${destY}); now at (${curX}, ${curY}). Order continues next turn.`,
         details_json: {
           fleet_id: fleetId,
-          from: { x: fleet.hex_x, y: fleet.hex_y },
+          from: { x: fromX, y: fromY },
           dest: { x: destX, y: destY },
           steps: stepsToTake,
           map_speed: effectiveSpeed,
           reached: reachedDestination,
+          carried_to_turn: reachedDestination ? null : ctx.nextTurn,
         },
       });
     }
