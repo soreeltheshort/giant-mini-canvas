@@ -26,6 +26,8 @@ import { playOrderPlaced, playOrdersSubmitted } from "@/lib/uiSounds";
 import { computeGroupStrikecraftCapacity, type FleetShipRow } from "@/components/game-shell/FleetCompositionEditor";
 import { processTurn } from "@/lib/gameLifecycle";
 import { computeInfectedHexOwners } from "@/lib/infectedHexes";
+import { useFleetSensorRanges } from "@/hooks/useFleetSensorRanges";
+
 
 
 
