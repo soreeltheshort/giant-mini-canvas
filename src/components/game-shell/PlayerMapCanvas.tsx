@@ -48,7 +48,7 @@ interface Props {
 
 const HEX_SIZE = 10;
 
-/** Faction/owner colors for province tinting */
+/** Faction/owner BACKGROUND colors — used to tint owned hex provinces. */
 const OWNER_COLORS: Record<string, string> = {
   PROVINCE_1: "#f97316",
   PROVINCE_2: "#06b6d4",
@@ -58,6 +58,19 @@ const OWNER_COLORS: Record<string, string> = {
   PROVINCE_6: "#14b8a6",
   // AI faction overrides — sourced from the Faction Config color values.
   Synod_int1: "#aefb09",
+};
+
+/** Faction/owner FOREGROUND colors — darker shades used to draw fleets and
+ *  planet dots so they remain legible on top of the lighter province tint.
+ *  Mirrors `factions.foreground_color` in the DB. */
+const OWNER_FG_COLORS: Record<string, string> = {
+  PROVINCE_1: "#7c3a08",
+  PROVINCE_2: "#075a6a",
+  PROVINCE_3: "#705604",
+  PROVINCE_4: "#581c87",
+  PROVINCE_5: "#9d174d",
+  PROVINCE_6: "#0b5a52",
+  Synod_int1: "#557e04",
 };
 
 const PlayerMapCanvas: React.FC<Props> = ({
@@ -297,7 +310,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
       const dotSize = isStation ? size * 0.25 : size * 0.35;
 
       // Glow (suppressed for memory-only systems to read as "ghost")
-      const ownerColor = OWNER_COLORS[sys.owner] || "#c8a96e";
+      const ownerColor = OWNER_FG_COLORS[sys.owner] || OWNER_COLORS[sys.owner] || "#c8a96e";
       if (isLiveSystem) {
         ctx.shadowColor = ownerColor;
         ctx.shadowBlur = size * 0.4;
@@ -348,7 +361,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
       if (fx < left || fx > right || fy < top || fy > bottom) continue;
 
       const triSize = size * 0.35;
-      const fleetColor = OWNER_COLORS[fleet.owner_classification] || "#c8a96e";
+      const fleetColor = OWNER_FG_COLORS[fleet.owner_classification] || OWNER_COLORS[fleet.owner_classification] || "#c8a96e";
 
       // Glow
       ctx.shadowColor = fleetColor;

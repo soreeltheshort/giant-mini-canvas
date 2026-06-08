@@ -15,14 +15,16 @@ const PROVINCE_FACTION_NAMES: Record<string, string> = {
   PROVINCE_5: "Marcellan",
   PROVINCE_6: "Octavian",
 };
+// Foreground (darker) colors used for the owner-color dot in fleet headers,
+// matching the foreground_color stored on each faction row in the DB.
 const PROVINCE_FACTION_COLORS: Record<string, string> = {
-  PROVINCE_1: "#f97316",
-  PROVINCE_2: "#06b6d4",
-  PROVINCE_3: "#eab308",
-  PROVINCE_4: "#a855f7",
-  PROVINCE_5: "#f472b6",
-  PROVINCE_6: "#14b8a6",
-  Synod_int1: "#aefb09",
+  PROVINCE_1: "#7c3a08",
+  PROVINCE_2: "#075a6a",
+  PROVINCE_3: "#705604",
+  PROVINCE_4: "#581c87",
+  PROVINCE_5: "#9d174d",
+  PROVINCE_6: "#0b5a52",
+  Synod_int1: "#557e04",
 };
 
 const READINESS_LEVELS = [
