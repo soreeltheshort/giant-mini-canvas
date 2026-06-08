@@ -101,6 +101,7 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     admin_capability: p.admin_capability || 3,
     combat_capability: p.combat_capability || 3,
     visible_system_ids: Array.isArray(p.visible_system_ids) ? p.visible_system_ids : [],
+    scouted_hex_ids: Array.isArray(p.scouted_hex_ids) ? p.scouted_hex_ids : [],
   }));
   const factions = (factionsRaw || []) as Array<{ id: string; name: string; code_name: string | null }>;
 
