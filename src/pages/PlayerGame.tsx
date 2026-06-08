@@ -767,18 +767,33 @@ const PlayerGame = () => {
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number]);
 
+  // Hexes the player's OWN infected planets currently control — fold them
+  // into visibility (live + everSeen) so an infected player can see their
+  // 1-hex aura even without a fleet/sensor present.
+  const ownInfectedHexKeys = useMemo(() => {
+    const set = new Set<string>();
+    if (!player) return set;
+    const own = player.own_classification;
+    for (const [k, owner] of infectedHexOwners) {
+      if (owner === own) set.add(k);
+    }
+    return set;
+  }, [infectedHexOwners, player?.own_classification]);
+
   const liveHexKeys = useMemo(() => {
-    if (attackerRevealHexKeys.size === 0) return liveHexKeysBase;
+    if (attackerRevealHexKeys.size === 0 && ownInfectedHexKeys.size === 0) return liveHexKeysBase;
     const merged = new Set(liveHexKeysBase);
     for (const k of attackerRevealHexKeys) merged.add(k);
+    for (const k of ownInfectedHexKeys) merged.add(k);
     return merged;
-  }, [liveHexKeysBase, attackerRevealHexKeys]);
+  }, [liveHexKeysBase, attackerRevealHexKeys, ownInfectedHexKeys]);
   const everSeenHexKeys = useMemo(() => {
-    if (attackerRevealHexKeys.size === 0) return everSeenHexKeysBase;
+    if (attackerRevealHexKeys.size === 0 && ownInfectedHexKeys.size === 0) return everSeenHexKeysBase;
     const merged = new Set(everSeenHexKeysBase);
     for (const k of attackerRevealHexKeys) merged.add(k);
+    for (const k of ownInfectedHexKeys) merged.add(k);
     return merged;
-  }, [everSeenHexKeysBase, attackerRevealHexKeys]);
+  }, [everSeenHexKeysBase, attackerRevealHexKeys, ownInfectedHexKeys]);
 
   // Admin-only override: reveal the entire map regardless of player sensor coverage.
   const [adminRevealAll, setAdminRevealAll] = useState(false);
