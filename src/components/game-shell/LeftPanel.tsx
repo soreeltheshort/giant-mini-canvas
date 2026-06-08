@@ -285,6 +285,7 @@ function InlineContextContent({
   playerTreasury,
   adminPointsAvailable,
   onCreateFleet,
+  onStartCommissionTargeting,
 }: {
   mode: GameMode;
   selection: MapSelection;
@@ -310,6 +311,7 @@ function InlineContextContent({
   playerTreasury?: number;
   adminPointsAvailable?: number;
   onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
+  onStartCommissionTargeting?: (fleetName: string) => void;
 }) {
   const getModeIcon = () => {
     if (selection.type === "news") return <Scroll className="w-3.5 h-3.5" />;
