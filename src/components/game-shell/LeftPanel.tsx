@@ -469,7 +469,7 @@ function CreateFleetCard({
         <button
           onClick={() => setOpen(true)}
           disabled={combatPointsAvailable < 1 || !hasEligibleHex}
-          className="w-full py-1.5 rounded-sm bg-crimson text-primary-foreground text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-1.5 rounded-sm bg-crimson text-ivory text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {combatPointsAvailable < 1 ? "No Combat Points" : !hasEligibleHex ? "No Eligible Hexes" : "Commission New Fleet"}
         </button>
@@ -478,7 +478,7 @@ function CreateFleetCard({
       <Dialog open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else setOpen(true); }}>
         <DialogContent className="bg-marble border-bronze/40">
           <DialogHeader>
-            <DialogTitle className="font-heading text-ivory">
+            <DialogTitle className="font-heading text-senate-dark">
               Commission New Fleet — Name Fleet
             </DialogTitle>
           </DialogHeader>
