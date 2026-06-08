@@ -29,6 +29,10 @@ interface Props {
   debugVisibleHexKeys?: Set<string>;
   /** Hex keys ever observed (faded if not in debugVisibleHexKeys). */
   everSeenHexKeys?: Set<string>;
+  /** Persistent per-player set of scouted hex IDs (append-only flag). Hexes
+   *  whose `hex_id` is NOT in this set are rendered with the subtle
+   *  "unscouted" indicator. */
+  scoutedHexIds?: Set<number>;
   /** Optional arrow drawn from a fleet to its order target (move dest or attack target). */
   orderArrow?: {
     fromX: number;
