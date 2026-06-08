@@ -689,8 +689,9 @@ const PlayerGame = () => {
   // checks attack targets against currently visible hexes). Rules of Hooks:
   // these still execute unconditionally on every render and before any early
   // return below.
-  const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
-  const { live: liveHexKeysBase, everSeen: everSeenHexKeysBase, liveHexIds } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+  const fleetSensorRanges = useFleetSensorRanges(game?.id);
+  const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState, fleetSensorRanges);
+  const { live: liveHexKeysBase, everSeen: everSeenHexKeysBase, liveHexIds } = useVisibleHexKeys(player, mapState, everSeenSystemIds, fleetSensorRanges);
 
   // Persistent "ever scouted" set of hex_ids. Loaded once from the player row
   // and grown locally as new hexes come into sensor range. Stored as a Set for
