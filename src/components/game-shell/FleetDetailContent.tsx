@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SENSOR_RADIUS } from "@/lib/turnProcessor/phases/visibility";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { playOrderPlaced } from "@/lib/uiSounds";
