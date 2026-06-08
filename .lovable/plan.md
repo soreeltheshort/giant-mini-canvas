@@ -1,23 +1,28 @@
 ## Goal
+Give the player a quiet visual cue on every hex their sensors have **never** entered, so the unexplored frontier reads at a glance without cluttering the map.
 
-Remove red-on-dark text from the Factions Config screen (`/map-testing/config`) so it's legible for red-green color blindness. Replace with a warm mustard yellow / burnt orange tone that fits the existing Roman techno-classical palette (ivory + bronze).
+## Where it fits
+All hex drawing happens in `src/components/game-shell/PlayerMapCanvas.tsx` inside the hex loop around lines 240–296. Each hex already computes `isLive`, `isRemembered`, and an implicit "never seen" branch (the `else` at line 290). The indicator only renders in that never-seen branch, so live + remembered hexes are untouched.
 
-## Approach
+## Recommended indicator
+A single tiny dot at the hex center, drawn in faint bronze:
 
-Introduce a new semantic token `--alert` (mustard yellow, roughly `hsl(38 78% 55%)` — sits between bronze and a burnt-orange highlight) in `src/index.css` and `tailwind.config.ts`, exposing `text-alert` and `accent-alert` utility classes. This keeps everything routed through design tokens rather than hard-coded hex.
+- 1px radius (scales with hex size: `Math.max(0.6, size * 0.06)`)
+- Color `rgba(200,169,110,0.22)` — same bronze hue already used for the unscouted hex border, slightly above its alpha so the dot reads as intentional rather than as a render artifact
+- No glow, no animation, no label
+- Skipped for hexes that contain a system the player has ever seen (so explored systems don't get a competing center mark)
+- Drawn only above a minimum zoom threshold (e.g. `zoom > 0.6`) so the fully-zoomed-out galaxy view stays clean
 
-Then swap every red usage on the Factions Config page from `text-destructive` / `accent-destructive` to the new `text-alert` / `accent-alert`:
+Result: zoomed in, the unexplored frontier looks like a faint dotted grid; zoomed out, it disappears into the fog.
 
-- `src/pages/MapTestingConfig.tsx` — lines 259, 402, 408, 468, 470, 522, 605, 889 (Infect label, Infect checkbox accent, Delete buttons)
-- `src/components/factions-config/RelationshipOverridesPanel.tsx` — lines 99 (enemy label) and 105 (× remove button)
+## Alternatives (one-line)
+- **Dashed hex border** instead of solid — readable but visually noisier than a dot.
+- **Faint "?" glyph** at center — clear meaning but feels game-y against the Roman aesthetic.
+- **Tiny corner tick** — subtle but harder to spot when scanning.
 
-Scope is limited to these two files (everything rendered on /map-testing/config). Other screens that use `text-destructive` are left untouched.
+I'd ship the center dot and we can swap to one of the alternatives if it doesn't read well.
 
-## Color choice
+## Files to change
+- `src/components/game-shell/PlayerMapCanvas.tsx` — add the dot draw inside the never-seen branch of the hex loop, after the border stroke.
 
-Default to **mustard yellow** `hsl(42 85% 55%)` for strong contrast on the dark/marble surfaces. If you'd prefer **burnt orange** `hsl(22 80% 50%)` instead, say so and I'll use that value when I implement.
-
-## Out of scope
-
-- No behavior changes (Delete still deletes, Infect still toggles).
-- No changes to `--destructive` itself, so destructive styling elsewhere in the app is unaffected.
+No new props, no schema changes, no other files affected.
