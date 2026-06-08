@@ -310,7 +310,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
       const dotSize = isStation ? size * 0.25 : size * 0.35;
 
       // Glow (suppressed for memory-only systems to read as "ghost")
-      const ownerColor = OWNER_COLORS[sys.owner] || "#c8a96e";
+      const ownerColor = OWNER_FG_COLORS[sys.owner] || OWNER_COLORS[sys.owner] || "#c8a96e";
       if (isLiveSystem) {
         ctx.shadowColor = ownerColor;
         ctx.shadowBlur = size * 0.4;
