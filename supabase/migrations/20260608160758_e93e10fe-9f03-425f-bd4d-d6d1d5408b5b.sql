@@ -1,0 +1,2 @@
+ALTER TABLE public.game_factions ADD COLUMN IF NOT EXISTS scouted_hex_ids integer[] NOT NULL DEFAULT '{}';
+CREATE INDEX IF NOT EXISTS idx_game_factions_scouted_hex_ids ON public.game_factions USING gin (scouted_hex_ids);

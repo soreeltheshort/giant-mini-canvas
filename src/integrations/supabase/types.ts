@@ -1319,6 +1319,7 @@ export type Database = {
           last_tribute: number
           orders_locked: boolean
           player_slot: number | null
+          scouted_hex_ids: number[]
           treasury: number
           user_id: string | null
           visible_system_ids: Json
@@ -1339,6 +1340,7 @@ export type Database = {
           last_tribute?: number
           orders_locked?: boolean
           player_slot?: number | null
+          scouted_hex_ids?: number[]
           treasury?: number
           user_id?: string | null
           visible_system_ids?: Json
@@ -1359,6 +1361,7 @@ export type Database = {
           last_tribute?: number
           orders_locked?: boolean
           player_slot?: number | null
+          scouted_hex_ids?: number[]
           treasury?: number
           user_id?: string | null
           visible_system_ids?: Json
