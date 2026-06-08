@@ -11,6 +11,7 @@ export interface FactionMeta {
   id: string;
   name: string;
   code_name: string | null;
+  infect?: boolean;
 }
 
 export const PROVINCE_NAMES: Record<number, string> = {
