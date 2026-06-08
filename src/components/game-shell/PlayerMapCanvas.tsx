@@ -304,7 +304,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
       // work this loop does for the "still off" path. Subtle by design —
       // fades away at low zoom and is suppressed for system hexes.
       const isScouted = scoutedHexIds ? scoutedHexIds.has(hex.hex_id) : (isLive || isRemembered);
-      if (!isScouted && zoom > 0.6 && !hex.has_system) {
+      if (!isScouted && zoom > 0.6) {
         const dotR = Math.max(0.6, size * 0.06);
         ctx.fillStyle = "rgba(200,169,110,0.22)";
         ctx.beginPath();
