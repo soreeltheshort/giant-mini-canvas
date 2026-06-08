@@ -1322,6 +1322,27 @@ const PlayerGame = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveVisibleIds.join(","), player?.id]);
 
+  // Persist newly-scouted hex IDs into player.scouted_hex_ids. Append-only:
+  // we never clear bits, so the only work each render is a single Set.has
+  // probe per live hex and (in the rare turn where a fleet moves into new
+  // space) one DB update with just the delta unioned into the prior array.
+  useEffect(() => {
+    if (!player || !mapState) return;
+    const persisted = scoutedHexIds;
+    const newly: number[] = [];
+    for (const id of liveHexIds) if (!persisted.has(id)) newly.push(id);
+    if (newly.length === 0) return;
+    const merged = Array.from(new Set<number>([...persisted, ...newly]));
+    (supabase as any)
+      .from("game_factions")
+      .update({ scouted_hex_ids: merged })
+      .eq("id", player.id)
+      .then(() => {
+        setPlayer(p => p ? { ...p, scouted_hex_ids: merged } : p);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveHexIds.length, liveHexIds.join(","), player?.id]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-ivory flex items-center justify-center">
