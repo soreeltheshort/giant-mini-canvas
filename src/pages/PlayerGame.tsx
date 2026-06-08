@@ -1229,8 +1229,9 @@ const PlayerGame = () => {
       const sys = Array.from(mapState.systems.values()).find(s => s.hex_id === destHex.hex_id);
       const ownsSystem = !!sys && (sys.owner === player.own_classification || (factionLabel && sys.owner === factionLabel));
       const isOwnProvince = destHex.classification === player.own_classification;
-      if (!ownsSystem && !isOwnProvince) {
-        toast({ title: "Not an owned hex", description: "Commission fleets only on your province hexes or owned systems.", variant: "destructive" });
+      const isOwnInfectedHex = infectedHexOwners.get(hexKey(hex.x, hex.y)) === player.own_classification;
+      if (!ownsSystem && !isOwnProvince && !isOwnInfectedHex) {
+        toast({ title: "Not an owned hex", description: "Commission fleets only on your province hexes, owned systems, or hexes you control.", variant: "destructive" });
         return;
       }
       const occupied = mapState.fleets.some(f => f.hex_x === hex.x && f.hex_y === hex.y);
