@@ -14,6 +14,9 @@
  */
 import type { Phase, TurnContext } from "../types";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
+import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+
+const SENSOR_RADIUS = 1;
 
 export const visibilityPhase: Phase = {
   name: "visibility",
