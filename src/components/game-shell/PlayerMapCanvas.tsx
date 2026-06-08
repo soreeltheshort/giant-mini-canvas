@@ -116,6 +116,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   ownClassification,
   revealAllFleets = false,
   currentSelectionId = null,
+  infectedHexOwners,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
