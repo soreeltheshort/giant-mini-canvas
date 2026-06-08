@@ -23,7 +23,27 @@ export const visibilityPhase: Phase = {
   name: "visibility",
   label: "Visibility",
   async run(ctx: TurnContext) {
-    const { supabase, gameId, mapState, currentTurn, players } = ctx;
+    const { supabase, gameId, mapState, currentTurn, players, factions } = ctx;
+
+    // ── Infected-faction hex ownership ──────────────────────────────────
+    // Build name/code_name → infect lookup and faction_id → player_slot map
+    // so we can credit "infected aura" hexes (planet hex + 6 neighbors) to
+    // the player slot that controls the infected faction.
+    const infectedById = new Map<string, boolean>();
+    const infectedOwnerStrings = new Set<string>();
+    for (const f of factions) {
+      infectedById.set(f.id, !!f.infect);
+      if (f.infect) {
+        if (f.name) infectedOwnerStrings.add(String(f.name).toLowerCase());
+        if (f.code_name) infectedOwnerStrings.add(String(f.code_name).toLowerCase());
+      }
+    }
+    const slotByFactionId = new Map<string, number>();
+    for (const p of players) {
+      if (p.faction_id && p.player_slot != null) slotByFactionId.set(p.faction_id, p.player_slot);
+    }
+    const isInfectedOwner = (owner: string | null | undefined) =>
+      !!owner && infectedOwnerStrings.has(String(owner).toLowerCase());
 
     // hex_id → classification (used as a fallback only)
     const hexClassById = new Map<number, string>();
