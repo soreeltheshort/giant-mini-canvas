@@ -48,7 +48,7 @@ interface Props {
 
 const HEX_SIZE = 10;
 
-/** Faction/owner colors for province tinting */
+/** Faction/owner BACKGROUND colors — used to tint owned hex provinces. */
 const OWNER_COLORS: Record<string, string> = {
   PROVINCE_1: "#f97316",
   PROVINCE_2: "#06b6d4",
@@ -58,6 +58,19 @@ const OWNER_COLORS: Record<string, string> = {
   PROVINCE_6: "#14b8a6",
   // AI faction overrides — sourced from the Faction Config color values.
   Synod_int1: "#aefb09",
+};
+
+/** Faction/owner FOREGROUND colors — darker shades used to draw fleets and
+ *  planet dots so they remain legible on top of the lighter province tint.
+ *  Mirrors `factions.foreground_color` in the DB. */
+const OWNER_FG_COLORS: Record<string, string> = {
+  PROVINCE_1: "#7c3a08",
+  PROVINCE_2: "#075a6a",
+  PROVINCE_3: "#705604",
+  PROVINCE_4: "#581c87",
+  PROVINCE_5: "#9d174d",
+  PROVINCE_6: "#0b5a52",
+  Synod_int1: "#557e04",
 };
 
 const PlayerMapCanvas: React.FC<Props> = ({
