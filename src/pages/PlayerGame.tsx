@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import type { MapState, SystemData, MapFleet, FacilityType, HexData } from "@/lib/mapTypes";
-import { hexKey } from "@/lib/mapTypes";
+import { hexKey, CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 import { isHexBlockedForPlayer } from "@/lib/hexAccess";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
