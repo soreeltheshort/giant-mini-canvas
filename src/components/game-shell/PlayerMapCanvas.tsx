@@ -49,6 +49,13 @@ interface Props {
   revealAllFleets?: boolean;
   /** Current map selection id (e.g. "fleet-<uuid>" or "sys-<id>"). Used to cycle through stacked objects on a hex on repeated clicks. */
   currentSelectionId?: string | null;
+  /** Hex keys ("x,y") currently controlled by an infected-faction planet's
+   *  1-hex radius. Value is the infected owner string (e.g. "Synod"). These
+   *  hexes are painted with the infected owner's color, on top of the
+   *  underlying classification tint. Original ownership is preserved by the
+   *  hex's static `classification` — when the planet is lost, the entry
+   *  simply disappears and the hex reverts to its classification color. */
+  infectedHexOwners?: Map<string, string>;
   className?: string;
 }
 
@@ -109,6 +116,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   ownClassification,
   revealAllFleets = false,
   currentSelectionId = null,
+  infectedHexOwners,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -284,6 +292,24 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.closePath();
       ctx.fillStyle = fillColor;
       ctx.fill();
+
+      // Infected-faction hex ownership overlay: paint infected color on top of
+      // the classification tint. Only shown for hexes the player has at least
+      // remembered/seen, so the spread of infection is a discovery driven by
+      // scouting rather than a god-view leak. Original ownership (the hex
+      // classification) is preserved underneath, so when the infected planet
+      // is lost, this overlay simply disappears and the hex visually reverts.
+      const infectedOwner = infectedHexOwners ? infectedHexOwners.get(hk) : undefined;
+      if (infectedOwner && (isLive || isRemembered || !hasMemory)) {
+        const infColor = OWNER_COLORS[infectedOwner] || "#888888";
+        ctx.globalAlpha = isLive ? 0.55 : 0.35;
+        ctx.beginPath();
+        ctx.moveTo(corners[0][0], corners[0][1]);
+        for (let i = 1; i < 6; i++) ctx.lineTo(corners[i][0], corners[i][1]);
+        ctx.closePath();
+        ctx.fillStyle = infColor;
+        ctx.fill();
+      }
 
       // Border — brightest for live, medium for explored memory, faintest for
       // never-seen fog (which still gets a thin outline so the player can click

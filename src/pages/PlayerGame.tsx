@@ -25,6 +25,8 @@ import { useGameMusic } from "@/hooks/useGameMusic";
 import { playOrderPlaced, playOrdersSubmitted } from "@/lib/uiSounds";
 import { computeGroupStrikecraftCapacity, type FleetShipRow } from "@/components/game-shell/FleetCompositionEditor";
 import { processTurn } from "@/lib/gameLifecycle";
+import { computeInfectedHexOwners } from "@/lib/infectedHexes";
+
 
 
 const PROVINCE_NAMES: Record<number, string> = {
@@ -690,6 +692,49 @@ const PlayerGame = () => {
     return new Set<number>((player?.scouted_hex_ids ?? []) as number[]);
   }, [player?.scouted_hex_ids]);
 
+  // ── Infected-faction hex ownership ─────────────────────────────────────
+  // Load all factions flagged `infect=true` once. Their owner strings (e.g.
+  // "Synod") are matched against `system.owner`; any matching planet's hex
+  // + 6 neighbors are then owned by that infected faction. We accept both
+  // the display `name` and the internal `code_name` to cover the
+  // "Synod_int1" → "Synod" rollup.
+  const [infectedOwnerStrings, setInfectedOwnerStrings] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("factions")
+        .select("name, code_name, infect")
+        .eq("infect", true);
+      if (cancelled) return;
+      const set = new Set<string>();
+      for (const f of (data || []) as any[]) {
+        if (f.name) set.add(String(f.name));
+        if (f.code_name) set.add(String(f.code_name));
+      }
+      setInfectedOwnerStrings(set);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const isInfectedOwner = useCallback((owner?: string | null) => {
+    if (!owner) return false;
+    if (infectedOwnerStrings.has(owner)) return true;
+    // Tolerate case differences just in case.
+    for (const k of infectedOwnerStrings) {
+      if (k.toLowerCase() === owner.toLowerCase()) return true;
+    }
+    return false;
+  }, [infectedOwnerStrings]);
+
+  /** "x,y" → infected owner string for hexes currently controlled by an
+   *  infected planet's 1-hex aura. */
+  const infectedHexOwners = useMemo(() => {
+    if (!mapState || infectedOwnerStrings.size === 0) return new Map<string, string>();
+    return computeInfectedHexOwners(mapState.systems.values(), mapState.hexes, isInfectedOwner);
+  }, [mapState, infectedOwnerStrings, isInfectedOwner]);
+
+
   // Hexes revealed because an enemy fleet attacked us last turn.
   // Rule: "If I am attacked by another fleet, that fleet's hex is visible to me
   // irrespective of my sensor range." Pulls battle_resolved logs from the most
@@ -722,18 +767,33 @@ const PlayerGame = () => {
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number]);
 
+  // Hexes the player's OWN infected planets currently control — fold them
+  // into visibility (live + everSeen) so an infected player can see their
+  // 1-hex aura even without a fleet/sensor present.
+  const ownInfectedHexKeys = useMemo(() => {
+    const set = new Set<string>();
+    if (!player) return set;
+    const own = player.own_classification;
+    for (const [k, owner] of infectedHexOwners) {
+      if (owner === own) set.add(k);
+    }
+    return set;
+  }, [infectedHexOwners, player?.own_classification]);
+
   const liveHexKeys = useMemo(() => {
-    if (attackerRevealHexKeys.size === 0) return liveHexKeysBase;
+    if (attackerRevealHexKeys.size === 0 && ownInfectedHexKeys.size === 0) return liveHexKeysBase;
     const merged = new Set(liveHexKeysBase);
     for (const k of attackerRevealHexKeys) merged.add(k);
+    for (const k of ownInfectedHexKeys) merged.add(k);
     return merged;
-  }, [liveHexKeysBase, attackerRevealHexKeys]);
+  }, [liveHexKeysBase, attackerRevealHexKeys, ownInfectedHexKeys]);
   const everSeenHexKeys = useMemo(() => {
-    if (attackerRevealHexKeys.size === 0) return everSeenHexKeysBase;
+    if (attackerRevealHexKeys.size === 0 && ownInfectedHexKeys.size === 0) return everSeenHexKeysBase;
     const merged = new Set(everSeenHexKeysBase);
     for (const k of attackerRevealHexKeys) merged.add(k);
+    for (const k of ownInfectedHexKeys) merged.add(k);
     return merged;
-  }, [everSeenHexKeysBase, attackerRevealHexKeys]);
+  }, [everSeenHexKeysBase, attackerRevealHexKeys, ownInfectedHexKeys]);
 
   // Admin-only override: reveal the entire map regardless of player sensor coverage.
   const [adminRevealAll, setAdminRevealAll] = useState(false);
@@ -1169,8 +1229,9 @@ const PlayerGame = () => {
       const sys = Array.from(mapState.systems.values()).find(s => s.hex_id === destHex.hex_id);
       const ownsSystem = !!sys && (sys.owner === player.own_classification || (factionLabel && sys.owner === factionLabel));
       const isOwnProvince = destHex.classification === player.own_classification;
-      if (!ownsSystem && !isOwnProvince) {
-        toast({ title: "Not an owned hex", description: "Commission fleets only on your province hexes or owned systems.", variant: "destructive" });
+      const isOwnInfectedHex = infectedHexOwners.get(hexKey(hex.x, hex.y)) === player.own_classification;
+      if (!ownsSystem && !isOwnProvince && !isOwnInfectedHex) {
+        toast({ title: "Not an owned hex", description: "Commission fleets only on your province hexes, owned systems, or hexes you control.", variant: "destructive" });
         return;
       }
       const occupied = mapState.fleets.some(f => f.hex_x === hex.x && f.hex_y === hex.y);
@@ -1556,6 +1617,7 @@ const PlayerGame = () => {
               ownClassification={player.own_classification}
               revealAllFleets={isAdmin && adminRevealAll}
               currentSelectionId={selection.type === "army" || selection.type === "region" ? selection.id : null}
+              infectedHexOwners={infectedHexOwners}
               className="flex-1"
             />
           ) : (

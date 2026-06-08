@@ -14,7 +14,8 @@
  */
 import type { Phase, TurnContext } from "../types";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
-import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+import { offsetToCube, cubeDistance, getNeighbors } from "@/lib/hexUtils";
+import { hexKey } from "@/lib/mapTypes";
 
 export const SENSOR_RADIUS = 1;
 
@@ -22,7 +23,27 @@ export const visibilityPhase: Phase = {
   name: "visibility",
   label: "Visibility",
   async run(ctx: TurnContext) {
-    const { supabase, gameId, mapState, currentTurn, players } = ctx;
+    const { supabase, gameId, mapState, currentTurn, players, factions } = ctx;
+
+    // ── Infected-faction hex ownership ──────────────────────────────────
+    // Build name/code_name → infect lookup and faction_id → player_slot map
+    // so we can credit "infected aura" hexes (planet hex + 6 neighbors) to
+    // the player slot that controls the infected faction.
+    const infectedById = new Map<string, boolean>();
+    const infectedOwnerStrings = new Set<string>();
+    for (const f of factions) {
+      infectedById.set(f.id, !!f.infect);
+      if (f.infect) {
+        if (f.name) infectedOwnerStrings.add(String(f.name).toLowerCase());
+        if (f.code_name) infectedOwnerStrings.add(String(f.code_name).toLowerCase());
+      }
+    }
+    const slotByFactionId = new Map<string, number>();
+    for (const p of players) {
+      if (p.faction_id && p.player_slot != null) slotByFactionId.set(p.faction_id, p.player_slot);
+    }
+    const isInfectedOwner = (owner: string | null | undefined) =>
+      !!owner && infectedOwnerStrings.has(String(owner).toLowerCase());
 
     // hex_id → classification (used as a fallback only)
     const hexClassById = new Map<number, string>();
@@ -118,6 +139,40 @@ export const visibilityPhase: Phase = {
       sensorHexIdsBySlot.set(slot, ids);
     }
 
+    // Infected-faction aura → scouted hexes for the controlling slot.
+    // Any system owned by an infected faction grants visibility on the
+    // planet hex + 6 neighbors to the player slot that controls that faction.
+    const infectedHexIdsBySlot = new Map<number, number[]>();
+    if (infectedOwnerStrings.size > 0) {
+      // owner string (lc) → slot, derived from factions × players.
+      const slotByOwnerString = new Map<string, number>();
+      for (const f of factions) {
+        if (!f.infect) continue;
+        const slot = slotByFactionId.get(f.id);
+        if (slot == null) continue;
+        if (f.name) slotByOwnerString.set(String(f.name).toLowerCase(), slot);
+        if (f.code_name) slotByOwnerString.set(String(f.code_name).toLowerCase(), slot);
+      }
+      const hexByCoord = new Map<string, number>(); // "x,y" → hex_id
+      for (const h of hexList) hexByCoord.set(hexKey(h.x, h.y), h.hex_id);
+      for (const sys of mapState.systems.values()) {
+        if (!isInfectedOwner(sys.owner)) continue;
+        const slot = slotByOwnerString.get(String(sys.owner).toLowerCase());
+        if (slot == null) continue;
+        const sysHex = hexList.find(h => h.hex_id === sys.hex_id);
+        if (!sysHex) continue;
+        let arr = infectedHexIdsBySlot.get(slot);
+        if (!arr) { arr = []; infectedHexIdsBySlot.set(slot, arr); }
+        arr.push(sysHex.hex_id);
+        for (const [nx, ny] of getNeighbors(sysHex.x, sysHex.y)) {
+          const id = hexByCoord.get(hexKey(nx, ny));
+          if (id != null) arr.push(id);
+        }
+      }
+    }
+
+
+
     // Merge baseline with each player's existing "ever seen" memory rather than
     // overwriting it. Otherwise systems discovered via sensor scan (e.g. a fleet
     // moving into the marches) get forgotten on turn rollover.
@@ -132,11 +187,15 @@ export const visibilityPhase: Phase = {
       const sensorHexes = gp.player_slot != null
         ? (sensorHexIdsBySlot.get(gp.player_slot) || [])
         : [];
+      const infectedHexes = gp.player_slot != null
+        ? (infectedHexIdsBySlot.get(gp.player_slot) || [])
+        : [];
       const mergedHex = Array.from(new Set<number>([
         ...priorHex,
         ...sharedScoutedHexIds,
         ...ownProvinceHexes,
         ...sensorHexes,
+        ...infectedHexes,
       ]));
 
 

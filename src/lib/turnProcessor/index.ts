@@ -88,7 +88,7 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     (supabase as any).from("game_factions")
       .select("id, user_id, player_slot, faction_id, treasury, admin_capability, combat_capability, visible_system_ids, scouted_hex_ids")
       .eq("game_id", gameId),
-    (supabase as any).from("factions").select("id, name, code_name"),
+    (supabase as any).from("factions").select("id, name, code_name, infect"),
   ]);
 
   const orders: ConditionalOrder[] = ordersRaw || [];
@@ -103,7 +103,7 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     visible_system_ids: Array.isArray(p.visible_system_ids) ? p.visible_system_ids : [],
     scouted_hex_ids: Array.isArray(p.scouted_hex_ids) ? p.scouted_hex_ids : [],
   }));
-  const factions = (factionsRaw || []) as Array<{ id: string; name: string; code_name: string | null }>;
+  const factions = (factionsRaw || []) as Array<{ id: string; name: string; code_name: string | null; infect?: boolean }>;
 
   const ctx: TurnContext = {
     supabase,
