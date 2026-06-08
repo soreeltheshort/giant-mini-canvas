@@ -298,11 +298,13 @@ const PlayerMapCanvas: React.FC<Props> = ({
       }
       ctx.stroke();
 
-      // Unscouted-hex indicator: a tiny bronze dot at the hex center for hexes
-      // the player has never had sensors on. Subtle by design — fades away at
-      // low zoom and is suppressed for hexes that contain a remembered system
-      // (those already render their own marker).
-      if (!isLive && !isRemembered && zoom > 0.6 && !hex.has_system) {
+      // Unscouted-hex indicator: a tiny bronze dot at the hex center for any
+      // hex whose `hex_id` is NOT in the player's persistent `scoutedHexIds`
+      // set. The flag is append-only, so an O(1) `Set.has` per hex is all the
+      // work this loop does for the "still off" path. Subtle by design —
+      // fades away at low zoom and is suppressed for system hexes.
+      const isScouted = scoutedHexIds ? scoutedHexIds.has(hex.hex_id) : (isLive || isRemembered);
+      if (!isScouted && zoom > 0.6 && !hex.has_system) {
         const dotR = Math.max(0.6, size * 0.06);
         ctx.fillStyle = "rgba(200,169,110,0.22)";
         ctx.beginPath();
