@@ -293,6 +293,18 @@ const PlayerMapCanvas: React.FC<Props> = ({
       }
       ctx.stroke();
 
+      // Unscouted-hex indicator: a tiny bronze dot at the hex center for hexes
+      // the player has never had sensors on. Subtle by design — fades away at
+      // low zoom and is suppressed for hexes that contain a remembered system
+      // (those already render their own marker).
+      if (!isLive && !isRemembered && zoom > 0.6 && !hex.has_system) {
+        const dotR = Math.max(0.6, size * 0.06);
+        ctx.fillStyle = "rgba(200,169,110,0.22)";
+        ctx.beginPath();
+        ctx.arc(px, py, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       ctx.globalAlpha = 1;
     }
 
