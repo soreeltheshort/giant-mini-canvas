@@ -680,7 +680,14 @@ const PlayerGame = () => {
   // these still execute unconditionally on every render and before any early
   // return below.
   const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
-  const { live: liveHexKeysBase, everSeen: everSeenHexKeysBase } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+  const { live: liveHexKeysBase, everSeen: everSeenHexKeysBase, liveHexIds } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+
+  // Persistent "ever scouted" set of hex_ids. Loaded once from the player row
+  // and grown locally as new hexes come into sensor range. Stored as a Set for
+  // O(1) per-hex lookup in the map canvas. Append-only — we never clear bits.
+  const scoutedHexIds = useMemo(() => {
+    return new Set<number>((player?.scouted_hex_ids ?? []) as number[]);
+  }, [player?.scouted_hex_ids]);
 
   // Hexes revealed because an enemy fleet attacked us last turn.
   // Rule: "If I am attacked by another fleet, that fleet's hex is visible to me
