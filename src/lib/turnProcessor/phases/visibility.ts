@@ -100,7 +100,25 @@ export const visibilityPhase: Phase = {
     // the client-side useVisibleHexKeys logic so hexes swept during
     // server-side fleet auto-movement are remembered even if the player
     // never opened the page that turn.
-    const sensorCentersBySlot = new Map<number, Array<[number, number, number]>>();
+    // Per-fleet sensor range: max(ship_types.sensor_rating) across the
+    // ships on each game_fleet. Falls back to SENSOR_RADIUS baseline.
+    const fleetSensorRanges = new Map<string, number>(); // fleet_id → radius
+    {
+      const { data: gfs } = await (supabase as any)
+        .from("game_fleets")
+        .select("fleet_id, game_fleet_ships(ship_type_id, ship_types(sensor_rating))")
+        .eq("game_id", gameId);
+      for (const gf of (gfs || []) as any[]) {
+        let max = SENSOR_RADIUS;
+        for (const s of gf.game_fleet_ships || []) {
+          const r = Number(s.ship_types?.sensor_rating ?? 0);
+          if (r > max) max = r;
+        }
+        if (gf.fleet_id) fleetSensorRanges.set(gf.fleet_id, max);
+      }
+    }
+
+    const sensorCentersBySlot = new Map<number, Array<[number, number, number, number]>>(); // cx, cy, cz, radius
     const ensureSlot = (slot: number) => {
       let arr = sensorCentersBySlot.get(slot);
       if (!arr) { arr = []; sensorCentersBySlot.set(slot, arr); }
@@ -113,24 +131,25 @@ export const visibilityPhase: Phase = {
     for (const sys of mapState.systems.values()) {
       const slot = slotFromClassification(sys.owner);
       if (slot == null) continue;
-      const hex = mapState.hexes.get(`${0}`); // placeholder, replaced below
-      // find hex by id
       const sysHex = hexList.find(h => h.hex_id === sys.hex_id);
       if (!sysHex) continue;
-      ensureSlot(slot).push(offsetToCube(sysHex.x, sysHex.y));
+      const [cx, cy, cz] = offsetToCube(sysHex.x, sysHex.y);
+      ensureSlot(slot).push([cx, cy, cz, SENSOR_RADIUS]);
     }
     for (const f of mapState.fleets ?? []) {
       const slot = slotFromClassification(f.owner_classification);
       if (slot == null) continue;
-      ensureSlot(slot).push(offsetToCube(f.hex_x, f.hex_y));
+      const [cx, cy, cz] = offsetToCube(f.hex_x, f.hex_y);
+      const r = fleetSensorRanges.get(f.fleet_id) ?? SENSOR_RADIUS;
+      ensureSlot(slot).push([cx, cy, cz, r]);
     }
 
     const sensorHexIdsBySlot = new Map<number, number[]>();
     for (const [slot, centers] of sensorCentersBySlot.entries()) {
       const ids: number[] = [];
       for (const h of hexCubes) {
-        for (const [cx, cy, cz] of centers) {
-          if (cubeDistance(h.cx, h.cy, h.cz, cx, cy, cz) <= SENSOR_RADIUS) {
+        for (const [cx, cy, cz, r] of centers) {
+          if (cubeDistance(h.cx, h.cy, h.cz, cx, cy, cz) <= r) {
             ids.push(h.id);
             break;
           }
