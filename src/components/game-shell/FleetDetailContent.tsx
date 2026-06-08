@@ -741,6 +741,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     <>
       <ImperialCard title={fleet.fleet_name}>
         <div className="space-y-2">
+          <Row label="Sensor Range" value={`${SENSOR_RADIUS}`} />
           <Row
             label="Maintenance"
             value={
