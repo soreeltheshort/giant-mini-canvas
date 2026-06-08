@@ -108,6 +108,7 @@ function deserializeMapState(json: any): MapState {
 function useComputedVisibility(
   player: PlayerInfo | null,
   mapState: MapState | null,
+  fleetSensorRanges: Map<string, number>,
 ): { live: number[]; everSeen: number[] } {
   return useMemo(() => {
     const persisted = ((player?.visible_system_ids ?? []) as number[]);
@@ -116,7 +117,7 @@ function useComputedVisibility(
     }
 
     const ownProvince = player.own_classification;
-    const SENSOR_RADIUS = 1;
+    const BASE_RADIUS = 1;
 
     // hex_id → HexData lookup
     const hexById = new Map<number, HexData>();
@@ -125,12 +126,6 @@ function useComputedVisibility(
     const allSystems = Array.from(mapState.systems.values());
     const live = new Set<number>();
 
-    // 1. Always-live: Core hexes + the player's own province + any system the
-    //    player owns. Other-province systems and Marches systems are NOT live
-    //    by classification — they only appear via sensor scan around an owned
-    //    fleet/system. Otherwise they fall back to "ever seen" memory (faded
-    //    ghost), so the player remembers planet locations but doesn't get a
-    //    live readout without scouting.
     for (const sys of allSystems) {
       const sysHex = hexById.get(sys.hex_id);
       if (!sysHex) continue;
@@ -140,29 +135,35 @@ function useComputedVisibility(
       if (sys.owner === ownProvince) live.add(sys.system_id);
     }
 
-    // 2. Sensor scan: scan centers = owned fleets + owned systems
-    const scanCenters: Array<[number, number]> = [];
+    // 2. Sensor scan: scan centers = owned fleets + owned systems, each with
+    //    its own radius. Systems use the baseline; fleets use the maximum
+    //    sensor_rating across the ships they carry (defaults to baseline).
+    const scanCenters: Array<[number, number, number]> = []; // x, y, radius
     for (const sys of allSystems) {
       if (sys.owner === ownProvince) {
         const sysHex = hexById.get(sys.hex_id);
-        if (sysHex) scanCenters.push([sysHex.x, sysHex.y]);
+        if (sysHex) scanCenters.push([sysHex.x, sysHex.y, BASE_RADIUS]);
       }
     }
     for (const f of mapState.fleets ?? []) {
       if (f.owner_classification === ownProvince) {
-        scanCenters.push([f.hex_x, f.hex_y]);
+        const r = fleetSensorRanges.get(f.fleet_id) ?? BASE_RADIUS;
+        scanCenters.push([f.hex_x, f.hex_y, r]);
       }
     }
 
     if (scanCenters.length > 0) {
-      const centersCube = scanCenters.map(([x, y]) => offsetToCube(x, y));
+      const centersCube = scanCenters.map(([x, y, r]) => {
+        const [cx, cy, cz] = offsetToCube(x, y);
+        return [cx, cy, cz, r] as const;
+      });
       for (const sys of allSystems) {
         if (live.has(sys.system_id)) continue;
         const sysHex = hexById.get(sys.hex_id);
         if (!sysHex) continue;
         const [sx, sy, sz] = offsetToCube(sysHex.x, sysHex.y);
-        for (const [cx, cy, cz] of centersCube) {
-          if (cubeDistance(sx, sy, sz, cx, cy, cz) <= SENSOR_RADIUS) {
+        for (const [cx, cy, cz, r] of centersCube) {
+          if (cubeDistance(sx, sy, sz, cx, cy, cz) <= r) {
             live.add(sys.system_id);
             break;
           }
@@ -175,7 +176,7 @@ function useComputedVisibility(
     for (const id of live) everSeen.add(id);
 
     return { live: Array.from(live), everSeen: Array.from(everSeen) };
-  }, [player, mapState]);
+  }, [player, mapState, fleetSensorRanges]);
 }
 
 /**
