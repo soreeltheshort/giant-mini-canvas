@@ -737,11 +737,23 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     .sort((a, b) => a.system_name.localeCompare(b.system_name));
   const transferActive = detail.special1_role === "Transfer" || detail.special2_role === "Transfer";
 
+  // Fleet sensor range = max(sensor_rating) across ships in the fleet,
+  // floored at the baseline SENSOR_RADIUS.
+  const fleetSensorRange = useMemo(() => {
+    let max = SENSOR_RADIUS;
+    const byId = new Map((shipTypes ?? []).map(t => [t.id, t]));
+    for (const s of ships) {
+      const r = Number(byId.get(s.ship_type_id)?.sensor_rating ?? 0);
+      if (r > max) max = r;
+    }
+    return max;
+  }, [ships, shipTypes]);
+
   return (
     <>
       <ImperialCard title={fleet.fleet_name}>
         <div className="space-y-2">
-          <Row label="Sensor Range" value={`${SENSOR_RADIUS}`} />
+          <Row label="Sensor Range" value={`${fleetSensorRange}`} />
           <Row
             label="Maintenance"
             value={
