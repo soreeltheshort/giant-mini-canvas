@@ -44,6 +44,10 @@ interface PlayerInfo {
   player_slot: number | null;
   initialized: boolean;
   visible_system_ids: number[];
+  /** Persistent per-player flag set: every hex_id this player's sensors have
+   *  ever reached. Append-only — never reset. Used to render the unscouted-hex
+   *  indicator and to short-circuit any "is this hex new to me?" check. */
+  scouted_hex_ids: number[];
   treasury: number;
   last_tribute: number;
   last_maintenance: number;
@@ -181,11 +185,12 @@ function useVisibleHexKeys(
   player: PlayerInfo | null,
   mapState: MapState | null,
   everSeenSystemIds: number[],
-): { live: Set<string>; everSeen: Set<string> } {
+): { live: Set<string>; everSeen: Set<string>; liveHexIds: number[] } {
   return useMemo(() => {
     const live = new Set<string>();
     const everSeen = new Set<string>();
-    if (!player || !mapState) return { live, everSeen };
+    const liveHexIds: number[] = [];
+    if (!player || !mapState) return { live, everSeen, liveHexIds };
 
     const ownProvince = player.own_classification;
     const SENSOR_RADIUS = 1;
@@ -193,7 +198,8 @@ function useVisibleHexKeys(
     // 1. Core + Explored Marches + own-province hexes are always live
     for (const hex of mapState.hexes.values()) {
       if (hex.classification === "CORE" || hex.classification === "MARCHES" || hex.classification === ownProvince) {
-        live.add(hexKey(hex.x, hex.y));
+        const k = hexKey(hex.x, hex.y);
+        if (!live.has(k)) { live.add(k); liveHexIds.push(hex.hex_id); }
       }
     }
 
@@ -223,6 +229,7 @@ function useVisibleHexKeys(
         for (const [cx, cy, cz] of centersCube) {
           if (cubeDistance(sx, sy, sz, cx, cy, cz) <= SENSOR_RADIUS) {
             live.add(k);
+            liveHexIds.push(hex.hex_id);
             break;
           }
         }
@@ -238,7 +245,7 @@ function useVisibleHexKeys(
       if (sysHex) everSeen.add(hexKey(sysHex.x, sysHex.y));
     }
 
-    return { live, everSeen };
+    return { live, everSeen, liveHexIds };
   }, [player, mapState, everSeenSystemIds]);
 }
 
@@ -378,7 +385,7 @@ const PlayerGame = () => {
     if (!user || !gameId) return;
 
     const useAdminImpersonation = !!(asFactionId && isAdmin);
-    const factionSelect = "id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, orders_locked, faction_id, user_id, factions:faction_id(id, name, code_name, is_player_faction, infect)";
+    const factionSelect = "id, player_slot, initialized, visible_system_ids, scouted_hex_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, orders_locked, faction_id, user_id, factions:faction_id(id, name, code_name, is_player_faction, infect)";
     let factionQuery = (supabase as any)
       .from("game_factions")
       .select(factionSelect)
@@ -673,7 +680,14 @@ const PlayerGame = () => {
   // these still execute unconditionally on every render and before any early
   // return below.
   const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
-  const { live: liveHexKeysBase, everSeen: everSeenHexKeysBase } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+  const { live: liveHexKeysBase, everSeen: everSeenHexKeysBase, liveHexIds } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+
+  // Persistent "ever scouted" set of hex_ids. Loaded once from the player row
+  // and grown locally as new hexes come into sensor range. Stored as a Set for
+  // O(1) per-hex lookup in the map canvas. Append-only — we never clear bits.
+  const scoutedHexIds = useMemo(() => {
+    return new Set<number>((player?.scouted_hex_ids ?? []) as number[]);
+  }, [player?.scouted_hex_ids]);
 
   // Hexes revealed because an enemy fleet attacked us last turn.
   // Rule: "If I am attacked by another fleet, that fleet's hex is visible to me
@@ -731,10 +745,16 @@ const PlayerGame = () => {
     if (mapState) for (const k of mapState.hexes.keys()) set.add(k);
     return set;
   }, [mapState]);
+  const allHexIds = useMemo(() => {
+    const set = new Set<number>();
+    if (mapState) for (const h of mapState.hexes.values()) set.add(h.hex_id);
+    return set;
+  }, [mapState]);
   const effectiveLiveSystemIds = isAdmin && adminRevealAll ? allSystemIds : liveVisibleIds;
   const effectiveEverSeenSystemIds = isAdmin && adminRevealAll ? allSystemIds : everSeenSystemIds;
   const effectiveLiveHexKeys = isAdmin && adminRevealAll ? allHexKeys : liveHexKeys;
   const effectiveEverSeenHexKeys = isAdmin && adminRevealAll ? allHexKeys : everSeenHexKeys;
+  const effectiveScoutedHexIds = isAdmin && adminRevealAll ? allHexIds : scoutedHexIds;
 
   // ─── Real dispatches from game_logs ───
   // Pull recent capture/colonize events affecting this player's province
@@ -1308,6 +1328,27 @@ const PlayerGame = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveVisibleIds.join(","), player?.id]);
 
+  // Persist newly-scouted hex IDs into player.scouted_hex_ids. Append-only:
+  // we never clear bits, so the only work each render is a single Set.has
+  // probe per live hex and (in the rare turn where a fleet moves into new
+  // space) one DB update with just the delta unioned into the prior array.
+  useEffect(() => {
+    if (!player || !mapState) return;
+    const persisted = scoutedHexIds;
+    const newly: number[] = [];
+    for (const id of liveHexIds) if (!persisted.has(id)) newly.push(id);
+    if (newly.length === 0) return;
+    const merged = Array.from(new Set<number>([...persisted, ...newly]));
+    (supabase as any)
+      .from("game_factions")
+      .update({ scouted_hex_ids: merged })
+      .eq("id", player.id)
+      .then(() => {
+        setPlayer(p => p ? { ...p, scouted_hex_ids: merged } : p);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveHexIds.length, liveHexIds.join(","), player?.id]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-ivory flex items-center justify-center">
@@ -1475,6 +1516,7 @@ const PlayerGame = () => {
               onCancelTargeting={() => setTargeting(null)}
               debugVisibleHexKeys={effectiveLiveHexKeys}
               everSeenHexKeys={effectiveEverSeenHexKeys}
+              scoutedHexIds={effectiveScoutedHexIds}
               orderArrow={orderArrow}
               ownClassification={player.own_classification}
               revealAllFleets={isAdmin && adminRevealAll}

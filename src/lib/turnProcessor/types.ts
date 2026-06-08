@@ -34,6 +34,7 @@ export interface PlayerCtx {
   admin_capability: number;
   combat_capability: number;
   visible_system_ids: number[];
+  scouted_hex_ids: number[];
 }
 
 /** Mutable accumulator for per-player economic deltas during a phase run. */

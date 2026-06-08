@@ -86,7 +86,7 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
   const [{ data: ordersRaw }, { data: playersRaw }, { data: factionsRaw }] = await Promise.all([
     (supabase as any).from("player_orders").select("*").eq("game_id", gameId).eq("turn_number", currentTurn),
     (supabase as any).from("game_factions")
-      .select("id, user_id, player_slot, faction_id, treasury, admin_capability, combat_capability, visible_system_ids")
+      .select("id, user_id, player_slot, faction_id, treasury, admin_capability, combat_capability, visible_system_ids, scouted_hex_ids")
       .eq("game_id", gameId),
     (supabase as any).from("factions").select("id, name, code_name"),
   ]);
@@ -101,6 +101,7 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     admin_capability: p.admin_capability || 3,
     combat_capability: p.combat_capability || 3,
     visible_system_ids: Array.isArray(p.visible_system_ids) ? p.visible_system_ids : [],
+    scouted_hex_ids: Array.isArray(p.scouted_hex_ids) ? p.scouted_hex_ids : [],
   }));
   const factions = (factionsRaw || []) as Array<{ id: string; name: string; code_name: string | null }>;
 
