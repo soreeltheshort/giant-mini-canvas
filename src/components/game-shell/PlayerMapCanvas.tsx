@@ -48,15 +48,20 @@ interface Props {
 
 const HEX_SIZE = 10;
 
-/** Faction/owner BACKGROUND colors — used to tint owned hex provinces. */
+/** Faction/owner BACKGROUND colors — used to tint owned hex provinces.
+ *  Keyed by both PROVINCE_<slot> (used by fleets / hex classification) and
+ *  faction display name (used by `system.owner`). */
 const OWNER_COLORS: Record<string, string> = {
-  PROVINCE_1: "#f97316",
-  PROVINCE_2: "#06b6d4",
-  PROVINCE_3: "#eab308",
-  PROVINCE_4: "#a855f7",
-  PROVINCE_5: "#f472b6",
-  PROVINCE_6: "#14b8a6",
-  // AI faction overrides — sourced from the Faction Config color values.
+  PROVINCE_1: "#f97316", Valerian: "#f97316",
+  PROVINCE_2: "#06b6d4", Aurelian: "#06b6d4",
+  PROVINCE_3: "#eab308", Cassian:  "#eab308",
+  PROVINCE_4: "#a855f7", Dravian:  "#a855f7",
+  PROVINCE_5: "#f472b6", Marcellan:"#f472b6",
+  PROVINCE_6: "#14b8a6", Octavian: "#14b8a6",
+  Core: "#3b82f6",
+  Synod: "#888888", Synod_int2: "#888888", Synod_int3: "#888888",
+  Synod_int4: "#888888", Synod_int5: "#888888", Synod_int6: "#888888",
+  Synod_int7: "#888888", Synod_int8: "#888888",
   Synod_int1: "#aefb09",
 };
 
@@ -64,12 +69,16 @@ const OWNER_COLORS: Record<string, string> = {
  *  planet dots so they remain legible on top of the lighter province tint.
  *  Mirrors `factions.foreground_color` in the DB. */
 const OWNER_FG_COLORS: Record<string, string> = {
-  PROVINCE_1: "#7c3a08",
-  PROVINCE_2: "#075a6a",
-  PROVINCE_3: "#705604",
-  PROVINCE_4: "#581c87",
-  PROVINCE_5: "#9d174d",
-  PROVINCE_6: "#0b5a52",
+  PROVINCE_1: "#7c3a08", Valerian: "#7c3a08",
+  PROVINCE_2: "#075a6a", Aurelian: "#075a6a",
+  PROVINCE_3: "#705604", Cassian:  "#705604",
+  PROVINCE_4: "#581c87", Dravian:  "#581c87",
+  PROVINCE_5: "#9d174d", Marcellan:"#9d174d",
+  PROVINCE_6: "#0b5a52", Octavian: "#0b5a52",
+  Core: "#1e3a8a",
+  Synod: "#3a3a3a", Synod_int2: "#3a3a3a", Synod_int3: "#3a3a3a",
+  Synod_int4: "#3a3a3a", Synod_int5: "#3a3a3a", Synod_int6: "#3a3a3a",
+  Synod_int7: "#3a3a3a", Synod_int8: "#3a3a3a",
   Synod_int1: "#557e04",
 };
 
