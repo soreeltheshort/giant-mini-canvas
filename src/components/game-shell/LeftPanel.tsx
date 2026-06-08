@@ -478,7 +478,7 @@ function CreateFleetCard({
       <Dialog open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else setOpen(true); }}>
         <DialogContent className="bg-marble border-bronze/40">
           <DialogHeader>
-            <DialogTitle className="font-heading text-senate-dark">
+            <DialogTitle className="font-heading text-ivory">
               Commission New Fleet — Name Fleet
             </DialogTitle>
           </DialogHeader>
