@@ -185,11 +185,12 @@ function useVisibleHexKeys(
   player: PlayerInfo | null,
   mapState: MapState | null,
   everSeenSystemIds: number[],
-): { live: Set<string>; everSeen: Set<string> } {
+): { live: Set<string>; everSeen: Set<string>; liveHexIds: number[] } {
   return useMemo(() => {
     const live = new Set<string>();
     const everSeen = new Set<string>();
-    if (!player || !mapState) return { live, everSeen };
+    const liveHexIds: number[] = [];
+    if (!player || !mapState) return { live, everSeen, liveHexIds };
 
     const ownProvince = player.own_classification;
     const SENSOR_RADIUS = 1;
@@ -197,7 +198,8 @@ function useVisibleHexKeys(
     // 1. Core + Explored Marches + own-province hexes are always live
     for (const hex of mapState.hexes.values()) {
       if (hex.classification === "CORE" || hex.classification === "MARCHES" || hex.classification === ownProvince) {
-        live.add(hexKey(hex.x, hex.y));
+        const k = hexKey(hex.x, hex.y);
+        if (!live.has(k)) { live.add(k); liveHexIds.push(hex.hex_id); }
       }
     }
 
@@ -227,6 +229,7 @@ function useVisibleHexKeys(
         for (const [cx, cy, cz] of centersCube) {
           if (cubeDistance(sx, sy, sz, cx, cy, cz) <= SENSOR_RADIUS) {
             live.add(k);
+            liveHexIds.push(hex.hex_id);
             break;
           }
         }
@@ -242,7 +245,7 @@ function useVisibleHexKeys(
       if (sysHex) everSeen.add(hexKey(sysHex.x, sysHex.y));
     }
 
-    return { live, everSeen };
+    return { live, everSeen, liveHexIds };
   }, [player, mapState, everSeenSystemIds]);
 }
 
