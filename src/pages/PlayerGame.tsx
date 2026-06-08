@@ -1150,10 +1150,40 @@ const PlayerGame = () => {
   const handleHexTargetPicked = async (hex: { x: number; y: number }) => {
     if (!player || !game || !targeting || targeting.mode !== "hex") return;
     if (combatPointsAvailable <= 0) {
-      toast({ title: "No combat points", description: "Cancel another fleet order first.", variant: "destructive" });
+      toast({ title: "No combat points", description: "Cancel another order first.", variant: "destructive" });
       setTargeting(null);
       return;
     }
+
+    // ── Commission fleet branch: validate hex is owned + unoccupied, then create
+    if (targeting.orderType === "commission_fleet") {
+      const factionLabel = player.own_classification
+        ? (CLASSIFICATION_LABELS[player.own_classification as HexClassification] ?? null)
+        : null;
+      const destHex = mapState?.hexes.get(hexKey(hex.x, hex.y));
+      if (!destHex || !mapState) {
+        toast({ title: "Invalid hex", description: "Unknown location.", variant: "destructive" });
+        setTargeting(null);
+        return;
+      }
+      const sys = Array.from(mapState.systems.values()).find(s => s.hex_id === destHex.hex_id);
+      const ownsSystem = !!sys && (sys.owner === player.own_classification || (factionLabel && sys.owner === factionLabel));
+      const isOwnProvince = destHex.classification === player.own_classification;
+      if (!ownsSystem && !isOwnProvince) {
+        toast({ title: "Not an owned hex", description: "Commission fleets only on your province hexes or owned systems.", variant: "destructive" });
+        return;
+      }
+      const occupied = mapState.fleets.some(f => f.hex_x === hex.x && f.hex_y === hex.y);
+      if (occupied) {
+        toast({ title: "Hex occupied", description: "Another fleet already occupies this hex.", variant: "destructive" });
+        return;
+      }
+      const fleetName = targeting.fleetName;
+      setTargeting(null);
+      await handleCreateFleet(fleetName, hex.x, hex.y);
+      return;
+    }
+
     // Block check: a fleet may not be ordered to a hex closed to this player
     // (CORE for everyone; foreign-faction systems for non-owners).
     const destHex = mapState?.hexes.get(hexKey(hex.x, hex.y));
@@ -1168,18 +1198,19 @@ const PlayerGame = () => {
         return;
       }
     }
+    const fleetId = targeting.fleetId;
     try {
       await (supabase as any).from("player_orders")
         .delete()
         .eq("game_id", game.id).eq("player_id", player.id).eq("turn_number", game.turn_number)
         .eq("order_type", "fleet_move")
-        .filter("order_json->>fleet_id", "eq", targeting.fleetId);
+        .filter("order_json->>fleet_id", "eq", fleetId);
       await (supabase as any).from("player_orders").insert({
         game_id: game.id,
         player_id: player.id,
         turn_number: game.turn_number,
         order_type: "fleet_move",
-        order_json: { fleet_id: targeting.fleetId, dest_x: hex.x, dest_y: hex.y },
+        order_json: { fleet_id: fleetId, dest_x: hex.x, dest_y: hex.y },
         notes: "",
       });
       playOrderPlaced();
