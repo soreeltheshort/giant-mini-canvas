@@ -13,8 +13,9 @@ import {
   Globe2,
   Sword,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { X } from "lucide-react";
 import type { GameMode, GlobalStats, NewsStory, MapSelection } from "./gameShellTypes";
 import { REGION_DETAILS, ARMY_DETAILS, PRODUCTION_DETAILS } from "./gameShellTypes";
 import { ProgressBar } from "./ProgressBar";
@@ -475,53 +476,128 @@ function CreateFleetCard({
         </button>
       </div>
 
-      <Dialog open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else setOpen(true); }}>
-        <DialogContent className="bg-marble border-bronze/40">
-          <DialogHeader>
-            <DialogTitle className="font-heading text-senate-dark">
-              Commission New Fleet — Name Fleet
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Fleet Name</label>
-              <input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter" && canConfirm) handleConfirm(); }}
-                placeholder="e.g. First Legion"
-                className="w-full rounded-sm border border-border bg-ivory px-2 py-1.5 text-sm text-senate-dark"
-                autoFocus
-              />
-            </div>
-            <div className="text-[10px] text-muted-foreground leading-snug">
-              After confirming, click an owned, unoccupied hex on the map to station the fleet.
-            </div>
-            <div className="text-[10px] text-bronze-dark font-semibold">
-              Cost: 1 Combat Point · Available: {combatPointsAvailable}
-            </div>
-            <div className="flex gap-2 justify-end pt-1">
-              <button
-                onClick={resetAndClose}
-                className="px-3 py-1.5 rounded-sm border border-border text-[11px] font-heading uppercase tracking-wider text-senate-dark hover:bg-ivory-dark"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirm}
-                disabled={!canConfirm}
-                className="px-3 py-1.5 rounded-sm bg-crimson text-primary-foreground text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Choose Location on Map
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {open && (
+        <CommissionFleetPanel
+          name={name}
+          setName={setName}
+          canConfirm={canConfirm}
+          combatPointsAvailable={combatPointsAvailable}
+          onConfirm={handleConfirm}
+          onClose={resetAndClose}
+        />
+      )}
     </ImperialCard>
   );
 }
+
+interface CommissionFleetPanelProps {
+  name: string;
+  setName: (v: string) => void;
+  canConfirm: boolean;
+  combatPointsAvailable: number;
+  onConfirm: () => void;
+  onClose: () => void;
+}
+
+function CommissionFleetPanel({ name, setName, canConfirm, combatPointsAvailable, onConfirm, onClose }: CommissionFleetPanelProps) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+
+  useEffect(() => {
+    if (pos === null && panelRef.current) {
+      const rect = panelRef.current.getBoundingClientRect();
+      // Center horizontally, position near top (~80px from top)
+      setPos({ x: (window.innerWidth - rect.width) / 2, y: 80 });
+    }
+  }, [pos]);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("button, input")) return;
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: pos?.x ?? 0,
+      origY: pos?.y ?? 0,
+    };
+  };
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current) return;
+    setPos({
+      x: dragRef.current.origX + (e.clientX - dragRef.current.startX),
+      y: dragRef.current.origY + (e.clientY - dragRef.current.startY),
+    });
+  };
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current = null;
+    try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
+  };
+
+  return (
+    <div
+      ref={panelRef}
+      className="fixed z-50 w-[360px] rounded-sm bg-marble border border-bronze/40 shadow-xl"
+      style={{
+        left: pos?.x ?? 0,
+        top: pos?.y ?? 80,
+        visibility: pos ? "visible" : "hidden",
+      }}
+    >
+      <div
+        className="flex items-center justify-between px-3 py-2 border-b border-bronze/30 cursor-move select-none bg-senate-dark/95 rounded-t-sm"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        <h3 className="font-heading text-ivory text-sm uppercase tracking-wider">
+          Commission New Fleet
+        </h3>
+        <button
+          onClick={onClose}
+          className="text-ivory/70 hover:text-ivory"
+          aria-label="Close"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="p-3 space-y-3">
+        <div className="space-y-1">
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Fleet Name</label>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && canConfirm) onConfirm(); }}
+            placeholder="e.g. First Legion"
+            className="w-full rounded-sm border border-border bg-ivory px-2 py-1.5 text-sm text-senate-dark"
+            autoFocus
+          />
+        </div>
+        <div className="text-[10px] text-bronze-dark font-semibold">
+          Cost: 1 Combat Point · Available: {combatPointsAvailable}
+        </div>
+        <div className="flex gap-2 justify-end pt-1">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 rounded-sm border border-ivory/40 bg-senate-dark text-ivory text-[11px] font-heading uppercase tracking-wider hover:bg-senate-dark/80"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={!canConfirm}
+            className="px-3 py-1.5 rounded-sm bg-crimson text-ivory text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Choose Location on Map
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 /* ── Inline detail sub-components ── */
 function InlineEmptyState({
