@@ -188,6 +188,7 @@ function useVisibleHexKeys(
   player: PlayerInfo | null,
   mapState: MapState | null,
   everSeenSystemIds: number[],
+  fleetSensorRanges: Map<string, number>,
 ): { live: Set<string>; everSeen: Set<string>; liveHexIds: number[] } {
   return useMemo(() => {
     const live = new Set<string>();
@@ -196,7 +197,7 @@ function useVisibleHexKeys(
     if (!player || !mapState) return { live, everSeen, liveHexIds };
 
     const ownProvince = player.own_classification;
-    const SENSOR_RADIUS = 1;
+    const BASE_RADIUS = 1;
 
     // 1. Core + Explored Marches + own-province hexes are always live
     for (const hex of mapState.hexes.values()) {
@@ -206,31 +207,36 @@ function useVisibleHexKeys(
       }
     }
 
-    // 2. Sensor centers: owned systems + owned fleets
+    // 2. Sensor centers: owned systems (baseline) + owned fleets (per-fleet
+    //    range = max ship sensor_rating, fallback baseline)
     const hexById = new Map<number, HexData>();
     for (const h of mapState.hexes.values()) hexById.set(h.hex_id, h);
 
-    const scanCenters: Array<[number, number]> = [];
+    const scanCenters: Array<[number, number, number]> = [];
     for (const sys of mapState.systems.values()) {
       if (sys.owner === ownProvince) {
         const sysHex = hexById.get(sys.hex_id);
-        if (sysHex) scanCenters.push([sysHex.x, sysHex.y]);
+        if (sysHex) scanCenters.push([sysHex.x, sysHex.y, BASE_RADIUS]);
       }
     }
     for (const f of mapState.fleets ?? []) {
       if (f.owner_classification === ownProvince) {
-        scanCenters.push([f.hex_x, f.hex_y]);
+        const r = fleetSensorRanges.get(f.fleet_id) ?? BASE_RADIUS;
+        scanCenters.push([f.hex_x, f.hex_y, r]);
       }
     }
 
     if (scanCenters.length > 0) {
-      const centersCube = scanCenters.map(([x, y]) => offsetToCube(x, y));
+      const centersCube = scanCenters.map(([x, y, r]) => {
+        const [cx, cy, cz] = offsetToCube(x, y);
+        return [cx, cy, cz, r] as const;
+      });
       for (const hex of mapState.hexes.values()) {
         const k = hexKey(hex.x, hex.y);
         if (live.has(k)) continue;
         const [sx, sy, sz] = offsetToCube(hex.x, hex.y);
-        for (const [cx, cy, cz] of centersCube) {
-          if (cubeDistance(sx, sy, sz, cx, cy, cz) <= SENSOR_RADIUS) {
+        for (const [cx, cy, cz, r] of centersCube) {
+          if (cubeDistance(sx, sy, sz, cx, cy, cz) <= r) {
             live.add(k);
             liveHexIds.push(hex.hex_id);
             break;
@@ -249,7 +255,7 @@ function useVisibleHexKeys(
     }
 
     return { live, everSeen, liveHexIds };
-  }, [player, mapState, everSeenSystemIds]);
+  }, [player, mapState, everSeenSystemIds, fleetSensorRanges]);
 }
 
 /* ── DEBUG: Log applied visibility & initialization rules ── */
