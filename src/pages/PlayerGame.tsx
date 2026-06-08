@@ -378,7 +378,7 @@ const PlayerGame = () => {
     if (!user || !gameId) return;
 
     const useAdminImpersonation = !!(asFactionId && isAdmin);
-    const factionSelect = "id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, orders_locked, faction_id, user_id, factions:faction_id(id, name, code_name, is_player_faction)";
+    const factionSelect = "id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, orders_locked, faction_id, user_id, factions:faction_id(id, name, code_name, is_player_faction, infect)";
     let factionQuery = (supabase as any)
       .from("game_factions")
       .select(factionSelect)
