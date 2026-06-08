@@ -82,6 +82,8 @@ interface LeftPanelProps {
     adminPointsAvailable?: number;
     /** Create a new empty fleet at a given hex (Military Overview action). */
     onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
+    /** Begin map-click targeting for commissioning a fleet with a chosen name. */
+    onStartCommissionTargeting?: (fleetName: string) => void;
   };
 }
 
