@@ -169,6 +169,9 @@ export const visibilityPhase: Phase = {
           if (id != null) arr.push(id);
         }
       }
+    }
+
+
 
     // Merge baseline with each player's existing "ever seen" memory rather than
     // overwriting it. Otherwise systems discovered via sensor scan (e.g. a fleet
