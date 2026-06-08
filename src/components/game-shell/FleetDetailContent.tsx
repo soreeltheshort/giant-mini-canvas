@@ -482,6 +482,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   let availableRepair = 0;
   let totalSupply = 0;
   let minMapSpeed = Infinity;
+  // Attack range uses the RAW slowest non-zero ship map_speed (ignoring
+  // crippled halving) per game rule: attack_range = floor(min(map_speed) / 2).
+  let minRawAttackSpeed = Infinity;
   // Strikecraft capacity & current usage (FL = 1 fighter slot, FH = 2, GS = 1 gunship slot).
   // Crippled non-strikecraft ships do NOT contribute bays/links/repair/sensors,
   // but DO still hold supply and storage. Crippled strikecraft still occupy
