@@ -692,6 +692,49 @@ const PlayerGame = () => {
     return new Set<number>((player?.scouted_hex_ids ?? []) as number[]);
   }, [player?.scouted_hex_ids]);
 
+  // ── Infected-faction hex ownership ─────────────────────────────────────
+  // Load all factions flagged `infect=true` once. Their owner strings (e.g.
+  // "Synod") are matched against `system.owner`; any matching planet's hex
+  // + 6 neighbors are then owned by that infected faction. We accept both
+  // the display `name` and the internal `code_name` to cover the
+  // "Synod_int1" → "Synod" rollup.
+  const [infectedOwnerStrings, setInfectedOwnerStrings] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("factions")
+        .select("name, code_name, infect")
+        .eq("infect", true);
+      if (cancelled) return;
+      const set = new Set<string>();
+      for (const f of (data || []) as any[]) {
+        if (f.name) set.add(String(f.name));
+        if (f.code_name) set.add(String(f.code_name));
+      }
+      setInfectedOwnerStrings(set);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const isInfectedOwner = useCallback((owner?: string | null) => {
+    if (!owner) return false;
+    if (infectedOwnerStrings.has(owner)) return true;
+    // Tolerate case differences just in case.
+    for (const k of infectedOwnerStrings) {
+      if (k.toLowerCase() === owner.toLowerCase()) return true;
+    }
+    return false;
+  }, [infectedOwnerStrings]);
+
+  /** "x,y" → infected owner string for hexes currently controlled by an
+   *  infected planet's 1-hex aura. */
+  const infectedHexOwners = useMemo(() => {
+    if (!mapState || infectedOwnerStrings.size === 0) return new Map<string, string>();
+    return computeInfectedHexOwners(mapState.systems.values(), mapState.hexes, isInfectedOwner);
+  }, [mapState, infectedOwnerStrings, isInfectedOwner]);
+
+
   // Hexes revealed because an enemy fleet attacked us last turn.
   // Rule: "If I am attacked by another fleet, that fleet's hex is visible to me
   // irrespective of my sensor range." Pulls battle_resolved logs from the most
