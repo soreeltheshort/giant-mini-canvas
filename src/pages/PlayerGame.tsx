@@ -1516,6 +1516,7 @@ const PlayerGame = () => {
               onCancelTargeting={() => setTargeting(null)}
               debugVisibleHexKeys={effectiveLiveHexKeys}
               everSeenHexKeys={effectiveEverSeenHexKeys}
+              scoutedHexIds={effectiveScoutedHexIds}
               orderArrow={orderArrow}
               ownClassification={player.own_classification}
               revealAllFleets={isAdmin && adminRevealAll}
