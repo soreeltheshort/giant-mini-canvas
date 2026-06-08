@@ -1509,6 +1509,8 @@ const PlayerGame = () => {
             onBuildFacility: handleBuildFacility,
             onUndoBuildOrder: handleUndoBuildOrder,
             onCreateFleet: handleCreateFleet,
+            onStartCommissionTargeting: (fleetName: string) =>
+              setTargeting({ mode: "hex", orderType: "commission_fleet", fleetName }),
             onCancelInProduction: handleCancelInProduction,
             onUndoCancelBuild: handleUndoCancelBuild,
             pendingBuildOrders,
