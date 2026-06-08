@@ -14,7 +14,8 @@
  */
 import type { Phase, TurnContext } from "../types";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
-import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+import { offsetToCube, cubeDistance, getNeighbors } from "@/lib/hexUtils";
+import { hexKey } from "@/lib/mapTypes";
 
 export const SENSOR_RADIUS = 1;
 
