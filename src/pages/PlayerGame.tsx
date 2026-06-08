@@ -354,6 +354,7 @@ const PlayerGame = () => {
   const [targeting, setTargeting] = useState<
     | { mode: "hex"; orderType: "fleet_move"; fleetId: string }
     | { mode: "fleet"; orderType: "attack"; fleetId: string }
+    | { mode: "hex"; orderType: "commission_fleet"; fleetName: string }
     | null
   >(null);
   // Number of fleet-related orders the player has issued this turn (each costs 1 combat point)
