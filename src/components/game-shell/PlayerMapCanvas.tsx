@@ -97,6 +97,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   onSystemClick,
   onFleetClick,
   targetingMode = null,
+  targetingLabel,
   onHexTargetPicked,
   onFleetTargetPicked,
   onSystemTargetPicked,
