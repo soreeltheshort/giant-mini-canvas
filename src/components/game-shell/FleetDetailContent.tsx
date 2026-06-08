@@ -529,6 +529,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     }
   }
   const mapSpeedDisplay = minMapSpeed === Infinity ? 0 : minMapSpeed;
+  const attackRangeBaseSpeed = minRawAttackSpeed === Infinity ? 0 : minRawAttackSpeed;
   const previewReadiness = detail.next_readiness ?? detail.readiness;
   const readinessChanged = detail.next_readiness !== null && detail.next_readiness !== detail.readiness;
   const currentMaintenance = Math.round(baseMaintenance * readinessMaintMult(detail.readiness) * 100) / 100;
