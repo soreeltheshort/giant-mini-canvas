@@ -26,6 +26,8 @@ import { playOrderPlaced, playOrdersSubmitted } from "@/lib/uiSounds";
 import { computeGroupStrikecraftCapacity, type FleetShipRow } from "@/components/game-shell/FleetCompositionEditor";
 import { processTurn } from "@/lib/gameLifecycle";
 import { computeInfectedHexOwners } from "@/lib/infectedHexes";
+import { useFleetSensorRanges } from "@/hooks/useFleetSensorRanges";
+
 
 
 
@@ -108,6 +110,7 @@ function deserializeMapState(json: any): MapState {
 function useComputedVisibility(
   player: PlayerInfo | null,
   mapState: MapState | null,
+  fleetSensorRanges: Map<string, number>,
 ): { live: number[]; everSeen: number[] } {
   return useMemo(() => {
     const persisted = ((player?.visible_system_ids ?? []) as number[]);
@@ -116,7 +119,7 @@ function useComputedVisibility(
     }
 
     const ownProvince = player.own_classification;
-    const SENSOR_RADIUS = 1;
+    const BASE_RADIUS = 1;
 
     // hex_id → HexData lookup
     const hexById = new Map<number, HexData>();
@@ -125,12 +128,6 @@ function useComputedVisibility(
     const allSystems = Array.from(mapState.systems.values());
     const live = new Set<number>();
 
-    // 1. Always-live: Core hexes + the player's own province + any system the
-    //    player owns. Other-province systems and Marches systems are NOT live
-    //    by classification — they only appear via sensor scan around an owned
-    //    fleet/system. Otherwise they fall back to "ever seen" memory (faded
-    //    ghost), so the player remembers planet locations but doesn't get a
-    //    live readout without scouting.
     for (const sys of allSystems) {
       const sysHex = hexById.get(sys.hex_id);
       if (!sysHex) continue;
@@ -140,29 +137,35 @@ function useComputedVisibility(
       if (sys.owner === ownProvince) live.add(sys.system_id);
     }
 
-    // 2. Sensor scan: scan centers = owned fleets + owned systems
-    const scanCenters: Array<[number, number]> = [];
+    // 2. Sensor scan: scan centers = owned fleets + owned systems, each with
+    //    its own radius. Systems use the baseline; fleets use the maximum
+    //    sensor_rating across the ships they carry (defaults to baseline).
+    const scanCenters: Array<[number, number, number]> = []; // x, y, radius
     for (const sys of allSystems) {
       if (sys.owner === ownProvince) {
         const sysHex = hexById.get(sys.hex_id);
-        if (sysHex) scanCenters.push([sysHex.x, sysHex.y]);
+        if (sysHex) scanCenters.push([sysHex.x, sysHex.y, BASE_RADIUS]);
       }
     }
     for (const f of mapState.fleets ?? []) {
       if (f.owner_classification === ownProvince) {
-        scanCenters.push([f.hex_x, f.hex_y]);
+        const r = fleetSensorRanges.get(f.fleet_id) ?? BASE_RADIUS;
+        scanCenters.push([f.hex_x, f.hex_y, r]);
       }
     }
 
     if (scanCenters.length > 0) {
-      const centersCube = scanCenters.map(([x, y]) => offsetToCube(x, y));
+      const centersCube = scanCenters.map(([x, y, r]) => {
+        const [cx, cy, cz] = offsetToCube(x, y);
+        return [cx, cy, cz, r] as const;
+      });
       for (const sys of allSystems) {
         if (live.has(sys.system_id)) continue;
         const sysHex = hexById.get(sys.hex_id);
         if (!sysHex) continue;
         const [sx, sy, sz] = offsetToCube(sysHex.x, sysHex.y);
-        for (const [cx, cy, cz] of centersCube) {
-          if (cubeDistance(sx, sy, sz, cx, cy, cz) <= SENSOR_RADIUS) {
+        for (const [cx, cy, cz, r] of centersCube) {
+          if (cubeDistance(sx, sy, sz, cx, cy, cz) <= r) {
             live.add(sys.system_id);
             break;
           }
@@ -175,7 +178,7 @@ function useComputedVisibility(
     for (const id of live) everSeen.add(id);
 
     return { live: Array.from(live), everSeen: Array.from(everSeen) };
-  }, [player, mapState]);
+  }, [player, mapState, fleetSensorRanges]);
 }
 
 /**
@@ -187,6 +190,7 @@ function useVisibleHexKeys(
   player: PlayerInfo | null,
   mapState: MapState | null,
   everSeenSystemIds: number[],
+  fleetSensorRanges: Map<string, number>,
 ): { live: Set<string>; everSeen: Set<string>; liveHexIds: number[] } {
   return useMemo(() => {
     const live = new Set<string>();
@@ -195,7 +199,7 @@ function useVisibleHexKeys(
     if (!player || !mapState) return { live, everSeen, liveHexIds };
 
     const ownProvince = player.own_classification;
-    const SENSOR_RADIUS = 1;
+    const BASE_RADIUS = 1;
 
     // 1. Core + Explored Marches + own-province hexes are always live
     for (const hex of mapState.hexes.values()) {
@@ -205,31 +209,36 @@ function useVisibleHexKeys(
       }
     }
 
-    // 2. Sensor centers: owned systems + owned fleets
+    // 2. Sensor centers: owned systems (baseline) + owned fleets (per-fleet
+    //    range = max ship sensor_rating, fallback baseline)
     const hexById = new Map<number, HexData>();
     for (const h of mapState.hexes.values()) hexById.set(h.hex_id, h);
 
-    const scanCenters: Array<[number, number]> = [];
+    const scanCenters: Array<[number, number, number]> = [];
     for (const sys of mapState.systems.values()) {
       if (sys.owner === ownProvince) {
         const sysHex = hexById.get(sys.hex_id);
-        if (sysHex) scanCenters.push([sysHex.x, sysHex.y]);
+        if (sysHex) scanCenters.push([sysHex.x, sysHex.y, BASE_RADIUS]);
       }
     }
     for (const f of mapState.fleets ?? []) {
       if (f.owner_classification === ownProvince) {
-        scanCenters.push([f.hex_x, f.hex_y]);
+        const r = fleetSensorRanges.get(f.fleet_id) ?? BASE_RADIUS;
+        scanCenters.push([f.hex_x, f.hex_y, r]);
       }
     }
 
     if (scanCenters.length > 0) {
-      const centersCube = scanCenters.map(([x, y]) => offsetToCube(x, y));
+      const centersCube = scanCenters.map(([x, y, r]) => {
+        const [cx, cy, cz] = offsetToCube(x, y);
+        return [cx, cy, cz, r] as const;
+      });
       for (const hex of mapState.hexes.values()) {
         const k = hexKey(hex.x, hex.y);
         if (live.has(k)) continue;
         const [sx, sy, sz] = offsetToCube(hex.x, hex.y);
-        for (const [cx, cy, cz] of centersCube) {
-          if (cubeDistance(sx, sy, sz, cx, cy, cz) <= SENSOR_RADIUS) {
+        for (const [cx, cy, cz, r] of centersCube) {
+          if (cubeDistance(sx, sy, sz, cx, cy, cz) <= r) {
             live.add(k);
             liveHexIds.push(hex.hex_id);
             break;
@@ -248,7 +257,7 @@ function useVisibleHexKeys(
     }
 
     return { live, everSeen, liveHexIds };
-  }, [player, mapState, everSeenSystemIds]);
+  }, [player, mapState, everSeenSystemIds, fleetSensorRanges]);
 }
 
 /* ── DEBUG: Log applied visibility & initialization rules ── */
@@ -402,7 +411,7 @@ const PlayerGame = () => {
       factionQuery.maybeSingle(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
       (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity, cost, turns_to_build, max_per_system, consumed_facility_id, maintenance, synod"),
-      (supabase as any).from("ship_types").select("id, name, hull_class, ship_id, class, point_cost, maintenance, map_speed, repair_pod, supply_pod, hull, ground_invasion, scout_sensors, fighter_bay, gun_ship_link, flavor_description, synod, laser_2_5cm, laser_4_5cm, laser_6_5cm, laser_10cm, laser_14cm, laser_20cm, laser_28cm, laser_50cm, missile_10kg, missile_50kg, missile_100kg, missile_half_kt"),
+      (supabase as any).from("ship_types").select("id, name, hull_class, ship_id, class, point_cost, maintenance, map_speed, repair_pod, supply_pod, hull, ground_invasion, scout_sensors, sensor_rating, fighter_bay, gun_ship_link, flavor_description, synod, laser_2_5cm, laser_4_5cm, laser_6_5cm, laser_10cm, laser_14cm, laser_20cm, laser_28cm, laser_50cm, missile_10kg, missile_50kg, missile_100kg, missile_half_kt"),
     ]);
 
     if (!gData || !pDataRaw) {
@@ -682,8 +691,9 @@ const PlayerGame = () => {
   // checks attack targets against currently visible hexes). Rules of Hooks:
   // these still execute unconditionally on every render and before any early
   // return below.
-  const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState);
-  const { live: liveHexKeysBase, everSeen: everSeenHexKeysBase, liveHexIds } = useVisibleHexKeys(player, mapState, everSeenSystemIds);
+  const fleetSensorRanges = useFleetSensorRanges(game?.id);
+  const { live: liveVisibleIds, everSeen: everSeenSystemIds } = useComputedVisibility(player, mapState, fleetSensorRanges);
+  const { live: liveHexKeysBase, everSeen: everSeenHexKeysBase, liveHexIds } = useVisibleHexKeys(player, mapState, everSeenSystemIds, fleetSensorRanges);
 
   // Persistent "ever scouted" set of hex_ids. Loaded once from the player row
   // and grown locally as new hexes come into sensor range. Stored as a Set for
