@@ -590,6 +590,7 @@ function InlineEmptyState({
   playerOwnerClassification,
   onSelect,
   onCreateFleet,
+  onStartCommissionTargeting,
   combatPointsAvailable,
 }: {
   mode: GameMode;
@@ -598,6 +599,7 @@ function InlineEmptyState({
   playerOwnerClassification?: string;
   onSelect?: (selection: MapSelection) => void;
   onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
+  onStartCommissionTargeting?: (fleetName: string) => void;
   combatPointsAvailable?: number;
 }) {
   if (mode === "military") {
@@ -629,6 +631,7 @@ function InlineEmptyState({
             playerOwnerClassification={playerOwnerClassification}
             combatPointsAvailable={combatPointsAvailable ?? 0}
             onCreateFleet={onCreateFleet}
+            onStartCommissionTargeting={onStartCommissionTargeting}
           />
         )}
 
