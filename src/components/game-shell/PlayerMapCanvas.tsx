@@ -758,4 +758,52 @@ const PlayerMapCanvas: React.FC<Props> = ({
   );
 };
 
+interface DraggableTargetingBannerProps {
+  label: string;
+  onCancel?: () => void;
+}
+
+const DraggableTargetingBanner: React.FC<DraggableTargetingBannerProps> = ({ label, onCancel }) => {
+  const [pos, setPos] = useState<{ x: number; y: number }>({ x: 0, y: 8 });
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("button")) return;
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
+  };
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current) return;
+    setPos({
+      x: dragRef.current.origX + (e.clientX - dragRef.current.startX),
+      y: dragRef.current.origY + (e.clientY - dragRef.current.startY),
+    });
+  };
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current = null;
+    try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
+  };
+
+  return (
+    <div
+      className="absolute left-1/2 z-20 flex items-center gap-1.5 rounded-sm bg-crimson text-primary-foreground px-2 py-1 border border-bronze/40 shadow-md cursor-move select-none"
+      style={{ top: pos.y, transform: `translate(calc(-50% + ${pos.x}px), 0)` }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      <span className="font-heading text-[9px] uppercase tracking-wider font-bold whitespace-nowrap">
+        {label}
+      </span>
+      <button
+        onClick={onCancel}
+        className="ml-1 px-1 py-0.5 rounded-sm border border-primary-foreground/40 text-[8px] font-heading uppercase tracking-wider hover:bg-primary-foreground/10"
+      >
+        Cancel
+      </button>
+    </div>
+  );
+};
+
 export default PlayerMapCanvas;
