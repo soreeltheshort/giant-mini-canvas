@@ -20,6 +20,8 @@ interface Props {
   onFleetClick?: (fleet: MapFleet) => void;
   /** When set, the next click is captured for targeting instead of selection. */
   targetingMode?: "hex" | "fleet" | null;
+  /** Optional banner label override (e.g. when commissioning a fleet). */
+  targetingLabel?: string;
   onHexTargetPicked?: (hex: { x: number; y: number }) => void;
   onFleetTargetPicked?: (fleet: MapFleet) => void;
   /** In "fleet" targeting mode, called when the user clicks a system hex with no fleet on it. */
@@ -95,6 +97,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   onSystemClick,
   onFleetClick,
   targetingMode = null,
+  targetingLabel,
   onHexTargetPicked,
   onFleetTargetPicked,
   onSystemTargetPicked,
@@ -742,9 +745,11 @@ const PlayerMapCanvas: React.FC<Props> = ({
       {targetingMode && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-sm bg-crimson text-primary-foreground px-3 py-1.5 border border-bronze/40 shadow-md">
           <span className="font-heading text-[10px] uppercase tracking-wider font-bold">
-            {targetingMode === "hex"
-              ? "Click a hex to set destination"
-              : "Click an enemy fleet or planet to target"}
+            {targetingLabel
+              ? targetingLabel
+              : targetingMode === "hex"
+                ? "Click a hex to set destination"
+                : "Click an enemy fleet or planet to target"}
           </span>
           <button
             onClick={onCancelTargeting}
