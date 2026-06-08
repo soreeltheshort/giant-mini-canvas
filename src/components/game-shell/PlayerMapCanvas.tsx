@@ -743,21 +743,16 @@ const PlayerMapCanvas: React.FC<Props> = ({
 
       {/* Targeting banner */}
       {targetingMode && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-sm bg-crimson text-primary-foreground px-3 py-1.5 border border-bronze/40 shadow-md">
-          <span className="font-heading text-[10px] uppercase tracking-wider font-bold">
-            {targetingLabel
+        <DraggableTargetingBanner
+          label={
+            targetingLabel
               ? targetingLabel
               : targetingMode === "hex"
                 ? "Click a hex to set destination"
-                : "Click an enemy fleet or planet to target"}
-          </span>
-          <button
-            onClick={onCancelTargeting}
-            className="ml-1 px-1.5 py-0.5 rounded-sm border border-primary-foreground/40 text-[9px] font-heading uppercase tracking-wider hover:bg-primary-foreground/10"
-          >
-            Cancel
-          </button>
-        </div>
+                : "Click an enemy fleet or planet to target"
+          }
+          onCancel={onCancelTargeting}
+        />
       )}
     </div>
   );
