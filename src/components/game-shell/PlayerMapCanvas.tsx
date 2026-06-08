@@ -49,6 +49,13 @@ interface Props {
   revealAllFleets?: boolean;
   /** Current map selection id (e.g. "fleet-<uuid>" or "sys-<id>"). Used to cycle through stacked objects on a hex on repeated clicks. */
   currentSelectionId?: string | null;
+  /** Hex keys ("x,y") currently controlled by an infected-faction planet's
+   *  1-hex radius. Value is the infected owner string (e.g. "Synod"). These
+   *  hexes are painted with the infected owner's color, on top of the
+   *  underlying classification tint. Original ownership is preserved by the
+   *  hex's static `classification` — when the planet is lost, the entry
+   *  simply disappears and the hex reverts to its classification color. */
+  infectedHexOwners?: Map<string, string>;
   className?: string;
 }
 
