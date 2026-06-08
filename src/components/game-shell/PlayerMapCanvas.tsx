@@ -20,6 +20,8 @@ interface Props {
   onFleetClick?: (fleet: MapFleet) => void;
   /** When set, the next click is captured for targeting instead of selection. */
   targetingMode?: "hex" | "fleet" | null;
+  /** Optional banner label override (e.g. when commissioning a fleet). */
+  targetingLabel?: string;
   onHexTargetPicked?: (hex: { x: number; y: number }) => void;
   onFleetTargetPicked?: (fleet: MapFleet) => void;
   /** In "fleet" targeting mode, called when the user clicks a system hex with no fleet on it. */
