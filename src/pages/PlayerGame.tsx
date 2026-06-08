@@ -745,10 +745,16 @@ const PlayerGame = () => {
     if (mapState) for (const k of mapState.hexes.keys()) set.add(k);
     return set;
   }, [mapState]);
+  const allHexIds = useMemo(() => {
+    const set = new Set<number>();
+    if (mapState) for (const h of mapState.hexes.values()) set.add(h.hex_id);
+    return set;
+  }, [mapState]);
   const effectiveLiveSystemIds = isAdmin && adminRevealAll ? allSystemIds : liveVisibleIds;
   const effectiveEverSeenSystemIds = isAdmin && adminRevealAll ? allSystemIds : everSeenSystemIds;
   const effectiveLiveHexKeys = isAdmin && adminRevealAll ? allHexKeys : liveHexKeys;
   const effectiveEverSeenHexKeys = isAdmin && adminRevealAll ? allHexKeys : everSeenHexKeys;
+  const effectiveScoutedHexIds = isAdmin && adminRevealAll ? allHexIds : scoutedHexIds;
 
   // ─── Real dispatches from game_logs ───
   // Pull recent capture/colonize events affecting this player's province
