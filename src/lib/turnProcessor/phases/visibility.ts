@@ -14,6 +14,9 @@
  */
 import type { Phase, TurnContext } from "../types";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
+import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+
+const SENSOR_RADIUS = 1;
 
 export const visibilityPhase: Phase = {
   name: "visibility",
@@ -63,6 +66,58 @@ export const visibilityPhase: Phase = {
       }
     }
 
+    // Precompute hex cube coords + an offset->hex_id index, used for sensor
+    // sweeps below.
+    const hexList = Array.from(mapState.hexes.values());
+    const hexCubes = hexList.map(h => {
+      const [cx, cy, cz] = offsetToCube(h.x, h.y);
+      return { id: h.hex_id, cx, cy, cz };
+    });
+
+    // Per-player sensor coverage: every hex within SENSOR_RADIUS of any owned
+    // fleet or owned system gets added to scouted_hex_ids this turn. Mirrors
+    // the client-side useVisibleHexKeys logic so hexes swept during
+    // server-side fleet auto-movement are remembered even if the player
+    // never opened the page that turn.
+    const sensorCentersBySlot = new Map<number, Array<[number, number, number]>>();
+    const ensureSlot = (slot: number) => {
+      let arr = sensorCentersBySlot.get(slot);
+      if (!arr) { arr = []; sensorCentersBySlot.set(slot, arr); }
+      return arr;
+    };
+    const slotFromClassification = (cls: string): number | null => {
+      const m = (cls || "").toUpperCase().match(/^PROVINCE_(\d+)$/);
+      return m ? parseInt(m[1], 10) : null;
+    };
+    for (const sys of mapState.systems.values()) {
+      const slot = slotFromClassification(sys.owner);
+      if (slot == null) continue;
+      const hex = mapState.hexes.get(`${0}`); // placeholder, replaced below
+      // find hex by id
+      const sysHex = hexList.find(h => h.hex_id === sys.hex_id);
+      if (!sysHex) continue;
+      ensureSlot(slot).push(offsetToCube(sysHex.x, sysHex.y));
+    }
+    for (const f of mapState.fleets ?? []) {
+      const slot = slotFromClassification(f.owner_classification);
+      if (slot == null) continue;
+      ensureSlot(slot).push(offsetToCube(f.hex_x, f.hex_y));
+    }
+
+    const sensorHexIdsBySlot = new Map<number, number[]>();
+    for (const [slot, centers] of sensorCentersBySlot.entries()) {
+      const ids: number[] = [];
+      for (const h of hexCubes) {
+        for (const [cx, cy, cz] of centers) {
+          if (cubeDistance(h.cx, h.cy, h.cz, cx, cy, cz) <= SENSOR_RADIUS) {
+            ids.push(h.id);
+            break;
+          }
+        }
+      }
+      sensorHexIdsBySlot.set(slot, ids);
+    }
+
     // Merge baseline with each player's existing "ever seen" memory rather than
     // overwriting it. Otherwise systems discovered via sensor scan (e.g. a fleet
     // moving into the marches) get forgotten on turn rollover.
@@ -74,11 +129,16 @@ export const visibilityPhase: Phase = {
       const ownProvinceHexes = gp.player_slot != null
         ? (provinceHexIdsBySlot.get(gp.player_slot) || [])
         : [];
+      const sensorHexes = gp.player_slot != null
+        ? (sensorHexIdsBySlot.get(gp.player_slot) || [])
+        : [];
       const mergedHex = Array.from(new Set<number>([
         ...priorHex,
         ...sharedScoutedHexIds,
         ...ownProvinceHexes,
+        ...sensorHexes,
       ]));
+
 
       await (supabase as any).from("game_factions")
         .update({ visible_system_ids: mergedSys, scouted_hex_ids: mergedHex })
