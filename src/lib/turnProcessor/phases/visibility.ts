@@ -42,14 +42,47 @@ export const visibilityPhase: Phase = {
       }
     }
 
+    // Baseline scouted hexes shared by every player: every CORE hex + every
+    // explored-MARCHES hex. Province hexes are added per-player below (only
+    // your own province auto-counts as scouted). Append-only: a hex only ever
+    // moves from off → on, so the persisted `scouted_hex_ids` set just keeps
+    // growing — no scan of the "off" flags is ever needed.
+    const sharedScoutedHexIds: number[] = [];
+    const provinceHexIdsBySlot = new Map<number, number[]>();
+    for (const h of mapState.hexes.values()) {
+      const cls = (h.classification || "").toUpperCase();
+      if (cls === "CORE" || cls === "MARCHES") {
+        sharedScoutedHexIds.push(h.hex_id);
+      } else if (cls.startsWith("PROVINCE_")) {
+        const slot = parseInt(cls.replace("PROVINCE_", ""), 10);
+        if (!Number.isNaN(slot)) {
+          const arr = provinceHexIdsBySlot.get(slot) || [];
+          arr.push(h.hex_id);
+          provinceHexIdsBySlot.set(slot, arr);
+        }
+      }
+    }
+
     // Merge baseline with each player's existing "ever seen" memory rather than
     // overwriting it. Otherwise systems discovered via sensor scan (e.g. a fleet
     // moving into the marches) get forgotten on turn rollover.
     for (const gp of players) {
-      const prior = Array.isArray(gp.visible_system_ids) ? gp.visible_system_ids as number[] : [];
-      const merged = Array.from(new Set<number>([...prior, ...baselineIds]));
+      const priorSys = Array.isArray(gp.visible_system_ids) ? gp.visible_system_ids as number[] : [];
+      const mergedSys = Array.from(new Set<number>([...priorSys, ...baselineIds]));
+
+      const priorHex = Array.isArray(gp.scouted_hex_ids) ? gp.scouted_hex_ids as number[] : [];
+      const ownProvinceHexes = gp.player_slot != null
+        ? (provinceHexIdsBySlot.get(gp.player_slot) || [])
+        : [];
+      const mergedHex = Array.from(new Set<number>([
+        ...priorHex,
+        ...sharedScoutedHexIds,
+        ...ownProvinceHexes,
+      ]));
+
       await (supabase as any).from("game_factions")
-        .update({ visible_system_ids: merged }).eq("id", gp.id);
+        .update({ visible_system_ids: mergedSys, scouted_hex_ids: mergedHex })
+        .eq("id", gp.id);
     }
 
     // Refresh fog-of-war memory: upsert intel for every system the player can
