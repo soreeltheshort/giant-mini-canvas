@@ -44,6 +44,10 @@ interface PlayerInfo {
   player_slot: number | null;
   initialized: boolean;
   visible_system_ids: number[];
+  /** Persistent per-player flag set: every hex_id this player's sensors have
+   *  ever reached. Append-only — never reset. Used to render the unscouted-hex
+   *  indicator and to short-circuit any "is this hex new to me?" check. */
+  scouted_hex_ids: number[];
   treasury: number;
   last_tribute: number;
   last_maintenance: number;
