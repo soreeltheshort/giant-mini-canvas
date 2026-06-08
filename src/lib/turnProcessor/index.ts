@@ -103,7 +103,7 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     visible_system_ids: Array.isArray(p.visible_system_ids) ? p.visible_system_ids : [],
     scouted_hex_ids: Array.isArray(p.scouted_hex_ids) ? p.scouted_hex_ids : [],
   }));
-  const factions = (factionsRaw || []) as Array<{ id: string; name: string; code_name: string | null }>;
+  const factions = (factionsRaw || []) as Array<{ id: string; name: string; code_name: string | null; infect?: boolean }>;
 
   const ctx: TurnContext = {
     supabase,
