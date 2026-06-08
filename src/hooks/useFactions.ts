@@ -7,6 +7,7 @@ export interface DbFaction {
   name: string;
   code_name?: string | null;
   color: string;
+  foreground_color?: string;
   ai_persona_id?: string | null;
   fleet_naming_convention?: string;
   fleet_naming_convention_id?: string | null;
@@ -14,7 +15,7 @@ export interface DbFaction {
   infect?: boolean;
 }
 
-const SELECT_COLS = "id, name, code_name, color, ai_persona_id, fleet_naming_convention, fleet_naming_convention_id, ship_naming_convention_id, infect";
+const SELECT_COLS = "id, name, code_name, color, foreground_color, ai_persona_id, fleet_naming_convention, fleet_naming_convention_id, ship_naming_convention_id, infect";
 
 export function useFactions() {
   const [factions, setFactions] = useState<DbFaction[]>([]);
