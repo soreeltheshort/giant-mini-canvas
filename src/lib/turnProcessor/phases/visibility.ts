@@ -139,6 +139,37 @@ export const visibilityPhase: Phase = {
       sensorHexIdsBySlot.set(slot, ids);
     }
 
+    // Infected-faction aura → scouted hexes for the controlling slot.
+    // Any system owned by an infected faction grants visibility on the
+    // planet hex + 6 neighbors to the player slot that controls that faction.
+    const infectedHexIdsBySlot = new Map<number, number[]>();
+    if (infectedOwnerStrings.size > 0) {
+      // owner string (lc) → slot, derived from factions × players.
+      const slotByOwnerString = new Map<string, number>();
+      for (const f of factions) {
+        if (!f.infect) continue;
+        const slot = slotByFactionId.get(f.id);
+        if (slot == null) continue;
+        if (f.name) slotByOwnerString.set(String(f.name).toLowerCase(), slot);
+        if (f.code_name) slotByOwnerString.set(String(f.code_name).toLowerCase(), slot);
+      }
+      const hexByCoord = new Map<string, number>(); // "x,y" → hex_id
+      for (const h of hexList) hexByCoord.set(hexKey(h.x, h.y), h.hex_id);
+      for (const sys of mapState.systems.values()) {
+        if (!isInfectedOwner(sys.owner)) continue;
+        const slot = slotByOwnerString.get(String(sys.owner).toLowerCase());
+        if (slot == null) continue;
+        const sysHex = hexList.find(h => h.hex_id === sys.hex_id);
+        if (!sysHex) continue;
+        let arr = infectedHexIdsBySlot.get(slot);
+        if (!arr) { arr = []; infectedHexIdsBySlot.set(slot, arr); }
+        arr.push(sysHex.hex_id);
+        for (const [nx, ny] of getNeighbors(sysHex.x, sysHex.y)) {
+          const id = hexByCoord.get(hexKey(nx, ny));
+          if (id != null) arr.push(id);
+        }
+      }
+
     // Merge baseline with each player's existing "ever seen" memory rather than
     // overwriting it. Otherwise systems discovered via sensor scan (e.g. a fleet
     // moving into the marches) get forgotten on turn rollover.
