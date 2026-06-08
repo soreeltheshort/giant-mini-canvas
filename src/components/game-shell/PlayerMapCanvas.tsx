@@ -361,7 +361,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
       if (fx < left || fx > right || fy < top || fy > bottom) continue;
 
       const triSize = size * 0.35;
-      const fleetColor = OWNER_COLORS[fleet.owner_classification] || "#c8a96e";
+      const fleetColor = OWNER_FG_COLORS[fleet.owner_classification] || OWNER_COLORS[fleet.owner_classification] || "#c8a96e";
 
       // Glow
       ctx.shadowColor = fleetColor;
