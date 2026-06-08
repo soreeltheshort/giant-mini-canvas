@@ -383,6 +383,7 @@ function InlineContextContent({
             playerOwnerClassification={playerOwnerClassification}
             onSelect={onSelect}
             onCreateFleet={onCreateFleet}
+            onStartCommissionTargeting={onStartCommissionTargeting}
             combatPointsAvailable={combatPointsAvailable}
           />
         )}
