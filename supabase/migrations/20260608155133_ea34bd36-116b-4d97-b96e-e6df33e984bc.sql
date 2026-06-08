@@ -1,0 +1,1 @@
+ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS foreground_color text NOT NULL DEFAULT '#000000';
