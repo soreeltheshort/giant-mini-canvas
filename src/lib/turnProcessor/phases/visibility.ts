@@ -187,11 +187,15 @@ export const visibilityPhase: Phase = {
       const sensorHexes = gp.player_slot != null
         ? (sensorHexIdsBySlot.get(gp.player_slot) || [])
         : [];
+      const infectedHexes = gp.player_slot != null
+        ? (infectedHexIdsBySlot.get(gp.player_slot) || [])
+        : [];
       const mergedHex = Array.from(new Set<number>([
         ...priorHex,
         ...sharedScoutedHexIds,
         ...ownProvinceHexes,
         ...sensorHexes,
+        ...infectedHexes,
       ]));
 
 
