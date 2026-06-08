@@ -3,13 +3,14 @@
  *
  * Game rule: a fleet may attack a target (enemy fleet OR planet) that is
  * currently visible AND within its attack range. Attack range is half the
- * fleet's map speed (rounded down). Attacking does NOT move the fleet.
+ * fleet's slowest ship's raw map_speed (rounded down). Attacking does NOT
+ * move the fleet.
  *
- *   attack_range = floor(fleet_map_speed / 2)
+ *   attack_range = floor(min(non-zero ship_types.map_speed across fleet) / 2)
  *
- * Fleet map speed is the SLOWEST `ship_types.map_speed` across the fleet's
- * non-strikecraft hosts, with crippled ships moving at half speed
- * (rounded up, min 1) — same rule used in FleetDetailContent.
+ * Note: attack range uses the RAW `ship_types.map_speed` of the slowest
+ * ship in the fleet — crippled status does NOT halve attack range (only
+ * movement speed is affected by crippling).
  */
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 
@@ -26,8 +27,9 @@ export function attackRangeFromMapSpeed(mapSpeed: number): number {
 }
 
 /**
- * Fetch a fleet's effective map speed from its per-game roster.
- * Returns 0 if the fleet has no movement-capable ships.
+ * Fetch a fleet's slowest non-zero raw ship map_speed from its per-game
+ * roster — the basis for attack-range calculations. Returns 0 if the
+ * fleet has no ship with map_speed > 0.
  */
 export async function fetchFleetMapSpeed(
   supabase: any,
@@ -35,14 +37,13 @@ export async function fetchFleetMapSpeed(
 ): Promise<number> {
   const { data: rows } = await supabase
     .from("game_fleet_ships")
-    .select("quantity, crippled, ship_types(map_speed)")
+    .select("quantity, ship_types(map_speed)")
     .eq("game_fleet_id", gameFleetId);
   let minSpeed = Infinity;
   for (const r of (rows || []) as any[]) {
     const raw = Number(r.ship_types?.map_speed) || 0;
     if (raw <= 0) continue;
-    const eff = r.crippled ? Math.max(1, Math.ceil(raw / 2)) : raw;
-    if (eff < minSpeed) minSpeed = eff;
+    if (raw < minSpeed) minSpeed = raw;
   }
   return minSpeed === Infinity ? 0 : minSpeed;
 }
@@ -50,6 +51,7 @@ export async function fetchFleetMapSpeed(
 /**
  * Same calculation, but driven by an in-memory ship list (used by client
  * code that already has the roster loaded — e.g. PlayerGame).
+ * Returns the lowest non-zero raw map_speed across the fleet's ships.
  */
 export function computeFleetMapSpeedFromShips(
   ships: Array<{ ship_type_id: string; quantity: number; crippled?: boolean }>,
@@ -61,8 +63,7 @@ export function computeFleetMapSpeedFromShips(
     if (!st) continue;
     const raw = Number(st.map_speed) || 0;
     if (raw <= 0) continue;
-    const eff = s.crippled ? Math.max(1, Math.ceil(raw / 2)) : raw;
-    if (eff < minSpeed) minSpeed = eff;
+    if (raw < minSpeed) minSpeed = raw;
   }
   return minSpeed === Infinity ? 0 : minSpeed;
 }
