@@ -378,7 +378,7 @@ const PlayerGame = () => {
     if (!user || !gameId) return;
 
     const useAdminImpersonation = !!(asFactionId && isAdmin);
-    const factionSelect = "id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, orders_locked, faction_id, user_id, factions:faction_id(id, name, code_name, is_player_faction)";
+    const factionSelect = "id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, orders_locked, faction_id, user_id, factions:faction_id(id, name, code_name, is_player_faction, infect)";
     let factionQuery = (supabase as any)
       .from("game_factions")
       .select(factionSelect)
@@ -461,8 +461,13 @@ const PlayerGame = () => {
         .update({ last_game_id: gameId, active_games: activeGames })
         .eq("user_id", user.id);
     })();
-    // Hide Synod-flagged facilities from non-admin players in any build screen.
-    const visibleFt = (ftData || []).filter((ft: any) => isAdmin || !ft.synod);
+    // Synod-flagged facilities and ships are only available to Synod (infect)
+    // factions. Admins viewing their own (non-impersonated) session still see
+    // everything for testing; admins impersonating a non-Synod faction get the
+    // same restricted catalog the real player would see.
+    const factionIsSynod = !!joinedFaction?.infect;
+    const canUseSynod = factionIsSynod || (isAdmin && !asFactionId);
+    const visibleFt = (ftData || []).filter((ft: any) => canUseSynod || !ft.synod);
     setDbFacilityTypes(visibleFt.map((ft: any) => ({
       facility_type_id: ft.id,
       name: ft.name,
@@ -482,8 +487,8 @@ const PlayerGame = () => {
       consumed_facility_id: ft.consumed_facility_id || null,
       maintenance: ft.maintenance || 0,
     })));
-    // Hide Synod-flagged ships from non-admin players in any build/list screen.
-    const visibleSt = (stData || []).filter((s: any) => isAdmin || !s.synod);
+    // Hide Synod-flagged ships from non-Synod players in any build/list screen.
+    const visibleSt = (stData || []).filter((s: any) => canUseSynod || !s.synod);
     setDbShipTypes(visibleSt.map((s: any) => ({
       id: s.id,
       name: s.name,
