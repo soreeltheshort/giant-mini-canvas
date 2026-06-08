@@ -1617,6 +1617,7 @@ const PlayerGame = () => {
               ownClassification={player.own_classification}
               revealAllFleets={isAdmin && adminRevealAll}
               currentSelectionId={selection.type === "army" || selection.type === "region" ? selection.id : null}
+              infectedHexOwners={infectedHexOwners}
               className="flex-1"
             />
           ) : (
