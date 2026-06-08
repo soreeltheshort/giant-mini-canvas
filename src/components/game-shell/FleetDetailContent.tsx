@@ -482,6 +482,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   let availableRepair = 0;
   let totalSupply = 0;
   let minMapSpeed = Infinity;
+  // Attack range uses the RAW slowest non-zero ship map_speed (ignoring
+  // crippled halving) per game rule: attack_range = floor(min(map_speed) / 2).
+  let minRawAttackSpeed = Infinity;
   // Strikecraft capacity & current usage (FL = 1 fighter slot, FH = 2, GS = 1 gunship slot).
   // Crippled non-strikecraft ships do NOT contribute bays/links/repair/sensors,
   // but DO still hold supply and storage. Crippled strikecraft still occupy
@@ -505,6 +508,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     const rawSpeed = st.map_speed ?? 0;
     const effSpeed = rawSpeed > 0 && isCrippled ? Math.max(1, Math.ceil(rawSpeed / 2)) : rawSpeed;
     if (effSpeed > 0 && effSpeed < minMapSpeed) minMapSpeed = effSpeed;
+    if (rawSpeed > 0 && rawSpeed < minRawAttackSpeed) minRawAttackSpeed = rawSpeed;
 
     const ext = shipTypeExtras.get(s.ship_type_id);
     if (ext) {
@@ -525,6 +529,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     }
   }
   const mapSpeedDisplay = minMapSpeed === Infinity ? 0 : minMapSpeed;
+  const attackRangeBaseSpeed = minRawAttackSpeed === Infinity ? 0 : minRawAttackSpeed;
   const previewReadiness = detail.next_readiness ?? detail.readiness;
   const readinessChanged = detail.next_readiness !== null && detail.next_readiness !== detail.readiness;
   const currentMaintenance = Math.round(baseMaintenance * readinessMaintMult(detail.readiness) * 100) / 100;
@@ -791,7 +796,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
             />
           )}
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
-          <Row label="Attack Range" value={`${Math.floor(mapSpeedDisplay / 2)}`} />
+          <Row label="Attack Range" value={`${Math.floor(attackRangeBaseSpeed / 2)}`} />
           <Row label="Ships" value={`${totalShips}`} />
           
         </div>
