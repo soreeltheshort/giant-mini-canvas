@@ -101,6 +101,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   onCancelTargeting,
   debugVisibleHexKeys,
   everSeenHexKeys,
+  scoutedHexIds,
   orderArrow = null,
   ownClassification,
   revealAllFleets = false,
