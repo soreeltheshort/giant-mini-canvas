@@ -415,28 +415,26 @@ function CreateFleetCard({
   playerOwnerClassification,
   combatPointsAvailable,
   onCreateFleet,
+  onStartCommissionTargeting,
 }: {
   gameData?: GameMapData;
   playerOwnerClassification?: string;
   combatPointsAvailable: number;
   onCreateFleet: (name: string, hexX: number, hexY: number) => Promise<void> | void;
+  onStartCommissionTargeting?: (fleetName: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<"hex" | "name">("hex");
   const [name, setName] = useState("");
-  const [hexValue, setHexValue] = useState("");
-  const [busy, setBusy] = useState(false);
 
   const resetAndClose = () => {
     setOpen(false);
-    setStep("hex");
     setName("");
-    setHexValue("");
   };
 
-  // Compute eligible hexes: owned by player AND no fleet currently on the hex.
-  const eligible = (() => {
-    if (!gameData || !playerOwnerClassification || !gameData.hexes) return [] as Array<{ key: string; x: number; y: number; label: string }>;
+  // Compute whether at least one eligible hex exists (owned + unoccupied),
+  // purely to gate the Commission button label.
+  const hasEligibleHex = (() => {
+    if (!gameData || !playerOwnerClassification || !gameData.hexes) return false;
     const factionLabel = CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null;
     const ownedSystemHexIds = new Set<number>();
     for (const s of gameData.systems.values()) {
@@ -446,36 +444,20 @@ function CreateFleetCard({
     }
     const occupied = new Set<string>();
     for (const f of gameData.fleets) occupied.add(`${f.hex_x},${f.hex_y}`);
-    const out: Array<{ key: string; x: number; y: number; label: string }> = [];
     for (const h of gameData.hexes.values()) {
-      const key = `${h.x},${h.y}`;
-      if (occupied.has(key)) continue;
-      const isProvince = h.classification === playerOwnerClassification;
-      const hasOwnedSystem = ownedSystemHexIds.has(h.hex_id);
-      if (!isProvince && !hasOwnedSystem) continue;
-      const sys = Array.from(gameData.systems.values()).find(s => s.hex_id === h.hex_id);
-      const label = sys ? `(${h.x}, ${h.y}) — ${sys.system_name}` : `(${h.x}, ${h.y})`;
-      out.push({ key, x: h.x, y: h.y, label });
+      if (occupied.has(`${h.x},${h.y}`)) continue;
+      if (h.classification === playerOwnerClassification || ownedSystemHexIds.has(h.hex_id)) return true;
     }
-    out.sort((a, b) => a.label.localeCompare(b.label));
-    return out;
+    return false;
   })();
 
-  const canSubmit = !busy && name.trim().length > 0 && hexValue !== "" && combatPointsAvailable >= 1;
+  const canConfirm = name.trim().length > 0 && combatPointsAvailable >= 1 && !!onStartCommissionTargeting;
 
-  const handleSubmit = async () => {
-    const hex = eligible.find(e => e.key === hexValue);
-    if (!hex) return;
-    setBusy(true);
-    try {
-      await onCreateFleet(name.trim(), hex.x, hex.y);
-      resetAndClose();
-    } finally {
-      setBusy(false);
-    }
+  const handleConfirm = () => {
+    if (!canConfirm) return;
+    onStartCommissionTargeting!(name.trim());
+    resetAndClose();
   };
-
-  const selectedHex = eligible.find(e => e.key === hexValue);
 
   return (
     <ImperialCard title="Commission Fleet">
@@ -485,11 +467,11 @@ function CreateFleetCard({
           <span className="block text-bronze-dark font-semibold mt-0.5">Cost: 1 Combat Point</span>
         </p>
         <button
-          onClick={() => { setStep("hex"); setOpen(true); }}
-          disabled={combatPointsAvailable < 1 || eligible.length === 0}
+          onClick={() => setOpen(true)}
+          disabled={combatPointsAvailable < 1 || !hasEligibleHex}
           className="w-full py-1.5 rounded-sm bg-crimson text-primary-foreground text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {combatPointsAvailable < 1 ? "No Combat Points" : eligible.length === 0 ? "No Eligible Hexes" : "Commission New Fleet"}
+          {combatPointsAvailable < 1 ? "No Combat Points" : !hasEligibleHex ? "No Eligible Hexes" : "Commission New Fleet"}
         </button>
       </div>
 
@@ -497,85 +479,44 @@ function CreateFleetCard({
         <DialogContent className="bg-marble border-bronze/40">
           <DialogHeader>
             <DialogTitle className="font-heading text-senate-dark">
-              {step === "hex" ? "Commission New Fleet — Choose Location" : "Commission New Fleet — Name Fleet"}
+              Commission New Fleet — Name Fleet
             </DialogTitle>
           </DialogHeader>
 
-          {step === "hex" ? (
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Place at Hex</label>
-                <select
-                  value={hexValue}
-                  onChange={e => setHexValue(e.target.value)}
-                  autoFocus
-                  className="w-full rounded-sm border border-border bg-ivory px-2 py-1.5 text-sm text-senate-dark"
-                >
-                  <option value="">Select an owned hex…</option>
-                  {eligible.map(e => (
-                    <option key={e.key} value={e.key}>{e.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="text-[10px] text-bronze-dark font-semibold">
-                Cost: 1 Combat Point · Available: {combatPointsAvailable}
-              </div>
-              <div className="flex gap-2 justify-end pt-1">
-                <button
-                  onClick={resetAndClose}
-                  className="px-3 py-1.5 rounded-sm border border-border text-[11px] font-heading uppercase tracking-wider text-senate-dark hover:bg-ivory-dark"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => setStep("name")}
-                  disabled={hexValue === ""}
-                  className="px-3 py-1.5 rounded-sm bg-crimson text-primary-foreground text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Fleet Name</label>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && canConfirm) handleConfirm(); }}
+                placeholder="e.g. First Legion"
+                className="w-full rounded-sm border border-border bg-ivory px-2 py-1.5 text-sm text-senate-dark"
+                autoFocus
+              />
             </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="text-[10px] text-muted-foreground">
-                Location: <span className="text-senate-dark font-semibold">{selectedHex?.label}</span>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-heading">Fleet Name</label>
-                <input
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="e.g. First Legion"
-                  className="w-full rounded-sm border border-border bg-ivory px-2 py-1.5 text-sm text-senate-dark"
-                  autoFocus
-                />
-              </div>
-              <div className="flex gap-2 justify-between pt-1">
-                <button
-                  onClick={() => setStep("hex")}
-                  className="px-3 py-1.5 rounded-sm border border-border text-[11px] font-heading uppercase tracking-wider text-senate-dark hover:bg-ivory-dark"
-                >
-                  Back
-                </button>
-                <div className="flex gap-2">
-                  <button
-                    onClick={resetAndClose}
-                    className="px-3 py-1.5 rounded-sm border border-border text-[11px] font-heading uppercase tracking-wider text-senate-dark hover:bg-ivory-dark"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={!canSubmit}
-                    className="px-3 py-1.5 rounded-sm bg-crimson text-primary-foreground text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {busy ? "Commissioning…" : "Done"}
-                  </button>
-                </div>
-              </div>
+            <div className="text-[10px] text-muted-foreground leading-snug">
+              After confirming, click an owned, unoccupied hex on the map to station the fleet.
             </div>
-          )}
+            <div className="text-[10px] text-bronze-dark font-semibold">
+              Cost: 1 Combat Point · Available: {combatPointsAvailable}
+            </div>
+            <div className="flex gap-2 justify-end pt-1">
+              <button
+                onClick={resetAndClose}
+                className="px-3 py-1.5 rounded-sm border border-border text-[11px] font-heading uppercase tracking-wider text-senate-dark hover:bg-ivory-dark"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={!canConfirm}
+                className="px-3 py-1.5 rounded-sm bg-crimson text-primary-foreground text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Choose Location on Map
+              </button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </ImperialCard>
