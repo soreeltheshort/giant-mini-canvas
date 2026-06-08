@@ -508,6 +508,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     const rawSpeed = st.map_speed ?? 0;
     const effSpeed = rawSpeed > 0 && isCrippled ? Math.max(1, Math.ceil(rawSpeed / 2)) : rawSpeed;
     if (effSpeed > 0 && effSpeed < minMapSpeed) minMapSpeed = effSpeed;
+    if (rawSpeed > 0 && rawSpeed < minRawAttackSpeed) minRawAttackSpeed = rawSpeed;
 
     const ext = shipTypeExtras.get(s.ship_type_id);
     if (ext) {
