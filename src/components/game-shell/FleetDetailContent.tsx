@@ -1340,7 +1340,7 @@ function EnemyFleetView({
   }, [observerPlayerId, fleet.source_fleet_id]);
 
   const sizeDescriptor = categories.find(
-    c => totalPoints >= c.min_points && totalPoints <= c.max_points,
+    c => shipCountForSize >= c.min_points && shipCountForSize <= c.max_points,
   )?.descriptor ?? (loadingExtras ? "…" : "Unknown");
 
   const factionName = PROVINCE_FACTION_NAMES[fleet.owner_classification] ?? fleet.owner_classification;
