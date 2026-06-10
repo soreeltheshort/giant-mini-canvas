@@ -744,7 +744,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
 
   // Fleet sensor range = max(sensor_rating) across ships in the fleet,
   // floored at the baseline SENSOR_RADIUS.
-  const fleetSensorRange = useMemo(() => {
+  const fleetSensorRange = (() => {
     let max = SENSOR_RADIUS;
     const byId = new Map((shipTypes ?? []).map(t => [t.id, t]));
     for (const s of ships) {
@@ -752,7 +752,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       if (r > max) max = r;
     }
     return max;
-  }, [ships, shipTypes]);
+  })();
 
   return (
     <>
