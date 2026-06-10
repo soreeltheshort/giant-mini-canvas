@@ -104,9 +104,10 @@ export const visibilityPhase: Phase = {
     // ships on each game_fleet. Falls back to SENSOR_RADIUS baseline.
     const fleetSensorRanges = new Map<string, number>(); // fleet_id → radius
     {
+      // MapFleet.fleet_id carries `game_fleets.id` (PK), not `fleet_id` ref.
       const { data: gfs } = await (supabase as any)
         .from("game_fleets")
-        .select("fleet_id, game_fleet_ships(ship_type_id, ship_types(sensor_rating))")
+        .select("id, game_fleet_ships(ship_type_id, ship_types(sensor_rating))")
         .eq("game_id", gameId);
       for (const gf of (gfs || []) as any[]) {
         let max = SENSOR_RADIUS;
@@ -114,7 +115,7 @@ export const visibilityPhase: Phase = {
           const r = Number(s.ship_types?.sensor_rating ?? 0);
           if (r > max) max = r;
         }
-        if (gf.fleet_id) fleetSensorRanges.set(gf.fleet_id, max);
+        if (gf.id) fleetSensorRanges.set(gf.id, max);
       }
     }
 
