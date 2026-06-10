@@ -808,7 +808,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           )}
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
           <Row label="Attack Range" value={`${Math.floor(attackRangeBaseSpeed / 2)}`} />
-          <Row label="Ships" value={`${totalShips}`} />
+          <Row label="Ships" value={`${shipsCount} / ${gunshipsCount} / ${fightersCount}`} />
           
         </div>
       </ImperialCard>
