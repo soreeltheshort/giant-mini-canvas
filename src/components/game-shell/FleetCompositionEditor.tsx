@@ -81,6 +81,8 @@ interface Props {
 const BASE_GROUPS = ["Core", "Attack"];
 const TAIL_GROUPS = ["Rear", "Retreat"];
 const FIXED_TAIL = ["System Defenses"];
+/** Crippled ships are confined to these groups only. */
+const CRIPPLED_ALLOWED_GROUPS = new Set(["Rear", "Retreat"]);
 
 export default function FleetCompositionEditor({
   ships,
