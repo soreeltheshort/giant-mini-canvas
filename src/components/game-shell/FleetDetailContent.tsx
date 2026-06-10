@@ -1307,13 +1307,15 @@ function EnemyFleetView({
   const [intel, setIntel] = useState<IntelRow[]>([]);
   const [loadingExtras, setLoadingExtras] = useState(true);
 
-  // Compute total point value of the enemy fleet from its actual ship list.
-  // The player only sees the descriptor, not the underlying number.
-  let totalPoints = 0;
+  // Fleet-size descriptor is keyed off the count of non-strikecraft ships
+  // (fleet_size_categories min_points/max_points are reused as ship-count buckets).
+  let shipCountForSize = 0;
   for (const s of ships) {
-    const st = shipTypes.find(t => t.id === s.ship_type_id);
-    if (st) totalPoints += (st.point_cost ?? 0) * (s.quantity || 0);
+    const cls = (s.ship_class || "") as string;
+    if (cls === "FL" || cls === "FH" || cls === "GS") continue;
+    shipCountForSize += s.quantity || 0;
   }
+
 
   useEffect(() => {
     let cancelled = false;
