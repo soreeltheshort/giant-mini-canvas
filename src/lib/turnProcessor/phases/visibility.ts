@@ -102,20 +102,28 @@ export const visibilityPhase: Phase = {
     // never opened the page that turn.
     // Per-fleet sensor range: max(ship_types.sensor_rating) across the
     // ships on each game_fleet. Falls back to SENSOR_RADIUS baseline.
-    const fleetSensorRanges = new Map<string, number>(); // fleet_id → radius
+    const fleetSensorRanges = new Map<string, number>(); // game_fleets.id → radius
+    // Per-fleet roster (game_fleets.id → [{ship_type_id, quantity}]) — reused
+    // by the intel-from-sensors pass below.
+    const fleetRosterById = new Map<string, Array<{ ship_type_id: string; quantity: number }>>();
     {
       // MapFleet.fleet_id carries `game_fleets.id` (PK), not `fleet_id` ref.
       const { data: gfs } = await (supabase as any)
         .from("game_fleets")
-        .select("id, game_fleet_ships(ship_type_id, ship_types(sensor_rating))")
+        .select("id, game_fleet_ships(ship_type_id, quantity, ship_types(sensor_rating))")
         .eq("game_id", gameId);
       for (const gf of (gfs || []) as any[]) {
         let max = SENSOR_RADIUS;
+        const roster: Array<{ ship_type_id: string; quantity: number }> = [];
         for (const s of gf.game_fleet_ships || []) {
           const r = Number(s.ship_types?.sensor_rating ?? 0);
           if (r > max) max = r;
+          roster.push({ ship_type_id: s.ship_type_id, quantity: Number(s.quantity) || 0 });
         }
-        if (gf.id) fleetSensorRanges.set(gf.id, max);
+        if (gf.id) {
+          fleetSensorRanges.set(gf.id, max);
+          fleetRosterById.set(gf.id, roster);
+        }
       }
     }
 
@@ -258,6 +266,113 @@ export const visibilityPhase: Phase = {
           .upsert(intelRows.slice(i, i + CHUNK), { onConflict: "observer_player_id,system_id" });
       }
     }
+
+    // ── Fleet intel from sensors ─────────────────────────────────────────
+    // For every faction (human OR AI), compute the set of hex_ids covered by
+    // its own systems + fleets (using per-fleet sensor ranges), then upsert
+    // player_fleet_intel for every enemy fleet currently sitting on one of
+    // those hexes. This is what feeds Threat Assessment / AI Inspector when
+    // an AI's fleet spots an opponent via sensors (no combat required).
+    {
+      // game_faction.id → owner-classification string (PROVINCE_N for humans,
+      // faction code_name for AI / neutral factions). Required because
+      // mapState.fleets.owner_classification uses these same strings.
+      const codeByFactionId = new Map<string, string>();
+      for (const f of factions) {
+        if (f.code_name) codeByFactionId.set(f.id, f.code_name);
+        else if (f.name) codeByFactionId.set(f.id, f.name);
+      }
+      const ownerStringByGfId = new Map<string, string>();
+      for (const gp of players) {
+        if (gp.player_slot != null) ownerStringByGfId.set(gp.id, `PROVINCE_${gp.player_slot}`);
+        else if (gp.faction_id) {
+          const code = codeByFactionId.get(gp.faction_id);
+          if (code) ownerStringByGfId.set(gp.id, code);
+        }
+      }
+
+      // Resolve hex coords for every system once.
+      const hexById = new Map<number, { x: number; y: number }>();
+      for (const h of mapState.hexes.values()) hexById.set(h.hex_id, { x: h.x, y: h.y });
+
+      // Build sensor coverage per observer faction.
+      type Center = [number, number, number, number]; // cx, cy, cz, radius
+      const centersByGf = new Map<string, Center[]>();
+      const pushCenter = (gfId: string, x: number, y: number, r: number) => {
+        const [cx, cy, cz] = offsetToCube(x, y);
+        let arr = centersByGf.get(gfId);
+        if (!arr) { arr = []; centersByGf.set(gfId, arr); }
+        arr.push([cx, cy, cz, r]);
+      };
+      // Owned systems contribute SENSOR_RADIUS coverage.
+      const gfIdByOwnerString = new Map<string, string>();
+      for (const [gfId, str] of ownerStringByGfId) gfIdByOwnerString.set(str, gfId);
+      for (const sys of mapState.systems.values()) {
+        const gfId = gfIdByOwnerString.get((sys.owner || "").trim());
+        if (!gfId) continue;
+        const hx = hexById.get(sys.hex_id);
+        if (hx) pushCenter(gfId, hx.x, hx.y, SENSOR_RADIUS);
+      }
+      // Owned fleets contribute their per-fleet sensor range.
+      for (const f of mapState.fleets ?? []) {
+        const gfId = gfIdByOwnerString.get((f.owner_classification || "").trim());
+        if (!gfId) continue;
+        const r = fleetSensorRanges.get(f.fleet_id) ?? SENSOR_RADIUS;
+        pushCenter(gfId, f.hex_x, f.hex_y, r);
+      }
+
+      // For each observer, find enemy fleets inside coverage and emit intel rows.
+      const intelUpserts: any[] = [];
+      for (const [observerGfId, centers] of centersByGf) {
+        const ownString = ownerStringByGfId.get(observerGfId);
+        for (const f of mapState.fleets ?? []) {
+          const owner = (f.owner_classification || "").trim();
+          if (!owner || owner === ownString) continue;
+          const [cx, cy, cz] = offsetToCube(f.hex_x, f.hex_y);
+          let inRange = false;
+          for (const [ox, oy, oz, r] of centers) {
+            if (cubeDistance(cx, cy, cz, ox, oy, oz) <= r) { inRange = true; break; }
+          }
+          if (!inRange) continue;
+          const roster = fleetRosterById.get(f.fleet_id) || [];
+          // Aggregate quantities per ship_type (rosters store one row per ship
+          // after the snapshot trigger, so we sum them here).
+          const qtyByType = new Map<string, number>();
+          for (const s of roster) {
+            qtyByType.set(s.ship_type_id, (qtyByType.get(s.ship_type_id) || 0) + (s.quantity || 0));
+          }
+          for (const [shipTypeId, qty] of qtyByType) {
+            intelUpserts.push({
+              game_id: gameId,
+              observer_player_id: observerGfId,
+              enemy_fleet_id: f.fleet_id,
+              ship_type_id: shipTypeId,
+              quantity_seen: qty,
+              last_seen_turn: currentTurn,
+            });
+          }
+        }
+      }
+      if (intelUpserts.length > 0) {
+        const CHUNK = 500;
+        for (let i = 0; i < intelUpserts.length; i += CHUNK) {
+          await (supabase as any)
+            .from("player_fleet_intel")
+            .upsert(intelUpserts.slice(i, i + CHUNK), {
+              onConflict: "observer_player_id,enemy_fleet_id,ship_type_id",
+            });
+        }
+      }
+      ctx.logs.push({
+        game_id: gameId,
+        turn_number: currentTurn,
+        phase: "visibility",
+        log_type: "fleet_intel_synced",
+        message: `Sensor sweep produced ${intelUpserts.length} fleet-intel row(s) across ${centersByGf.size} observer(s).`,
+        details_json: { rows: intelUpserts.length, observers: centersByGf.size },
+      });
+    }
+
 
     ctx.logs.push({
       game_id: gameId,
