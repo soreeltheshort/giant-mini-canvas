@@ -477,6 +477,17 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   // Maintenance scales with readiness. We show the *current* readiness cost by default
   // and italicize the value when a readiness order would change it next turn.
   const totalShips = ships.reduce((sum, s) => sum + (s.quantity || 0), 0);
+  // Break out non-strikecraft ships, gunships (GS), and fighters (FL+FH).
+  let shipsCount = 0;
+  let gunshipsCount = 0;
+  let fightersCount = 0;
+  for (const s of ships) {
+    const cls = (s.ship_class || shipTypeExtras.get(s.ship_type_id)?.class || "") as string;
+    const qty = s.quantity || 0;
+    if (cls === "GS") gunshipsCount += qty;
+    else if (cls === "FL" || cls === "FH") fightersCount += qty;
+    else shipsCount += qty;
+  }
   let baseMaintenance = 0;
   let totalRepair = 0;
   let availableRepair = 0;
@@ -797,7 +808,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           )}
           <Row label="Map Speed" value={`${mapSpeedDisplay}`} />
           <Row label="Attack Range" value={`${Math.floor(attackRangeBaseSpeed / 2)}`} />
-          <Row label="Ships" value={`${totalShips}`} />
+          <Row label="Ships" value={`${shipsCount} / ${gunshipsCount} / ${fightersCount}`} />
           
         </div>
       </ImperialCard>
@@ -1296,13 +1307,15 @@ function EnemyFleetView({
   const [intel, setIntel] = useState<IntelRow[]>([]);
   const [loadingExtras, setLoadingExtras] = useState(true);
 
-  // Compute total point value of the enemy fleet from its actual ship list.
-  // The player only sees the descriptor, not the underlying number.
-  let totalPoints = 0;
+  // Fleet-size descriptor is keyed off the count of non-strikecraft ships
+  // (fleet_size_categories min_points/max_points are reused as ship-count buckets).
+  let shipCountForSize = 0;
   for (const s of ships) {
-    const st = shipTypes.find(t => t.id === s.ship_type_id);
-    if (st) totalPoints += (st.point_cost ?? 0) * (s.quantity || 0);
+    const cls = (s.ship_class || "") as string;
+    if (cls === "FL" || cls === "FH" || cls === "GS") continue;
+    shipCountForSize += s.quantity || 0;
   }
+
 
   useEffect(() => {
     let cancelled = false;
@@ -1327,7 +1340,7 @@ function EnemyFleetView({
   }, [observerPlayerId, fleet.source_fleet_id]);
 
   const sizeDescriptor = categories.find(
-    c => totalPoints >= c.min_points && totalPoints <= c.max_points,
+    c => shipCountForSize >= c.min_points && shipCountForSize <= c.max_points,
   )?.descriptor ?? (loadingExtras ? "…" : "Unknown");
 
   const factionName = PROVINCE_FACTION_NAMES[fleet.owner_classification] ?? fleet.owner_classification;
