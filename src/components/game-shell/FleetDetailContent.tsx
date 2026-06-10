@@ -477,6 +477,17 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   // Maintenance scales with readiness. We show the *current* readiness cost by default
   // and italicize the value when a readiness order would change it next turn.
   const totalShips = ships.reduce((sum, s) => sum + (s.quantity || 0), 0);
+  // Break out non-strikecraft ships, gunships (GS), and fighters (FL+FH).
+  let shipsCount = 0;
+  let gunshipsCount = 0;
+  let fightersCount = 0;
+  for (const s of ships) {
+    const cls = (s.ship_class || shipTypeExtras.get(s.ship_type_id)?.class || "") as string;
+    const qty = s.quantity || 0;
+    if (cls === "GS") gunshipsCount += qty;
+    else if (cls === "FL" || cls === "FH") fightersCount += qty;
+    else shipsCount += qty;
+  }
   let baseMaintenance = 0;
   let totalRepair = 0;
   let availableRepair = 0;
