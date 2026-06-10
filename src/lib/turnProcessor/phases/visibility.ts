@@ -102,20 +102,28 @@ export const visibilityPhase: Phase = {
     // never opened the page that turn.
     // Per-fleet sensor range: max(ship_types.sensor_rating) across the
     // ships on each game_fleet. Falls back to SENSOR_RADIUS baseline.
-    const fleetSensorRanges = new Map<string, number>(); // fleet_id → radius
+    const fleetSensorRanges = new Map<string, number>(); // game_fleets.id → radius
+    // Per-fleet roster (game_fleets.id → [{ship_type_id, quantity}]) — reused
+    // by the intel-from-sensors pass below.
+    const fleetRosterById = new Map<string, Array<{ ship_type_id: string; quantity: number }>>();
     {
       // MapFleet.fleet_id carries `game_fleets.id` (PK), not `fleet_id` ref.
       const { data: gfs } = await (supabase as any)
         .from("game_fleets")
-        .select("id, game_fleet_ships(ship_type_id, ship_types(sensor_rating))")
+        .select("id, game_fleet_ships(ship_type_id, quantity, ship_types(sensor_rating))")
         .eq("game_id", gameId);
       for (const gf of (gfs || []) as any[]) {
         let max = SENSOR_RADIUS;
+        const roster: Array<{ ship_type_id: string; quantity: number }> = [];
         for (const s of gf.game_fleet_ships || []) {
           const r = Number(s.ship_types?.sensor_rating ?? 0);
           if (r > max) max = r;
+          roster.push({ ship_type_id: s.ship_type_id, quantity: Number(s.quantity) || 0 });
         }
-        if (gf.id) fleetSensorRanges.set(gf.id, max);
+        if (gf.id) {
+          fleetSensorRanges.set(gf.id, max);
+          fleetRosterById.set(gf.id, roster);
+        }
       }
     }
 
