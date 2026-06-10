@@ -128,6 +128,17 @@ export default function FleetCompositionEditor({
   const handleDrop = useCallback(
     (targetGroup: string) => {
       if (dragId !== null) {
+        const dragged = ships.find((s) => s.id === dragId);
+        if (dragged?.crippled && !CRIPPLED_ALLOWED_GROUPS.has(targetGroup)) {
+          toast({
+            title: "Crippled ships restricted",
+            description: "Crippled ships can only be placed in Rear or Retreat.",
+            variant: "destructive",
+          });
+          setDragId(null);
+          setDragOverGroup(null);
+          return;
+        }
         setShips((prev) =>
           prev.map((s) =>
             s.id === dragId ? { ...s, tactical_group: targetGroup } : s
@@ -139,8 +150,27 @@ export default function FleetCompositionEditor({
       setDragId(null);
       setDragOverGroup(null);
     },
-    [dragId, setShips, onCompositionChanged]
+    [dragId, ships, setShips, onCompositionChanged, toast]
   );
+
+  // Auto-relocate any crippled ships outside Rear/Retreat into Rear.
+  useEffect(() => {
+    if (!canEdit) return;
+    const strays = ships.filter(
+      (s) => s.crippled && !CRIPPLED_ALLOWED_GROUPS.has(s.tactical_group)
+    );
+    if (strays.length === 0) return;
+    setShips((prev) =>
+      prev.map((s) =>
+        s.crippled && !CRIPPLED_ALLOWED_GROUPS.has(s.tactical_group)
+          ? { ...s, tactical_group: "Rear" }
+          : s
+      )
+    );
+    for (const s of strays) persistGroup(s.id, "Rear");
+    onCompositionChanged?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ships, canEdit]);
 
   const handleQtyChange = async (rowId: string, qty: number) => {
     const safe = Math.max(0, Math.floor(qty));
