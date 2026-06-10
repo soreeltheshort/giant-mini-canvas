@@ -237,11 +237,17 @@ export const threatAssessmentPhase: Phase = {
       });
     }
 
+    // ai_world_beliefs has UNIQUE(player_id, belief_key) — must upsert,
+    // not insert, or repeat-turn writes silently fail on the unique violation.
     if (beliefInserts.length > 0) {
-      await (supabase as any).from("ai_world_beliefs").insert(beliefInserts);
+      await (supabase as any)
+        .from("ai_world_beliefs")
+        .upsert(beliefInserts, { onConflict: "player_id,belief_key" });
     }
     if (baselineUpserts.length > 0) {
-      await (supabase as any).from("ai_world_beliefs").insert(baselineUpserts);
+      await (supabase as any)
+        .from("ai_world_beliefs")
+        .upsert(baselineUpserts, { onConflict: "player_id,belief_key" });
     }
   },
 };
