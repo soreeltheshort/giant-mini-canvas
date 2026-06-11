@@ -819,6 +819,10 @@ function InlineRegionDetail({
       const cap = Number(ft?.ship_build_capacity) || 0;
       return sum + cap * (f.quantity || 1);
     }, 0);
+    const shipyardMaxHullCodes: (string | null)[] = (realSys.facilities || [])
+      .map(f => (gameData?.facilityTypesFull || []).find(t => String(t.facility_type_id) === String(f.facility_type_id)) as any)
+      .filter(ft => Number(ft?.ship_build_capacity) > 0)
+      .map(ft => (ft?.max_ship_hull_class || null) as string | null);
     return (
       <>
         <ImperialCard title={realSys.system_name} subtitle={classLabel}>
@@ -1038,6 +1042,7 @@ function InlineRegionDetail({
             return h?.y;
           })()}
           shipBuildCapacity={shipBuildCapacity}
+          shipyardMaxHullCodes={shipyardMaxHullCodes}
           shipTypes={gameData?.shipTypes || []}
           playerFleets={(() => {
             if (!gameData || !playerOwnerClassification) return [];
