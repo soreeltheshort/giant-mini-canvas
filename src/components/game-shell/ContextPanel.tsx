@@ -658,6 +658,7 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
             return h?.y;
           })()}
           shipBuildCapacity={shipBuildCapacity}
+          shipyardMaxHullCodes={shipyardMaxHullCodes}
           shipTypes={gameData?.shipTypes || []}
           playerFleets={(() => {
             if (!gameData || !playerOwnerClassification) return [];
