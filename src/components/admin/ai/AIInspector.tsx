@@ -521,8 +521,11 @@ function ThreatAssessmentSection({ gameId, playerId, turn, isTestMode }: { gameI
       </div>
       {rows === null ? (
         <p className="p-3 text-xs text-muted-foreground">Loading…</p>
+      ) : isTestMode && noDataForTurn ? (
+        <p className="p-3 text-xs text-muted-foreground">No threat-assessment beliefs recorded for turn {turn}. Pick another turn, or process this turn to populate it.</p>
       ) : !total && !nearby ? (
         <p className="p-3 text-xs text-muted-foreground">No threat-assessment beliefs recorded yet. Process a turn for this game.</p>
+
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
           <div>
