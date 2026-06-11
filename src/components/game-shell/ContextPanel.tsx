@@ -483,6 +483,12 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
       const cap = Number(ft?.ship_build_capacity) || 0;
       return sum + cap * (f.quantity || 1);
     }, 0);
+    // Highest hull-class codes each shipyard facility on this planet can build.
+    // null entry = a shipyard with no class limit (treated as unlimited).
+    const shipyardMaxHullCodes: (string | null)[] = (realSys.facilities || [])
+      .map(f => (gameData?.facilityTypesFull || []).find(t => String(t.facility_type_id) === String(f.facility_type_id)) as any)
+      .filter(ft => Number(ft?.ship_build_capacity) > 0)
+      .map(ft => (ft?.max_ship_hull_class || null) as string | null);
 
     return (
       <>
