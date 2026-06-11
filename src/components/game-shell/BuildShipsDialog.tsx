@@ -110,6 +110,59 @@ export default function BuildShipsDialog({
   const [newFleetHex, setNewFleetHex] = useState<{ x: number; y: number } | null>(null);
   const [persisted, setPersisted] = useState<PersistedQueueRow[]>([]);
   const [persistedLoading, setPersistedLoading] = useState(false);
+  const [hullSort, setHullSort] = useState<Map<string, number>>(new Map());
+
+  // Load hull-class ordering once. Used to enforce shipyard max_ship_hull_class.
+  useEffect(() => {
+    let cancelled = false;
+    (supabase as any)
+      .from("ship_hull_classes")
+      .select("code, sort_order")
+      .then(({ data }: any) => {
+        if (cancelled) return;
+        const m = new Map<string, number>();
+        for (const r of data || []) m.set(String(r.code), Number(r.sort_order) || 0);
+        setHullSort(m);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Compute the highest hull-class sort_order this system can build.
+  // - If any shipyard has no class limit (null) → unlimited.
+  // - Otherwise take the max sort_order across shipyard caps.
+  // - If no shipyards on system at all → undefined (no filter applied here;
+  //   shipBuildCapacity == 0 already warns the player nothing will progress).
+  const maxHullSort: number | null | undefined = useMemo(() => {
+    if (!shipyardMaxHullCodes.length) return undefined;
+    if (shipyardMaxHullCodes.some(c => !c)) return null; // unlimited
+    let max = -Infinity;
+    for (const code of shipyardMaxHullCodes) {
+      const so = hullSort.get(String(code));
+      if (so !== undefined && so > max) max = so;
+    }
+    return max === -Infinity ? null : max;
+  }, [shipyardMaxHullCodes, hullSort]);
+
+  const maxHullCode: string | null = useMemo(() => {
+    if (maxHullSort == null) return null;
+    let best: string | null = null;
+    let bestSo = -Infinity;
+    for (const [code, so] of hullSort) {
+      if (so <= maxHullSort && so > bestSo) { best = code; bestSo = so; }
+    }
+    return best;
+  }, [maxHullSort, hullSort]);
+
+  /** True if this ship's hull class is buildable at this system's shipyards. */
+  const isHullAllowed = (s: ShipTypeLookup): boolean => {
+    if (maxHullSort == null) return true; // unlimited / no shipyards / no codes
+    const code = String(s.class || "");
+    const so = hullSort.get(code);
+    // Unknown class codes (e.g. "FL" not in ship_hull_classes) → allow.
+    if (so === undefined) return true;
+    return so <= maxHullSort;
+  };
+
 
   // Load persisted queue rows whenever the dialog opens.
   const reloadPersisted = async () => {
