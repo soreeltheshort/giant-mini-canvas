@@ -60,6 +60,12 @@ interface BuildShipsDialogProps {
   systemHexY?: number;
   /** Ship-build capacity (points/turn) of the producing system. */
   shipBuildCapacity?: number;
+  /**
+   * max_ship_hull_class code for each shipyard facility on this system.
+   * A `null` entry means a shipyard with no class limit (unlimited).
+   * Empty array → no shipyards → no hull-class filter is shown.
+   */
+  shipyardMaxHullCodes?: (string | null)[];
   shipTypes: ShipTypeLookup[];
   playerFleets?: PlayerFleetOption[];
   /** Hexes inside the player's province (where new fleets can spawn). */
