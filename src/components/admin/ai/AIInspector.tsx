@@ -16,7 +16,9 @@ interface Game {
   id: string;
   name: string;
   turn_number: number;
+  is_test_mode: boolean;
 }
+
 interface PlayerRow {
   id: string;
   player_slot: number | null;
