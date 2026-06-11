@@ -397,31 +397,64 @@ function PersonaFollowthroughSection({ playerId }: { playerId: string }) {
   );
 }
 
-function ThreatAssessmentSection({ gameId, playerId, turn }: { gameId: string; playerId: string; turn: number }) {
+function ThreatAssessmentSection({ gameId, playerId, turn, isTestMode }: { gameId: string; playerId: string; turn: number; isTestMode: boolean }) {
   const [rows, setRows] = useState<any[] | null>(null);
   const [tol, setTol] = useState<{ total: number; nearby: number } | null>(null);
+  const [noDataForTurn, setNoDataForTurn] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setRows(null);
-      // Latest belief rows up to & including this turn
-      const { data } = await supabase
-        .from("ai_world_beliefs")
-        .select("belief_key, value_json, turn_number")
-        .eq("game_id", gameId)
-        .eq("player_id", playerId)
-        .in("belief_key", [
-          "enemy_strength_total",
-          "enemy_strength_nearby",
-          "enemy_strength_total_baseline",
-          "enemy_strength_nearby_baseline",
-        ])
-        .lte("turn_number", turn)
-        .order("turn_number", { ascending: false })
-        .limit(40);
-      if (cancelled) return;
-      setRows((data as any[]) ?? []);
+      setNoDataForTurn(false);
+
+      const beliefKeys = [
+        "enemy_strength_total",
+        "enemy_strength_nearby",
+        "enemy_strength_total_baseline",
+        "enemy_strength_nearby_baseline",
+      ];
+
+      if (isTestMode) {
+        // Exact-turn rows: live values for that turn + most recent baseline ≤ turn.
+        const liveKeys = ["enemy_strength_total", "enemy_strength_nearby"];
+        const baselineKeys = ["enemy_strength_total_baseline", "enemy_strength_nearby_baseline"];
+
+        const [liveRes, baseRes] = await Promise.all([
+          supabase
+            .from("ai_world_beliefs")
+            .select("belief_key, value_json, turn_number")
+            .eq("game_id", gameId)
+            .eq("player_id", playerId)
+            .in("belief_key", liveKeys)
+            .eq("turn_number", turn),
+          supabase
+            .from("ai_world_beliefs")
+            .select("belief_key, value_json, turn_number")
+            .eq("game_id", gameId)
+            .eq("player_id", playerId)
+            .in("belief_key", baselineKeys)
+            .lte("turn_number", turn)
+            .order("turn_number", { ascending: false })
+            .limit(20),
+        ]);
+        if (cancelled) return;
+        const merged = [...((liveRes.data as any[]) ?? []), ...((baseRes.data as any[]) ?? [])];
+        setRows(merged);
+        setNoDataForTurn(((liveRes.data as any[]) ?? []).length === 0);
+      } else {
+        // Snapshot mode: there's only one row per (player, belief_key) per game.
+        const { data } = await supabase
+          .from("ai_world_beliefs")
+          .select("belief_key, value_json, turn_number")
+          .eq("game_id", gameId)
+          .eq("player_id", playerId)
+          .in("belief_key", beliefKeys)
+          .order("turn_number", { ascending: false })
+          .limit(40);
+        if (cancelled) return;
+        setRows((data as any[]) ?? []);
+      }
 
       // Persona tolerances
       const { data: pf } = await supabase
@@ -444,7 +477,8 @@ function ThreatAssessmentSection({ gameId, playerId, turn }: { gameId: string; p
       }
     })();
     return () => { cancelled = true; };
-  }, [gameId, playerId, turn]);
+  }, [gameId, playerId, turn, isTestMode]);
+
 
   const latest = (key: string) => (rows || []).find((r) => r.belief_key === key);
   const total = latest("enemy_strength_total");
