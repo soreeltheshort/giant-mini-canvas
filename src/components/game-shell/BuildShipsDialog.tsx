@@ -334,6 +334,11 @@ export default function BuildShipsDialog({
                 · {shipBuildCapacity} pts/turn
               </span>
             )}
+            {maxHullCode && (
+              <span className="ml-2 text-[10px] font-body font-semibold text-bronze">
+                · max hull {maxHullCode}
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
