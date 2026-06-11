@@ -30,6 +30,18 @@ export const threatAssessmentPhase: Phase = {
   async run(ctx: TurnContext) {
     const { supabase, gameId, currentTurn, mapState } = ctx;
 
+    // Test-mode games append one row per turn so the AI inspector can show
+    // historical beliefs. Non-test games keep a single rolling snapshot
+    // (prior rows for the same (game, player, belief_key) are deleted first).
+    const { data: gameRow } = await (supabase as any)
+      .from("games")
+      .select("is_test_mode")
+      .eq("id", gameId)
+      .maybeSingle();
+    const isTestMode = !!gameRow?.is_test_mode;
+
+
+
     // Pull AI factions + persona tolerances + faction code_name (sys.owner uses code_name)
     const { data: gfRows } = await (supabase as any)
       .from("game_factions")
