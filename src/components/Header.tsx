@@ -30,6 +30,7 @@ const Header = () => {
   
   const isGameMode = location.pathname.startsWith("/admin/games");
   const isForumActive = location.pathname.startsWith("/blog") || location.pathname === "/admin/blog" || location.pathname === "/unsubscribe";
+  const isAITestingMode = location.pathname.startsWith("/admin/ai-config");
 
   // Studio mode = Mini Giant Games marketing surface (home, about, public games index/detail).
   // Renders a simplified nav: Games, About Us, Sign In/Out only.
@@ -149,7 +150,7 @@ const Header = () => {
                 </Link>
                 {user && canAccessGameFeatures && (
                   <DropdownMenu>
-                    <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isCombatTestingMode || isMapTestingMode || isPlanetTestingMode ? "text-foreground" : "text-muted-foreground"}`}>
+                    <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-foreground ${isCombatTestingMode || isMapTestingMode || isPlanetTestingMode || isAITestingMode ? "text-foreground" : "text-muted-foreground"}`}>
                       Testing
                       <ChevronDown className="h-3 w-3" />
                     </DropdownMenuTrigger>
@@ -162,6 +163,9 @@ const Header = () => {
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link to="/planet-testing">Planet Testing</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/ai-config">AI Testing</Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -202,10 +206,6 @@ const Header = () => {
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link to="/map-testing/config">Factions Config</Link>
-                      </DropdownMenuItem>
-
-                      <DropdownMenuItem asChild>
-                        <Link to="/admin/ai-config">AI Config</Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

@@ -129,7 +129,7 @@ export default function AdminAIConfig() {
       <Header />
       <div className="container max-w-5xl py-8 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-accent">AI Configuration</h1>
+          <h1 className="text-xl font-semibold text-accent">AI Testing</h1>
         </div>
         <p className="text-xs text-muted-foreground">
           Tune AI personas with trait sliders and goal-weight matrices. The Inspector tab shows what each AI thought, planned, and did on past turns.
