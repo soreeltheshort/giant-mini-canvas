@@ -16,7 +16,9 @@ interface Game {
   id: string;
   name: string;
   turn_number: number;
+  is_test_mode: boolean;
 }
+
 interface PlayerRow {
   id: string;
   player_slot: number | null;
@@ -52,11 +54,15 @@ export default function AIInspector() {
     (async () => {
       const { data } = await supabase
         .from("games")
-        .select("id, name, turn_number")
+        .select("id, name, turn_number, is_test_mode")
         .order("updated_at", { ascending: false });
       setGames((data ?? []) as any);
     })();
   }, []);
+
+  const currentGame = games.find((g) => g.id === gameId);
+  const isTestMode = !!currentGame?.is_test_mode;
+
 
   useEffect(() => {
     if (!gameId) {
@@ -134,11 +140,37 @@ export default function AIInspector() {
             type="number"
             value={turn}
             min={0}
+            disabled={!isTestMode && !!gameId}
             onChange={(e) => setTurn(Number(e.target.value))}
-            className="h-9 w-full rounded border border-border bg-background px-2 text-sm font-mono"
+            className="h-9 w-full rounded border border-border bg-background px-2 text-sm font-mono disabled:opacity-60"
           />
         </div>
       </div>
+
+      {gameId && (
+        <div className="flex items-center justify-between gap-3 rounded border border-border/60 bg-muted/30 px-3 py-2">
+          <div className="text-xs">
+            <span className="font-semibold">Test mode:</span>{" "}
+            {isTestMode
+              ? "ON — AI beliefs are recorded for every processed turn. You can scrub the Turn field to inspect history."
+              : "OFF — only the current/most-recent AI belief snapshot is retained. Turn selector is locked."}
+          </div>
+          <Button
+            size="sm"
+            variant={isTestMode ? "secondary" : "outline"}
+            onClick={async () => {
+              const next = !isTestMode;
+              const { error } = await supabase.from("games").update({ is_test_mode: next } as any).eq("id", gameId);
+              if (error) { toast.error(error.message); return; }
+              setGames((gs) => gs.map((g) => g.id === gameId ? { ...g, is_test_mode: next } : g));
+              toast.success(`Test mode ${next ? "enabled" : "disabled"}`);
+            }}
+          >
+            {isTestMode ? "Disable test mode" : "Enable test mode"}
+          </Button>
+        </div>
+      )}
+
 
       {gameId && players.filter((p) => p.has_ai_persona).length === 0 && (
         <div className="rounded border border-dashed border-border p-3 text-xs text-muted-foreground flex items-center justify-between gap-3">
@@ -179,7 +211,7 @@ export default function AIInspector() {
         <p className="text-xs text-muted-foreground">Pick a game and faction to inspect.</p>
       ) : (
         <div className="space-y-6">
-          <ThreatAssessmentSection gameId={gameId} playerId={playerId} turn={turn} />
+          <ThreatAssessmentSection gameId={gameId} playerId={playerId} turn={turn} isTestMode={isTestMode} />
           <InspectorSection
             title="Decision log"
             table="ai_decision_log"
@@ -365,31 +397,64 @@ function PersonaFollowthroughSection({ playerId }: { playerId: string }) {
   );
 }
 
-function ThreatAssessmentSection({ gameId, playerId, turn }: { gameId: string; playerId: string; turn: number }) {
+function ThreatAssessmentSection({ gameId, playerId, turn, isTestMode }: { gameId: string; playerId: string; turn: number; isTestMode: boolean }) {
   const [rows, setRows] = useState<any[] | null>(null);
   const [tol, setTol] = useState<{ total: number; nearby: number } | null>(null);
+  const [noDataForTurn, setNoDataForTurn] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setRows(null);
-      // Latest belief rows up to & including this turn
-      const { data } = await supabase
-        .from("ai_world_beliefs")
-        .select("belief_key, value_json, turn_number")
-        .eq("game_id", gameId)
-        .eq("player_id", playerId)
-        .in("belief_key", [
-          "enemy_strength_total",
-          "enemy_strength_nearby",
-          "enemy_strength_total_baseline",
-          "enemy_strength_nearby_baseline",
-        ])
-        .lte("turn_number", turn)
-        .order("turn_number", { ascending: false })
-        .limit(40);
-      if (cancelled) return;
-      setRows((data as any[]) ?? []);
+      setNoDataForTurn(false);
+
+      const beliefKeys = [
+        "enemy_strength_total",
+        "enemy_strength_nearby",
+        "enemy_strength_total_baseline",
+        "enemy_strength_nearby_baseline",
+      ];
+
+      if (isTestMode) {
+        // Exact-turn rows: live values for that turn + most recent baseline ≤ turn.
+        const liveKeys = ["enemy_strength_total", "enemy_strength_nearby"];
+        const baselineKeys = ["enemy_strength_total_baseline", "enemy_strength_nearby_baseline"];
+
+        const [liveRes, baseRes] = await Promise.all([
+          supabase
+            .from("ai_world_beliefs")
+            .select("belief_key, value_json, turn_number")
+            .eq("game_id", gameId)
+            .eq("player_id", playerId)
+            .in("belief_key", liveKeys)
+            .eq("turn_number", turn),
+          supabase
+            .from("ai_world_beliefs")
+            .select("belief_key, value_json, turn_number")
+            .eq("game_id", gameId)
+            .eq("player_id", playerId)
+            .in("belief_key", baselineKeys)
+            .lte("turn_number", turn)
+            .order("turn_number", { ascending: false })
+            .limit(20),
+        ]);
+        if (cancelled) return;
+        const merged = [...((liveRes.data as any[]) ?? []), ...((baseRes.data as any[]) ?? [])];
+        setRows(merged);
+        setNoDataForTurn(((liveRes.data as any[]) ?? []).length === 0);
+      } else {
+        // Snapshot mode: there's only one row per (player, belief_key) per game.
+        const { data } = await supabase
+          .from("ai_world_beliefs")
+          .select("belief_key, value_json, turn_number")
+          .eq("game_id", gameId)
+          .eq("player_id", playerId)
+          .in("belief_key", beliefKeys)
+          .order("turn_number", { ascending: false })
+          .limit(40);
+        if (cancelled) return;
+        setRows((data as any[]) ?? []);
+      }
 
       // Persona tolerances
       const { data: pf } = await supabase
@@ -412,7 +477,8 @@ function ThreatAssessmentSection({ gameId, playerId, turn }: { gameId: string; p
       }
     })();
     return () => { cancelled = true; };
-  }, [gameId, playerId, turn]);
+  }, [gameId, playerId, turn, isTestMode]);
+
 
   const latest = (key: string) => (rows || []).find((r) => r.belief_key === key);
   const total = latest("enemy_strength_total");
@@ -455,8 +521,11 @@ function ThreatAssessmentSection({ gameId, playerId, turn }: { gameId: string; p
       </div>
       {rows === null ? (
         <p className="p-3 text-xs text-muted-foreground">Loading…</p>
+      ) : isTestMode && noDataForTurn ? (
+        <p className="p-3 text-xs text-muted-foreground">No threat-assessment beliefs recorded for turn {turn}. Pick another turn, or process this turn to populate it.</p>
       ) : !total && !nearby ? (
         <p className="p-3 text-xs text-muted-foreground">No threat-assessment beliefs recorded yet. Process a turn for this game.</p>
+
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
           <div>

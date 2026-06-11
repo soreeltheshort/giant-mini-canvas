@@ -30,6 +30,18 @@ export const threatAssessmentPhase: Phase = {
   async run(ctx: TurnContext) {
     const { supabase, gameId, currentTurn, mapState } = ctx;
 
+    // Test-mode games append one row per turn so the AI inspector can show
+    // historical beliefs. Non-test games keep a single rolling snapshot
+    // (prior rows for the same (game, player, belief_key) are deleted first).
+    const { data: gameRow } = await (supabase as any)
+      .from("games")
+      .select("is_test_mode")
+      .eq("id", gameId)
+      .maybeSingle();
+    const isTestMode = !!gameRow?.is_test_mode;
+
+
+
     // Pull AI factions + persona tolerances + faction code_name (sys.owner uses code_name)
     const { data: gfRows } = await (supabase as any)
       .from("game_factions")
@@ -237,17 +249,27 @@ export const threatAssessmentPhase: Phase = {
       });
     }
 
-    // ai_world_beliefs has UNIQUE(player_id, belief_key) — must upsert,
-    // not insert, or repeat-turn writes silently fail on the unique violation.
-    if (beliefInserts.length > 0) {
+    // ai_world_beliefs unique key is (game_id, player_id, belief_key, turn_number).
+    // Test mode → append per-turn row (upsert is idempotent on rerun of same turn).
+    // Non-test → delete prior rows for these (player, belief_key) pairs in this game,
+    //          then insert the new snapshot. Keeps the table small for live games.
+    const allRows = [...beliefInserts, ...baselineUpserts];
+    if (allRows.length === 0) return;
+
+    if (!isTestMode) {
+      const playerIds = Array.from(new Set(allRows.map((r) => r.player_id)));
+      const keys = Array.from(new Set(allRows.map((r) => r.belief_key)));
       await (supabase as any)
         .from("ai_world_beliefs")
-        .upsert(beliefInserts, { onConflict: "player_id,belief_key" });
+        .delete()
+        .eq("game_id", gameId)
+        .in("player_id", playerIds)
+        .in("belief_key", keys);
     }
-    if (baselineUpserts.length > 0) {
-      await (supabase as any)
-        .from("ai_world_beliefs")
-        .upsert(baselineUpserts, { onConflict: "player_id,belief_key" });
-    }
+
+    await (supabase as any)
+      .from("ai_world_beliefs")
+      .upsert(allRows, { onConflict: "game_id,player_id,belief_key,turn_number" });
+
   },
 };

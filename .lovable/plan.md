@@ -1,28 +1,47 @@
 ## Goal
-Give the player a quiet visual cue on every hex their sensors have **never** entered, so the unexplored frontier reads at a glance without cluttering the map.
 
-## Where it fits
-All hex drawing happens in `src/components/game-shell/PlayerMapCanvas.tsx` inside the hex loop around lines 240–296. Each hex already computes `isLive`, `isRemembered`, and an implicit "never seen" branch (the `else` at line 290). The indicator only renders in that never-seen branch, so live + remembered hexes are untouched.
+Make AI Configuration Inspector show accurate per-turn history for **test-mode games**, while non-test games keep the current "latest snapshot only" behavior (admin can only inspect the current turn).
 
-## Recommended indicator
-A single tiny dot at the hex center, drawn in faint bronze:
+## Root cause (recap)
 
-- 1px radius (scales with hex size: `Math.max(0.6, size * 0.06)`)
-- Color `rgba(200,169,110,0.22)` — same bronze hue already used for the unscouted hex border, slightly above its alpha so the dot reads as intentional rather than as a render artifact
-- No glow, no animation, no label
-- Skipped for hexes that contain a system the player has ever seen (so explored systems don't get a competing center mark)
-- Drawn only above a minimum zoom threshold (e.g. `zoom > 0.6`) so the fully-zoomed-out galaxy view stays clean
+`ai_world_beliefs` has `UNIQUE(player_id, belief_key)`. The threat-assessment phase upserts on that key every turn, so each new turn overwrites the prior row in place. The inspector then reconstructs "previous turns" with `.lte(turn_number, turn).order(... desc).limit(1)`, which silently returns 0 once the row's `turn_number` has been bumped past the selected turn.
 
-Result: zoomed in, the unexplored frontier looks like a faint dotted grid; zoomed out, it disappears into the fog.
+## Changes
 
-## Alternatives (one-line)
-- **Dashed hex border** instead of solid — readable but visually noisier than a dot.
-- **Faint "?" glyph** at center — clear meaning but feels game-y against the Roman aesthetic.
-- **Tiny corner tick** — subtle but harder to spot when scanning.
+### 1. Schema (migration)
 
-I'd ship the center dot and we can swap to one of the alternatives if it doesn't read well.
+- Add `games.is_test_mode boolean NOT NULL DEFAULT false`.
+- On `ai_world_beliefs`:
+  - Drop `UNIQUE(player_id, belief_key)`.
+  - Add `UNIQUE(game_id, player_id, belief_key, turn_number)` so the same belief can be appended once per turn per player per game.
+  - Add index `(game_id, player_id, belief_key, turn_number DESC)` for fast "latest" lookups.
 
-## Files to change
-- `src/components/game-shell/PlayerMapCanvas.tsx` — add the dot draw inside the never-seen branch of the hex loop, after the border stroke.
+No data migration needed — existing rows remain valid under the new unique key.
 
-No new props, no schema changes, no other files affected.
+### 2. Threat assessment phase (`src/lib/turnProcessor/phases/threatAssessment.ts`)
+
+- Read `games.is_test_mode` once at phase start.
+- If `is_test_mode === true`: append per-turn rows. Use `upsert` on the new 4-column conflict target so re-running a turn is still idempotent.
+- If `is_test_mode === false`: keep current behavior — one row per `(player, belief_key)` that is overwritten each turn. Implement this by deleting prior rows for that `(game_id, player_id, belief_key)` before inserting the new one (since the old 2-column unique is gone).
+- Baseline rows (`*_baseline`) follow the same rule.
+
+### 3. AI Admin Game Settings UI (`src/pages/AdminAIConfig.tsx` or wherever the game is selected for the inspector)
+
+- Add a "Test mode (retain per-turn AI history)" toggle on the game row. Writes `games.is_test_mode`.
+
+### 4. AI Inspector (`src/components/admin/ai/AIInspector.tsx`)
+
+- Fetch `games.is_test_mode` for the selected game.
+- Threat-assessment section:
+  - If test mode: query the exact `turn_number = turn` rows. If none exist for that turn, render "No data recorded for turn N" (not 0).
+  - If not test mode: hide the turn selector for this section and label it "Current turn only — enable test mode to retain history". Only show the most recent row.
+- Same treatment for any other section in the inspector that currently relies on `.lte(turn_number, turn)` against `ai_world_beliefs`.
+
+### 5. Backfill note
+
+Prior to this change, only the latest snapshot exists in `ai_world_beliefs`. For Test050 turn 17 specifically, the historical data is gone and cannot be recovered. From the next processed turn forward, history will accumulate.
+
+## Out of scope
+
+- Other AI tables (`ai_goals`, `ai_plans`, `ai_relationships`, …). They have their own history semantics; this plan only fixes `ai_world_beliefs` per the reported symptom.
+- Pruning/retention of old belief rows in test games — can be added later if the table grows.
