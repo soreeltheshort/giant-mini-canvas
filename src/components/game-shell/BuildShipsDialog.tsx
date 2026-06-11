@@ -94,6 +94,7 @@ export default function BuildShipsDialog({
   systemHexX,
   systemHexY,
   shipBuildCapacity = 0,
+  shipyardMaxHullCodes = [],
   shipTypes,
   playerFleets = [],
   ownedHexes = [],
