@@ -211,7 +211,7 @@ export default function AIInspector() {
         <p className="text-xs text-muted-foreground">Pick a game and faction to inspect.</p>
       ) : (
         <div className="space-y-6">
-          <ThreatAssessmentSection gameId={gameId} playerId={playerId} turn={turn} />
+          <ThreatAssessmentSection gameId={gameId} playerId={playerId} turn={turn} isTestMode={isTestMode} />
           <InspectorSection
             title="Decision log"
             table="ai_decision_log"
