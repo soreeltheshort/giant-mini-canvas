@@ -225,10 +225,11 @@ export default function BuildShipsDialog({
   const qtyOf = (id: string) => queueOrder.find((q) => q.id === id)?.qty ?? 0;
 
   const filtered = useMemo(() => {
-    if (!activeFilter) return shipTypes;
-    const f = FILTERS.find((x) => x.key === activeFilter)!;
-    return shipTypes.filter((s) => f.predicate(s));
-  }, [shipTypes, activeFilter]);
+    const base = activeFilter
+      ? shipTypes.filter((s) => FILTERS.find((x) => x.key === activeFilter)!.predicate(s))
+      : shipTypes;
+    return base.filter(isHullAllowed);
+  }, [shipTypes, activeFilter, maxHullSort, hullSort]);
 
   /** Strikecraft can only target fleets/garrisons within 2 hexes of the producing system. */
   const fleetsForShip = (shipTypeId: string): PlayerFleetOption[] => {
