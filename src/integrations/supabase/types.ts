@@ -1582,6 +1582,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          is_test_mode: boolean
           map_data_json: Json
           name: string
           status: Database["public"]["Enums"]["game_status"]
@@ -1593,6 +1594,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          is_test_mode?: boolean
           map_data_json?: Json
           name: string
           status?: Database["public"]["Enums"]["game_status"]
@@ -1604,6 +1606,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          is_test_mode?: boolean
           map_data_json?: Json
           name?: string
           status?: Database["public"]["Enums"]["game_status"]
