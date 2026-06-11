@@ -99,19 +99,17 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
           ))}
         </select>
       </div>
-      {fields.ship_build_capacity > 0 && (
-        <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] text-muted-foreground">Max Ship Hull Class (shipyards only)</label>
-          <select
-            value={fields.max_ship_hull_class || ""}
-            onChange={(e) => patch({ max_ship_hull_class: e.target.value || (null as any) })}
-            className="h-7 text-xs rounded border border-input bg-background px-2"
-          >
-            <option value="">No limit</option>
-            {hullClasses.map(h => <option key={h.id} value={h.code}>{h.code}</option>)}
-          </select>
-        </div>
-      )}
+      <div className="flex flex-col gap-0.5">
+        <label className="text-[10px] text-muted-foreground">Max Ship Hull Class (shipyards only)</label>
+        <select
+          value={fields.max_ship_hull_class || ""}
+          onChange={(e) => patch({ max_ship_hull_class: e.target.value || (null as any) })}
+          className="h-7 text-xs rounded border border-input bg-background px-2"
+        >
+          <option value="">No limit</option>
+          {hullClasses.map(h => <option key={h.id} value={h.code}>{h.code}</option>)}
+        </select>
+      </div>
       <label className="flex items-center gap-2 text-xs text-foreground pt-1">
         <input
           type="checkbox"
