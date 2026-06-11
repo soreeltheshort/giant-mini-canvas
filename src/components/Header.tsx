@@ -164,6 +164,9 @@ const Header = () => {
                       <DropdownMenuItem asChild>
                         <Link to="/planet-testing">Planet Testing</Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/ai-config">AI Testing</Link>
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
