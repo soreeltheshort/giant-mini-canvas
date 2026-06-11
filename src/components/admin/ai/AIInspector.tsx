@@ -140,11 +140,37 @@ export default function AIInspector() {
             type="number"
             value={turn}
             min={0}
+            disabled={!isTestMode && !!gameId}
             onChange={(e) => setTurn(Number(e.target.value))}
-            className="h-9 w-full rounded border border-border bg-background px-2 text-sm font-mono"
+            className="h-9 w-full rounded border border-border bg-background px-2 text-sm font-mono disabled:opacity-60"
           />
         </div>
       </div>
+
+      {gameId && (
+        <div className="flex items-center justify-between gap-3 rounded border border-border/60 bg-muted/30 px-3 py-2">
+          <div className="text-xs">
+            <span className="font-semibold">Test mode:</span>{" "}
+            {isTestMode
+              ? "ON — AI beliefs are recorded for every processed turn. You can scrub the Turn field to inspect history."
+              : "OFF — only the current/most-recent AI belief snapshot is retained. Turn selector is locked."}
+          </div>
+          <Button
+            size="sm"
+            variant={isTestMode ? "secondary" : "outline"}
+            onClick={async () => {
+              const next = !isTestMode;
+              const { error } = await supabase.from("games").update({ is_test_mode: next } as any).eq("id", gameId);
+              if (error) { toast.error(error.message); return; }
+              setGames((gs) => gs.map((g) => g.id === gameId ? { ...g, is_test_mode: next } : g));
+              toast.success(`Test mode ${next ? "enabled" : "disabled"}`);
+            }}
+          >
+            {isTestMode ? "Disable test mode" : "Enable test mode"}
+          </Button>
+        </div>
+      )}
+
 
       {gameId && players.filter((p) => p.has_ai_persona).length === 0 && (
         <div className="rounded border border-dashed border-border p-3 text-xs text-muted-foreground flex items-center justify-between gap-3">
