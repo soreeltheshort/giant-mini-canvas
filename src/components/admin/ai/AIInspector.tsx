@@ -54,11 +54,15 @@ export default function AIInspector() {
     (async () => {
       const { data } = await supabase
         .from("games")
-        .select("id, name, turn_number")
+        .select("id, name, turn_number, is_test_mode")
         .order("updated_at", { ascending: false });
       setGames((data ?? []) as any);
     })();
   }, []);
+
+  const currentGame = games.find((g) => g.id === gameId);
+  const isTestMode = !!currentGame?.is_test_mode;
+
 
   useEffect(() => {
     if (!gameId) {
