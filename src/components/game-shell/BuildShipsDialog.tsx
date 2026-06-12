@@ -444,7 +444,10 @@ export default function BuildShipsDialog({
                     className="text-[10px] bg-muted border border-border rounded-sm px-1 py-0.5 text-foreground max-w-[12rem]"
                     title="Destination fleet"
                   >
-                    <option value={NEW_FLEET}>🪐 Planet (new fleet)</option>
+                    {allowedFleets.every(f => f.fleet_id !== q.destFleetId) && (
+                      <option value={q.destFleetId}>— select fleet —</option>
+                    )}
+
                     {allowedFleets.map((f) => (
                       <option key={f.fleet_id} value={f.fleet_id}>
                         {f.fleet_name}{f.atSystem ? " (here)" : ""}{f.is_garrison ? " ⚓" : ""}
