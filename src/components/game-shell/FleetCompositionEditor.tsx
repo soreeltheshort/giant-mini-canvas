@@ -354,22 +354,35 @@ export default function FleetCompositionEditor({
               )}
             </div>
             <div className="space-y-1">
-              {displayShips.length === 0 && canEdit && (
+              {displayItems.length === 0 && canEdit && (
                 <p className="text-[9px] text-foreground/60 italic px-1">
                   Drop ships here
                 </p>
               )}
-              {displayShips.map((s) => {
-                // In listEachShip mode the row id is suffixed (`${realId}__${i}`)
-                // so React keys stay unique; strip it to get the underlying DB id.
-                const realId = listEachShip ? s.id.split("__")[0] : s.id;
+              {displayItems.map((item) => {
+                const s = item.sample;
+                const realId = item.ids[0];
+                const isDragging =
+                  item.aggregate
+                    ? dragAggregateIds != null && dragAggregateIds[0] === item.ids[0]
+                    : dragId === realId;
                 return (
                 <div
-                  key={s.id}
+                  key={item.key}
                   draggable={canEdit}
-                  onDragStart={() => canEdit && setDragId(realId)}
+                  onDragStart={() => {
+                    if (!canEdit) return;
+                    if (item.aggregate) {
+                      setDragAggregateIds(item.ids);
+                      setDragId(null);
+                    } else {
+                      setDragId(realId);
+                      setDragAggregateIds(null);
+                    }
+                  }}
                   onDragEnd={() => {
                     setDragId(null);
+                    setDragAggregateIds(null);
                     setDragOverGroup(null);
                   }}
                   className={`flex items-center gap-1.5 rounded-sm px-1.5 py-1 transition-opacity ${
@@ -382,14 +395,14 @@ export default function FleetCompositionEditor({
                     canEdit
                       ? "cursor-grab active:cursor-grabbing hover:bg-muted/50"
                       : ""
-                  } ${dragId === realId ? "opacity-40" : ""}`}
+                  } ${isDragging ? "opacity-40" : ""}`}
                 >
                   {canEdit && (
                     <GripVertical className="h-3 w-3 text-foreground/60 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="truncate text-[11px] font-bold text-foreground">
-                      {s.ship_display_id ? `${s.ship_display_id} ` : ""}
+                      {!item.aggregate && s.ship_display_id ? `${s.ship_display_id} ` : ""}
                       {s.ship_name}
                     </div>
                     <div className="text-[9px] text-foreground/85 uppercase tracking-wider font-semibold flex items-center gap-1.5">
@@ -405,7 +418,7 @@ export default function FleetCompositionEditor({
                             </span>
                           );
                         }
-                        if (max != null && cur != null && cur < max) {
+                        if (!item.aggregate && max != null && cur != null && cur < max) {
                           return (
                             <span className="text-amber-700/70 normal-case tracking-normal font-semibold">
                               {cur}/{max}
@@ -431,20 +444,22 @@ export default function FleetCompositionEditor({
                       )}
                     </div>
                   </div>
-                  {!listEachShip && (canEdit ? (
+                  {!listEachShip && (item.aggregate ? (
+                    <span className="font-bold text-bronze text-xs">×{s.quantity}</span>
+                  ) : canEdit ? (
                     <>
                       <input
                         type="number"
                         min={0}
                         value={s.quantity}
                         onChange={(e) =>
-                          handleQtyChange(s.id, Number(e.target.value))
+                          handleQtyChange(realId, Number(e.target.value))
                         }
                         onClick={(e) => e.stopPropagation()}
                         className="w-12 h-6 rounded-sm border border-input bg-background px-1 text-[11px] text-right font-semibold"
                       />
                       <button
-                        onClick={() => removeRow(s.id)}
+                        onClick={() => removeRow(realId)}
                         className="text-crimson hover:text-crimson-light p-0.5"
                         title="Remove"
                       >
@@ -459,6 +474,7 @@ export default function FleetCompositionEditor({
                 </div>
                 );
               })}
+
             </div>
           </div>
         );
