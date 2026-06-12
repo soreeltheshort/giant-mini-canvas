@@ -471,10 +471,6 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
     // Calculate buildable facilities (always available — facility commissioning costs 1 admin point)
     const buildableFacilities = getBuildableFacilities(realSys, gameData!);
     const adminPointsLeft = adminPointsAvailable ?? 0;
-    const hasShipyard = (realSys.facilities || []).some(f => {
-      const ft = gameData!.facilityTypes.find(t => t.facility_type_id === f.facility_type_id);
-      return (ft?.name || "").toLowerCase().includes("shipyard");
-    });
     const [shipDialogOpen, setShipDialogOpen] = useState(false);
     const [facilityDialogOpen, setFacilityDialogOpen] = useState(false);
     const [queueRefresh, setQueueRefresh] = useState(0);
@@ -483,6 +479,7 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
       const cap = Number(ft?.ship_build_capacity) || 0;
       return sum + cap * (f.quantity || 1);
     }, 0);
+    const hasShipyard = shipBuildCapacity > 0;
     // Highest hull-class codes each shipyard facility on this planet can build.
     // null entry = a shipyard with no class limit (treated as unlimited).
     const shipyardMaxHullCodes: (string | null)[] = (realSys.facilities || [])
