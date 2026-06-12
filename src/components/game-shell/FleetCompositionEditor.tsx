@@ -259,16 +259,50 @@ export default function FleetCompositionEditor({
         const gunshipOver = cap.gunshipUsed > cap.gunshipCap;
         const showFighter = cap.fighterCap > 0 || cap.fighterUsed > 0;
         const showGunship = cap.gunshipCap > 0 || cap.gunshipUsed > 0;
-        const displayShips: FleetShipRow[] = listEachShip
-          ? groupShips.flatMap((s) =>
-              Array.from({ length: s.quantity }, (_, i) => ({
-                ...s,
-                quantity: 1,
-                // Suffix the key so React doesn't collide; id stays for drag mapping.
-                id: `${s.id}__${i}`,
-              }))
-            )
-          : groupShips;
+        // Build display items. In !listEachShip mode, collapse strikecraft
+        // (FL/FH/GS) of the same ship_type_id within a group into one row;
+        // drag/move on that row prompts for a count.
+        type DisplayItem = { key: string; ids: string[]; sample: FleetShipRow; aggregate: boolean };
+        let displayItems: DisplayItem[] = [];
+        if (listEachShip) {
+          displayItems = groupShips.flatMap((s) =>
+            Array.from({ length: s.quantity }, (_, i) => ({
+              key: `${s.id}__${i}`,
+              ids: [s.id],
+              sample: { ...s, quantity: 1 },
+              aggregate: false,
+            }))
+          );
+        } else {
+          const byType = new Map<string, FleetShipRow[]>();
+          const others: FleetShipRow[] = [];
+          for (const s of groupShips) {
+            const cls = s.ship_class || "";
+            const isStrikecraft = cls === "FL" || cls === "FH" || cls === "GS" || s.hull_class === "Strikecraft";
+            if (isStrikecraft && !s.crippled && (s.max_hp == null || s.current_hp == null || s.current_hp >= s.max_hp)) {
+              // Only collapse healthy, non-crippled strikecraft so HP/crippled rows
+              // remain individually visible.
+              const arr = byType.get(s.ship_type_id) || [];
+              arr.push(s);
+              byType.set(s.ship_type_id, arr);
+            } else {
+              others.push(s);
+            }
+          }
+          for (const [typeId, rows] of byType) {
+            const totalCount = rows.reduce((sum, r) => sum + r.quantity, 0);
+            displayItems.push({
+              key: `agg-${typeId}-${group}`,
+              ids: rows.map((r) => r.id),
+              sample: { ...rows[0], quantity: totalCount },
+              aggregate: rows.length > 1 || totalCount > 1,
+            });
+          }
+          for (const s of others) {
+            displayItems.push({ key: s.id, ids: [s.id], sample: s, aggregate: false });
+          }
+        }
+
         return (
           <div
             key={group}
