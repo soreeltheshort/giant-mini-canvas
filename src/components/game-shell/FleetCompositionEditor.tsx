@@ -196,7 +196,7 @@ export default function FleetCompositionEditor({
       setDragId(null);
       setDragOverGroup(null);
     },
-    [dragId, ships, setShips, onCompositionChanged, toast]
+    [dragId, dragAggregateIds, ships, setShips, onCompositionChanged, toast]
   );
 
   // Auto-relocate any crippled ships outside Rear/Retreat into Rear.
