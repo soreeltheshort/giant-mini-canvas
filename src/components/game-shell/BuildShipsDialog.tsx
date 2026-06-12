@@ -381,7 +381,7 @@ export default function BuildShipsDialog({
                     if (systemHexX === undefined || systemHexY === undefined) return playerFleets;
                     return playerFleets.filter(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
                   })();
-                  const currentDest = row.destination_fleet_id ?? NEW_FLEET;
+                  const currentDest = row.destination_fleet_id ?? "";
                   return (
                     <div key={row.id} className="flex items-center gap-2 text-[10px] flex-wrap">
                       <span className="w-4 text-right text-muted-foreground">{idx + 1}.</span>
@@ -394,15 +394,16 @@ export default function BuildShipsDialog({
                         value={currentDest}
                         onChange={(e) => updatePersistedDest(row, e.target.value)}
                         className="text-[10px] bg-muted border border-border rounded-sm px-1 py-0.5 text-foreground max-w-[12rem]"
-                        title="Destination"
+                        title="Destination fleet"
                       >
-                        <option value={NEW_FLEET}>🪐 Planet (new fleet)</option>
+                        {currentDest === "" && <option value="">— select fleet —</option>}
                         {allowedFleets.map((f) => (
                           <option key={f.fleet_id} value={f.fleet_id}>
                             {f.fleet_name}{f.atSystem ? " (here)" : ""}{f.is_garrison ? " ⚓" : ""}
                           </option>
                         ))}
                       </select>
+
                       <button
                         onClick={() => cancelPersisted(row)}
                         className="px-1.5 py-0.5 rounded-sm bg-muted text-foreground hover:bg-crimson/30 text-[10px] font-bold"
