@@ -8,9 +8,8 @@ import { Input } from "@/components/ui/input";
 
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { toast } from "sonner";
-import AIInspector from "@/components/admin/ai/AIInspector";
 import FollowthroughEditor from "@/components/admin/ai/FollowthroughEditor";
 import { seedDefaultPersonas } from "@/lib/ai/seedDefaultPersonas";
 import { GOAL_CODES } from "@/lib/ai/goalCatalog";
@@ -129,53 +128,39 @@ export default function AdminAIConfig() {
       <Header />
       <div className="container max-w-5xl py-8 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-accent">AI Testing</h1>
+          <h1 className="text-xl font-semibold text-accent">AI Config</h1>
         </div>
         <p className="text-xs text-muted-foreground">
-          Tune AI personas with trait sliders and goal-weight matrices. The Inspector tab shows what each AI thought, planned, and did on past turns.
+          Tune AI personas with trait sliders and goal-weight matrices.
         </p>
 
+        {isAdmin && (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={addPersona} disabled={busy}>+ New persona</Button>
+            <Button size="sm" variant="outline" onClick={seedDefaults} disabled={busy}>
+              Seed defaults
+            </Button>
+            <span className="text-[11px] text-muted-foreground self-center">
+              Seed inserts Warlord, Trade Senator, Paranoid Isolationist if missing. Safe to run twice.
+            </span>
+          </div>
+        )}
 
-        <Tabs defaultValue="personas">
-          <TabsList>
-            <TabsTrigger value="personas">Personas</TabsTrigger>
-            <TabsTrigger value="inspector">Inspector</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="personas" className="space-y-6 pt-4">
-            {isAdmin && (
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" onClick={addPersona} disabled={busy}>+ New persona</Button>
-                <Button size="sm" variant="outline" onClick={seedDefaults} disabled={busy}>
-                  Seed defaults
-                </Button>
-                <span className="text-[11px] text-muted-foreground self-center">
-                  Seed inserts Warlord, Trade Senator, Paranoid Isolationist if missing. Safe to run twice.
-                </span>
-              </div>
-            )}
-
-            {personas.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No personas defined yet.</p>
-            ) : (
-              <div className="space-y-6">
-                {personas.map((p) => (
-                  <PersonaCard
-                    key={p.id}
-                    persona={p}
-                    weights={weights.filter((w) => w.persona_id === p.id)}
-                    isAdmin={isAdmin}
-                    onChanged={reload}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="inspector" className="pt-4">
-            <AIInspector />
-          </TabsContent>
-        </Tabs>
+        {personas.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No personas defined yet.</p>
+        ) : (
+          <div className="space-y-6">
+            {personas.map((p) => (
+              <PersonaCard
+                key={p.id}
+                persona={p}
+                weights={weights.filter((w) => w.persona_id === p.id)}
+                isAdmin={isAdmin}
+                onChanged={reload}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

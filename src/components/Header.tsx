@@ -30,7 +30,7 @@ const Header = () => {
   
   const isGameMode = location.pathname.startsWith("/admin/games");
   const isForumActive = location.pathname.startsWith("/blog") || location.pathname === "/admin/blog" || location.pathname === "/unsubscribe";
-  const isAITestingMode = location.pathname.startsWith("/admin/ai-config");
+  const isAITestingMode = location.pathname.startsWith("/admin/ai-inspector");
 
   // Studio mode = Mini Giant Games marketing surface (home, about, public games index/detail).
   // Renders a simplified nav: Games, About Us, Sign In/Out only.
@@ -165,20 +165,23 @@ const Header = () => {
                         <Link to="/planet-testing">Planet Testing</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/admin/ai-config">AI Testing</Link>
+                        <Link to="/admin/ai-inspector">AI Testing</Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
                 {user && isAdmin && (
                   <DropdownMenu>
-                    <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/weapons" || location.pathname === "/admin/ships" || location.pathname === "/admin/battle-config" ? "text-foreground" : ""}`}>
+                    <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium text-gold transition-colors hover:text-foreground ${location.pathname === "/admin/weapons" || location.pathname === "/admin/ships" || location.pathname === "/admin/battle-config" || location.pathname === "/admin/ai-config" ? "text-foreground" : ""}`}>
                       Assets
                       <ChevronDown className="h-3 w-3" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-background z-50">
                       <DropdownMenuItem asChild>
                         <Link to="/admin/battle-debug">Debug</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/ai-config">AI Config</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link to="/admin/weapons">Weapons</Link>
