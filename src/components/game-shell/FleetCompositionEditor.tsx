@@ -479,6 +479,69 @@ export default function FleetCompositionEditor({
           </div>
         );
       })}
+
+      {pendingMove && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
+          onClick={() => setPendingMove(null)}
+        >
+          <div
+            className="bg-background border border-bronze rounded-sm p-4 w-[280px] space-y-3 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 className="text-[11px] font-heading uppercase tracking-wider text-bronze-dark font-bold">
+              Move {pendingMove.label} → {pendingMove.targetGroup}
+            </h4>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={1}
+                max={pendingMove.max}
+                value={pendingMove.count}
+                onChange={(e) =>
+                  setPendingMove((p) => (p ? { ...p, count: Number(e.target.value) } : p))
+                }
+                className="flex-1"
+              />
+              <input
+                type="number"
+                min={1}
+                max={pendingMove.max}
+                value={pendingMove.count}
+                onChange={(e) =>
+                  setPendingMove((p) => {
+                    if (!p) return p;
+                    const n = Math.max(1, Math.min(p.max, Number(e.target.value) || 1));
+                    return { ...p, count: n };
+                  })
+                }
+                className="w-14 h-7 rounded-sm border border-input bg-background px-1 text-[11px] text-right font-semibold"
+              />
+              <span className="text-[10px] text-foreground/70">/ {pendingMove.max}</span>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setPendingMove(null)}
+                className="px-2 py-1 rounded-sm text-[10px] font-heading uppercase tracking-wider bg-muted text-foreground hover:bg-bronze/20"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const subset = pendingMove.ids.slice(0, pendingMove.count);
+                  const target = pendingMove.targetGroup;
+                  setPendingMove(null);
+                  await commitAggregateMove(subset, target);
+                }}
+                className="px-2 py-1 rounded-sm text-[10px] font-heading uppercase tracking-wider bg-crimson text-primary-foreground hover:bg-crimson-light"
+              >
+                Move
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
