@@ -95,7 +95,18 @@ export default function FleetCompositionEditor({
 }: Props) {
   const { toast } = useToast();
   const [dragId, setDragId] = useState<string | null>(null);
+  /** When dragging an aggregated strikecraft row, carries every underlying DB id. */
+  const [dragAggregateIds, setDragAggregateIds] = useState<string[] | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
+  /** Pending strikecraft move awaiting a count from the user. */
+  const [pendingMove, setPendingMove] = useState<{
+    ids: string[];
+    targetGroup: string;
+    label: string;
+    max: number;
+    count: number;
+  } | null>(null);
+
 
   const GROUPS = useMemo(
     () => [
