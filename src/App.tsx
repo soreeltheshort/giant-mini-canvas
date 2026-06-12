@@ -21,6 +21,7 @@ import AdminUsers from "./pages/AdminUsers";
 import AdminShips from "./pages/AdminShips";
 import AdminFacilities from "./pages/AdminFacilities";
 import AdminAIConfig from "./pages/AdminAIConfig";
+import AdminAIInspector from "./pages/AdminAIInspector";
 import AdminGames from "./pages/AdminGames";
 import MyGames from "./pages/MyGames";
 import TesterDashboard from "./pages/TesterDashboard";
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/admin/ships" element={<AdminShips />} />
             <Route path="/admin/facilities" element={<RequireRole roles={["admin", "tester"]}><AdminFacilities /></RequireRole>} />
             <Route path="/admin/ai-config" element={<RequireRole roles={["admin", "tester"]}><AdminAIConfig /></RequireRole>} />
+            <Route path="/admin/ai-inspector" element={<RequireRole roles={["admin", "tester"]}><AdminAIInspector /></RequireRole>} />
             <Route path="/admin/games" element={<RequireRole roles={["admin"]}><AdminGames /></RequireRole>} />
             <Route path="/my-games" element={<MyGames />} />
             <Route path="/tester" element={<RequireRole roles={["admin","tester"]}><TesterDashboard /></RequireRole>} />

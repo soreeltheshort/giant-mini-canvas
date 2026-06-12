@@ -30,7 +30,7 @@ const Header = () => {
   
   const isGameMode = location.pathname.startsWith("/admin/games");
   const isForumActive = location.pathname.startsWith("/blog") || location.pathname === "/admin/blog" || location.pathname === "/unsubscribe";
-  const isAITestingMode = location.pathname.startsWith("/admin/ai-config");
+  const isAITestingMode = location.pathname.startsWith("/admin/ai-inspector");
 
   // Studio mode = Mini Giant Games marketing surface (home, about, public games index/detail).
   // Renders a simplified nav: Games, About Us, Sign In/Out only.
@@ -165,7 +165,7 @@ const Header = () => {
                         <Link to="/planet-testing">Planet Testing</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/admin/ai-config">AI Testing</Link>
+                        <Link to="/admin/ai-inspector">AI Testing</Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
