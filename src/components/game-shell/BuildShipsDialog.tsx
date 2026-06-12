@@ -252,15 +252,18 @@ export default function BuildShipsDialog({
       const idx = prev.findIndex((q) => q.id === id);
       if (idx === -1) {
         if (delta <= 0) return prev;
-        // For strikecraft, default destination must be within 2 hexes.
+        // Strikecraft must default to a fleet within 2 hexes; otherwise blocked.
         const st = shipTypes.find(s => s.id === id);
         let dflt = defaultDestination;
         if (st?.hull_class === "Strikecraft" && systemHexX !== undefined && systemHexY !== undefined) {
           const ok = playerFleets.find(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
-          dflt = ok ? ok.fleet_id : NEW_FLEET;
+          if (!ok) return prev; // no eligible fleet → can't queue
+          dflt = ok.fleet_id;
         }
+        if (!dflt) return prev; // no fleets at all → can't queue
         return [...prev, { id, qty: delta, destFleetId: dflt }];
       }
+
       const next = [...prev];
       const v = Math.max(0, next[idx].qty + delta);
       if (v === 0) next.splice(idx, 1);
