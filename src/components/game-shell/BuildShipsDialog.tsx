@@ -219,8 +219,11 @@ export default function BuildShipsDialog({
   };
 
 
-  // Default to building at the planet (new fleet); user can pick an existing fleet instead.
-  const defaultDestination = NEW_FLEET;
+  // Ships must be assigned to an existing fleet. New-fleet creation from
+  // production is disallowed — players must form a fleet first.
+  const defaultDestination = playerFleets[0]?.fleet_id ?? "";
+
+
 
   const qtyOf = (id: string) => queueOrder.find((q) => q.id === id)?.qty ?? 0;
 
@@ -249,15 +252,18 @@ export default function BuildShipsDialog({
       const idx = prev.findIndex((q) => q.id === id);
       if (idx === -1) {
         if (delta <= 0) return prev;
-        // For strikecraft, default destination must be within 2 hexes.
+        // Strikecraft must default to a fleet within 2 hexes; otherwise blocked.
         const st = shipTypes.find(s => s.id === id);
         let dflt = defaultDestination;
         if (st?.hull_class === "Strikecraft" && systemHexX !== undefined && systemHexY !== undefined) {
           const ok = playerFleets.find(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
-          dflt = ok ? ok.fleet_id : NEW_FLEET;
+          if (!ok) return prev; // no eligible fleet → can't queue
+          dflt = ok.fleet_id;
         }
+        if (!dflt) return prev; // no fleets at all → can't queue
         return [...prev, { id, qty: delta, destFleetId: dflt }];
       }
+
       const next = [...prev];
       const v = Math.max(0, next[idx].qty + delta);
       if (v === 0) next.splice(idx, 1);
@@ -375,7 +381,7 @@ export default function BuildShipsDialog({
                     if (systemHexX === undefined || systemHexY === undefined) return playerFleets;
                     return playerFleets.filter(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
                   })();
-                  const currentDest = row.destination_fleet_id ?? NEW_FLEET;
+                  const currentDest = row.destination_fleet_id ?? "";
                   return (
                     <div key={row.id} className="flex items-center gap-2 text-[10px] flex-wrap">
                       <span className="w-4 text-right text-muted-foreground">{idx + 1}.</span>
@@ -388,15 +394,16 @@ export default function BuildShipsDialog({
                         value={currentDest}
                         onChange={(e) => updatePersistedDest(row, e.target.value)}
                         className="text-[10px] bg-muted border border-border rounded-sm px-1 py-0.5 text-foreground max-w-[12rem]"
-                        title="Destination"
+                        title="Destination fleet"
                       >
-                        <option value={NEW_FLEET}>🪐 Planet (new fleet)</option>
+                        {currentDest === "" && <option value="">— select fleet —</option>}
                         {allowedFleets.map((f) => (
                           <option key={f.fleet_id} value={f.fleet_id}>
                             {f.fleet_name}{f.atSystem ? " (here)" : ""}{f.is_garrison ? " ⚓" : ""}
                           </option>
                         ))}
                       </select>
+
                       <button
                         onClick={() => cancelPersisted(row)}
                         className="px-1.5 py-0.5 rounded-sm bg-muted text-foreground hover:bg-crimson/30 text-[10px] font-bold"
@@ -437,7 +444,10 @@ export default function BuildShipsDialog({
                     className="text-[10px] bg-muted border border-border rounded-sm px-1 py-0.5 text-foreground max-w-[12rem]"
                     title="Destination fleet"
                   >
-                    <option value={NEW_FLEET}>🪐 Planet (new fleet)</option>
+                    {allowedFleets.every(f => f.fleet_id !== q.destFleetId) && (
+                      <option value={q.destFleetId}>— select fleet —</option>
+                    )}
+
                     {allowedFleets.map((f) => (
                       <option key={f.fleet_id} value={f.fleet_id}>
                         {f.fleet_name}{f.atSystem ? " (here)" : ""}{f.is_garrison ? " ⚓" : ""}
@@ -475,15 +485,14 @@ export default function BuildShipsDialog({
           </div>
         )}
 
-        {/* Inline mini-map: pick destination hex for new fleets */}
-        {ownedHexes.length > 0 && (queueOrder.length === 0 || queueOrder.some(q => q.destFleetId === NEW_FLEET)) && (
-          <NewFleetHexPicker
-            ownedHexes={ownedHexes}
-            systemHex={systemHexX !== undefined && systemHexY !== undefined ? { x: systemHexX, y: systemHexY } : null}
-            selected={newFleetHex}
-            onSelect={(h) => setNewFleetHex(h)}
-          />
+        {/* New-fleet creation from production is disabled — ships must join an existing fleet. */}
+        {playerFleets.length === 0 && (
+          <p className="text-[10px] text-crimson italic">
+            No fleets available. Form a fleet before queueing ship production.
+          </p>
         )}
+
+
 
         {/* Filters */}
         <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border">
