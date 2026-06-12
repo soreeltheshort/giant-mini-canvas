@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { toast } from "sonner";
 import FollowthroughEditor from "@/components/admin/ai/FollowthroughEditor";
 import { seedDefaultPersonas } from "@/lib/ai/seedDefaultPersonas";
