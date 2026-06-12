@@ -136,28 +136,63 @@ export default function FleetCompositionEditor({
     }
   };
 
+  const moveOneId = async (rowId: string, targetGroup: string) => {
+    const dragged = ships.find((s) => s.id === rowId);
+    if (dragged?.crippled && !CRIPPLED_ALLOWED_GROUPS.has(targetGroup)) {
+      toast({
+        title: "Crippled ships restricted",
+        description: "Crippled ships can only be placed in Rear or Retreat.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShips((prev) =>
+      prev.map((s) => (s.id === rowId ? { ...s, tactical_group: targetGroup } : s))
+    );
+    await persistGroup(rowId, targetGroup);
+  };
+
+  const commitAggregateMove = async (ids: string[], targetGroup: string) => {
+    // Check crippled restriction across the chosen subset
+    const subset = ships.filter((s) => ids.includes(s.id));
+    if (subset.some((s) => s.crippled) && !CRIPPLED_ALLOWED_GROUPS.has(targetGroup)) {
+      toast({
+        title: "Crippled ships restricted",
+        description: "Crippled ships can only be placed in Rear or Retreat.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShips((prev) =>
+      prev.map((s) => (ids.includes(s.id) ? { ...s, tactical_group: targetGroup } : s))
+    );
+    await Promise.all(ids.map((id) => persistGroup(id, targetGroup)));
+    onCompositionChanged?.();
+  };
+
   const handleDrop = useCallback(
     (targetGroup: string) => {
-      if (dragId !== null) {
-        const dragged = ships.find((s) => s.id === dragId);
-        if (dragged?.crippled && !CRIPPLED_ALLOWED_GROUPS.has(targetGroup)) {
-          toast({
-            title: "Crippled ships restricted",
-            description: "Crippled ships can only be placed in Rear or Retreat.",
-            variant: "destructive",
+      // Aggregate drop → prompt for count
+      if (dragAggregateIds && dragAggregateIds.length > 0) {
+        const first = ships.find((s) => s.id === dragAggregateIds[0]);
+        if (first && first.tactical_group !== targetGroup) {
+          setPendingMove({
+            ids: dragAggregateIds,
+            targetGroup,
+            label: `${first.ship_name}`,
+            max: dragAggregateIds.length,
+            count: dragAggregateIds.length,
           });
-          setDragId(null);
-          setDragOverGroup(null);
-          return;
         }
-        setShips((prev) =>
-          prev.map((s) =>
-            s.id === dragId ? { ...s, tactical_group: targetGroup } : s
-          )
-        );
-        persistGroup(dragId, targetGroup);
-        onCompositionChanged?.();
+        setDragAggregateIds(null);
+        setDragId(null);
+        setDragOverGroup(null);
+        return;
       }
+      if (dragId !== null) {
+        moveOneId(dragId, targetGroup).then(() => onCompositionChanged?.());
+      }
+
       setDragId(null);
       setDragOverGroup(null);
     },
