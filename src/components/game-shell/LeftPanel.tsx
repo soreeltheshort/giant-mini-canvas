@@ -807,10 +807,6 @@ function InlineRegionDetail({
       : [];
     const adminPointsLeft = adminPointsAvailable ?? 0;
     const ftFull = gameData?.facilityTypesFull || [];
-    const hasShipyard = (realSys.facilities || []).some((f) => {
-      const ft = gameData?.facilityTypes.find((t) => t.facility_type_id === f.facility_type_id);
-      return (ft?.name || "").toLowerCase().includes("shipyard");
-    });
     const [shipDialogOpen, setShipDialogOpen] = useState(false);
     const [facilityDialogOpen, setFacilityDialogOpen] = useState(false);
     const [queueRefresh, setQueueRefresh] = useState(0);
@@ -819,6 +815,7 @@ function InlineRegionDetail({
       const cap = Number(ft?.ship_build_capacity) || 0;
       return sum + cap * (f.quantity || 1);
     }, 0);
+    const hasShipyard = shipBuildCapacity > 0;
     const shipyardMaxHullCodes: (string | null)[] = (realSys.facilities || [])
       .map(f => (gameData?.facilityTypesFull || []).find(t => String(t.facility_type_id) === String(f.facility_type_id)) as any)
       .filter(ft => Number(ft?.ship_build_capacity) > 0)
