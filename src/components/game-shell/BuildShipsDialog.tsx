@@ -219,8 +219,11 @@ export default function BuildShipsDialog({
   };
 
 
-  // Default to building at the planet (new fleet); user can pick an existing fleet instead.
-  const defaultDestination = NEW_FLEET;
+  // Ships must be assigned to an existing fleet. New-fleet creation from
+  // production is disallowed — players must form a fleet first.
+  const defaultDestination = playerFleets[0]?.fleet_id ?? "";
+
+
 
   const qtyOf = (id: string) => queueOrder.find((q) => q.id === id)?.qty ?? 0;
 
