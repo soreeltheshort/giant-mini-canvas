@@ -695,7 +695,11 @@ const AdminGames = () => {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       <div className="container py-6 space-y-6">
-        <h1 className="text-2xl font-heading font-bold">Game Management</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-heading font-bold">Game Management</h1>
+          <Button variant="outline" onClick={() => navigate("/admin/games/snapshots")}>All Snapshots →</Button>
+        </div>
+
 
         {/* ── Default Map (used by Tester Dashboard) ── */}
         <DefaultMapSelector />
