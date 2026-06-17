@@ -23,11 +23,13 @@ import { seedFactionPlayers } from "@/lib/gameLifecycle";
 import { ownerToEconKey, rowEconKey } from "@/lib/turnProcessor/ownerKey";
 import { SystemData, MapState } from "@/lib/mapTypes";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
+import { forkGameFromSnapshot, touchGameLastOpened } from "@/lib/forkGameFromSnapshot";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TurnLogViewer from "@/components/game-shell/TurnLogViewer";
 import FactionsConfigPicker from "@/components/FactionsConfigPicker";
 import { applyAndSetDefaultFactionsConfig } from "@/lib/factionsConfig";
+
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
@@ -42,7 +44,12 @@ interface GameRow {
   turn_number: number;
   created_at: string;
   created_by: string;
+  parent_game_id?: string | null;
+  parent_snapshot_id?: string | null;
+  forked_at?: string | null;
+  last_opened_at?: string | null;
 }
+
 
 interface GamePlayerRow {
   id: string;
@@ -109,7 +116,7 @@ const AdminGames = () => {
 
   /* ── fetch helpers ── */
   const fetchGames = useCallback(async () => {
-    const { data: gData } = await (supabase as any).from("games").select("id, name, status, turn_number, created_at, created_by").order("created_at", { ascending: false });
+    const { data: gData } = await (supabase as any).from("games").select("id, name, status, turn_number, created_at, created_by, parent_game_id, parent_snapshot_id, forked_at, last_opened_at").order("created_at", { ascending: false });
     const list = (gData || []) as GameRow[];
     setGames(list);
     // Fetch player rosters for all games so the list can show participants
@@ -161,7 +168,9 @@ const AdminGames = () => {
   /* ── load a game ── */
   const loadGame = useCallback(async (game: GameRow) => {
     setSelectedGame(game);
+    touchGameLastOpened(game.id);
     setReseedDone(false);
+
     // players
     const { data: pData } = await (supabase as any).from("game_factions").select("*, factions:faction_id(id, name, code_name, is_player_faction)").eq("game_id", game.id).order("player_slot");
     setPlayers(pData || []);
@@ -312,6 +321,26 @@ const AdminGames = () => {
     setSnapshots(sData || []);
     toast({ title: "Snapshot restored", description: `Now at turn ${snapshot.turn_number}` });
   };
+
+  const forkSnapshot = async (snapshot: GameSnapshotRow) => {
+    if (!selectedGame || !user) return;
+    if (!confirm(`Fork a new game from "${snapshot.label}" (turn ${snapshot.turn_number})?\n\nThe original game is preserved; a new branch appears in the games list.`)) return;
+    try {
+      const result = await forkGameFromSnapshot({
+        parentGameId: selectedGame.id,
+        snapshotId: snapshot.id,
+        createdBy: user.id,
+      });
+      toast({ title: "Forked", description: `${result.newGameName} (${result.fleetsCreated} fleets, ${result.factionsCopied} factions)` });
+      await fetchGames();
+      // Auto-select the new branch
+      const { data: fresh } = await (supabase as any).from("games").select("id, name, status, turn_number, created_at, created_by, parent_game_id, parent_snapshot_id, forked_at, last_opened_at").eq("id", result.newGameId).single();
+      if (fresh) await loadGame(fresh as GameRow);
+    } catch (e: any) {
+      toast({ title: "Fork failed", description: e?.message ?? String(e), variant: "destructive" });
+    }
+  };
+
 
   const deleteSnapshot = async (snapshotId: string) => {
     if (!selectedGame) return;
@@ -666,7 +695,11 @@ const AdminGames = () => {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       <div className="container py-6 space-y-6">
-        <h1 className="text-2xl font-heading font-bold">Game Management</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-heading font-bold">Game Management</h1>
+          <Button variant="outline" onClick={() => navigate("/admin/games/snapshots")}>All Snapshots →</Button>
+        </div>
+
 
         {/* ── Default Map (used by Tester Dashboard) ── */}
         <DefaultMapSelector />
@@ -681,7 +714,42 @@ const AdminGames = () => {
           </div>
         </div>
 
-        {/* ── Games List ── */}
+        {/* ── Recent Branches (quick access for testing) ── */}
+        {(() => {
+          const recents = games
+            .slice()
+            .sort((a, b) => {
+              const ta = new Date(a.last_opened_at || a.forked_at || a.created_at).getTime();
+              const tb = new Date(b.last_opened_at || b.forked_at || b.created_at).getTime();
+              return tb - ta;
+            })
+            .slice(0, 10);
+          return (
+            <div className="border border-border rounded-md p-3 bg-card space-y-2">
+              <h2 className="text-sm font-heading font-semibold uppercase tracking-wider text-muted-foreground">Recent (last opened or forked)</h2>
+              <div className="flex flex-wrap gap-2">
+                {recents.map(g => {
+                  const ts = g.last_opened_at || g.forked_at || g.created_at;
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => loadGame(g)}
+                      className={`text-xs px-2 py-1 rounded border ${selectedGame?.id === g.id ? "bg-accent/40 border-accent" : "border-border hover:bg-muted"}`}
+                      title={`Turn ${g.turn_number} · ${new Date(ts).toLocaleString()}`}
+                    >
+                      <span className="font-medium">{g.name}</span>
+                      <span className="ml-1 text-muted-foreground">T{g.turn_number}</span>
+                      {g.parent_game_id && <span className="ml-1 text-bronze">⑂</span>}
+                    </button>
+                  );
+                })}
+                {recents.length === 0 && <span className="text-xs text-muted-foreground">No games yet</span>}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── Games List (grouped by root, branches indented) ── */}
         <div className="border border-border rounded-md">
           <Table>
             <TableHeader>
@@ -691,48 +759,104 @@ const AdminGames = () => {
                 <TableHead>Turn</TableHead>
                 <TableHead>Creator</TableHead>
                 <TableHead>Players</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>Created / Forked</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loadingGames ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Loading...</TableCell></TableRow>
-              ) : games.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No games yet</TableCell></TableRow>
-              ) : games.map(g => {
-                const roster = (gamePlayersMap.get(g.id) || []).slice().sort((a, b) => (a.player_slot ?? 99) - (b.player_slot ?? 99));
+              {(() => {
+                if (loadingGames) return <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Loading...</TableCell></TableRow>;
+                if (games.length === 0) return <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No games yet</TableCell></TableRow>;
+
+                // Build parent → children map and find roots
+                const byId = new Map(games.map(g => [g.id, g] as const));
+                const childrenOf = new Map<string, GameRow[]>();
+                const roots: GameRow[] = [];
+                for (const g of games) {
+                  if (g.parent_game_id && byId.has(g.parent_game_id)) {
+                    const arr = childrenOf.get(g.parent_game_id) || [];
+                    arr.push(g);
+                    childrenOf.set(g.parent_game_id, arr);
+                  } else {
+                    roots.push(g);
+                  }
+                }
+                // Sort children newest fork first
+                for (const arr of childrenOf.values()) {
+                  arr.sort((a, b) => new Date(b.forked_at || b.created_at).getTime() - new Date(a.forked_at || a.created_at).getTime());
+                }
+                // Sort roots by most recent root or descendant activity
+                const recencyOf = (g: GameRow): number => {
+                  let t = new Date(g.last_opened_at || g.created_at).getTime();
+                  const stack = [g];
+                  while (stack.length) {
+                    const cur = stack.pop()!;
+                    const ct = new Date(cur.last_opened_at || cur.forked_at || cur.created_at).getTime();
+                    if (ct > t) t = ct;
+                    for (const c of (childrenOf.get(cur.id) || [])) stack.push(c);
+                  }
+                  return t;
+                };
+                roots.sort((a, b) => recencyOf(b) - recencyOf(a));
+
+                const rows: JSX.Element[] = [];
                 const labelFor = (r: { user_id: string | null; ai_persona_id: string | null }) =>
                   r.user_id ? getProfileLabel(r.user_id) : r.ai_persona_id ? "AI" : "inactive";
                 const rank = (r: { user_id: string | null; ai_persona_id: string | null }) =>
                   r.user_id ? 0 : r.ai_persona_id ? 1 : 2;
-                const sortedRoster = roster.slice().sort((a, b) => rank(a) - rank(b));
-                return (
-                <TableRow key={g.id} className={selectedGame?.id === g.id ? "bg-accent/30" : ""}>
-                  <TableCell className="font-medium">{g.name}</TableCell>
-                  <TableCell><Badge className={statusColors[g.status]}>{g.status}</Badge></TableCell>
-                  <TableCell>{g.turn_number}</TableCell>
-                  <TableCell className="text-xs">{getProfileLabel(g.created_by)}</TableCell>
-                  <TableCell className="text-xs">
-                    {sortedRoster.length === 0 ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <span title={sortedRoster.map(r => `${r.player_slot != null ? (PROVINCE_NAMES[r.player_slot] || `Slot ${r.player_slot}`) : "—"}: ${labelFor(r)}`).join("\n")}>
-                        {sortedRoster.map(r => labelFor(r)).join(", ")}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">{new Date(g.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button size="sm" variant="outline" onClick={() => loadGame(g)}>Load</Button>
-                    <Button size="sm" variant="destructive" onClick={() => deleteGame(g.id)}>Delete</Button>
-                  </TableCell>
-                </TableRow>
-                );
-              })}
+
+                const pushRow = (g: GameRow, depth: number) => {
+                  const roster = (gamePlayersMap.get(g.id) || []).slice().sort((a, b) => (a.player_slot ?? 99) - (b.player_slot ?? 99));
+                  const sortedRoster = roster.slice().sort((a, b) => rank(a) - rank(b));
+                  const parent = g.parent_game_id ? byId.get(g.parent_game_id) : null;
+                  rows.push(
+                    <TableRow key={g.id} className={selectedGame?.id === g.id ? "bg-accent/30" : ""}>
+                      <TableCell className="font-medium">
+                        <span style={{ paddingLeft: `${depth * 16}px` }} className="inline-flex items-center gap-2">
+                          {depth > 0 && <span className="text-bronze">↳</span>}
+                          {g.name}
+                          {g.parent_game_id && (
+                            <Badge variant="outline" className="text-[10px]" title={parent ? `Forked from ${parent.name}` : "Forked"}>
+                              SS
+                            </Badge>
+                          )}
+                        </span>
+                      </TableCell>
+                      <TableCell><Badge className={statusColors[g.status]}>{g.status}</Badge></TableCell>
+                      <TableCell>{g.turn_number}</TableCell>
+                      <TableCell className="text-xs">{getProfileLabel(g.created_by)}</TableCell>
+                      <TableCell className="text-xs">
+                        {sortedRoster.length === 0 ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : (
+                          <span title={sortedRoster.map(r => `${r.player_slot != null ? (PROVINCE_NAMES[r.player_slot] || `Slot ${r.player_slot}`) : "—"}: ${labelFor(r)}`).join("\n")}>
+                            {sortedRoster.map(r => labelFor(r)).join(", ")}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {g.forked_at
+                          ? <>Forked {new Date(g.forked_at).toLocaleString()}</>
+                          : <>{new Date(g.created_at).toLocaleDateString()}</>}
+                        {g.last_opened_at && (
+                          <div className="text-[10px] opacity-70">Opened {new Date(g.last_opened_at).toLocaleString()}</div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button size="sm" variant="outline" onClick={() => loadGame(g)}>Load</Button>
+                        <Button size="sm" variant="destructive" onClick={() => deleteGame(g.id)}>Delete</Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                  for (const child of (childrenOf.get(g.id) || [])) pushRow(child, depth + 1);
+                };
+                for (const r of roots) pushRow(r, 0);
+                return rows;
+              })()}
             </TableBody>
           </Table>
         </div>
+
 
         {/* ── Selected Game Detail ── */}
         {selectedGame && (
@@ -858,7 +982,7 @@ const AdminGames = () => {
                         <TableHead>Label</TableHead>
                         <TableHead className="w-16">Turn</TableHead>
                         <TableHead className="w-32">Saved</TableHead>
-                        <TableHead className="text-right w-40">Actions</TableHead>
+                        <TableHead className="text-right w-56">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -868,11 +992,13 @@ const AdminGames = () => {
                           <TableCell className="text-xs">{s.turn_number}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleString()}</TableCell>
                           <TableCell className="text-right space-x-2">
-                            <Button size="sm" variant="outline" onClick={() => loadSnapshot(s)}>Restore</Button>
+                            <Button size="sm" variant="default" onClick={() => forkSnapshot(s)} title="Create a new branch game from this snapshot (original is preserved)">Fork</Button>
+                            <Button size="sm" variant="outline" onClick={() => loadSnapshot(s)} title="Overwrite the current game with this snapshot (no branch)">Restore</Button>
                             <Button size="sm" variant="destructive" onClick={() => deleteSnapshot(s.id)}>Delete</Button>
                           </TableCell>
                         </TableRow>
                       ))}
+
                     </TableBody>
                   </Table>
                 </div>

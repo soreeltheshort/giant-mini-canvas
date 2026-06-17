@@ -1581,10 +1581,14 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          forked_at: string | null
           id: string
           is_test_mode: boolean
+          last_opened_at: string | null
           map_data_json: Json
           name: string
+          parent_game_id: string | null
+          parent_snapshot_id: string | null
           status: Database["public"]["Enums"]["game_status"]
           turn_number: number
           turn_phase: Database["public"]["Enums"]["turn_phase"]
@@ -1593,10 +1597,14 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          forked_at?: string | null
           id?: string
           is_test_mode?: boolean
+          last_opened_at?: string | null
           map_data_json?: Json
           name: string
+          parent_game_id?: string | null
+          parent_snapshot_id?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           turn_number?: number
           turn_phase?: Database["public"]["Enums"]["turn_phase"]
@@ -1605,16 +1613,35 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          forked_at?: string | null
           id?: string
           is_test_mode?: boolean
+          last_opened_at?: string | null
           map_data_json?: Json
           name?: string
+          parent_game_id?: string | null
+          parent_snapshot_id?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           turn_number?: number
           turn_phase?: Database["public"]["Enums"]["turn_phase"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "games_parent_game_id_fkey"
+            columns: ["parent_game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "games_parent_snapshot_id_fkey"
+            columns: ["parent_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "game_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ground_combat_outcomes: {
         Row: {
