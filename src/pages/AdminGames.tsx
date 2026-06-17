@@ -44,7 +44,12 @@ interface GameRow {
   turn_number: number;
   created_at: string;
   created_by: string;
+  parent_game_id?: string | null;
+  parent_snapshot_id?: string | null;
+  forked_at?: string | null;
+  last_opened_at?: string | null;
 }
+
 
 interface GamePlayerRow {
   id: string;
