@@ -23,6 +23,8 @@ import AdminFacilities from "./pages/AdminFacilities";
 import AdminAIConfig from "./pages/AdminAIConfig";
 import AdminAIInspector from "./pages/AdminAIInspector";
 import AdminGames from "./pages/AdminGames";
+import AdminSnapshots from "./pages/AdminSnapshots";
+
 import MyGames from "./pages/MyGames";
 import TesterDashboard from "./pages/TesterDashboard";
 import PlayerGame from "./pages/PlayerGame";
