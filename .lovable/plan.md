@@ -1,47 +1,64 @@
 ## Goal
 
-Make AI Configuration Inspector show accurate per-turn history for **test-mode games**, while non-test games keep the current "latest snapshot only" behavior (admin can only inspect the current turn).
+Instead of restoring snapshots in-place (overwriting the current game), let snapshot loads **fork a new Game** so the original is preserved. Each fork shows clear lineage (which game + which snapshot it came from) and branches are easy to find again during heavy testing.
 
-## Root cause (recap)
+## Naming scheme
 
-`ai_world_beliefs` has `UNIQUE(player_id, belief_key)`. The threat-assessment phase upserts on that key every turn, so each new turn overwrites the prior row in place. The inspector then reconstructs "previous turns" with `.lte(turn_number, turn).order(... desc).limit(1)`, which silently returns 0 once the row's `turn_number` has been bumped past the selected turn.
+Every game has a `name` and a derived `branch_label` that captures lineage:
 
-## Changes
+- Original game: `Game050`
+- Fork from Game050's snapshot "SS04": `Game050:SS04`
+- Fork from that branch's snapshot "SS07": `Game050:SS04:SS07`
+- A second fork from the same `Game050:SS04` snapshot SS07: `Game050:SS04:SS07 (b)`, then `(c)`, etc.
 
-### 1. Schema (migration)
+The colon chain always traces back to the root, so any depth of re-branching is unambiguous.
 
-- Add `games.is_test_mode boolean NOT NULL DEFAULT false`.
-- On `ai_world_beliefs`:
-  - Drop `UNIQUE(player_id, belief_key)`.
-  - Add `UNIQUE(game_id, player_id, belief_key, turn_number)` so the same belief can be appended once per turn per player per game.
-  - Add index `(game_id, player_id, belief_key, turn_number DESC)` for fast "latest" lookups.
+## Data model
 
-No data migration needed — existing rows remain valid under the new unique key.
+Add two columns to `games`:
 
-### 2. Threat assessment phase (`src/lib/turnProcessor/phases/threatAssessment.ts`)
+- `parent_game_id uuid` — the game this was forked from (null for originals)
+- `parent_snapshot_id uuid` — the snapshot row that seeded this fork
+- `forked_at timestamptz` — when the fork was created (drives "most recent" sorting)
 
-- Read `games.is_test_mode` once at phase start.
-- If `is_test_mode === true`: append per-turn rows. Use `upsert` on the new 4-column conflict target so re-running a turn is still idempotent.
-- If `is_test_mode === false`: keep current behavior — one row per `(player, belief_key)` that is overwritten each turn. Implement this by deleting prior rows for that `(game_id, player_id, belief_key)` before inserting the new one (since the old 2-column unique is gone).
-- Baseline rows (`*_baseline`) follow the same rule.
+No change to `game_snapshots`. Snapshots remain point-in-time captures of a game.
 
-### 3. AI Admin Game Settings UI (`src/pages/AdminAIConfig.tsx` or wherever the game is selected for the inspector)
+## Fork flow (replaces "Restore")
 
-- Add a "Test mode (retain per-turn AI history)" toggle on the game row. Writes `games.is_test_mode`.
+On the Admin Games → Snapshots list, the action becomes **Fork from snapshot**:
 
-### 4. AI Inspector (`src/components/admin/ai/AIInspector.tsx`)
+1. Copy `map_data_json` + `turn_number` from the snapshot into a brand-new `games` row.
+2. Set `parent_game_id`, `parent_snapshot_id`, `forked_at = now()`.
+3. Compute `name` from parent's name + snapshot label, appending `(b)`, `(c)`, ... if that exact name already exists.
+4. Re-create the dependent per-game rows the snapshot needs (game_fleets, game_factions, etc.) the same way "Load snapshot" does today, but pointed at the new game id.
+5. Navigate to the new game.
 
-- Fetch `games.is_test_mode` for the selected game.
-- Threat-assessment section:
-  - If test mode: query the exact `turn_number = turn` rows. If none exist for that turn, render "No data recorded for turn N" (not 0).
-  - If not test mode: hide the turn selector for this section and label it "Current turn only — enable test mode to retain history". Only show the most recent row.
-- Same treatment for any other section in the inspector that currently relies on `.lte(turn_number, turn)` against `ai_world_beliefs`.
+The old in-place "Restore" is removed so originals are never overwritten.
 
-### 5. Backfill note
+## Games list UX (under /admin/games)
 
-Prior to this change, only the latest snapshot exists in `ai_world_beliefs`. For Test050 turn 17 specifically, the historical data is gone and cannot be recovered. From the next processed turn forward, history will accumulate.
+Reorganize the list to make branches obvious and recency scannable:
+
+- **Group by root game.** Each root (no parent) is a top-level row; its descendants render indented underneath, sorted by `forked_at desc`.
+- Each branch row shows: branch name, parent → snapshot label, turn number, `forked_at` ("3m ago"), and a "Last opened" timestamp.
+- **"Recent branches" panel** at the top of /admin/games: flat list of the 10 most recently forked or opened branches across all roots, so during testing the latest fork is always one click away.
+- Filter chip: "Originals only / Include branches".
+- A small "SS" badge on every forked row; tooltip shows the full lineage chain.
+
+## Snapshots sub-page
+
+Keep `/admin/games` as the lineage-aware games browser. Add `/admin/games/snapshots` as a dedicated **Snapshots** page (linked from the Games header) that lists every snapshot across every game with: game name, turn, label, created_at, and a **Fork** button. This is the heavy-use surface during testing.
+
+## Technical notes
+
+- Migration: add `parent_game_id`, `parent_snapshot_id`, `forked_at`, `last_opened_at` to `public.games` with appropriate FKs (`on delete set null` so deleting a parent doesn't cascade-destroy branches). Index `(parent_game_id)` and `(forked_at desc)`.
+- Update `last_opened_at` whenever a game is opened in `/play/:gameId` or `/admin/games`.
+- Branch-name collision handling lives in a small helper that queries existing names with the same prefix and picks the next `(letter)` suffix.
+- `loadSnapshot` in `AdminGames.tsx` is replaced by `forkFromSnapshot`; the existing per-game materialization logic (fleets, factions) is reused against the new game id.
+- Routes: add `/admin/games/snapshots` → new `AdminSnapshots.tsx` page. `/admin/games` keeps the grouped tree view.
 
 ## Out of scope
 
-- Other AI tables (`ai_goals`, `ai_plans`, `ai_relationships`, …). They have their own history semantics; this plan only fixes `ai_world_beliefs` per the reported symptom.
-- Pruning/retention of old belief rows in test games — can be added later if the table grows.
+- No changes to how snapshots are *saved* — same button, same table.
+- No merging branches back together.
+- No UI for renaming auto-generated branch names (can be added later if needed).
