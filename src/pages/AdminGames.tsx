@@ -322,6 +322,26 @@ const AdminGames = () => {
     toast({ title: "Snapshot restored", description: `Now at turn ${snapshot.turn_number}` });
   };
 
+  const forkSnapshot = async (snapshot: GameSnapshotRow) => {
+    if (!selectedGame || !user) return;
+    if (!confirm(`Fork a new game from "${snapshot.label}" (turn ${snapshot.turn_number})?\n\nThe original game is preserved; a new branch appears in the games list.`)) return;
+    try {
+      const result = await forkGameFromSnapshot({
+        parentGameId: selectedGame.id,
+        snapshotId: snapshot.id,
+        createdBy: user.id,
+      });
+      toast({ title: "Forked", description: `${result.newGameName} (${result.fleetsCreated} fleets, ${result.factionsCopied} factions)` });
+      await fetchGames();
+      // Auto-select the new branch
+      const { data: fresh } = await (supabase as any).from("games").select("id, name, status, turn_number, created_at, created_by, parent_game_id, parent_snapshot_id, forked_at, last_opened_at").eq("id", result.newGameId).single();
+      if (fresh) await loadGame(fresh as GameRow);
+    } catch (e: any) {
+      toast({ title: "Fork failed", description: e?.message ?? String(e), variant: "destructive" });
+    }
+  };
+
+
   const deleteSnapshot = async (snapshotId: string) => {
     if (!selectedGame) return;
     await (supabase as any).from("game_snapshots").delete().eq("id", snapshotId);
