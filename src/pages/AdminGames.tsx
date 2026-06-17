@@ -116,7 +116,7 @@ const AdminGames = () => {
 
   /* ── fetch helpers ── */
   const fetchGames = useCallback(async () => {
-    const { data: gData } = await (supabase as any).from("games").select("id, name, status, turn_number, created_at, created_by").order("created_at", { ascending: false });
+    const { data: gData } = await (supabase as any).from("games").select("id, name, status, turn_number, created_at, created_by, parent_game_id, parent_snapshot_id, forked_at, last_opened_at").order("created_at", { ascending: false });
     const list = (gData || []) as GameRow[];
     setGames(list);
     // Fetch player rosters for all games so the list can show participants
