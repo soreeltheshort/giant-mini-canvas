@@ -168,7 +168,9 @@ const AdminGames = () => {
   /* ── load a game ── */
   const loadGame = useCallback(async (game: GameRow) => {
     setSelectedGame(game);
+    touchGameLastOpened(game.id);
     setReseedDone(false);
+
     // players
     const { data: pData } = await (supabase as any).from("game_factions").select("*, factions:faction_id(id, name, code_name, is_player_faction)").eq("game_id", game.id).order("player_slot");
     setPlayers(pData || []);
