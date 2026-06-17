@@ -85,6 +85,8 @@ const App = () => (
             <Route path="/admin/ai-config" element={<RequireRole roles={["admin", "tester"]}><AdminAIConfig /></RequireRole>} />
             <Route path="/admin/ai-inspector" element={<RequireRole roles={["admin", "tester"]}><AdminAIInspector /></RequireRole>} />
             <Route path="/admin/games" element={<RequireRole roles={["admin"]}><AdminGames /></RequireRole>} />
+            <Route path="/admin/games/snapshots" element={<RequireRole roles={["admin"]}><AdminSnapshots /></RequireRole>} />
+
             <Route path="/my-games" element={<MyGames />} />
             <Route path="/tester" element={<RequireRole roles={["admin","tester"]}><TesterDashboard /></RequireRole>} />
             <Route path="/play/:gameId" element={<PlayerGame />} />
