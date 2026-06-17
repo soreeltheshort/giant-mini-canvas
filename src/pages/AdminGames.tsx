@@ -23,11 +23,13 @@ import { seedFactionPlayers } from "@/lib/gameLifecycle";
 import { ownerToEconKey, rowEconKey } from "@/lib/turnProcessor/ownerKey";
 import { SystemData, MapState } from "@/lib/mapTypes";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
+import { forkGameFromSnapshot, touchGameLastOpened } from "@/lib/forkGameFromSnapshot";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TurnLogViewer from "@/components/game-shell/TurnLogViewer";
 import FactionsConfigPicker from "@/components/FactionsConfigPicker";
 import { applyAndSetDefaultFactionsConfig } from "@/lib/factionsConfig";
+
 
 const PROVINCE_NAMES: Record<number, string> = {
   1: "Valerian", 2: "Aurelian", 3: "Cassian",
