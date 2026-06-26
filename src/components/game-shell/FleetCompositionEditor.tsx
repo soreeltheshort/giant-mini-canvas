@@ -280,7 +280,8 @@ export default function FleetCompositionEditor({
             } else if (listEachShip) {
               // Non-strikecraft in fleet-detail view: expand each ship individually.
               for (let i = 0; i < s.quantity; i++) {
-                others.push({ ...s, quantity: 1, __idx: i } as FleetShipRow & { __idx: number });
+                others.push({ ...s, quantity: 1 });
+                // Track an index suffix via a parallel key generator below.
               }
             } else {
               others.push(s);
@@ -295,8 +296,16 @@ export default function FleetCompositionEditor({
               aggregate: rows.length > 1 || totalCount > 1,
             });
           }
+          const keyCounts = new Map<string, number>();
           for (const s of others) {
-            displayItems.push({ key: s.id, ids: [s.id], sample: s, aggregate: false });
+            const n = keyCounts.get(s.id) ?? 0;
+            keyCounts.set(s.id, n + 1);
+            displayItems.push({
+              key: listEachShip ? `${s.id}__${n}` : s.id,
+              ids: [s.id],
+              sample: s,
+              aggregate: false,
+            });
           }
         }
 
