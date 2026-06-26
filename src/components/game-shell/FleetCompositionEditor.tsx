@@ -264,27 +264,25 @@ export default function FleetCompositionEditor({
         // drag/move on that row prompts for a count.
         type DisplayItem = { key: string; ids: string[]; sample: FleetShipRow; aggregate: boolean };
         let displayItems: DisplayItem[] = [];
-        if (listEachShip) {
-          displayItems = groupShips.flatMap((s) =>
-            Array.from({ length: s.quantity }, (_, i) => ({
-              key: `${s.id}__${i}`,
-              ids: [s.id],
-              sample: { ...s, quantity: 1 },
-              aggregate: false,
-            }))
-          );
-        } else {
+        {
           const byType = new Map<string, FleetShipRow[]>();
           const others: FleetShipRow[] = [];
           for (const s of groupShips) {
             const cls = s.ship_class || "";
             const isStrikecraft = cls === "FL" || cls === "FH" || cls === "GS" || s.hull_class === "Strikecraft";
             if (isStrikecraft && !s.crippled && (s.max_hp == null || s.current_hp == null || s.current_hp >= s.max_hp)) {
-              // Only collapse healthy, non-crippled strikecraft so HP/crippled rows
-              // remain individually visible.
+              // Always collapse healthy, non-crippled strikecraft into a single row
+              // (both in editor and fleet-detail views). HP/crippled rows remain
+              // individually visible.
               const arr = byType.get(s.ship_type_id) || [];
               arr.push(s);
               byType.set(s.ship_type_id, arr);
+            } else if (listEachShip) {
+              // Non-strikecraft in fleet-detail view: expand each ship individually.
+              for (let i = 0; i < s.quantity; i++) {
+                others.push({ ...s, quantity: 1 });
+                // Track an index suffix via a parallel key generator below.
+              }
             } else {
               others.push(s);
             }
@@ -298,8 +296,16 @@ export default function FleetCompositionEditor({
               aggregate: rows.length > 1 || totalCount > 1,
             });
           }
+          const keyCounts = new Map<string, number>();
           for (const s of others) {
-            displayItems.push({ key: s.id, ids: [s.id], sample: s, aggregate: false });
+            const n = keyCounts.get(s.id) ?? 0;
+            keyCounts.set(s.id, n + 1);
+            displayItems.push({
+              key: listEachShip ? `${s.id}__${n}` : s.id,
+              ids: [s.id],
+              sample: s,
+              aggregate: false,
+            });
           }
         }
 
