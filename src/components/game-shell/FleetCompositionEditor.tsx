@@ -264,27 +264,24 @@ export default function FleetCompositionEditor({
         // drag/move on that row prompts for a count.
         type DisplayItem = { key: string; ids: string[]; sample: FleetShipRow; aggregate: boolean };
         let displayItems: DisplayItem[] = [];
-        if (listEachShip) {
-          displayItems = groupShips.flatMap((s) =>
-            Array.from({ length: s.quantity }, (_, i) => ({
-              key: `${s.id}__${i}`,
-              ids: [s.id],
-              sample: { ...s, quantity: 1 },
-              aggregate: false,
-            }))
-          );
-        } else {
+        {
           const byType = new Map<string, FleetShipRow[]>();
           const others: FleetShipRow[] = [];
           for (const s of groupShips) {
             const cls = s.ship_class || "";
             const isStrikecraft = cls === "FL" || cls === "FH" || cls === "GS" || s.hull_class === "Strikecraft";
             if (isStrikecraft && !s.crippled && (s.max_hp == null || s.current_hp == null || s.current_hp >= s.max_hp)) {
-              // Only collapse healthy, non-crippled strikecraft so HP/crippled rows
-              // remain individually visible.
+              // Always collapse healthy, non-crippled strikecraft into a single row
+              // (both in editor and fleet-detail views). HP/crippled rows remain
+              // individually visible.
               const arr = byType.get(s.ship_type_id) || [];
               arr.push(s);
               byType.set(s.ship_type_id, arr);
+            } else if (listEachShip) {
+              // Non-strikecraft in fleet-detail view: expand each ship individually.
+              for (let i = 0; i < s.quantity; i++) {
+                others.push({ ...s, quantity: 1, __idx: i } as FleetShipRow & { __idx: number });
+              }
             } else {
               others.push(s);
             }
