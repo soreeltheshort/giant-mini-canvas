@@ -507,6 +507,9 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   for (const s of ships) {
     const st = shipTypes.find(t => t.id === s.ship_type_id);
     if (!st) continue;
+    // Scuttle-lane ships are off-the-books — excluded from every derived
+    // fleet stat (maintenance, speed, repair, supply, capacity, GI).
+    if (s.tactical_group === "Scuttle") continue;
     const isCrippled = !!s.crippled;
     baseMaintenance += (st.maintenance ?? 0) * s.quantity;
     // Crippled ships can't operate their repair pods.
