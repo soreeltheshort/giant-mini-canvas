@@ -57,7 +57,7 @@ interface FleetShipEntry {
 const SPECIAL_ROLES = ["Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish", "System Defenses"];
 
 const BASE_GROUPS = ["Core", "Attack"];
-const TAIL_GROUPS = ["Rear", "Retreat"];
+const TAIL_GROUPS = ["Rear", "Retreat", "Skuttle"];
 const FIXED_TAIL = ["System Defenses"];
 const STANDING_ORDERS = ["move", "attack", "defend"] as const;
 type StandingOrder = typeof STANDING_ORDERS[number];
@@ -117,6 +117,7 @@ const FleetBuilder = () => {
     Attack: "Attack",
     Rear: "Rear",
     Retreat: "Retreat",
+    Skuttle: "Skuttle",
   };
   // Strategy roles use their own name as label
   for (const role of SPECIAL_ROLES) {
