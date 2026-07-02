@@ -218,6 +218,7 @@ const AdminShips = () => {
   const [ships, setShips] = useState<ShipType[]>([]);
   const [saving, setSaving] = useState(false);
   const [filterClass, setFilterClass] = useState<string>("all");
+  const [filterSynod, setFilterSynod] = useState<"all" | "synod" | "non-synod">("all");
   const [csvPending, setCsvPending] = useState<Record<string, string | number | null>[] | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
