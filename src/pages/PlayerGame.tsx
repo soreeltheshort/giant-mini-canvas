@@ -481,11 +481,11 @@ const PlayerGame = () => {
         .eq("user_id", user.id);
     })();
     // Synod-flagged facilities and ships are only available to Synod (infect)
-    // factions. Admins viewing their own (non-impersonated) session still see
-    // everything for testing; admins impersonating a non-Synod faction get the
-    // same restricted catalog the real player would see.
+    // factions. The joined faction is authoritative — an admin logged in as a
+    // non-Synod faction (e.g. Dravian) sees the same restricted catalog the
+    // real player would see, whether or not they are impersonating.
     const factionIsSynod = !!joinedFaction?.infect;
-    const canUseSynod = factionIsSynod || (isAdmin && !asFactionId);
+    const canUseSynod = factionIsSynod;
     const visibleFt = (ftData || []).filter((ft: any) => canUseSynod || !ft.synod);
     setDbFacilityTypes(visibleFt.map((ft: any) => ({
       facility_type_id: ft.id,
