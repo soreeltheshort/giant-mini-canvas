@@ -40,7 +40,9 @@ interface LeftPanelProps {
   /** Toggle order submission. */
   onSubmitOrders?: () => void;
   /** Open issues that block turn submission. Empty array = ready to submit. */
-  submissionIssues?: string[];
+  submissionIssues?: { message: string; fleetId?: string }[];
+  /** Click handler for a single issue — jumps user to the offending entity. */
+  onIssueClick?: (issue: { message: string; fleetId?: string }) => void;
   /** Solo game: button reads "Next Turn" and processes the turn in-place. */
   soloMode?: boolean;
   /** Disable + show processing label while the turn engine runs. */
