@@ -509,10 +509,13 @@ const AdminShips = () => {
     setSaving(false);
   };
 
-  const filtered = useMemo(() =>
-    filterClass === "all" ? ships : ships.filter(s => s.class === filterClass),
-    [ships, filterClass]
-  );
+  const filtered = useMemo(() => {
+    let result = ships;
+    if (filterClass !== "all") result = result.filter(s => s.class === filterClass);
+    if (filterSynod === "synod") result = result.filter(s => s.synod);
+    if (filterSynod === "non-synod") result = result.filter(s => !s.synod);
+    return result;
+  }, [ships, filterClass, filterSynod]);
 
   const downloadCSV = () => {
     const CSV_COLUMNS: (keyof ShipType)[] = [
