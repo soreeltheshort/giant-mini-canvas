@@ -392,6 +392,11 @@ const PlayerGame = () => {
   const [submissionIssues, setSubmissionIssues] = useState<{ message: string; fleetId?: string }[]>([]);
   /** Player-facing dispatches sourced from game_logs (capture/colonize, etc.) */
   const [realDispatches, setRealDispatches] = useState<import("@/components/game-shell/gameShellTypes").NewsStory[]>([]);
+  /** Admin Test Mode: session-only toggle that unlocks direct edits (treasury,
+   *  supply, teleport, add/remove ships). Never persists. */
+  const [testMode, setTestMode] = useState(false);
+  const [teleportArmed, setTeleportArmed] = useState(false);
+  const [testModeMapReloadTick, setTestModeMapReloadTick] = useState(0);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
