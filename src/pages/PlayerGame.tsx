@@ -1230,6 +1230,27 @@ const PlayerGame = () => {
 
   const handleHexTargetPicked = async (hex: { x: number; y: number }) => {
     if (!player || !game || !targeting || targeting.mode !== "hex") return;
+
+    // ── Test Mode teleport: admin bypass, no combat point cost, no order log.
+    if (targeting.orderType === "test_teleport") {
+      const { fleetId, fleetName, fromX, fromY } = targeting;
+      setTargeting(null);
+      setTeleportArmed(false);
+      try {
+        const { teleportFleet } = await import("@/lib/testMode/testActions");
+        await teleportFleet({
+          gameId: game.id, turnNumber: game.turn_number,
+          gameFleetId: fleetId, fleetName,
+          fromX, fromY, toX: hex.x, toY: hex.y,
+        });
+        setTestModeMapReloadTick(t => t + 1);
+        toast({ title: "Teleported", description: `${fleetName} → (${hex.x}, ${hex.y})` });
+      } catch (e: any) {
+        toast({ title: "Teleport failed", description: e.message, variant: "destructive" });
+      }
+      return;
+    }
+
     if (combatPointsAvailable <= 0) {
       toast({ title: "No combat points", description: "Cancel another order first.", variant: "destructive" });
       setTargeting(null);
