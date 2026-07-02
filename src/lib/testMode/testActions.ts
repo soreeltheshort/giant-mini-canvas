@@ -101,16 +101,17 @@ export async function setTreasury(args: {
 
 export async function setFleetSupply(args: {
   gameId: string; turnNumber: number;
-  gameFleetId: string; fleetName: string;
+  /** id from public.fleets (NOT game_fleets) — that's where current_supply lives. */
+  fleetsRowId: string; fleetName: string;
   fromValue: number; toValue: number;
 }) {
   const toValue = Math.max(0, Math.floor(args.toValue));
-  const { error } = await (supabase as any).from("game_fleets")
-    .update({ current_supply: toValue }).eq("id", args.gameFleetId);
+  const { error } = await (supabase as any).from("fleets")
+    .update({ current_supply: toValue }).eq("id", args.fleetsRowId);
   if (error) throw error;
   await writeLog({
     gameId: args.gameId, turnNumber: args.turnNumber,
     message: `set ${args.fleetName} supply ${args.fromValue} → ${toValue}`,
-    details: { game_fleet_id: args.gameFleetId, from: args.fromValue, to: toValue },
+    details: { fleets_row_id: args.fleetsRowId, from: args.fromValue, to: toValue },
   });
 }
