@@ -79,7 +79,7 @@ interface Props {
 }
 
 const BASE_GROUPS = ["Core", "Attack"];
-const TAIL_GROUPS = ["Rear", "Retreat", "Scuttle"];
+const TAIL_GROUPS = ["Rear", "Retreat"];
 const FIXED_TAIL = ["System Defenses"];
 /** Crippled ships are confined to these groups only. Scuttle is allowed because the ships are being removed at end of turn anyway. */
 const CRIPPLED_ALLOWED_GROUPS = new Set(["Rear", "Retreat", "Scuttle"]);
