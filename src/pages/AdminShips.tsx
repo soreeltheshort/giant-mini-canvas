@@ -585,6 +585,12 @@ const AdminShips = () => {
             <option value="all">All Classes ({ships.length})</option>
             {CLASS_CODES.map(c => <option key={c} value={c}>{c} ({ships.filter(s => s.class === c).length})</option>)}
           </select>
+          <select className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground"
+            value={filterSynod} onChange={e => setFilterSynod(e.target.value as any)}>
+            <option value="all">All Ships ({ships.length})</option>
+            <option value="synod">Synod Only ({ships.filter(s => s.synod).length})</option>
+            <option value="non-synod">Non-Synod Only ({ships.filter(s => !s.synod).length})</option>
+          </select>
         </div>
 
         <div className="overflow-auto border border-border rounded max-h-[70vh]">
