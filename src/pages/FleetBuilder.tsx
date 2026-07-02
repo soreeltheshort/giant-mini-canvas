@@ -54,10 +54,10 @@ interface FleetShipEntry {
   notes: string;
 }
 
-const SPECIAL_ROLES = ["Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish", "System Defenses"];
+const SPECIAL_ROLES = ["Flank", "Outflank", "Attack Planet", "Cover Retreat", "Skirmish", "System Defenses", "Scuttle"];
 
 const BASE_GROUPS = ["Core", "Attack"];
-const TAIL_GROUPS = ["Rear", "Retreat", "Scuttle"];
+const TAIL_GROUPS = ["Rear", "Retreat"];
 const FIXED_TAIL = ["System Defenses"];
 const STANDING_ORDERS = ["move", "attack", "defend"] as const;
 type StandingOrder = typeof STANDING_ORDERS[number];
