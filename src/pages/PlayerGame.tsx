@@ -1559,6 +1559,11 @@ const PlayerGame = () => {
           ordersSubmitted={!!player?.orders_locked}
           onSubmitOrders={submitOrders}
           submissionIssues={submissionIssues}
+          onIssueClick={(issue) => {
+            if (!issue.fleetId) return;
+            setSelection({ type: "army", id: `fleet-${issue.fleetId}` });
+            setRightPanelOpen(true);
+          }}
           soloMode={isSolo}
           processingTurn={processingTurn}
           inlineContext={{
