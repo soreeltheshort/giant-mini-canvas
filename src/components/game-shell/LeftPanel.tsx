@@ -49,6 +49,8 @@ interface LeftPanelProps {
   processingTurn?: boolean;
   /** When true, render full-width (mobile stacked layout) instead of fixed 14rem rail. */
   fullWidth?: boolean;
+  /** Optional admin Test Mode slot rendered above the global stats. */
+  testModeSlot?: React.ReactNode;
   /** Inline context (used on tablet where right panel is hidden) */
   inlineContext?: {
     mode: GameMode;
