@@ -389,7 +389,7 @@ const PlayerGame = () => {
   const [isSolo, setIsSolo] = useState(false);
   const [processingTurn, setProcessingTurn] = useState(false);
   /** Open issues that block turn submission (e.g. fleet group overcapacity). */
-  const [submissionIssues, setSubmissionIssues] = useState<string[]>([]);
+  const [submissionIssues, setSubmissionIssues] = useState<{ message: string; fleetId?: string }[]>([]);
   /** Player-facing dispatches sourced from game_logs (capture/colonize, etc.) */
   const [realDispatches, setRealDispatches] = useState<import("@/components/game-shell/gameShellTypes").NewsStory[]>([]);
 
@@ -927,16 +927,16 @@ const PlayerGame = () => {
           if (cur === undefined || raw < cur) speedByFleet.set(r.game_fleet_id, raw);
         }
       }
-      const issues: string[] = [];
+      const issues: { message: string; fleetId?: string }[] = [];
       for (const f of myFleets) {
         const ships = byFleet.get(f.fleet_id) ?? [];
         const caps = computeGroupStrikecraftCapacity(ships);
         for (const [group, c] of caps.entries()) {
           if (c.fighterUsed > c.fighterCap) {
-            issues.push(`${f.fleet_name} · ${group}: fighters ${c.fighterUsed}/${c.fighterCap}`);
+            issues.push({ message: `${f.fleet_name} · ${group}: fighters ${c.fighterUsed}/${c.fighterCap}`, fleetId: f.fleet_id });
           }
           if (c.gunshipUsed > c.gunshipCap) {
-            issues.push(`${f.fleet_name} · ${group}: gunships ${c.gunshipUsed}/${c.gunshipCap}`);
+            issues.push({ message: `${f.fleet_name} · ${group}: gunships ${c.gunshipUsed}/${c.gunshipCap}`, fleetId: f.fleet_id });
           }
         }
       }
@@ -965,15 +965,15 @@ const PlayerGame = () => {
           }
         }
         if (tgtX === null || tgtY === null) {
-          issues.push(`${f.fleet_name}: attack target no longer exists`);
+          issues.push({ message: `${f.fleet_name}: attack target no longer exists`, fleetId: f.fleet_id });
           continue;
         }
         const dist = hexDistance(f.hex_x, f.hex_y, tgtX, tgtY);
         if (dist > range) {
-          issues.push(`${f.fleet_name}: ${tgtLabel} is ${dist} hex(es) away — exceeds attack range ${range}`);
+          issues.push({ message: `${f.fleet_name}: ${tgtLabel} is ${dist} hex(es) away — exceeds attack range ${range}`, fleetId: f.fleet_id });
         }
         if (!liveHexKeys.has(hexKey(tgtX, tgtY))) {
-          issues.push(`${f.fleet_name}: ${tgtLabel} is not currently visible`);
+          issues.push({ message: `${f.fleet_name}: ${tgtLabel} is not currently visible`, fleetId: f.fleet_id });
         }
       }
 
@@ -1559,6 +1559,11 @@ const PlayerGame = () => {
           ordersSubmitted={!!player?.orders_locked}
           onSubmitOrders={submitOrders}
           submissionIssues={submissionIssues}
+          onIssueClick={(issue) => {
+            if (!issue.fleetId) return;
+            setSelection({ type: "army", id: `fleet-${issue.fleetId}` });
+            setRightPanelOpen(true);
+          }}
           soloMode={isSolo}
           processingTurn={processingTurn}
           inlineContext={{
