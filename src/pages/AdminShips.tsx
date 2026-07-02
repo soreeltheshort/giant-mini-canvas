@@ -218,6 +218,7 @@ const AdminShips = () => {
   const [ships, setShips] = useState<ShipType[]>([]);
   const [saving, setSaving] = useState(false);
   const [filterClass, setFilterClass] = useState<string>("all");
+  const [filterSynod, setFilterSynod] = useState<"all" | "synod" | "non-synod">("all");
   const [csvPending, setCsvPending] = useState<Record<string, string | number | null>[] | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -508,10 +509,13 @@ const AdminShips = () => {
     setSaving(false);
   };
 
-  const filtered = useMemo(() =>
-    filterClass === "all" ? ships : ships.filter(s => s.class === filterClass),
-    [ships, filterClass]
-  );
+  const filtered = useMemo(() => {
+    let result = ships;
+    if (filterClass !== "all") result = result.filter(s => s.class === filterClass);
+    if (filterSynod === "synod") result = result.filter(s => s.synod);
+    if (filterSynod === "non-synod") result = result.filter(s => !s.synod);
+    return result;
+  }, [ships, filterClass, filterSynod]);
 
   const downloadCSV = () => {
     const CSV_COLUMNS: (keyof ShipType)[] = [
@@ -580,6 +584,12 @@ const AdminShips = () => {
             value={filterClass} onChange={e => setFilterClass(e.target.value)}>
             <option value="all">All Classes ({ships.length})</option>
             {CLASS_CODES.map(c => <option key={c} value={c}>{c} ({ships.filter(s => s.class === c).length})</option>)}
+          </select>
+          <select className="h-8 rounded border border-input bg-background px-2 text-xs text-foreground"
+            value={filterSynod} onChange={e => setFilterSynod(e.target.value as any)}>
+            <option value="all">All Ships ({ships.length})</option>
+            <option value="synod">Synod Only ({ships.filter(s => s.synod).length})</option>
+            <option value="non-synod">Non-Synod Only ({ships.filter(s => !s.synod).length})</option>
           </select>
         </div>
 
