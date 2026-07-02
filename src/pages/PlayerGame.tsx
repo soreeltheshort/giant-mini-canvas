@@ -610,7 +610,7 @@ const PlayerGame = () => {
     setLoading(false);
   }, [user, gameId, navigate, toast, isAdmin, asFactionId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, testModeMapReloadTick]);
 
   // Count player's fleet move/attack orders for this turn (each costs 1 combat point).
   // Load player's fleet move/attack orders for this turn (each costs 1 combat point)
