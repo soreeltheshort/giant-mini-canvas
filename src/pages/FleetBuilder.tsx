@@ -117,6 +117,7 @@ const FleetBuilder = () => {
     Attack: "Attack",
     Rear: "Rear",
     Retreat: "Retreat",
+    Skuttle: "Skuttle",
   };
   // Strategy roles use their own name as label
   for (const role of SPECIAL_ROLES) {
