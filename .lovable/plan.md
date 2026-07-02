@@ -1,48 +1,38 @@
-# Clickable Submission Issue (One at a Time)
+# Scuttle Ships Are Off-The-Books
 
-Replace the current red list at the bottom of the left panel with a single-issue banner. It shows the first outstanding blocker; when it's resolved, the next one appears; when none remain, the banner disappears and Submit Turn becomes enabled. The banner is clickable and jumps to the fleet causing it.
+Ships assigned to the Scuttle tactical group should behave, for every UI and gameplay purpose, as if they were already gone. No capacity checks against them, no contribution to the fleet's map speed / attack range / maintenance / repair / supply / ground invasion / strikecraft counts, no upkeep charged for the last turn. They only exist to be deleted before movement (already implemented) and to fight as Rear if combat happens first (already implemented).
 
-## Behavior
+## What changes
 
-- Only the **first** issue in the current list is rendered.
-- The banner is a button. Clicking it:
-  1. Selects the offending fleet (`setSelection({ type: "army", id: "fleet-<id>" })`).
-  2. Opens the right panel to Fleet Detail.
-- When the user fixes that issue, the effect re-runs and either:
-  - Shows the next issue, or
-  - Clears the banner and enables Submit Turn.
-- Submit Turn remains disabled while any issue exists (unchanged logic — still driven by `submissionIssues.length > 0`).
-- Small `1 of N` counter shown next to the message so the user knows more may follow. If only one issue exists, no counter.
+**Capacity checks (submission-blocking)**
+- `computeGroupStrikecraftCapacity` will skip any row whose `tactical_group === "Scuttle"`. Scuttle ships never generate a fighter/gunship over-capacity issue, and the Scuttle lane never renders a `FI x/y` / `GS x/y` badge.
 
-## Scope of issue types wired up
+**Fleet Detail derived stats**
+- The main stat-aggregation loop in `FleetDetailContent.tsx` (starts near line 507) will `continue` on Scuttle rows. That removes them from:
+  - `baseMaintenance` (displayed maintenance)
+  - `minMapSpeed` (fleet map speed)
+  - `minRawAttackSpeed` (attack range)
+  - `totalRepair` / `availableRepair`
+  - `totalSupply`
+  - `fighterCap` / `fighterUsed` / `gunshipCap` / `gunshipUsed` / `fighterStorage` / `gunshipStorage`
+  - `maxGroundInvasion`
+- Result: the moment a ship is dropped into the Scuttle lane, every fleet stat re-renders as if the ship were not in the roster.
 
-All existing issues produced in `PlayerGame.tsx` (lines 930–978) are tied to a specific fleet, so all get a `fleetId` target:
-- Strikecraft over-capacity (fighters/gunships per tactical group)
-- Attack target no longer exists
-- Attack target out of range
-- Attack target not visible
+**Player attack-range validation**
+- The submission-issues effect in `PlayerGame.tsx` (line ~905) will skip Scuttle rows when computing `speedByFleet`, so a slow Scuttle ship never shortens attack range.
 
-## Technical Details
-
-**`src/pages/PlayerGame.tsx`**
-- Change `submissionIssues` state type from `string[]` to `SubmissionIssue[]`:
-  ```ts
-  type SubmissionIssue = { message: string; fleetId?: string };
-  ```
-- In the issues-building effect, push `{ message, fleetId: f.fleet_id }` instead of raw strings. Order is preserved so the "first" issue is stable across re-renders.
-- Add `handleIssueClick(issue)` mirroring `handleFleetClick`: sets selection + opens right panel.
-- Pass `submissionIssues` (new shape) and `onIssueClick` to `LeftPanel`.
-
-**`src/components/game-shell/LeftPanel.tsx`**
-- Update `submissionIssues` prop type to `SubmissionIssue[]`; add optional `onIssueClick(issue)`.
-- Replace the `<ul>` with a single `<button>` banner rendering only `submissionIssues[0]`:
-  - Crimson palette (same as today).
-  - Hover: `bg-crimson/10`; focus ring in bronze; cursor pointer.
-  - Small right-aligned counter `1 / N` when `N > 1`.
-- Submit button disable logic unchanged.
+**Turn processing (maintenance)**
+- Economy phase (`phases/economy.ts` fleet-maintenance block near line 143) will fetch `tactical_group` too and exclude Scuttle rows from the fleet-maintenance sum. No last-turn upkeep is charged on ships that will be removed this same turn.
 
 ## Out of scope
 
-- Map panning/centering on the fleet's hex (no pan helper exists today).
-- Changing which conditions produce an issue.
-- Any backend / turn-validation changes.
+- FleetBuilder (saved-template screen) totals stay as-is — Scuttle is a strategy slot there, and the saved template is not a live fleet.
+- Combat treatment unchanged: Scuttle ships still fight as Rear this turn via the existing `battleSetup` normalization.
+- No schema changes.
+
+## Files touched
+
+- `src/components/game-shell/FleetCompositionEditor.tsx` — skip Scuttle in `computeGroupStrikecraftCapacity`.
+- `src/components/game-shell/FleetDetailContent.tsx` — skip Scuttle in the main aggregation loop.
+- `src/pages/PlayerGame.tsx` — skip Scuttle when building `speedByFleet`.
+- `src/lib/turnProcessor/phases/economy.ts` — exclude Scuttle rows from fleet maintenance.

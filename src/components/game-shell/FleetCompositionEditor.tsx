@@ -48,6 +48,9 @@ export function computeGroupStrikecraftCapacity(ships: FleetShipRow[]) {
     { fighterCap: number; fighterUsed: number; gunshipCap: number; gunshipUsed: number }
   >();
   for (const s of ships) {
+    // Scuttle ships are off-the-books — they contribute no capacity, use no
+    // capacity, and never trigger over-capacity warnings.
+    if (s.tactical_group === "Scuttle") continue;
     const entry =
       map.get(s.tactical_group) ??
       { fighterCap: 0, fighterUsed: 0, gunshipCap: 0, gunshipUsed: 0 };
