@@ -104,8 +104,8 @@ export async function loadFleetSnapshot(
       parent_id: parentId,
       ship_type_id: s.ship_type_id,
       quantity: s.quantity,
-      // Skuttle ships fight as Rear this turn — they're removed before movement.
-      tactical_group: s.tactical_group === "Skuttle" ? "Rear" : s.tactical_group,
+      // Scuttle ships fight as Rear this turn — they're removed before movement.
+      tactical_group: s.tactical_group === "Scuttle" ? "Rear" : s.tactical_group,
       current_hp: s.current_hp ?? null,
       crippled: !!s.crippled,
     }));

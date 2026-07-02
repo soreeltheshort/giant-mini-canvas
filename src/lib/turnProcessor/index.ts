@@ -18,7 +18,7 @@ import type { Phase, TurnContext, PlayerCtx, ConditionalOrder } from "./types";
 
 import { economyPhase } from "./phases/economy";
 import { movementPhase } from "./phases/movement";
-import { skuttlePhase } from "./phases/skuttle";
+import { scuttlePhase } from "./phases/scuttle";
 import { visibilityPhase } from "./phases/visibility";
 import { combatPhase } from "./phases/combat";
 import { groundCombatPhase } from "./phases/groundCombat";
@@ -45,7 +45,7 @@ export const PHASE_ORDER: Phase[] = [
   economyPhase,
   shipProductionPhase,
   combatPhase,
-  skuttlePhase,
+  scuttlePhase,
   movementPhase,
   transferShipsPhase,
   groundCombatPhase,
