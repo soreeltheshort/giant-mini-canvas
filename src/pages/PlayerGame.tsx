@@ -1667,7 +1667,13 @@ const PlayerGame = () => {
               onSystemClick={handleSystemClick}
               onFleetClick={handleFleetClick}
               targetingMode={targeting?.mode ?? null}
-              targetingLabel={targeting && (targeting as any).orderType === "commission_fleet" ? `Click an owned, unoccupied hex to station "${(targeting as any).fleetName}"` : undefined}
+              targetingLabel={
+                targeting?.orderType === "commission_fleet"
+                  ? `Click an owned, unoccupied hex to station "${(targeting as any).fleetName}"`
+                  : targeting?.orderType === "test_teleport"
+                    ? `TEST MODE: click any hex to teleport "${(targeting as any).fleetName}"`
+                    : undefined
+              }
               onHexTargetPicked={handleHexTargetPicked}
               onFleetTargetPicked={handleFleetTargetPicked}
               onSystemTargetPicked={handleSystemTargetPicked}
