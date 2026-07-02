@@ -1569,6 +1569,46 @@ const PlayerGame = () => {
       <div className={`flex-1 flex overflow-hidden ${isMobile ? "flex-col" : ""}`}>
         {/* Left Strategic Panel — includes inline context on tablet */}
         <LeftPanel
+          testModeSlot={isAdmin && testMode ? (
+            <TestModePanel
+              gameId={game.id}
+              turnNumber={game.turn_number}
+              gameFactionId={player.id}
+              factionName={factionName}
+              treasury={player.treasury ?? 0}
+              fleets={mapState?.fleets ?? []}
+              shipTypes={dbShipTypes}
+              selectedGameFleetId={
+                selection.type === "army" && selection.id.startsWith("fleet-")
+                  ? selection.id.slice("fleet-".length)
+                  : null
+              }
+              teleportArmed={teleportArmed}
+              onArmTeleport={(armed) => {
+                setTeleportArmed(armed);
+                if (!armed) {
+                  if (targeting?.orderType === "test_teleport") setTargeting(null);
+                  return;
+                }
+                // Arm: need a selected fleet.
+                const selId = selection.type === "army" && selection.id.startsWith("fleet-")
+                  ? selection.id.slice("fleet-".length)
+                  : null;
+                const sel = selId ? mapState?.fleets.find(f => f.fleet_id === selId) : null;
+                if (!sel) {
+                  toast({ title: "Select a fleet first", variant: "destructive" });
+                  setTeleportArmed(false);
+                  return;
+                }
+                setTargeting({
+                  mode: "hex", orderType: "test_teleport",
+                  fleetId: sel.fleet_id, fleetName: sel.fleet_name,
+                  fromX: sel.hex_x, fromY: sel.hex_y,
+                });
+              }}
+              onChanged={() => setTestModeMapReloadTick(t => t + 1)}
+            />
+          ) : undefined}
           stats={{
             ...DUMMY_STATS,
             treasury: player?.treasury ?? 0,
