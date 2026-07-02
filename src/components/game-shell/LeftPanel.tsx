@@ -121,6 +121,7 @@ export default function LeftPanel({
   ordersSubmitted = false,
   onSubmitOrders,
   submissionIssues = [],
+  onIssueClick,
   soloMode = false,
   processingTurn = false,
   fullWidth = false,
