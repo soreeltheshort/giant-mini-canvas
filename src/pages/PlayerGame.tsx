@@ -12,6 +12,7 @@ import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/
 
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
+import TestModePanel from "@/components/game-shell/TestModePanel";
 import ContextPanel from "@/components/game-shell/ContextPanel";
 import type { GameMapData, FacilityTypeFull, ShipTypeLookup } from "@/components/game-shell/ContextPanel";
 import PlayerMapCanvas from "@/components/game-shell/PlayerMapCanvas";
