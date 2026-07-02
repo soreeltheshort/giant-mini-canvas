@@ -127,6 +127,7 @@ export default function LeftPanel({
   soloMode = false,
   processingTurn = false,
   fullWidth = false,
+  testModeSlot,
 }: LeftPanelProps) {
   const unreadCount = news.filter((n) => !n.read).length;
   const latestUnread = news.find((n) => !n.read);
