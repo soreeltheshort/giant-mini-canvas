@@ -137,7 +137,9 @@ export default function LeftPanel({
       className={`${fullWidth ? "w-full border-b-2 border-r-0" : "w-72 border-r-2"} bg-marble flex flex-col border-bronze/40 relative z-20 shrink-0 overflow-hidden`}
     >
       <div className="flex-1 overflow-y-auto">
-        {/* ── Global Stats ── */}
+        {testModeSlot && (
+          <div className="p-3 border-b border-border">{testModeSlot}</div>
+        )}
         <div className="p-3 space-y-2 border-b border-border">
           <div className="space-y-1.5">
             {STAT_ITEMS.map(({ key, label, icon: Icon, format }) => {
