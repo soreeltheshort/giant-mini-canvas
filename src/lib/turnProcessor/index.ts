@@ -45,6 +45,7 @@ export const PHASE_ORDER: Phase[] = [
   economyPhase,
   shipProductionPhase,
   combatPhase,
+  skuttlePhase,
   movementPhase,
   transferShipsPhase,
   groundCombatPhase,
