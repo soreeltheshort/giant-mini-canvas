@@ -229,21 +229,34 @@ export default function LeftPanel({
 
       {/* ── Bottom: Submit Orders ── */}
       <div className="p-3 border-t border-border shrink-0 space-y-1.5">
-        {submissionIssues.length > 0 && !ordersSubmitted && (
-          <div className="rounded-sm border border-crimson/60 bg-crimson/5 p-2 space-y-1 max-h-40 overflow-y-auto">
-            <div className="text-[9px] font-heading uppercase tracking-widest text-crimson font-bold">
-              {submissionIssues.length} issue{submissionIssues.length === 1 ? "" : "s"} block submission
-            </div>
-            <ul className="space-y-0.5">
-              {submissionIssues.map((msg, i) => (
-                <li key={i} className="text-[10px] text-crimson-dark leading-tight flex gap-1">
-                  <span className="text-crimson">•</span>
-                  <span>{msg}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {submissionIssues.length > 0 && !ordersSubmitted && (() => {
+          const issue = submissionIssues[0];
+          const total = submissionIssues.length;
+          const clickable = !!(issue.fleetId && onIssueClick);
+          return (
+            <button
+              type="button"
+              onClick={clickable ? () => onIssueClick!(issue) : undefined}
+              disabled={!clickable}
+              className={`w-full text-left rounded-sm border border-crimson/60 bg-crimson/5 p-2 space-y-1 transition-colors ${
+                clickable ? "hover:bg-crimson/10 focus:outline-none focus:ring-1 focus:ring-bronze cursor-pointer" : "cursor-default"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[9px] font-heading uppercase tracking-widest text-crimson font-bold">
+                  Blocks submission
+                </div>
+                {total > 1 && (
+                  <div className="text-[9px] font-heading text-crimson/70">1 / {total}</div>
+                )}
+              </div>
+              <div className="text-[10px] text-crimson-dark leading-tight flex gap-1">
+                <span className="text-crimson">•</span>
+                <span>{issue.message}</span>
+              </div>
+            </button>
+          );
+        })()}
         <button
           onClick={onSubmitOrders}
           disabled={!onSubmitOrders || processingTurn || (!ordersSubmitted && submissionIssues.length > 0)}
