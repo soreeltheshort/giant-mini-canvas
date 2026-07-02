@@ -134,7 +134,7 @@ export const economyPhase: Phase = {
     if (gameFleets && gameFleets.length > 0) {
       const gameFleetIds = gameFleets.map((gf: any) => gf.id);
       const [{ data: fleetShips }, { data: allShipTypes }] = await Promise.all([
-        (supabase as any).from("game_fleet_ships").select("game_fleet_id, ship_type_id, quantity").in("game_fleet_id", gameFleetIds),
+        (supabase as any).from("game_fleet_ships").select("game_fleet_id, ship_type_id, quantity, tactical_group").in("game_fleet_id", gameFleetIds),
         (supabase as any).from("ship_types").select("id, maintenance"),
       ]);
       const shipMaintMap = new Map<string, number>();
@@ -143,7 +143,9 @@ export const economyPhase: Phase = {
       for (const gf of gameFleets) {
         const key = ownerToEconKey(gf.owner_classification, ctx.factions);
         if (!key) continue;
-        const ships = (fleetShips || []).filter((fs: any) => fs.game_fleet_id === gf.id);
+        // Scuttle-lane ships are removed later this turn (skuttlePhase runs
+        // after economy but before movement) — do not charge upkeep on them.
+        const ships = (fleetShips || []).filter((fs: any) => fs.game_fleet_id === gf.id && fs.tactical_group !== "Scuttle");
         const fleetMaint = ships.reduce(
           (sum: number, fs: any) => sum + (shipMaintMap.get(fs.ship_type_id) || 0) * fs.quantity,
           0

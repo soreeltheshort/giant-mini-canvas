@@ -920,7 +920,9 @@ const PlayerGame = () => {
         arr.push(row);
         byFleet.set(r.game_fleet_id, arr);
         const raw = Number(st.map_speed) || 0;
-        if (raw > 0) {
+        // Scuttle ships are removed before movement — they must not drag down
+        // the fleet's attack range.
+        if (raw > 0 && r.tactical_group !== "Scuttle") {
           // Attack range uses the RAW lowest non-zero map_speed across all
           // ships in the fleet — crippled status does NOT affect attack range.
           const cur = speedByFleet.get(r.game_fleet_id);
