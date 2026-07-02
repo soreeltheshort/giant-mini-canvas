@@ -12,6 +12,7 @@ import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/
 
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
+import TestModePanel from "@/components/game-shell/TestModePanel";
 import ContextPanel from "@/components/game-shell/ContextPanel";
 import type { GameMapData, FacilityTypeFull, ShipTypeLookup } from "@/components/game-shell/ContextPanel";
 import PlayerMapCanvas from "@/components/game-shell/PlayerMapCanvas";
@@ -366,6 +367,7 @@ const PlayerGame = () => {
     | { mode: "hex"; orderType: "fleet_move"; fleetId: string }
     | { mode: "fleet"; orderType: "attack"; fleetId: string }
     | { mode: "hex"; orderType: "commission_fleet"; fleetName: string }
+    | { mode: "hex"; orderType: "test_teleport"; fleetId: string; fleetName: string; fromX: number; fromY: number }
     | null
   >(null);
   // Number of fleet-related orders the player has issued this turn (each costs 1 combat point)
@@ -392,6 +394,11 @@ const PlayerGame = () => {
   const [submissionIssues, setSubmissionIssues] = useState<{ message: string; fleetId?: string }[]>([]);
   /** Player-facing dispatches sourced from game_logs (capture/colonize, etc.) */
   const [realDispatches, setRealDispatches] = useState<import("@/components/game-shell/gameShellTypes").NewsStory[]>([]);
+  /** Admin Test Mode: session-only toggle that unlocks direct edits (treasury,
+   *  supply, teleport, add/remove ships). Never persists. */
+  const [testMode, setTestMode] = useState(false);
+  const [teleportArmed, setTeleportArmed] = useState(false);
+  const [testModeMapReloadTick, setTestModeMapReloadTick] = useState(0);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
@@ -605,7 +612,7 @@ const PlayerGame = () => {
     setLoading(false);
   }, [user, gameId, navigate, toast, isAdmin, asFactionId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, testModeMapReloadTick]);
 
   // Count player's fleet move/attack orders for this turn (each costs 1 combat point).
   // Load player's fleet move/attack orders for this turn (each costs 1 combat point)
@@ -1224,6 +1231,27 @@ const PlayerGame = () => {
 
   const handleHexTargetPicked = async (hex: { x: number; y: number }) => {
     if (!player || !game || !targeting || targeting.mode !== "hex") return;
+
+    // ── Test Mode teleport: admin bypass, no combat point cost, no order log.
+    if (targeting.orderType === "test_teleport") {
+      const { fleetId, fleetName, fromX, fromY } = targeting;
+      setTargeting(null);
+      setTeleportArmed(false);
+      try {
+        const { teleportFleet } = await import("@/lib/testMode/testActions");
+        await teleportFleet({
+          gameId: game.id, turnNumber: game.turn_number,
+          gameFleetId: fleetId, fleetName,
+          fromX, fromY, toX: hex.x, toY: hex.y,
+        });
+        setTestModeMapReloadTick(t => t + 1);
+        toast({ title: "Teleported", description: `${fleetName} → (${hex.x}, ${hex.y})` });
+      } catch (e: any) {
+        toast({ title: "Teleport failed", description: e.message, variant: "destructive" });
+      }
+      return;
+    }
+
     if (combatPointsAvailable <= 0) {
       toast({ title: "No combat points", description: "Cancel another order first.", variant: "destructive" });
       setTargeting(null);
@@ -1541,6 +1569,46 @@ const PlayerGame = () => {
       <div className={`flex-1 flex overflow-hidden ${isMobile ? "flex-col" : ""}`}>
         {/* Left Strategic Panel — includes inline context on tablet */}
         <LeftPanel
+          testModeSlot={isAdmin && testMode ? (
+            <TestModePanel
+              gameId={game.id}
+              turnNumber={game.turn_number}
+              gameFactionId={player.id}
+              factionName={factionName}
+              treasury={player.treasury ?? 0}
+              fleets={mapState?.fleets ?? []}
+              shipTypes={dbShipTypes}
+              selectedGameFleetId={
+                selection.type === "army" && selection.id.startsWith("fleet-")
+                  ? selection.id.slice("fleet-".length)
+                  : null
+              }
+              teleportArmed={teleportArmed}
+              onArmTeleport={(armed) => {
+                setTeleportArmed(armed);
+                if (!armed) {
+                  if (targeting?.orderType === "test_teleport") setTargeting(null);
+                  return;
+                }
+                // Arm: need a selected fleet.
+                const selId = selection.type === "army" && selection.id.startsWith("fleet-")
+                  ? selection.id.slice("fleet-".length)
+                  : null;
+                const sel = selId ? mapState?.fleets.find(f => f.fleet_id === selId) : null;
+                if (!sel) {
+                  toast({ title: "Select a fleet first", variant: "destructive" });
+                  setTeleportArmed(false);
+                  return;
+                }
+                setTargeting({
+                  mode: "hex", orderType: "test_teleport",
+                  fleetId: sel.fleet_id, fleetName: sel.fleet_name,
+                  fromX: sel.hex_x, fromY: sel.hex_y,
+                });
+              }}
+              onChanged={() => setTestModeMapReloadTick(t => t + 1)}
+            />
+          ) : undefined}
           stats={{
             ...DUMMY_STATS,
             treasury: player?.treasury ?? 0,
@@ -1605,15 +1673,30 @@ const PlayerGame = () => {
         {/* Center Map + Overlay Demo */}
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {isAdmin && (
-            <label className="absolute top-2 right-2 z-20 flex items-center gap-2 rounded bg-background/90 border border-bronze/30 px-2 py-1 text-[10px] font-heading uppercase tracking-wider text-foreground cursor-pointer hover:bg-background">
-              <input
-                type="checkbox"
-                checked={adminRevealAll}
-                onChange={(e) => setAdminRevealAll(e.target.checked)}
-                className="h-3 w-3 accent-crimson"
-              />
-              Admin: Reveal Full Map
-            </label>
+            <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1">
+              <label className="flex items-center gap-2 rounded bg-background/90 border border-bronze/30 px-2 py-1 text-[10px] font-heading uppercase tracking-wider text-foreground cursor-pointer hover:bg-background">
+                <input
+                  type="checkbox"
+                  checked={adminRevealAll}
+                  onChange={(e) => setAdminRevealAll(e.target.checked)}
+                  className="h-3 w-3 accent-crimson"
+                />
+                Admin: Reveal Full Map
+              </label>
+              <label className={`flex items-center gap-2 rounded px-2 py-1 text-[10px] font-heading uppercase tracking-wider cursor-pointer ${
+                testMode
+                  ? "bg-crimson text-primary-foreground border border-crimson"
+                  : "bg-background/90 border border-bronze/30 text-foreground hover:bg-background"
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={testMode}
+                  onChange={(e) => { setTestMode(e.target.checked); if (!e.target.checked) { setTeleportArmed(false); if (targeting?.orderType === "test_teleport") setTargeting(null); } }}
+                  className="h-3 w-3 accent-crimson"
+                />
+                Test Mode
+              </label>
+            </div>
           )}
           {mapState ? (
             <PlayerMapCanvas
@@ -1625,7 +1708,13 @@ const PlayerGame = () => {
               onSystemClick={handleSystemClick}
               onFleetClick={handleFleetClick}
               targetingMode={targeting?.mode ?? null}
-              targetingLabel={targeting && (targeting as any).orderType === "commission_fleet" ? `Click an owned, unoccupied hex to station "${(targeting as any).fleetName}"` : undefined}
+              targetingLabel={
+                targeting?.orderType === "commission_fleet"
+                  ? `Click an owned, unoccupied hex to station "${(targeting as any).fleetName}"`
+                  : targeting?.orderType === "test_teleport"
+                    ? `TEST MODE: click any hex to teleport "${(targeting as any).fleetName}"`
+                    : undefined
+              }
               onHexTargetPicked={handleHexTargetPicked}
               onFleetTargetPicked={handleFleetTargetPicked}
               onSystemTargetPicked={handleSystemTargetPicked}
