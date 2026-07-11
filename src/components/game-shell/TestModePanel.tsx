@@ -148,6 +148,28 @@ export default function TestModePanel({
     } finally { setBusy(false); }
   };
 
+  const applyGi = async () => {
+    if (!meta) return;
+    const val = parseInt(giInput, 10);
+    if (!isFinite(val) || val < 0) {
+      toast({ title: "Invalid amount", variant: "destructive" });
+      return;
+    }
+    setBusy(true);
+    try {
+      await setFleetGroundInvasion({
+        gameId, turnNumber,
+        fleetsRowId: meta.sourceFleetId, fleetName: meta.fleetName,
+        fromValue: meta.currentGroundInvasion, toValue: val,
+      });
+      setMeta({ ...meta, currentGroundInvasion: val });
+      onChanged();
+      toast({ title: "Ground invasion updated" });
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message, variant: "destructive" });
+    } finally { setBusy(false); }
+  };
+
   const addShip = async () => {
     if (!meta || !addShipTypeId) return;
     const type = shipTypes.find(t => t.id === addShipTypeId);
