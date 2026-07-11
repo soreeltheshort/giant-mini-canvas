@@ -7,6 +7,7 @@ import type { ShipTypeLookup } from "./ContextPanel";
 import {
   addShipsToFleet,
   removeFleetShipRow,
+  setFleetGroundInvasion,
   setFleetSupply,
   setTreasury,
 } from "@/lib/testMode/testActions";
@@ -44,6 +45,7 @@ interface FleetMeta {
   /** fleets.id — supply lives here. */
   sourceFleetId: string;
   currentSupply: number;
+  currentGroundInvasion: number;
 }
 
 export default function TestModePanel({
@@ -63,6 +65,7 @@ export default function TestModePanel({
 
   const [meta, setMeta] = useState<FleetMeta | null>(null);
   const [supplyInput, setSupplyInput] = useState("0");
+  const [giInput, setGiInput] = useState("0");
   const [rows, setRows] = useState<FleetShipRow[]>([]);
   const [addShipTypeId, setAddShipTypeId] = useState<string>(shipTypes[0]?.id ?? "");
   const [addQty, setAddQty] = useState(1);
@@ -80,7 +83,7 @@ export default function TestModePanel({
       if (!gf || cancelled) return;
       const { data: fl } = await (supabase as any)
         .from("fleets")
-        .select("id, current_supply")
+        .select("id, current_supply, current_ground_invasion")
         .eq("id", gf.fleet_id).maybeSingle();
       const { data: shipRows } = await (supabase as any)
         .from("game_fleet_ships")
@@ -88,13 +91,17 @@ export default function TestModePanel({
         .eq("game_fleet_id", gf.id)
         .order("tactical_group");
       if (cancelled) return;
+      const supply = Number(fl?.current_supply ?? 0);
+      const gi = Number(fl?.current_ground_invasion ?? 0);
       setMeta({
         gameFleetId: gf.id,
         fleetName: gf.fleet_name,
         sourceFleetId: gf.fleet_id,
-        currentSupply: Number(fl?.current_supply ?? 0),
+        currentSupply: supply,
+        currentGroundInvasion: gi,
       });
-      setSupplyInput(String(Number(fl?.current_supply ?? 0)));
+      setSupplyInput(String(supply));
+      setGiInput(String(gi));
       setRows(shipRows || []);
     })();
     return () => { cancelled = true; };
@@ -136,6 +143,28 @@ export default function TestModePanel({
       setMeta({ ...meta, currentSupply: val });
       onChanged();
       toast({ title: "Supply updated" });
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message, variant: "destructive" });
+    } finally { setBusy(false); }
+  };
+
+  const applyGi = async () => {
+    if (!meta) return;
+    const val = parseInt(giInput, 10);
+    if (!isFinite(val) || val < 0) {
+      toast({ title: "Invalid amount", variant: "destructive" });
+      return;
+    }
+    setBusy(true);
+    try {
+      await setFleetGroundInvasion({
+        gameId, turnNumber,
+        fleetsRowId: meta.sourceFleetId, fleetName: meta.fleetName,
+        fromValue: meta.currentGroundInvasion, toValue: val,
+      });
+      setMeta({ ...meta, currentGroundInvasion: val });
+      onChanged();
+      toast({ title: "Ground invasion updated" });
     } catch (e: any) {
       toast({ title: "Failed", description: e.message, variant: "destructive" });
     } finally { setBusy(false); }
@@ -257,6 +286,29 @@ export default function TestModePanel({
                 />
                 <button
                   onClick={applySupply}
+                  disabled={busy}
+                  className="h-7 px-2 rounded-sm bg-crimson text-primary-foreground text-[10px] font-heading uppercase tracking-wider disabled:opacity-50"
+                >Set</button>
+              </div>
+            </div>
+          )}
+
+          {/* Ground Invasion Forces */}
+          {meta && (
+            <div className="space-y-1">
+              <label className="text-[9px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
+                Ground Invasion Forces
+              </label>
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  min={0}
+                  value={giInput}
+                  onChange={(e) => setGiInput(e.target.value)}
+                  className="flex-1 h-7 rounded-sm border border-input bg-background px-2 text-[11px]"
+                />
+                <button
+                  onClick={applyGi}
                   disabled={busy}
                   className="h-7 px-2 rounded-sm bg-crimson text-primary-foreground text-[10px] font-heading uppercase tracking-wider disabled:opacity-50"
                 >Set</button>

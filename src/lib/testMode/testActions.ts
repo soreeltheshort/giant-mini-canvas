@@ -115,3 +115,20 @@ export async function setFleetSupply(args: {
     details: { fleets_row_id: args.fleetsRowId, from: args.fromValue, to: toValue },
   });
 }
+
+export async function setFleetGroundInvasion(args: {
+  gameId: string; turnNumber: number;
+  /** id from public.fleets — current_ground_invasion lives on that row. */
+  fleetsRowId: string; fleetName: string;
+  fromValue: number; toValue: number;
+}) {
+  const toValue = Math.max(0, Math.floor(args.toValue));
+  const { error } = await (supabase as any).from("fleets")
+    .update({ current_ground_invasion: toValue }).eq("id", args.fleetsRowId);
+  if (error) throw error;
+  await writeLog({
+    gameId: args.gameId, turnNumber: args.turnNumber,
+    message: `set ${args.fleetName} ground invasion ${args.fromValue} → ${toValue}`,
+    details: { fleets_row_id: args.fleetsRowId, from: args.fromValue, to: toValue },
+  });
+}
