@@ -7,6 +7,7 @@ import type { ShipTypeLookup } from "./ContextPanel";
 import {
   addShipsToFleet,
   removeFleetShipRow,
+  setFleetGroundInvasion,
   setFleetSupply,
   setTreasury,
 } from "@/lib/testMode/testActions";
