@@ -65,6 +65,7 @@ export default function TestModePanel({
 
   const [meta, setMeta] = useState<FleetMeta | null>(null);
   const [supplyInput, setSupplyInput] = useState("0");
+  const [giInput, setGiInput] = useState("0");
   const [rows, setRows] = useState<FleetShipRow[]>([]);
   const [addShipTypeId, setAddShipTypeId] = useState<string>(shipTypes[0]?.id ?? "");
   const [addQty, setAddQty] = useState(1);
@@ -82,7 +83,7 @@ export default function TestModePanel({
       if (!gf || cancelled) return;
       const { data: fl } = await (supabase as any)
         .from("fleets")
-        .select("id, current_supply")
+        .select("id, current_supply, current_ground_invasion")
         .eq("id", gf.fleet_id).maybeSingle();
       const { data: shipRows } = await (supabase as any)
         .from("game_fleet_ships")
@@ -90,13 +91,17 @@ export default function TestModePanel({
         .eq("game_fleet_id", gf.id)
         .order("tactical_group");
       if (cancelled) return;
+      const supply = Number(fl?.current_supply ?? 0);
+      const gi = Number(fl?.current_ground_invasion ?? 0);
       setMeta({
         gameFleetId: gf.id,
         fleetName: gf.fleet_name,
         sourceFleetId: gf.fleet_id,
-        currentSupply: Number(fl?.current_supply ?? 0),
+        currentSupply: supply,
+        currentGroundInvasion: gi,
       });
-      setSupplyInput(String(Number(fl?.current_supply ?? 0)));
+      setSupplyInput(String(supply));
+      setGiInput(String(gi));
       setRows(shipRows || []);
     })();
     return () => { cancelled = true; };
