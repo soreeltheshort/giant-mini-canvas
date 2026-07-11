@@ -293,6 +293,29 @@ export default function TestModePanel({
             </div>
           )}
 
+          {/* Ground Invasion Forces */}
+          {meta && (
+            <div className="space-y-1">
+              <label className="text-[9px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
+                Ground Invasion Forces
+              </label>
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  min={0}
+                  value={giInput}
+                  onChange={(e) => setGiInput(e.target.value)}
+                  className="flex-1 h-7 rounded-sm border border-input bg-background px-2 text-[11px]"
+                />
+                <button
+                  onClick={applyGi}
+                  disabled={busy}
+                  className="h-7 px-2 rounded-sm bg-crimson text-primary-foreground text-[10px] font-heading uppercase tracking-wider disabled:opacity-50"
+                >Set</button>
+              </div>
+            </div>
+          )}
+
           {/* Add Ship */}
           {meta && (
             <div className="space-y-1">
