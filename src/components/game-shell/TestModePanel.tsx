@@ -45,6 +45,7 @@ interface FleetMeta {
   /** fleets.id — supply lives here. */
   sourceFleetId: string;
   currentSupply: number;
+  currentGroundInvasion: number;
 }
 
 export default function TestModePanel({
