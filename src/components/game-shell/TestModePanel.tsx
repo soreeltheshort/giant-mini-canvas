@@ -232,7 +232,7 @@ export default function TestModePanel({
 
       {/* Treasury */}
       <div className="space-y-1">
-        <label className="text-[9px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
+        <label className="text-[9px] font-heading uppercase tracking-wider text-white font-bold block">
           {factionName} Treasury
         </label>
         <div className="flex gap-1">
@@ -273,7 +273,7 @@ export default function TestModePanel({
           {/* Supply */}
           {meta && (
             <div className="space-y-1">
-              <label className="text-[9px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
+              <label className="text-[9px] font-heading uppercase tracking-wider text-white font-bold block">
                 Current Supply
               </label>
               <div className="flex gap-1">
@@ -296,7 +296,7 @@ export default function TestModePanel({
           {/* Ground Invasion Forces */}
           {meta && (
             <div className="space-y-1">
-              <label className="text-[9px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
+              <label className="text-[9px] font-heading uppercase tracking-wider text-white font-bold block">
                 Ground Invasion Forces
               </label>
               <div className="flex gap-1">
@@ -319,7 +319,7 @@ export default function TestModePanel({
           {/* Add Ship */}
           {meta && (
             <div className="space-y-1">
-              <label className="text-[9px] font-heading uppercase tracking-wider text-bronze-dark font-bold block">
+              <label className="text-[9px] font-heading uppercase tracking-wider text-white font-bold block">
                 Add Ships (→ Core)
               </label>
               <div className="flex gap-1">
@@ -352,7 +352,7 @@ export default function TestModePanel({
           {/* Existing rows with delete */}
           {aggregated.size > 0 && (
             <div className="space-y-0.5 max-h-40 overflow-y-auto">
-              <div className="text-[9px] font-heading uppercase tracking-wider text-bronze-dark font-bold">Composition</div>
+              <div className="text-[9px] font-heading uppercase tracking-wider text-white font-bold">Composition</div>
               {Array.from(aggregated.values()).map(a => {
                 const type = shipTypes.find(t => t.id === a.shipTypeId);
                 return (
