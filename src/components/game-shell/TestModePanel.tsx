@@ -254,7 +254,7 @@ export default function TestModePanel({
       {/* Fleet-scoped section */}
       {selected ? (
         <div className="space-y-2 border-t border-crimson/30 pt-2">
-          <div className="text-[9px] font-heading uppercase tracking-wider text-bronze-dark font-bold">
+          <div className="text-[9px] font-heading uppercase tracking-wider text-white font-bold">
             Fleet: {selected.fleet_name}
           </div>
 
