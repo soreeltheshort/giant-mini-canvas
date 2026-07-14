@@ -314,6 +314,9 @@ function InlineContextContent({
   adminPointsAvailable,
   onCreateFleet,
   onStartCommissionTargeting,
+  testMode,
+  onTestSetFacilityQty,
+  onTestSetGarrison,
 }: {
   mode: GameMode;
   selection: MapSelection;
