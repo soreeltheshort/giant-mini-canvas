@@ -82,16 +82,8 @@ export default function GarrisonCard({
   const [maxInput, setMaxInput] = useState<string>(String(max));
   useEffect(() => { setCurInput(String(cur)); setMaxInput(String(max)); }, [systemId, cur, max]);
 
-  const invaders = useMemo(() => {
-    if (!system || !fleets) return [] as MapFleet[];
-    return fleets.filter(
-      (f) =>
-        !f.is_garrison &&
-        f.hex_x === system.system_id != null && // placeholder guard
-        false,
-    );
-  }, [system, fleets]);
-  // Recompute cleanly (the useMemo above was a stub; do the real filter):
+  // Real invader enumeration below.
+
   const invadersReal: MapFleet[] = useMemo(() => {
     if (!system || !fleets) return [];
     // Find this system's hex via any garrison fleet at the same system_id if present,
