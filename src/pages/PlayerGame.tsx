@@ -1096,12 +1096,13 @@ const PlayerGame = () => {
   };
 
   const handleViewNews = () => {
-    const firstUnread = DUMMY_NEWS.find((n) => !n.read);
+    const firstUnread = realDispatches.find((n) => !n.read);
     if (firstUnread) {
       setSelection({ type: "news", id: firstUnread.id });
     }
     setRightPanelOpen(true);
   };
+
 
   const handleSystemClick = (system: SystemData) => {
     setSelection({ type: "region", id: `sys-${system.system_id}` });
