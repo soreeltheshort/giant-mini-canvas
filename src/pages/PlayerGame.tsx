@@ -1182,6 +1182,73 @@ const PlayerGame = () => {
     }
   }, [player, game, mapState, combatPointsAvailable, toast]);
 
+  /**
+   * TEST MODE (admin, in-game): rewrite a system's facilities/garrison directly.
+   * Persists by rewriting games.map_data_json (same pattern as handleCreateFleet)
+   * and inserts an audit row in game_logs with log_type=test_mode_edit.
+   */
+  const writeSystemEdit = useCallback(async (
+    systemId: number,
+    mutate: (sys: SystemData) => SystemData,
+    message: string,
+    details: Record<string, any>,
+  ) => {
+    if (!isAdmin || !game || !mapState) return;
+    const existing = mapState.systems.get(systemId);
+    if (!existing) return;
+    const updated = mutate(existing);
+    const newSystems = new Map(mapState.systems);
+    newSystems.set(systemId, updated);
+    const nextState: MapState = { ...mapState, systems: newSystems };
+    const serialized = {
+      mapData: nextState.mapData,
+      hexes: Array.from(nextState.hexes.entries()),
+      systems: Array.from(nextState.systems.entries()),
+      regions: nextState.regions,
+      facilityTypes: nextState.facilityTypes,
+      fleets: nextState.fleets,
+    };
+    const { error } = await (supabase as any).from("games").update({ map_data_json: serialized }).eq("id", game.id);
+    if (error) { toast({ title: "Test edit failed", description: error.message, variant: "destructive" }); return; }
+    setMapState(nextState);
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    await (supabase as any).from("game_logs").insert({
+      game_id: game.id,
+      turn_number: game.turn_number,
+      phase: "admin",
+      log_type: "test_mode_edit",
+      message: `TEST MODE: ${message}`,
+      details_json: { ...details, system_id: systemId, admin_user_id: authUser?.id ?? null },
+    });
+  }, [isAdmin, game, mapState, toast]);
+
+  const handleTestSetFacilityQty = useCallback(async (systemId: number, facilityTypeId: string, quantity: number) => {
+    const q = Math.max(0, Math.floor(quantity));
+    await writeSystemEdit(systemId, (sys) => {
+      const list = [...(sys.facilities || [])];
+      const idx = list.findIndex(f => f.facility_type_id === facilityTypeId);
+      if (q === 0) {
+        if (idx >= 0) list.splice(idx, 1);
+      } else if (idx >= 0) {
+        list[idx] = { ...list[idx], quantity: q };
+      } else {
+        list.push({ facility_type_id: facilityTypeId, quantity: q });
+      }
+      return { ...sys, facilities: list };
+    }, `set facility ${facilityTypeId} on system ${systemId} → ×${q}`, { facility_type_id: facilityTypeId, quantity: q });
+  }, [writeSystemEdit]);
+
+  const handleTestSetGarrison = useCallback(async (systemId: number, current: number, max: number) => {
+    const m = Math.max(0, Math.floor(max));
+    const c = Math.max(0, Math.min(m, Math.floor(current)));
+    await writeSystemEdit(systemId, (sys) => ({
+      ...sys,
+      max_ground_defenses: m,
+      current_ground_defenses: c,
+    }), `set garrison on system ${systemId} → ${c}/${m}`, { current_ground_defenses: c, max_ground_defenses: m });
+  }, [writeSystemEdit]);
+
+
   const handleBuildFacility = async (systemId: number, facilityTypeId: string) => {
     if (!player || !game) return;
     try {
