@@ -1822,6 +1822,9 @@ const PlayerGame = () => {
             testMode: isAdmin && testMode,
             onTestSetFacilityQty: handleTestSetFacilityQty,
             onTestSetGarrison: handleTestSetGarrison,
+            onRecruitGarrison: handleRecruitGarrison,
+            onDisbandGarrison: handleDisbandGarrison,
+
           }}
           fullWidth={isMobile}
         />
