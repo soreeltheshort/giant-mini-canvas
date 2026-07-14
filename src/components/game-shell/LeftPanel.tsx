@@ -322,6 +322,9 @@ function InlineContextContent({
   testMode,
   onTestSetFacilityQty,
   onTestSetGarrison,
+  onRecruitGarrison,
+  onDisbandGarrison,
+
 }: {
   mode: GameMode;
   selection: MapSelection;
