@@ -17,13 +17,17 @@ export interface TurnConstants {
   pop_and_resource_tribute: number;
   pop_or_resources_tribute: number;
   ground_force_replacement_cost: number;
+  /** Per-unit per-turn upkeep charged for every current ground defense unit. */
+  ground_defense_maintenance: number;
 }
 
 export const DEFAULT_TURN_CONSTANTS: TurnConstants = {
   pop_and_resource_tribute: 1,
   pop_or_resources_tribute: 0.5,
   ground_force_replacement_cost: 2,
+  ground_defense_maintenance: 1,
 };
+
 
 /**
  * Population change process — single-step input/output.
