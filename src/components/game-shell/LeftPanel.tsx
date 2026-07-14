@@ -408,6 +408,9 @@ function InlineContextContent({
             testMode={testMode}
             onTestSetFacilityQty={onTestSetFacilityQty}
             onTestSetGarrison={onTestSetGarrison}
+            onRecruitGarrison={onRecruitGarrison}
+            onDisbandGarrison={onDisbandGarrison}
+
           />
         ) : selection.type === "army" ? (
           <InlineArmyDetail
