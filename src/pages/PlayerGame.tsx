@@ -1220,7 +1220,7 @@ const PlayerGame = () => {
       message: `TEST MODE: ${message}`,
       details_json: { ...details, system_id: systemId, admin_user_id: authUser?.id ?? null },
     });
-  }, [isAdmin, game, mapState, toast]);
+  }, [game, mapState, toast]);
 
   const handleTestSetFacilityQty = useCallback(async (systemId: number, facilityTypeId: string, quantity: number) => {
     const q = Math.max(0, Math.floor(quantity));
