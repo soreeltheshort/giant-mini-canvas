@@ -859,8 +859,145 @@ export const groundCombatPhase: Phase = {
           },
         });
       }
+
+      // ── Emit per-observer DISPATCH for this engagement ──
+      {
+        const outcomeVerb =
+          outcome === "colonize" ? "colonizes"
+          : outcome === "capture" ? "captures"
+          : outcome === "repulsed" ? "attempts to invade"
+          : "engages";
+        const attackerDisplay = displayForOwner(champion.owner_classification);
+        const defenderDisplay = displayForOwner(previousOwner);
+
+        // Build human debug lines.
+        const debugLines: string[] = [];
+        debugLines.push(
+          `${sys.system_name} — turn ${currentTurn} — seed ${seed} — killChance ${killChance.toFixed(2)}`,
+        );
+        if (phaseATranscript.length === 0) {
+          debugLines.push(`PHASE A: (no other invaders)`);
+        } else {
+          debugLines.push(`PHASE A (${phaseATranscript.length} pairing${phaseATranscript.length === 1 ? "" : "s"}):`);
+          for (const t of phaseATranscript) {
+            if (t.sitting_out) {
+              debugLines.push(`  ${t.sitting_out} sits out with ${t.gi} GI`);
+              continue;
+            }
+            debugLines.push(`  ${t.attacker} (${t.a_start}) vs ${t.defender} (${t.b_start})`);
+            debugLines.push(`    A rolls: ${formatRollLine(t.a_rolls)}`);
+            debugLines.push(`    B rolls: ${formatRollLine(t.b_rolls)}`);
+            debugLines.push(`    applied: A −${t.b_kills_on_a} → ${t.a_end}, B −${t.a_kills_on_b} → ${t.b_end}`);
+          }
+        }
+        debugLines.push(
+          `PHASE B: ${champion.fleet_name} (${champion.starting_gi}) vs defenses (${startingDefenses})`,
+        );
+        debugLines.push(`  attacker rolls: ${formatRollLine(round.aRolls)}`);
+        debugLines.push(`  defense  rolls: ${formatRollLine(round.bRolls)}`);
+        debugLines.push(
+          `  applied simultaneously — attacker −${round.aKilled} → ${preMultiplyGi}, defenses −${round.bKilled} → ${newDefenses}`,
+        );
+        if (infectMultiplied) {
+          debugLines.push(
+            `  INFECT multiplier ×${infectMultiplier}: attacker ${preMultiplyGi} → ${champion.gi}`,
+          );
+        }
+        const resultLine =
+          outcome === "capture" ? `  RESULT: defenses eliminated, attacker survives with ${champion.gi} GI → CAPTURE from ${previousOwner || "unowned"}`
+          : outcome === "colonize" ? `  RESULT: unpopulated world colonized, attacker holds with ${champion.gi} GI → COLONIZE`
+          : outcome === "repulsed" ? `  RESULT: attacker wiped, defenses ${newDefenses} remain → REPULSED`
+          : `  RESULT: stalemate — defenses ${newDefenses}, invader ${champion.gi}`;
+        debugLines.push(resultLine);
+        if (transportsDestroyed > 0) {
+          debugLines.push(`  transports destroyed: ${transportsDestroyed} (INFECT drop)`);
+        }
+        if (synodPurge) {
+          debugLines.push(
+            `  Synod purge: ${synodPurge.removed_facility_ids.length} facility/ies removed, population −${synodPurge.removed_population}`,
+          );
+        }
+
+        const basePayload = {
+          schema: "dispatch.ground_combat.v1",
+          turn: currentTurn,
+          system: {
+            id: systemId,
+            name: sys.system_name,
+            hex: (() => { const h = Array.from(mapState.hexes.values()).find(hx => hx.hex_id === sys.hex_id); return h ? { x: h.x, y: h.y } : null; })(),
+            planet_type: sys.planet_type_id || null,
+            population_before: Number(sys.current_population) || 0,
+            population_after: Number(sys.current_population) || 0,
+          },
+          attacker: {
+            faction: champion.owner_classification || null,
+            faction_display: attackerDisplay,
+            is_infect: championInfects,
+            fleet_name: champion.fleet_name,
+            ground_force_start: champion.starting_gi,
+            ground_force_end: champion.gi,
+            transports_destroyed: transportsDestroyed,
+          },
+          defender: {
+            faction: previousOwner || null,
+            faction_display: defenderDisplay,
+            ground_defenses_start: startingDefenses,
+            ground_defenses_end: newDefenses,
+          },
+          outcome: {
+            kind: outcome,
+            rule_path: championInfects ? "infect" : "standard",
+            new_owner: sys.owner || null,
+            previous_owner: previousOwner || null,
+            kill_chance: killChance,
+            synod_purge: synodPurge,
+          },
+          combat_transcript: {
+            seed,
+            kill_chance: killChance,
+            phase_a: phaseATranscript,
+            phase_b: {
+              champion: champion.fleet_name,
+              defenses_start: startingDefenses,
+              champion_rolls: round.aRolls,
+              defense_rolls: round.bRolls,
+              champion_kills_on_defenses: round.bKilled,
+              defense_kills_on_champion: round.aKilled,
+              champion_end: champion.gi,
+              defenses_end: newDefenses,
+              infect_multiplied: infectMultiplied,
+              infect_multiplier: infectMultiplied ? infectMultiplier : null,
+              invader_gi_before_multiplier: infectMultiplied ? preMultiplyGi : null,
+            },
+          },
+          debug_lines: debugLines,
+          narration_hints: {
+            tone: championInfects && (outcome === "capture" || outcome === "colonize") ? "grim"
+              : outcome === "repulsed" ? "heroic"
+              : outcome === "colonize" ? "neutral"
+              : "grim",
+            headline_seed:
+              outcome === "capture" ? `${sys.system_name} falls to ${attackerDisplay}`
+              : outcome === "colonize" ? `${attackerDisplay} colonizes ${sys.system_name}`
+              : outcome === "repulsed" ? `${sys.system_name} repulses ${attackerDisplay} invasion`
+              : `Ground fighting rages on ${sys.system_name}`,
+          },
+        };
+
+        emitDispatches({
+          sys,
+          basePayload,
+          message: `${attackerDisplay} ${outcomeVerb} ${sys.system_name}${previousOwner ? ` (defender: ${defenderDisplay})` : ""}.`,
+          debugLines,
+          attackerOwner: champion.owner_classification || "",
+          previousOwner,
+          championFleetName: champion.fleet_name,
+        });
+      }
+
       resolved++;
     }
+
 
     // 6. Persist GI changes for all touched fleets.
     for (const [sourceId, newGi] of giDelta) {
