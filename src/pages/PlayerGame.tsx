@@ -1193,7 +1193,7 @@ const PlayerGame = () => {
     message: string,
     details: Record<string, any>,
   ) => {
-    if (!isAdmin || !game || !mapState) return;
+    if (!game || !mapState) return;
     const existing = mapState.systems.get(systemId);
     if (!existing) return;
     const updated = mutate(existing);
