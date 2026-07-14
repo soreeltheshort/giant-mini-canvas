@@ -89,6 +89,12 @@ interface LeftPanelProps {
     onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
     /** Begin map-click targeting for commissioning a fleet with a chosen name. */
     onStartCommissionTargeting?: (fleetName: string) => void;
+    /** Admin-only Test Mode enabled — reveals direct-edit controls on systems. */
+    testMode?: boolean;
+    /** TEST MODE: set (or delete when quantity=0) a facility row on a system. */
+    onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
+    /** TEST MODE: set garrison current/max on a system. */
+    onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
   };
 }
 
