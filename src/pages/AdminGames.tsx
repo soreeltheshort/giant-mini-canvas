@@ -673,9 +673,10 @@ const AdminGames = () => {
   const runTurn = async () => {
     if (!selectedGame || !mapState) return;
     setProcessing(true);
+    const outerPerf = new PerfTimer(!!isAdmin);
     try {
       // Set phase to processing
-      await (supabase as any).from("games").update({ turn_phase: "processing" }).eq("id", selectedGame.id);
+      await outerPerf.time("games.setProcessing", () => (supabase as any).from("games").update({ turn_phase: "processing" }).eq("id", selectedGame.id));
 
       const currentTurn = selectedGame.turn_number;
       const nextTurn = currentTurn + 1;
@@ -683,51 +684,54 @@ const AdminGames = () => {
       // Run the phase-based processor: it loads orders, runs Economy → Movement
       // → Visibility → Combat, accumulates per-player econ, and bulk-inserts
       // logs tagged by phase.
-      const result = await runTurnProcessor({
+      const result = await outerPerf.time("runTurnProcessor", () => runTurnProcessor({
         supabase: supabase as any,
         gameId: selectedGame.id,
         currentTurn,
         mapState,
         facilityTypes,
         shipTypes,
-      });
+        enablePerf: !!isAdmin,
+      }));
 
       const newMapState = result.mapState;
       setMapState(newMapState);
 
       // Persist updated map and advance turn
-      const serialized = serializeMapState(newMapState);
-      await (supabase as any).from("games").update({
+      const serialized = await outerPerf.time("map.serialize", async () => serializeMapState(newMapState));
+      await outerPerf.time("games.update", () => (supabase as any).from("games").update({
         map_data_json: serialized,
         turn_number: nextTurn,
         turn_phase: "orders",
-      }).eq("id", selectedGame.id);
+      }).eq("id", selectedGame.id));
 
       // Apply per-player econ deltas + reset action points and order locks
-      const { data: gps } = await (supabase as any)
+      const { data: gps } = await outerPerf.time("factions.reload", () => (supabase as any)
         .from("game_factions")
         .select("id, player_slot, faction_id, treasury, admin_capability, combat_capability")
-        .eq("game_id", selectedGame.id);
-      if (gps) {
-        for (const gp of gps) {
-          const key = rowEconKey(gp);
-          const econ = (key && result.playerEcon.get(key)) || { tribute: 0, maintenance: 0 };
-          // Integer columns — ship maintenance is numeric, must round or the
-          // whole row update is rejected by Postgres (silently in supabase-js).
-          const tributeInt = Math.round(econ.tribute);
-          const maintInt = Math.round(econ.maintenance);
-          const newTreasury = (gp.treasury || 0) + tributeInt - maintInt;
-          const { error: updErr } = await (supabase as any).from("game_factions").update({
-            orders_locked: false,
-            treasury: newTreasury,
-            last_tribute: tributeInt,
-            last_maintenance: maintInt,
-            admin_points_remaining: gp.admin_capability || 3,
-            combat_points_remaining: gp.combat_capability || 3,
-          }).eq("id", gp.id);
-          if (updErr) console.warn(`[runTurn] player update failed key=${key}:`, updErr.message);
+        .eq("game_id", selectedGame.id));
+      await outerPerf.time("factions.updateLoop", async () => {
+        if (gps) {
+          for (const gp of gps) {
+            const key = rowEconKey(gp);
+            const econ = (key && result.playerEcon.get(key)) || { tribute: 0, maintenance: 0 };
+            // Integer columns — ship maintenance is numeric, must round or the
+            // whole row update is rejected by Postgres (silently in supabase-js).
+            const tributeInt = Math.round(econ.tribute);
+            const maintInt = Math.round(econ.maintenance);
+            const newTreasury = (gp.treasury || 0) + tributeInt - maintInt;
+            const { error: updErr } = await (supabase as any).from("game_factions").update({
+              orders_locked: false,
+              treasury: newTreasury,
+              last_tribute: tributeInt,
+              last_maintenance: maintInt,
+              admin_points_remaining: gp.admin_capability || 3,
+              combat_points_remaining: gp.combat_capability || 3,
+            }).eq("id", gp.id);
+            if (updErr) console.warn(`[runTurn] player update failed key=${key}:`, updErr.message);
+          }
         }
-      }
+      });
 
       // Final summary log
       await addLog(
@@ -737,8 +741,28 @@ const AdminGames = () => {
       );
 
       setSelectedGame({ ...selectedGame, turn_number: nextTurn });
-      await fetchGames();
-      await refreshLogs(selectedGame.id);
+      await outerPerf.time("fetchGames", () => fetchGames());
+      await outerPerf.time("refreshLogs", () => refreshLogs(selectedGame.id));
+
+      // Admin-only: persist perf report as a log row so we can compare turns.
+      if (isAdmin) {
+        outerPerf.logTable(`runTurn (outer) · turn ${currentTurn}`);
+        const outerRows = outerPerf.report();
+        await (supabase as any).from("game_logs").insert({
+          game_id: selectedGame.id,
+          turn_number: currentTurn,
+          phase: "summary",
+          log_type: "perf_report",
+          message: `Perf: total ${outerPerf.totalMs().toFixed(0)}ms · processor ${result.perfTotalMs ?? 0}ms`,
+          details_json: {
+            outer_total_ms: Math.round(outerPerf.totalMs()),
+            outer: outerRows,
+            processor_total_ms: result.perfTotalMs ?? null,
+            processor: result.perf ?? [],
+          },
+        });
+      }
+
       toast({ title: `Turn ${currentTurn} processed`, description: `Now accepting orders for Turn ${nextTurn}` });
     } catch (err: any) {
       toast({ title: "Turn failed", description: err.message, variant: "destructive" });
