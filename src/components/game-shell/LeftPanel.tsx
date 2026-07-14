@@ -898,6 +898,16 @@ function InlineRegionDetail({
           )}
         </ImperialCard>
 
+        {testMode && onTestSetFacilityQty && onTestSetGarrison && gameData ? (
+          <SystemTestEditor
+            system={realSys}
+            gameData={gameData}
+            onSetFacilityQty={onTestSetFacilityQty}
+            onSetGarrison={onTestSetGarrison}
+          />
+        ) : null}
+
+
         {mode === "military" && gameId ? (
           <GarrisonCard gameId={gameId} systemId={realSys.system_id} />
         ) : null}
