@@ -391,9 +391,32 @@ export const groundCombatPhase: Phase = {
     // Track GI changes to write back at the end (source_fleet_id -> new GI).
     const giDelta = new Map<string, number>();
 
+    // Build a factions-catalog lookup by every alias so we can resolve an
+    // owner classification string to a `factions.id` (matches ctx.players.faction_id).
+    const factionIdByAlias = new Map<string, string>();
+    const factionMetaById = new Map<string, { display: string; is_infect: boolean }>();
+    for (const f of ctx.factions as any[]) {
+      const display = f.name || f.code_name || "Unknown";
+      factionMetaById.set(f.id, { display, is_infect: !!f.infect });
+      if (f.name) factionIdByAlias.set(String(f.name).toLowerCase(), f.id);
+      if (f.code_name) factionIdByAlias.set(String(f.code_name).toLowerCase(), f.id);
+    }
+    const resolveFactionId = (owner: string | null | undefined): string | null => {
+      const k = (owner || "").trim().toLowerCase();
+      if (!k) return null;
+      return factionIdByAlias.get(k) || null;
+    };
+    const displayForOwner = (owner: string | null | undefined): string => {
+      const fid = resolveFactionId(owner);
+      const meta = fid ? factionMetaById.get(fid) : null;
+      return meta?.display || owner || "Unknown";
+    };
+
     let resolved = 0;
     // Process systems in deterministic order (by system_id).
     const systemEntries = Array.from(bySystem.entries()).sort((a, b) => a[0] - b[0]);
+
+
 
     for (const [systemId, bucket] of systemEntries) {
       const sys = bucket.sys;
