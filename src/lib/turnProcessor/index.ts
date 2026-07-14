@@ -82,22 +82,23 @@ export interface RunTurnResult {
 }
 
 export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult> {
-  const { supabase, gameId, currentTurn, mapState, facilityTypes, shipTypes } = args;
+  const { supabase, gameId, currentTurn, mapState, facilityTypes, shipTypes, enablePerf } = args;
+  const perf = new PerfTimer(!!enablePerf);
 
   // Self-heal: ensure every AI faction (and every map-owning faction) has a
   // game_players row before we load players. Idempotent.
-  try { await seedFactionPlayers(supabase, gameId, mapState); } catch (e) { console.warn("[turnProcessor] seedFactionPlayers failed", e); }
-
-
+  await perf.time("seedFactionPlayers", async () => {
+    try { await seedFactionPlayers(supabase, gameId, mapState); } catch (e) { console.warn("[turnProcessor] seedFactionPlayers failed", e); }
+  });
 
   // Load orders, players, and faction catalog (for owner→faction id mapping).
-  const [{ data: ordersRaw }, { data: playersRaw }, { data: factionsRaw }] = await Promise.all([
+  const [{ data: ordersRaw }, { data: playersRaw }, { data: factionsRaw }] = await perf.time("load.orders+players+factions", () => Promise.all([
     (supabase as any).from("player_orders").select("*").eq("game_id", gameId).eq("turn_number", currentTurn),
     (supabase as any).from("game_factions")
       .select("id, user_id, player_slot, faction_id, treasury, admin_capability, combat_capability, visible_system_ids, scouted_hex_ids")
       .eq("game_id", gameId),
     (supabase as any).from("factions").select("id, name, code_name, infect"),
-  ]);
+  ]));
 
   const orders: ConditionalOrder[] = ordersRaw || [];
   const players: PlayerCtx[] = (playersRaw || []).map((p: any) => ({
@@ -126,6 +127,7 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     orders,
     playerEcon: new Map(),
     logs: [],
+    perf,
   };
 
   // Phase header log (per turn)
@@ -138,35 +140,49 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
   });
 
   for (const phase of PHASE_ORDER) {
-    try {
-      await phase.run(ctx);
-    } catch (err: any) {
-      ctx.logs.push({
-        game_id: gameId,
-        turn_number: currentTurn,
-        phase: phase.name,
-        log_type: "phase_error",
-        message: `Phase ${phase.label} failed: ${err.message || err}`,
-        details_json: { error: String(err) },
-      });
-    }
+    await perf.time(`phase.${phase.name}`, async () => {
+      try {
+        await phase.run(ctx);
+      } catch (err: any) {
+        ctx.logs.push({
+          game_id: gameId,
+          turn_number: currentTurn,
+          phase: phase.name,
+          log_type: "phase_error",
+          message: `Phase ${phase.label} failed: ${err.message || err}`,
+          details_json: { error: String(err) },
+        });
+      }
+    });
   }
 
   // Bulk insert all logs (single round trip)
-  if (ctx.logs.length > 0) {
-    await (supabase as any).from("game_logs").insert(
-      ctx.logs.map(l => ({
-        game_id: l.game_id,
-        turn_number: l.turn_number,
-        phase: l.phase,
-        log_type: l.log_type,
-        message: l.message,
-        details_json: l.details_json || {},
-      }))
-    );
-  }
+  await perf.time("logs.bulkInsert", async () => {
+    if (ctx.logs.length > 0) {
+      await (supabase as any).from("game_logs").insert(
+        ctx.logs.map(l => ({
+          game_id: l.game_id,
+          turn_number: l.turn_number,
+          phase: l.phase,
+          log_type: l.log_type,
+          message: l.message,
+          details_json: l.details_json || {},
+        }))
+      );
+    }
+  });
 
-  return { mapState: ctx.mapState, playerEcon: ctx.playerEcon, logsInserted: ctx.logs.length };
+  const perfReport = enablePerf ? perf.report() : undefined;
+  const perfTotalMs = enablePerf ? Math.round(perf.totalMs()) : undefined;
+  if (enablePerf) perf.logTable(`runTurnProcessor · turn ${currentTurn}`);
+
+  return {
+    mapState: ctx.mapState,
+    playerEcon: ctx.playerEcon,
+    logsInserted: ctx.logs.length,
+    perf: perfReport,
+    perfTotalMs,
+  };
 }
 
 export type { Phase, TurnContext, PlayerCtx, ConditionalOrder } from "./types";
