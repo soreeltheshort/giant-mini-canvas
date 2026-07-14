@@ -796,6 +796,163 @@ function InlineEmptyState({
   );
 }
 
+/* ── TEST MODE: in-game facility + garrison editor for a system ── */
+function SystemTestEditor({
+  system,
+  gameData,
+  onSetFacilityQty,
+  onSetGarrison,
+}: {
+  system: import("@/lib/mapTypes").SystemData;
+  gameData: GameMapData;
+  onSetFacilityQty: (systemId: number, facilityTypeId: string, quantity: number) => void;
+  onSetGarrison: (systemId: number, current: number, max: number) => void;
+}) {
+  const [curGD, setCurGD] = useState<string>(String(system.current_ground_defenses ?? 0));
+  const [maxGD, setMaxGD] = useState<string>(String(system.max_ground_defenses ?? 0));
+  const [addFacilityId, setAddFacilityId] = useState<string>("");
+
+  // Reset local inputs when the selected system changes.
+  const sysId = system.system_id;
+  useEffect(() => {
+    setCurGD(String(system.current_ground_defenses ?? 0));
+    setMaxGD(String(system.max_ground_defenses ?? 0));
+    setAddFacilityId("");
+  }, [sysId, system.current_ground_defenses, system.max_ground_defenses]);
+
+  const existingIds = new Set((system.facilities || []).map((f) => f.facility_type_id));
+  const addable = (gameData.facilityTypes || []).filter((ft) => !existingIds.has(ft.facility_type_id));
+
+  return (
+    <ImperialCard title="Test Mode · Edit System" subtitle="Admin only — writes immediately">
+      <div className="space-y-3">
+        {/* Garrison editor */}
+        <div className="space-y-1.5">
+          <div className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground">Garrison</div>
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] text-slate-500 w-14">Current</label>
+            <input
+              type="number"
+              min={0}
+              value={curGD}
+              onChange={(e) => setCurGD(e.target.value)}
+              className="flex-1 h-7 px-2 rounded-sm border border-border bg-background text-xs"
+            />
+            <label className="text-[10px] text-slate-500 w-10 text-right">Max</label>
+            <input
+              type="number"
+              min={0}
+              value={maxGD}
+              onChange={(e) => setMaxGD(e.target.value)}
+              className="flex-1 h-7 px-2 rounded-sm border border-border bg-background text-xs"
+            />
+          </div>
+          <button
+            onClick={() => onSetGarrison(sysId, parseInt(curGD || "0", 10) || 0, parseInt(maxGD || "0", 10) || 0)}
+            className="w-full py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider bg-crimson text-primary-foreground hover:bg-crimson-light"
+          >
+            Save Garrison
+          </button>
+        </div>
+
+        {/* Facility editor */}
+        <div className="space-y-1.5">
+          <div className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground">Facilities</div>
+          {(system.facilities || []).length === 0 ? (
+            <p className="text-[10px] text-muted-foreground italic">No facilities. Add one below.</p>
+          ) : (
+            <div className="space-y-1">
+              {(system.facilities || []).map((f) => {
+                const ft = gameData.facilityTypes.find((t) => t.facility_type_id === f.facility_type_id);
+                return (
+                  <FacilityQtyRow
+                    key={f.facility_type_id}
+                    icon={ft?.icon || "🏭"}
+                    name={ft?.name || f.facility_type_id}
+                    initialQty={f.quantity}
+                    onSave={(q) => onSetFacilityQty(sysId, f.facility_type_id, q)}
+                    onDelete={() => onSetFacilityQty(sysId, f.facility_type_id, 0)}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {addable.length > 0 ? (
+            <div className="flex items-center gap-2 pt-1">
+              <select
+                value={addFacilityId}
+                onChange={(e) => setAddFacilityId(e.target.value)}
+                className="flex-1 h-7 px-2 rounded-sm border border-border bg-background text-xs"
+              >
+                <option value="">+ Add facility…</option>
+                {addable.map((ft) => (
+                  <option key={ft.facility_type_id} value={ft.facility_type_id}>
+                    {ft.icon} {ft.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                disabled={!addFacilityId}
+                onClick={() => {
+                  onSetFacilityQty(sysId, addFacilityId, 1);
+                  setAddFacilityId("");
+                }}
+                className={`h-7 px-3 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider ${addFacilityId ? "bg-crimson text-primary-foreground hover:bg-crimson-light" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+              >
+                Add
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </ImperialCard>
+  );
+}
+
+function FacilityQtyRow({
+  icon,
+  name,
+  initialQty,
+  onSave,
+  onDelete,
+}: {
+  icon: string;
+  name: string;
+  initialQty: number;
+  onSave: (q: number) => void;
+  onDelete: () => void;
+}) {
+  const [qty, setQty] = useState<string>(String(initialQty));
+  useEffect(() => { setQty(String(initialQty)); }, [initialQty]);
+  const dirty = String(initialQty) !== qty;
+  return (
+    <div className="flex items-center gap-2 text-xs py-1 border-b border-border last:border-0">
+      <span className="flex-1 truncate text-slate-500">{icon} {name}</span>
+      <input
+        type="number"
+        min={0}
+        value={qty}
+        onChange={(e) => setQty(e.target.value)}
+        className="w-14 h-6 px-1 rounded-sm border border-border bg-background text-xs text-right"
+      />
+      <button
+        onClick={() => onSave(Math.max(0, parseInt(qty || "0", 10) || 0))}
+        disabled={!dirty}
+        className={`h-6 px-2 rounded-sm text-[9px] font-heading uppercase tracking-wider ${dirty ? "bg-crimson text-primary-foreground hover:bg-crimson-light" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+      >
+        Save
+      </button>
+      <button
+        onClick={onDelete}
+        className="h-6 px-2 rounded-sm text-[9px] font-heading uppercase tracking-wider bg-muted text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 function InlineRegionDetail({
   id,
   gameData,
