@@ -936,6 +936,8 @@ function InlineRegionDetail({
   testMode,
   onTestSetFacilityQty,
   onTestSetGarrison,
+  onRecruitGarrison,
+  onDisbandGarrison,
 }: {
   id: string;
   gameData?: GameMapData;
@@ -953,7 +955,10 @@ function InlineRegionDetail({
   testMode?: boolean;
   onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
+  onRecruitGarrison?: (systemId: number) => void;
+  onDisbandGarrison?: (systemId: number) => void;
 }) {
+
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
   const realSys =
     !isNaN(sysId) && gameData ? Array.from(gameData.systems.values()).find((s) => s.system_id === sysId) : undefined;
