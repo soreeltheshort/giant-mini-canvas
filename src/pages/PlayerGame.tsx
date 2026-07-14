@@ -846,44 +846,77 @@ const PlayerGame = () => {
     const factionLc = (player.faction_name || "").toLowerCase();
     let cancelled = false;
     (async () => {
+      // Pull v1 ground-combat dispatches (per-observer rows) alongside legacy
+      // planet_captured/colonized rows so older logs still surface.
       const { data: logs } = await (supabase as any)
         .from("game_logs")
         .select("id, turn_number, log_type, message, details_json")
         .eq("game_id", game.id)
-        .in("log_type", ["planet_colonized", "planet_captured"])
+        .in("log_type", ["planet_colonized", "planet_captured", "dispatch_ground_combat"])
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(100);
       if (cancelled) return;
       const matches = (s?: string) => {
         if (!s) return false;
         const lc = s.toLowerCase();
         return s === ownClass || lc === factionLc;
       };
-      const stories = (logs || [])
-        .filter((l: any) =>
-          matches(l.details_json?.new_owner) || matches(l.details_json?.previous_owner)
-        )
-        .map((l: any) => {
-          const isColonize = l.log_type === "planet_colonized";
-          const newOwner = l.details_json?.new_owner || "";
-          const sysName = l.details_json?.system_name || "an unknown world";
-          const ours = matches(newOwner);
-          const headline = isColonize
-            ? (ours ? `Colony established at ${sysName}` : `${newOwner} colonizes ${sysName}`)
-            : (ours ? `${sysName} captured` : `${sysName} lost to ${newOwner}`);
-          return {
-            id: `log-${l.id}`,
-            headline,
-            summary: l.message || headline,
-            turn: l.turn_number,
-            read: false,
-            category: "military" as const,
-          };
+
+      const stories: import("@/components/game-shell/gameShellTypes").NewsStory[] = [];
+      // Dedupe key: (turn, system_id) — prefer v1 dispatch over legacy.
+      const seen = new Set<string>();
+
+      // Pass 1: v1 dispatches addressed to this player.
+      for (const l of (logs || [])) {
+        if (l.log_type !== "dispatch_ground_combat") continue;
+        const observerPid = l.details_json?.observer?.player_id;
+        if (observerPid !== player.id) continue;
+        const sysId = l.details_json?.system?.id;
+        const key = `${l.turn_number}:${sysId ?? l.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const hint = l.details_json?.narration_hints?.headline_seed;
+        stories.push({
+          id: `log-${l.id}`,
+          headline: hint || l.message || "Ground engagement",
+          summary: l.message || hint || "",
+          turn: l.turn_number,
+          read: false,
+          category: "military" as const,
         });
+      }
+
+      // Pass 2: legacy planet_captured/colonized fallback (skips events
+      // already covered by a v1 dispatch above).
+      for (const l of (logs || [])) {
+        if (l.log_type === "dispatch_ground_combat") continue;
+        if (!(matches(l.details_json?.new_owner) || matches(l.details_json?.previous_owner))) continue;
+        const sysId = l.details_json?.system_id;
+        const key = `${l.turn_number}:${sysId ?? l.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const isColonize = l.log_type === "planet_colonized";
+        const newOwner = l.details_json?.new_owner || "";
+        const sysName = l.details_json?.system_name || "an unknown world";
+        const ours = matches(newOwner);
+        const headline = isColonize
+          ? (ours ? `Colony established at ${sysName}` : `${newOwner} colonizes ${sysName}`)
+          : (ours ? `${sysName} captured` : `${sysName} lost to ${newOwner}`);
+        stories.push({
+          id: `log-${l.id}`,
+          headline,
+          summary: l.message || headline,
+          turn: l.turn_number,
+          read: false,
+          category: "military" as const,
+        });
+      }
+
       setRealDispatches(stories);
     })();
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number]);
+
 
   // ─── Submission-blocking issues ───
   // Currently checks: per-fleet, per-tactical-group strikecraft overcapacity
