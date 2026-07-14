@@ -354,6 +354,9 @@ function InlineContextContent({
   testMode?: boolean;
   onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
+  onRecruitGarrison?: (systemId: number) => void;
+  onDisbandGarrison?: (systemId: number) => void;
+
 }) {
   const getModeIcon = () => {
     if (selection.type === "news") return <Scroll className="w-3.5 h-3.5" />;
