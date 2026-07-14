@@ -74,8 +74,10 @@ export interface TurnResult {
     fighterUpkeep: number;
     gunshipUpkeep: number;
     groundForceReplacement: number;
+    groundDefenseMaintenance: number;
     totalUpkeep: number;
   };
+
   completedFacilities: string[]; // names of facilities completed this turn
 }
 
