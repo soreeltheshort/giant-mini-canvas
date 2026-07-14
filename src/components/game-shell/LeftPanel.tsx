@@ -1021,19 +1021,29 @@ function InlineRegionDetail({
           )}
         </ImperialCard>
 
-        {testMode && onTestSetFacilityQty && onTestSetGarrison && gameData ? (
+        {testMode && onTestSetFacilityQty && gameData ? (
           <SystemTestEditor
             system={realSys}
             gameData={gameData}
             onSetFacilityQty={onTestSetFacilityQty}
-            onSetGarrison={onTestSetGarrison}
           />
         ) : null}
 
-
-        {mode === "military" && gameId ? (
-          <GarrisonCard gameId={gameId} systemId={realSys.system_id} />
+        {gameId ? (
+          <GarrisonCard
+            gameId={gameId}
+            systemId={realSys.system_id}
+            system={realSys}
+            fleets={gameData?.fleets as any}
+            viewerOwner={playerOwnerClassification}
+            viewerTreasury={playerTreasury}
+            testMode={testMode}
+            onRecruitGarrison={onRecruitGarrison}
+            onDisbandGarrison={onDisbandGarrison}
+            onTestSetGarrison={onTestSetGarrison}
+          />
         ) : null}
+
 
         <ImperialCard title="Production Queue">
           <div className="space-y-1.5">
