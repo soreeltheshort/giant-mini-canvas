@@ -1248,6 +1248,59 @@ const PlayerGame = () => {
     }), `set garrison on system ${systemId} → ${c}/${m}`, { current_ground_defenses: c, max_ground_defenses: m });
   }, [writeSystemEdit]);
 
+  /**
+   * Recruit +1 ground defense: charges ground_force_replacement_cost from
+   * treasury, requires current<max, only allowed for the owning faction.
+   * Persists both the system change and the treasury debit.
+   */
+  const handleRecruitGarrison = useCallback(async (systemId: number) => {
+    if (!player || !game || !mapState) return;
+    const sys = mapState.systems.get(systemId);
+    if (!sys) return;
+    if (sys.owner !== player.own_classification) {
+      toast({ title: "Not your system", variant: "destructive" }); return;
+    }
+    if ((sys.current_ground_defenses ?? 0) >= (sys.max_ground_defenses ?? 0)) {
+      toast({ title: "Garrison at maximum", description: "Build facilities that grant more capacity." });
+      return;
+    }
+    const cost = 2; // DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost
+    if ((player.treasury ?? 0) < cost) {
+      toast({ title: "Insufficient treasury", variant: "destructive" }); return;
+    }
+    const newTreasury = (player.treasury ?? 0) - cost;
+    const { error: tErr } = await (supabase as any)
+      .from("game_factions").update({ treasury: newTreasury }).eq("id", player.id);
+    if (tErr) { toast({ title: "Failed", description: tErr.message, variant: "destructive" }); return; }
+    setPlayer(p => p ? { ...p, treasury: newTreasury } : p);
+    await writeSystemEdit(
+      systemId,
+      (s) => ({ ...s, current_ground_defenses: Math.min(s.max_ground_defenses ?? 0, (s.current_ground_defenses ?? 0) + 1) }),
+      `recruit garrison at system ${systemId} (cost ${cost} ₡)`,
+      { action: "recruit_garrison", cost, player_id: player.id },
+    );
+  }, [player, game, mapState, writeSystemEdit, toast]);
+
+  /**
+   * Disband -1 ground defense: no refund. Owner-only.
+   */
+  const handleDisbandGarrison = useCallback(async (systemId: number) => {
+    if (!player || !game || !mapState) return;
+    const sys = mapState.systems.get(systemId);
+    if (!sys) return;
+    if (sys.owner !== player.own_classification) {
+      toast({ title: "Not your system", variant: "destructive" }); return;
+    }
+    if ((sys.current_ground_defenses ?? 0) <= 0) return;
+    await writeSystemEdit(
+      systemId,
+      (s) => ({ ...s, current_ground_defenses: Math.max(0, (s.current_ground_defenses ?? 0) - 1) }),
+      `disband garrison at system ${systemId}`,
+      { action: "disband_garrison", player_id: player.id },
+    );
+  }, [player, game, mapState, writeSystemEdit, toast]);
+
+
 
   const handleBuildFacility = async (systemId: number, facilityTypeId: string) => {
     if (!player || !game) return;
