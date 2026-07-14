@@ -412,9 +412,112 @@ export const groundCombatPhase: Phase = {
       return meta?.display || owner || "Unknown";
     };
 
+    // Pre-load intel visibility for this turn — one query for all engaged
+    // systems is cheaper than one per engagement. Maps system_id -> set of
+    // observer_player_id (game_factions.id) that had `last_seen_turn ==
+    // currentTurn`, i.e. sensors currently see the system.
+    const engagedSystemIds = Array.from(bySystem.keys());
+    const observersBySystem = new Map<number, Set<string>>();
+    if (engagedSystemIds.length > 0) {
+      const { data: intelRows } = await (supabase as any)
+        .from("player_system_intel")
+        .select("observer_player_id, system_id, last_seen_turn")
+        .eq("game_id", gameId)
+        .in("system_id", engagedSystemIds);
+      for (const r of (intelRows || [])) {
+        // "Sees this turn" = last_seen_turn is at or after current turn
+        // (visibility phase writes rows at currentTurn+1 during processing;
+        // stale rows for older turns count as "scouted" via scouted_hex_ids).
+        if (Number(r.last_seen_turn) < currentTurn) continue;
+        const sid = Number(r.system_id);
+        if (!observersBySystem.has(sid)) observersBySystem.set(sid, new Set());
+        observersBySystem.get(sid)!.add(String(r.observer_player_id));
+      }
+    }
+
+    /**
+     * Emit one DISPATCH log per observing player for a single engagement.
+     * `basePayload` is the shared v1 payload; `debugLines` is the pretty-print.
+     * We tag observer role/fog_level per player and redact attacker fleet name
+     * when the observer only has scouted-hex visibility.
+     */
+    const emitDispatches = (args: {
+      sys: any;
+      basePayload: any;
+      message: string;
+      debugLines: string[];
+      attackerOwner: string;
+      previousOwner: string;
+      championFleetName: string;
+    }) => {
+      const { sys, basePayload, message, debugLines, attackerOwner, previousOwner, championFleetName } = args;
+      const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+      const hexId = sys.hex_id;
+      const clearObservers = observersBySystem.get(sys.system_id) || new Set<string>();
+      const attackerFid = resolveFactionId(attackerOwner);
+      const previousFid = resolveFactionId(previousOwner);
+
+      // Union: current-turn intel viewers + scouted-hex holders + involved parties.
+      const roleByPlayer = new Map<string, "attacker" | "previous_owner" | "defender" | "third_party">();
+      const fogByPlayer = new Map<string, "clear" | "scouted" | "reported">();
+
+      for (const p of ctx.players) {
+        let role: "attacker" | "previous_owner" | "defender" | "third_party" | null = null;
+        if (attackerFid && p.faction_id === attackerFid) role = "attacker";
+        else if (previousFid && p.faction_id === previousFid) role = "previous_owner";
+
+        let fog: "clear" | "scouted" | "reported" | null = null;
+        if (clearObservers.has(p.id)) fog = "clear";
+        else if (hexId != null && p.scouted_hex_ids.includes(hexId)) fog = "scouted";
+        else if (Array.isArray(p.visible_system_ids) && p.visible_system_ids.includes(sys.system_id)) fog = "scouted";
+
+        if (!role && !fog) continue;
+        // Involved parties always get the dispatch, even if fog is dark.
+        if (role && !fog) fog = "reported";
+        roleByPlayer.set(p.id, role || "third_party");
+        fogByPlayer.set(p.id, fog!);
+      }
+
+      for (const [playerId, role] of roleByPlayer) {
+        const fog = fogByPlayer.get(playerId)!;
+        const p = ctx.players.find(x => x.id === playerId);
+        const observerFactionId = p?.faction_id || null;
+        const observerFactionName = observerFactionId ? factionMetaById.get(observerFactionId)?.display || "" : "";
+
+        // Redact for scouted-only observers (not involved).
+        const redact = fog === "scouted" && role === "third_party";
+        const attackerBlock = redact
+          ? { ...basePayload.attacker, fleet_name: "Unidentified force" }
+          : basePayload.attacker;
+
+        const payload = {
+          ...basePayload,
+          attacker: attackerBlock,
+          observer: {
+            player_id: playerId,
+            faction_id: observerFactionId,
+            faction: observerFactionName,
+            role,
+            fog_level: fog,
+          },
+        };
+
+        ctx.logs.push({
+          game_id: gameId,
+          turn_number: currentTurn,
+          phase: "ground_combat",
+          log_type: "dispatch_ground_combat",
+          message,
+          details_json: payload,
+        });
+      }
+    };
+
     let resolved = 0;
     // Process systems in deterministic order (by system_id).
     const systemEntries = Array.from(bySystem.entries()).sort((a, b) => a[0] - b[0]);
+
+
 
 
 
