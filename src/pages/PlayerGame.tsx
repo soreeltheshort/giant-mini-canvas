@@ -1766,6 +1766,9 @@ const PlayerGame = () => {
             pendingCancelBuildOrders,
             playerTreasury: player?.treasury ?? 0,
             adminPointsAvailable,
+            testMode: isAdmin && testMode,
+            onTestSetFacilityQty: handleTestSetFacilityQty,
+            onTestSetGarrison: handleTestSetGarrison,
           }}
           fullWidth={isMobile}
         />
