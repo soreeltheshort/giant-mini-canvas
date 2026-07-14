@@ -10,6 +10,7 @@ import type { MapState } from "@/lib/mapTypes";
 import type { DbFacilityType } from "@/hooks/useFacilityTypes";
 import type { ShipTypeForUpkeep } from "@/lib/turnEngine";
 import type { FactionMeta } from "./ownerKey";
+import type { PerfTimer } from "./perf";
 
 export type PhaseName = "economy" | "movement" | "visibility" | "combat" | "ground_combat" | "infect_intel_leech" | "threat_assessment";
 
@@ -81,6 +82,9 @@ export interface TurnContext {
 
   /** Logs queued for bulk insertion at the end of processing. */
   logs: PhaseLogEntry[];
+
+  /** Optional perf timer (admin-only). Phases may push nested timings via `perf?.time(...)`. */
+  perf?: PerfTimer;
 }
 
 /** A phase definition. Phases are pure-ish functions over the context. */
