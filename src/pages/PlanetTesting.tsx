@@ -639,6 +639,8 @@ const PlanetTesting = () => {
                     <div>Fighter upkeep: {lastTurnResult.upkeepBreakdown.fighterUpkeep}</div>
                     <div>Gunship upkeep: {lastTurnResult.upkeepBreakdown.gunshipUpkeep}</div>
                     <div>Ground force replacement: {lastTurnResult.upkeepBreakdown.groundForceReplacement}</div>
+                    <div>Ground defense upkeep: {lastTurnResult.upkeepBreakdown.groundDefenseMaintenance}</div>
+
                     <div className="font-medium">Total: {lastTurnResult.upkeepBreakdown.totalUpkeep}</div>
                   </div>
                 )}
