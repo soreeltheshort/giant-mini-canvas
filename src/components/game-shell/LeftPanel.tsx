@@ -95,8 +95,13 @@ interface LeftPanelProps {
     onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
     /** TEST MODE: set garrison current/max on a system. */
     onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
+    /** Player action: recruit one ground defense unit at a system they own. */
+    onRecruitGarrison?: (systemId: number) => void;
+    /** Player action: disband one ground defense unit at a system they own. */
+    onDisbandGarrison?: (systemId: number) => void;
   };
 }
+
 
 const STAT_ITEMS: { key: keyof GlobalStats; label: string; icon: React.ElementType; format?: (v: number) => string }[] =
   [
