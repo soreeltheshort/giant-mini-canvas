@@ -19,7 +19,7 @@ import PlayerMapCanvas from "@/components/game-shell/PlayerMapCanvas";
 import BottomStrip from "@/components/game-shell/BottomStrip";
 import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
 import type { GameMode, MapSelection } from "@/components/game-shell/gameShellTypes";
-import { DUMMY_STATS, DUMMY_NEWS } from "@/components/game-shell/gameShellTypes";
+import { DUMMY_STATS } from "@/components/game-shell/gameShellTypes";
 import { useIsTablet } from "@/hooks/useIsTablet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useGameMusic } from "@/hooks/useGameMusic";
@@ -1096,12 +1096,13 @@ const PlayerGame = () => {
   };
 
   const handleViewNews = () => {
-    const firstUnread = DUMMY_NEWS.find((n) => !n.read);
+    const firstUnread = realDispatches.find((n) => !n.read);
     if (firstUnread) {
       setSelection({ type: "news", id: firstUnread.id });
     }
     setRightPanelOpen(true);
   };
+
 
   const handleSystemClick = (system: SystemData) => {
     setSelection({ type: "region", id: `sys-${system.system_id}` });
@@ -1691,18 +1692,11 @@ const PlayerGame = () => {
     return null;
   })();
 
-  // Real dispatches sourced from game_logs (currently: planet capture / colonize
-  // events involving this player's province). Falls back to dummy story flavor
-  // for everything else.
-  const rebasedNews = (() => {
-    const currentTurn = game.turn_number;
-    const maxDummyTurn = Math.max(...DUMMY_NEWS.map(n => n.turn));
-    const offset = currentTurn - maxDummyTurn;
-    const dummy = DUMMY_NEWS.map(n => ({ ...n, turn: Math.max(1, n.turn + offset) }));
-    const real = realDispatches;
-    // Real first, then dummy — most recent first within each.
-    return [...real, ...dummy];
-  })();
+  // Player-facing dispatches sourced only from real game_logs events.
+  // Dummy/flavor stories have been removed — empty state is expected until
+  // real events (captures, colonizations, etc.) occur.
+  const rebasedNews = realDispatches;
+
 
   if (!player.initialized && initStep > 0) {
     return <InitScreen step={initStep} factionName={factionName} onContinue={advanceInit} />;
