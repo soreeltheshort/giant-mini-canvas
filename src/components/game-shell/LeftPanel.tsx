@@ -810,6 +810,9 @@ function InlineRegionDetail({
   playerTreasury,
   adminPointsAvailable,
   playerOwnerClassification,
+  testMode,
+  onTestSetFacilityQty,
+  onTestSetGarrison,
 }: {
   id: string;
   gameData?: GameMapData;
@@ -824,6 +827,9 @@ function InlineRegionDetail({
   playerTreasury?: number;
   adminPointsAvailable?: number;
   playerOwnerClassification?: string;
+  testMode?: boolean;
+  onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
+  onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
 }) {
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
   const realSys =
