@@ -63,6 +63,8 @@ export interface RunTurnArgs {
   mapState: MapState;
   facilityTypes: DbFacilityType[];
   shipTypes: ShipTypeForUpkeep[];
+  /** Admin-only perf instrumentation. Default false — regular players pay no overhead. */
+  enablePerf?: boolean;
 }
 
 export interface RunTurnResult {
@@ -74,6 +76,9 @@ export interface RunTurnResult {
    */
   playerEcon: Map<string, { tribute: number; maintenance: number }>;
   logsInserted: number;
+  /** Perf report entries (only populated when enablePerf=true). */
+  perf?: Array<PerfEntry & { pct: number }>;
+  perfTotalMs?: number;
 }
 
 export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult> {
