@@ -70,21 +70,64 @@ function shuffleInPlace<T>(arr: T[], rng: () => number): T[] {
   return arr;
 }
 
+/** Per-unit die roll captured during a combat round for debug transcripts. */
+export interface RollRecord { i: number; roll: number; hit: boolean; }
+export interface RoundResult {
+  aLeft: number; bLeft: number; aKilled: number; bKilled: number;
+  aRolls: RollRecord[]; bRolls: RollRecord[];
+}
+
 /**
  * One simultaneous round of attrition.
  * Each unit on each side rolls independently against `killChance` to kill
  * one enemy unit. Both sides apply losses at the same time. Returns the
- * survivor counts after the round.
+ * survivor counts plus per-unit rolls so callers can build a debug transcript.
  */
-function resolveRound(a: number, b: number, killChance: number, rng: () => number): { aLeft: number; bLeft: number; aKilled: number; bKilled: number } {
+function resolveRound(a: number, b: number, killChance: number, rng: () => number): RoundResult {
+  const aRolls: RollRecord[] = [];
   let aKills = 0;
-  for (let i = 0; i < a; i++) if (rng() < killChance) aKills++;
+  for (let i = 0; i < a; i++) {
+    const roll = rng();
+    const hit = roll < killChance;
+    if (hit) aKills++;
+    aRolls.push({ i: i + 1, roll, hit });
+  }
+  const bRolls: RollRecord[] = [];
   let bKills = 0;
-  for (let i = 0; i < b; i++) if (rng() < killChance) bKills++;
-  // Cap kills at the opposing pool size.
+  for (let i = 0; i < b; i++) {
+    const roll = rng();
+    const hit = roll < killChance;
+    if (hit) bKills++;
+    bRolls.push({ i: i + 1, roll, hit });
+  }
   const aCasualties = Math.min(a, bKills);
   const bCasualties = Math.min(b, aKills);
-  return { aLeft: a - aCasualties, bLeft: b - bCasualties, aKilled: bCasualties, bKilled: aCasualties };
+  return {
+    aLeft: a - aCasualties, bLeft: b - bCasualties,
+    aKilled: bCasualties, bKilled: aCasualties,
+    aRolls, bRolls,
+  };
+}
+
+/** Compact roll list into a readable one-liner: "0.213 HIT  0.884 miss  … → N hits". */
+function formatRollLine(rolls: RollRecord[]): string {
+  if (rolls.length === 0) return "(no units)";
+  const MAX = 40;
+  const HEAD = 20;
+  const TAIL = 20;
+  let render = rolls;
+  let elided = 0;
+  if (rolls.length > MAX) {
+    elided = rolls.length - HEAD - TAIL;
+    render = [...rolls.slice(0, HEAD), ...rolls.slice(-TAIL)];
+  }
+  const parts: string[] = [];
+  render.forEach((r, idx) => {
+    if (elided > 0 && idx === HEAD) parts.push(`… ${elided} more …`);
+    parts.push(`${r.roll.toFixed(3)} ${r.hit ? "HIT " : "miss"}`);
+  });
+  const hits = rolls.filter(r => r.hit).length;
+  return `${parts.join("  ")}   → ${hits}/${rolls.length} hits`;
 }
 
 interface InvaderEntry {
