@@ -394,6 +394,9 @@ function InlineContextContent({
             playerTreasury={playerTreasury}
             adminPointsAvailable={adminPointsAvailable}
             playerOwnerClassification={playerOwnerClassification}
+            testMode={testMode}
+            onTestSetFacilityQty={onTestSetFacilityQty}
+            onTestSetGarrison={onTestSetGarrison}
           />
         ) : selection.type === "army" ? (
           <InlineArmyDetail
