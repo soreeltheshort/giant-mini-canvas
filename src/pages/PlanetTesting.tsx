@@ -112,7 +112,9 @@ const PlanetTesting = () => {
           pop_and_resource_tribute: map.pop_and_resource_tribute ?? DEFAULT_TURN_CONSTANTS.pop_and_resource_tribute,
           pop_or_resources_tribute: map.pop_or_resources_tribute ?? DEFAULT_TURN_CONSTANTS.pop_or_resources_tribute,
           ground_force_replacement_cost: map.ground_force_replacement_cost ?? DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost,
+          ground_defense_maintenance: map.ground_defense_maintenance ?? DEFAULT_TURN_CONSTANTS.ground_defense_maintenance,
         });
+
       }
     };
     loadConstants();
@@ -637,6 +639,8 @@ const PlanetTesting = () => {
                     <div>Fighter upkeep: {lastTurnResult.upkeepBreakdown.fighterUpkeep}</div>
                     <div>Gunship upkeep: {lastTurnResult.upkeepBreakdown.gunshipUpkeep}</div>
                     <div>Ground force replacement: {lastTurnResult.upkeepBreakdown.groundForceReplacement}</div>
+                    <div>Ground defense upkeep: {lastTurnResult.upkeepBreakdown.groundDefenseMaintenance}</div>
+
                     <div className="font-medium">Total: {lastTurnResult.upkeepBreakdown.totalUpkeep}</div>
                   </div>
                 )}
