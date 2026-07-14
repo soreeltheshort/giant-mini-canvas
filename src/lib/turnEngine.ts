@@ -266,7 +266,12 @@ export function processNextTurn(
     groundForceReplacement = replenish * constants.ground_force_replacement_cost;
   }
 
-  const totalUpkeep = facilityMaintenance + fighterUpkeep + gunshipUpkeep + groundForceReplacement;
+  // --- Step 9b: Ground defense per-unit maintenance (facility-style, always). ---
+  const groundDefenseMaintenance =
+    (p.current_ground_defenses || 0) * (constants.ground_defense_maintenance || 0);
+
+  const totalUpkeep =
+    facilityMaintenance + fighterUpkeep + gunshipUpkeep + groundForceReplacement + groundDefenseMaintenance;
   p.upkeep = totalUpkeep;
 
   // --- Step 10 & 11: Income ---
@@ -287,8 +292,10 @@ export function processNextTurn(
       fighterUpkeep,
       gunshipUpkeep,
       groundForceReplacement,
+      groundDefenseMaintenance,
       totalUpkeep,
     },
+
     completedFacilities,
   };
 }
