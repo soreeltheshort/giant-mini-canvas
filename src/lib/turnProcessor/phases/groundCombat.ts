@@ -589,9 +589,77 @@ export const groundCombatPhase: Phase = {
             phase_b: null, outcome: "mutual_annihilation",
           },
         });
+
+        // Emit per-observer dispatches for this mutual-annihilation event.
+        {
+          const debugLines: string[] = [
+            `${sys.system_name} — turn ${currentTurn} — seed ${seed} — killChance ${killChance.toFixed(2)}`,
+            `PHASE A (${phaseATranscript.length} pairing${phaseATranscript.length === 1 ? "" : "s"}):`,
+          ];
+          for (const t of phaseATranscript) {
+            if (t.sitting_out) {
+              debugLines.push(`  ${t.sitting_out} sits out with ${t.gi} GI`);
+              continue;
+            }
+            debugLines.push(`  ${t.attacker} (${t.a_start}) vs ${t.defender} (${t.b_start})`);
+            debugLines.push(`    A rolls: ${formatRollLine(t.a_rolls)}`);
+            debugLines.push(`    B rolls: ${formatRollLine(t.b_rolls)}`);
+            debugLines.push(`    applied: A −${t.b_kills_on_a} → ${t.a_end}, B −${t.a_kills_on_b} → ${t.b_end}`);
+          }
+          debugLines.push(`RESULT: all invaders wiped out; planet untouched.`);
+
+          const basePayload = {
+            schema: "dispatch.ground_combat.v1",
+            turn: currentTurn,
+            system: {
+              id: systemId, name: sys.system_name,
+              hex: (() => { const h = Array.from(mapState.hexes.values()).find(hx => hx.hex_id === sys.hex_id); return h ? { x: h.x, y: h.y } : null; })(),
+              planet_type: sys.planet_type_id || null,
+              population_before: Number(sys.current_population) || 0,
+              population_after: Number(sys.current_population) || 0,
+            },
+            attacker: {
+              faction: null, faction_display: null, is_infect: false,
+              fleet_name: `${invaders.length} invaders`,
+              ground_force_start: invaders.reduce((s, i) => s + i.starting_gi, 0),
+              ground_force_end: 0,
+              transports_destroyed: 0,
+            },
+            defender: {
+              faction: sys.owner || null,
+              faction_display: displayForOwner(sys.owner),
+              ground_defenses_start: Number(sys.current_ground_defenses) || 0,
+              ground_defenses_end: Number(sys.current_ground_defenses) || 0,
+            },
+            outcome: {
+              kind: "mutual_annihilation",
+              rule_path: "standard",
+              new_owner: sys.owner || null,
+              previous_owner: sys.owner || null,
+              kill_chance: killChance,
+              synod_purge: null,
+            },
+            combat_transcript: { seed, kill_chance: killChance, phase_a: phaseATranscript, phase_b: null },
+            debug_lines: debugLines,
+            narration_hints: {
+              tone: "grim",
+              headline_seed: `Invaders annihilate one another at ${sys.system_name}`,
+            },
+          };
+          emitDispatches({
+            sys, basePayload,
+            message: `Sensors report mutual annihilation of invading forces at ${sys.system_name}.`,
+            debugLines,
+            attackerOwner: invaders[0]?.owner_classification || "",
+            previousOwner: sys.owner || "",
+            championFleetName: "(none)",
+          });
+        }
+
         resolved++;
         continue;
       }
+
 
       // ── Phase B: champion attacks the planet ──
       survivors.sort((a, b) => {
