@@ -343,6 +343,9 @@ function InlineContextContent({
   adminPointsAvailable?: number;
   onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
   onStartCommissionTargeting?: (fleetName: string) => void;
+  testMode?: boolean;
+  onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
+  onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
 }) {
   const getModeIcon = () => {
     if (selection.type === "news") return <Scroll className="w-3.5 h-3.5" />;
