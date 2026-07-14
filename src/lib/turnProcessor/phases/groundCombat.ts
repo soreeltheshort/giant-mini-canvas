@@ -403,12 +403,14 @@ export const groundCombatPhase: Phase = {
 
       // ── Phase A: pair-fight inter-invader attrition ──
       const phaseAEvents: any[] = [];
+      const phaseATranscript: any[] = [];
       if (invaders.length >= 2) {
         const order = shuffleInPlace([...invaders], rng);
         const sittingOut = order.length % 2 === 1 ? order.pop()! : null;
         for (let i = 0; i < order.length; i += 2) {
           const A = order[i];
           const B = order[i + 1];
+          const aStart = A.gi, bStart = B.gi;
           const round = resolveRound(A.gi, B.gi, killChance, rng);
           A.gi = round.aLeft;
           B.gi = round.bLeft;
@@ -418,11 +420,20 @@ export const groundCombatPhase: Phase = {
             attacker_losses: round.bKilled, defender_losses: round.aKilled,
             attacker_left: A.gi, defender_left: B.gi,
           });
+          phaseATranscript.push({
+            attacker: A.fleet_name, defender: B.fleet_name,
+            a_start: aStart, b_start: bStart,
+            a_rolls: round.aRolls, b_rolls: round.bRolls,
+            a_kills_on_b: round.bKilled, b_kills_on_a: round.aKilled,
+            a_end: A.gi, b_end: B.gi,
+          });
         }
         if (sittingOut) {
           phaseAEvents.push({ sitting_out: sittingOut.fleet_name, owner: sittingOut.owner_classification, gi: sittingOut.gi });
+          phaseATranscript.push({ sitting_out: sittingOut.fleet_name, gi: sittingOut.gi });
         }
       }
+
 
       // Drop any invaders that were wiped out in Phase A.
       const survivors = invaders.filter(inv => inv.gi > 0);
