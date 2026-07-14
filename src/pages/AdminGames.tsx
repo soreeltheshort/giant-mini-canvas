@@ -289,14 +289,45 @@ const AdminGames = () => {
     if (!selectedGame || !mapState) return;
     const label = snapshotLabel.trim() || `Turn ${selectedGame.turn_number} snapshot`;
     const serialized = serializeMapState(mapState);
+
+    // Bake all mutable per-game state into the snapshot so Restore is truly
+    // point-in-time. Without this, game_fleet_ships / game_factions / intel
+    // continue to drift and "Restore" silently loses fidelity.
+    const gameId = selectedGame.id;
+    const [gfRes, gfsRes, factRes, sysIntelRes, fleetIntelRes, ordersRes, gameMetaRes] = await Promise.all([
+      (supabase as any).from("game_fleets").select("*").eq("game_id", gameId),
+      (supabase as any)
+        .from("game_fleet_ships")
+        .select("*, game_fleets!inner(game_id)")
+        .eq("game_fleets.game_id", gameId),
+      (supabase as any).from("game_factions").select("*").eq("game_id", gameId),
+      (supabase as any).from("player_system_intel").select("*").eq("game_id", gameId),
+      (supabase as any).from("player_fleet_intel").select("*").eq("game_id", gameId),
+      (supabase as any).from("player_orders").select("*").eq("game_id", gameId),
+      (supabase as any).from("games").select("turn_phase, is_test_mode, status").eq("id", gameId).single(),
+    ]);
+
+    // Strip the join wrapper off game_fleet_ships rows.
+    const gameFleetShips = ((gfsRes.data as any[]) || []).map((r) => {
+      const { game_fleets: _drop, ...rest } = r;
+      return rest;
+    });
+
     const { error } = await (supabase as any).from("game_snapshots").insert({
-      game_id: selectedGame.id,
+      game_id: gameId,
       turn_number: selectedGame.turn_number,
       label,
       map_data_json: serialized,
+      game_fleets_json: gfRes.data || [],
+      game_fleet_ships_json: gameFleetShips,
+      game_factions_json: factRes.data || [],
+      player_system_intel_json: sysIntelRes.data || [],
+      player_fleet_intel_json: fleetIntelRes.data || [],
+      player_orders_json: ordersRes.data || [],
+      game_meta_json: gameMetaRes.data || null,
     });
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    await addLog(selectedGame.id, "snapshot_saved", `Snapshot saved: "${label}" at turn ${selectedGame.turn_number}`);
+    await addLog(gameId, "snapshot_saved", `Snapshot saved: "${label}" at turn ${selectedGame.turn_number}`);
     setSnapshotLabel("");
     await loadGame(selectedGame);
     toast({ title: "Snapshot saved", description: label });
@@ -304,22 +335,82 @@ const AdminGames = () => {
 
   const loadSnapshot = async (snapshot: GameSnapshotRow) => {
     if (!selectedGame) return;
-    if (!confirm(`Restore game to "${snapshot.label}" (turn ${snapshot.turn_number})? This will overwrite the current game state.`)) return;
-    // Fetch the full snapshot data
-    const { data } = await (supabase as any).from("game_snapshots").select("map_data_json").eq("id", snapshot.id).single();
-    if (!data) return;
-    // Update the game with the snapshot's map and turn number
-    await (supabase as any).from("games").update({ map_data_json: data.map_data_json, turn_number: snapshot.turn_number }).eq("id", selectedGame.id);
-    await addLog(selectedGame.id, "snapshot_restored", `Restored to snapshot: "${snapshot.label}" (turn ${snapshot.turn_number})`);
-    // Reload
+    const gameId = selectedGame.id;
+    // Fetch full snapshot including new baked-in state columns
+    const { data, error: fetchErr } = await (supabase as any)
+      .from("game_snapshots")
+      .select("map_data_json, game_fleets_json, game_fleet_ships_json, game_factions_json, player_system_intel_json, player_fleet_intel_json, player_orders_json, game_meta_json")
+      .eq("id", snapshot.id)
+      .single();
+    if (fetchErr || !data) { toast({ title: "Restore failed", description: fetchErr?.message || "Snapshot missing", variant: "destructive" }); return; }
+
+    const isFull = Array.isArray(data.game_fleets_json);
+    const warn = isFull ? "" : "\n\nWARNING: This is a LEGACY snapshot (map-only). Ship rosters, treasury, and intel WILL NOT be restored — they will keep their current values.";
+    if (!confirm(`Restore game to "${snapshot.label}" (turn ${snapshot.turn_number})? This will overwrite the current game state.${isFull ? "\n\nShip rosters, treasury, and intel will be restored." : warn}`)) return;
+
+    if (isFull) {
+      // 1) Delete existing mutable state for this game.
+      //    game_fleet_ships must go before game_fleets (FK).
+      const { data: existingFleets } = await (supabase as any)
+        .from("game_fleets").select("id").eq("game_id", gameId);
+      const existingFleetIds = ((existingFleets as any[]) || []).map((r) => r.id);
+      if (existingFleetIds.length > 0) {
+        await (supabase as any).from("game_fleet_ships").delete().in("game_fleet_id", existingFleetIds);
+      }
+      await (supabase as any).from("game_fleets").delete().eq("game_id", gameId);
+      await (supabase as any).from("player_system_intel").delete().eq("game_id", gameId);
+      await (supabase as any).from("player_fleet_intel").delete().eq("game_id", gameId);
+      await (supabase as any).from("player_orders").delete().eq("game_id", gameId);
+      await (supabase as any).from("game_factions").delete().eq("game_id", gameId);
+
+      // 2) Re-insert snapshotted rows verbatim (preserving ids so map JSON
+      //    fleet_id references still resolve).
+      const factions = (data.game_factions_json as any[]) || [];
+      if (factions.length) {
+        await (supabase as any).from("game_factions").insert(factions);
+      }
+
+      const fleets = (data.game_fleets_json as any[]) || [];
+      if (fleets.length) {
+        // Insert fleets. The AFTER INSERT trigger will auto-populate
+        // game_fleet_ships from the template — we delete those immediately
+        // after and replace with the snapshotted authoritative rows.
+        await (supabase as any).from("game_fleets").insert(fleets);
+        const newFleetIds = fleets.map((f: any) => f.id);
+        await (supabase as any).from("game_fleet_ships").delete().in("game_fleet_id", newFleetIds);
+        const ships = (data.game_fleet_ships_json as any[]) || [];
+        if (ships.length) {
+          await (supabase as any).from("game_fleet_ships").insert(ships);
+        }
+      }
+
+      const sysIntel = (data.player_system_intel_json as any[]) || [];
+      if (sysIntel.length) await (supabase as any).from("player_system_intel").insert(sysIntel);
+      const fleetIntel = (data.player_fleet_intel_json as any[]) || [];
+      if (fleetIntel.length) await (supabase as any).from("player_fleet_intel").insert(fleetIntel);
+      const orders = (data.player_orders_json as any[]) || [];
+      if (orders.length) await (supabase as any).from("player_orders").insert(orders);
+    }
+
+    // 3) Restore the game row (map JSON + turn + turn_phase).
+    const meta = data.game_meta_json || {};
+    const gameUpdate: any = {
+      map_data_json: data.map_data_json,
+      turn_number: snapshot.turn_number,
+    };
+    if (meta.turn_phase) gameUpdate.turn_phase = meta.turn_phase;
+    await (supabase as any).from("games").update(gameUpdate).eq("id", gameId);
+    await addLog(gameId, "snapshot_restored", `Restored to snapshot: "${snapshot.label}" (turn ${snapshot.turn_number})${isFull ? " [full]" : " [legacy: map only]"}`);
+
+    // Reload local state
     const updatedGame = { ...selectedGame, turn_number: snapshot.turn_number };
     setSelectedGame(updatedGame);
     try { setMapState(deserializeMapState(data.map_data_json)); } catch { setMapState(null); }
     await fetchGames();
-    await refreshLogs(selectedGame.id);
-    const { data: sData } = await (supabase as any).from("game_snapshots").select("id, game_id, turn_number, label, created_at").eq("game_id", selectedGame.id).order("turn_number", { ascending: false });
+    await refreshLogs(gameId);
+    const { data: sData } = await (supabase as any).from("game_snapshots").select("id, game_id, turn_number, label, created_at").eq("game_id", gameId).order("turn_number", { ascending: false });
     setSnapshots(sData || []);
-    toast({ title: "Snapshot restored", description: `Now at turn ${snapshot.turn_number}` });
+    toast({ title: "Snapshot restored", description: `Now at turn ${snapshot.turn_number}${isFull ? " (full state)" : " (map only — legacy)"}` });
   };
 
   const forkSnapshot = async (snapshot: GameSnapshotRow) => {

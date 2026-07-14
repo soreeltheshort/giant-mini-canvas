@@ -1545,26 +1545,47 @@ export type Database = {
       game_snapshots: {
         Row: {
           created_at: string
+          game_factions_json: Json | null
+          game_fleet_ships_json: Json | null
+          game_fleets_json: Json | null
           game_id: string
+          game_meta_json: Json | null
           id: string
           label: string
           map_data_json: Json
+          player_fleet_intel_json: Json | null
+          player_orders_json: Json | null
+          player_system_intel_json: Json | null
           turn_number: number
         }
         Insert: {
           created_at?: string
+          game_factions_json?: Json | null
+          game_fleet_ships_json?: Json | null
+          game_fleets_json?: Json | null
           game_id: string
+          game_meta_json?: Json | null
           id?: string
           label?: string
           map_data_json?: Json
+          player_fleet_intel_json?: Json | null
+          player_orders_json?: Json | null
+          player_system_intel_json?: Json | null
           turn_number?: number
         }
         Update: {
           created_at?: string
+          game_factions_json?: Json | null
+          game_fleet_ships_json?: Json | null
+          game_fleets_json?: Json | null
           game_id?: string
+          game_meta_json?: Json | null
           id?: string
           label?: string
           map_data_json?: Json
+          player_fleet_intel_json?: Json | null
+          player_orders_json?: Json | null
+          player_system_intel_json?: Json | null
           turn_number?: number
         }
         Relationships: [
