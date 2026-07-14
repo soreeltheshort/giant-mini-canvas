@@ -796,64 +796,30 @@ function InlineEmptyState({
   );
 }
 
-/* ── TEST MODE: in-game facility + garrison editor for a system ── */
+/* ── TEST MODE: in-game facility editor for a system (garrison lives in GarrisonCard) ── */
 function SystemTestEditor({
   system,
   gameData,
   onSetFacilityQty,
-  onSetGarrison,
 }: {
   system: import("@/lib/mapTypes").SystemData;
   gameData: GameMapData;
   onSetFacilityQty: (systemId: number, facilityTypeId: string, quantity: number) => void;
-  onSetGarrison: (systemId: number, current: number, max: number) => void;
 }) {
-  const [curGD, setCurGD] = useState<string>(String(system.current_ground_defenses ?? 0));
-  const [maxGD, setMaxGD] = useState<string>(String(system.max_ground_defenses ?? 0));
   const [addFacilityId, setAddFacilityId] = useState<string>("");
 
-  // Reset local inputs when the selected system changes.
   const sysId = system.system_id;
   useEffect(() => {
-    setCurGD(String(system.current_ground_defenses ?? 0));
-    setMaxGD(String(system.max_ground_defenses ?? 0));
     setAddFacilityId("");
-  }, [sysId, system.current_ground_defenses, system.max_ground_defenses]);
+  }, [sysId]);
 
   const existingIds = new Set((system.facilities || []).map((f) => f.facility_type_id));
   const addable = (gameData.facilityTypes || []).filter((ft) => !existingIds.has(ft.facility_type_id));
 
   return (
-    <ImperialCard title="Test Mode · Edit System" subtitle="Admin only — writes immediately">
+    <ImperialCard title="Test Mode · Edit Facilities" subtitle="Admin only — writes immediately">
       <div className="space-y-3">
-        {/* Garrison editor */}
-        <div className="space-y-1.5">
-          <div className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground">Garrison</div>
-          <div className="flex items-center gap-2">
-            <label className="text-[10px] text-slate-500 w-14">Current</label>
-            <input
-              type="number"
-              min={0}
-              value={curGD}
-              onChange={(e) => setCurGD(e.target.value)}
-              className="flex-1 h-7 px-2 rounded-sm border border-border bg-background text-xs"
-            />
-            <label className="text-[10px] text-slate-500 w-10 text-right">Max</label>
-            <input
-              type="number"
-              min={0}
-              value={maxGD}
-              onChange={(e) => setMaxGD(e.target.value)}
-              className="flex-1 h-7 px-2 rounded-sm border border-border bg-background text-xs"
-            />
-          </div>
-          <button
-            onClick={() => onSetGarrison(sysId, parseInt(curGD || "0", 10) || 0, parseInt(maxGD || "0", 10) || 0)}
-            className="w-full py-1 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider bg-crimson text-primary-foreground hover:bg-crimson-light"
-          >
-            Save Garrison
-          </button>
-        </div>
+
 
         {/* Facility editor */}
         <div className="space-y-1.5">
