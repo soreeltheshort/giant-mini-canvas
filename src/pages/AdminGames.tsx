@@ -168,29 +168,33 @@ const AdminGames = () => {
 
   /* ── load a game ── */
   const loadGame = useCallback(async (game: GameRow) => {
+    const perf = new PerfTimer(!!isAdmin);
     setSelectedGame(game);
     touchGameLastOpened(game.id);
     setReseedDone(false);
 
     // players
-    const { data: pData } = await (supabase as any).from("game_factions").select("*, factions:faction_id(id, name, code_name, is_player_faction)").eq("game_id", game.id).order("player_slot");
+    const { data: pData } = await perf.time("factions.load", () => (supabase as any).from("game_factions").select("*, factions:faction_id(id, name, code_name, is_player_faction)").eq("game_id", game.id).order("player_slot"));
     setPlayers(pData || []);
     // logs
-    const { data: lData } = await (supabase as any).from("game_logs").select("id, turn_number, log_type, message, created_at").eq("game_id", game.id).order("created_at", { ascending: false }).limit(100);
+    const { data: lData } = await perf.time("logs.load", () => (supabase as any).from("game_logs").select("id, turn_number, log_type, message, created_at").eq("game_id", game.id).order("created_at", { ascending: false }).limit(100));
     setLogs(lData || []);
     // snapshots
-    const { data: sData } = await (supabase as any).from("game_snapshots").select("id, game_id, turn_number, label, created_at").eq("game_id", game.id).order("turn_number", { ascending: false });
+    const { data: sData } = await perf.time("snapshots.load", () => (supabase as any).from("game_snapshots").select("id, game_id, turn_number, label, created_at").eq("game_id", game.id).order("turn_number", { ascending: false }));
     setSnapshots(sData || []);
     // map state from json
-    const { data: gData } = await (supabase as any).from("games").select("map_data_json").eq("id", game.id).single();
-    if (gData?.map_data_json && Object.keys(gData.map_data_json).length > 0) {
-      try {
-        setMapState(deserializeMapState(gData.map_data_json));
-      } catch { setMapState(null); }
-    } else {
-      setMapState(null);
-    }
-  }, []);
+    const { data: gData } = await perf.time("map.download", () => (supabase as any).from("games").select("map_data_json").eq("id", game.id).single());
+    await perf.time("map.deserialize", async () => {
+      if (gData?.map_data_json && Object.keys(gData.map_data_json).length > 0) {
+        try {
+          setMapState(deserializeMapState(gData.map_data_json));
+        } catch { setMapState(null); }
+      } else {
+        setMapState(null);
+      }
+    });
+    perf.logTable(`loadGame · ${game.name}`);
+  }, [isAdmin]);
 
   /* ── create game ── */
   const createGame = async () => {
