@@ -243,7 +243,24 @@ export default function TurnLogViewer({ gameId, showDetails = false, recentTurns
                               </details>
                             )}
 
-                            {!hasBattleDetails && hasDetails && (
+                            {!hasBattleDetails && hasDetails && Array.isArray(e.details_json?.debug_lines) && (
+                              <details className="ml-6 rounded border border-border bg-muted/20" open>
+                                <summary className="cursor-pointer px-2 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-foreground">
+                                  Ground combat transcript
+                                </summary>
+                                <pre className="overflow-x-auto border-t border-border px-3 py-2 font-mono text-[10px] leading-relaxed text-foreground whitespace-pre">
+{(e.details_json.debug_lines as string[]).join("\n")}
+                                </pre>
+                                <details className="border-t border-border">
+                                  <summary className="cursor-pointer px-2 py-1 text-[10px] text-muted-foreground">raw payload</summary>
+                                  <pre className="mt-1 overflow-x-auto rounded bg-muted/50 p-2 text-[10px] text-foreground">
+                                    {JSON.stringify(e.details_json, null, 2)}
+                                  </pre>
+                                </details>
+                              </details>
+                            )}
+
+                            {!hasBattleDetails && hasDetails && !Array.isArray(e.details_json?.debug_lines) && (
                               <details className="ml-6">
                                 <summary className="cursor-pointer text-[10px] text-foreground">details</summary>
                                 <pre className="mt-1 overflow-x-auto rounded bg-muted/50 p-2 text-[10px] text-foreground">
@@ -251,6 +268,7 @@ export default function TurnLogViewer({ gameId, showDetails = false, recentTurns
                                 </pre>
                               </details>
                             )}
+
                           </li>
                         );
                       })}
