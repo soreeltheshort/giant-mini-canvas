@@ -93,13 +93,19 @@ export async function forkGameFromSnapshot(params: {
 }): Promise<ForkResult> {
   const { parentGameId, snapshotId, createdBy } = params;
 
-  // Load parent game + snapshot
+  // Load parent game + snapshot (include full-state columns; may be null on legacy snapshots)
   const [{ data: parent, error: parentErr }, { data: snap, error: snapErr }] = await Promise.all([
     (supabase as any).from("games").select("id, name, status").eq("id", parentGameId).single(),
-    (supabase as any).from("game_snapshots").select("id, turn_number, label, map_data_json").eq("id", snapshotId).single(),
+    (supabase as any)
+      .from("game_snapshots")
+      .select("id, turn_number, label, map_data_json, game_fleets_json, game_fleet_ships_json, game_factions_json, player_system_intel_json, player_fleet_intel_json, game_meta_json")
+      .eq("id", snapshotId)
+      .single(),
   ]);
   if (parentErr || !parent) throw new Error(`Parent game not found: ${parentErr?.message || "missing"}`);
   if (snapErr || !snap) throw new Error(`Snapshot not found: ${snapErr?.message || "missing"}`);
+
+  const hasFullState = Array.isArray(snap.game_fleets_json);
 
   // Reset fleet_ids in the snapshot's map JSON so materializeGameFleets will
   // create fresh game_fleets rows for the new game (instead of reusing the
@@ -109,15 +115,12 @@ export async function forkGameFromSnapshot(params: {
     const source = UUID_RE.test(fl.source_fleet_id || "")
       ? fl.source_fleet_id
       : (UUID_RE.test(fl.fleet_id) ? fl.fleet_id : fl.fleet_id);
-    // Wipe the per-game UUID; keep source_fleet_id (template) so
-    // materializeGameFleets can re-insert.
     return { ...fl, fleet_id: source!, source_fleet_id: source };
   });
   const resetMapState: MapState = { ...parsedMap, fleets: resetFleets };
 
   const branchName = await computeBranchName(parent.name, snap.label || `Turn ${snap.turn_number}`);
 
-  // Insert the new game row with serialized map (without materialized fleets yet)
   const initialSerialized = serializeMapState(resetMapState);
   const now = new Date().toISOString();
   const { data: newGame, error: insertErr } = await (supabase as any)
@@ -127,7 +130,7 @@ export async function forkGameFromSnapshot(params: {
       created_by: createdBy,
       status: parent.status === "completed" ? "paused" : parent.status,
       turn_number: snap.turn_number,
-      turn_phase: "orders",
+      turn_phase: (snap.game_meta_json as any)?.turn_phase || "orders",
       map_data_json: initialSerialized,
       parent_game_id: parentGameId,
       parent_snapshot_id: snapshotId,
@@ -140,27 +143,101 @@ export async function forkGameFromSnapshot(params: {
 
   const newGameId: string = newGame.id;
 
-  // Copy game_factions from parent (reset per-turn order locks)
-  const { data: parentFactions } = await (supabase as any)
-    .from("game_factions")
-    .select("user_id, faction_id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, is_ai, ai_persona_id, scouted_hex_ids")
-    .eq("game_id", parentGameId);
+  // ── Copy factions ──
   let factionsCopied = 0;
-  if (parentFactions && parentFactions.length > 0) {
-    const rows = parentFactions.map((pf: any) => ({
-      ...pf,
-      game_id: newGameId,
-      orders_locked: false,
-    }));
-    const { error: factErr } = await (supabase as any).from("game_factions").insert(rows);
-    if (factErr) console.warn("[forkGameFromSnapshot] game_factions copy failed:", factErr.message);
-    else factionsCopied = rows.length;
+  if (hasFullState) {
+    const rows = ((snap.game_factions_json as any[]) || []).map((f) => {
+      const { id: _drop, game_id: _drop2, created_at: _drop3, ...rest } = f;
+      return { ...rest, game_id: newGameId, orders_locked: false };
+    });
+    if (rows.length) {
+      const { error: factErr } = await (supabase as any).from("game_factions").insert(rows);
+      if (factErr) console.warn("[forkGameFromSnapshot] game_factions copy failed:", factErr.message);
+      else factionsCopied = rows.length;
+    }
+  } else {
+    const { data: parentFactions } = await (supabase as any)
+      .from("game_factions")
+      .select("user_id, faction_id, player_slot, initialized, visible_system_ids, treasury, last_tribute, last_maintenance, admin_capability, combat_capability, admin_points_remaining, combat_points_remaining, is_ai, ai_persona_id, scouted_hex_ids")
+      .eq("game_id", parentGameId);
+    if (parentFactions && parentFactions.length > 0) {
+      const rows = parentFactions.map((pf: any) => ({ ...pf, game_id: newGameId, orders_locked: false }));
+      const { error: factErr } = await (supabase as any).from("game_factions").insert(rows);
+      if (factErr) console.warn("[forkGameFromSnapshot] game_factions copy failed:", factErr.message);
+      else factionsCopied = rows.length;
+    }
   }
 
-  // Re-materialize fleets for the new game; this rewrites map fleet_ids and
-  // creates game_fleets + (via trigger) game_fleet_ships.
-  const { updatedMap, created, reused } = await materializeGameFleets(newGameId, resetMapState);
-  const finalSerialized = serializeMapState(updatedMap);
+  // ── Fleets + ship rosters ──
+  let created = 0;
+  let reused = 0;
+  let finalMap = resetMapState;
+
+  if (hasFullState) {
+    // Insert fleets with NEW ids and build a mapping old_id → new_id so we can
+    // rewrite ship rows and the map JSON fleet_id references.
+    const snapFleets = (snap.game_fleets_json as any[]) || [];
+    const idMap = new Map<string, string>();
+    const newFleetRows = snapFleets.map((f) => {
+      const newId = crypto.randomUUID();
+      idMap.set(f.id, newId);
+      const { id: _drop, game_id: _drop2, created_at: _drop3, ...rest } = f;
+      return { ...rest, id: newId, game_id: newGameId };
+    });
+    if (newFleetRows.length) {
+      const { error: fErr } = await (supabase as any).from("game_fleets").insert(newFleetRows);
+      if (fErr) throw new Error(`Fork game_fleets insert failed: ${fErr.message}`);
+      // Trigger populated game_fleet_ships from templates — wipe and replace.
+      const newIds = newFleetRows.map((r) => r.id);
+      await (supabase as any).from("game_fleet_ships").delete().in("game_fleet_id", newIds);
+
+      const snapShips = (snap.game_fleet_ships_json as any[]) || [];
+      const shipRows = snapShips
+        .map((s) => {
+          const mapped = idMap.get(s.game_fleet_id);
+          if (!mapped) return null;
+          const { id: _drop, ...rest } = s;
+          return { ...rest, game_fleet_id: mapped };
+        })
+        .filter(Boolean);
+      if (shipRows.length) {
+        const { error: sErr } = await (supabase as any).from("game_fleet_ships").insert(shipRows);
+        if (sErr) console.warn("[forkGameFromSnapshot] game_fleet_ships insert failed:", sErr.message);
+      }
+      created = newFleetRows.length;
+    }
+
+    // Rewrite fleet_id references in map JSON to point at new game_fleets ids.
+    const rewrittenFleets: MapFleet[] = (parsedMap.fleets || []).map((fl) => {
+      const newId = idMap.get(fl.fleet_id);
+      return newId ? { ...fl, fleet_id: newId } : fl;
+    });
+    finalMap = { ...parsedMap, fleets: rewrittenFleets };
+
+    // Player intel is per-observer; copy verbatim to the new game.
+    const sysIntel = ((snap.player_system_intel_json as any[]) || []).map((r) => {
+      const { id: _drop, game_id: _drop2, created_at: _drop3, updated_at: _drop4, ...rest } = r;
+      return { ...rest, game_id: newGameId };
+    });
+    if (sysIntel.length) await (supabase as any).from("player_system_intel").insert(sysIntel);
+    const fleetIntel = ((snap.player_fleet_intel_json as any[]) || [])
+      .map((r) => {
+        const mapped = idMap.get(r.enemy_fleet_id);
+        if (!mapped) return null;
+        const { id: _drop, game_id: _drop2, created_at: _drop3, updated_at: _drop4, ...rest } = r;
+        return { ...rest, game_id: newGameId, enemy_fleet_id: mapped };
+      })
+      .filter(Boolean);
+    if (fleetIntel.length) await (supabase as any).from("player_fleet_intel").insert(fleetIntel);
+  } else {
+    // Legacy snapshot: rematerialize from templates as before.
+    const res = await materializeGameFleets(newGameId, resetMapState);
+    finalMap = res.updatedMap;
+    created = res.created;
+    reused = res.reused;
+  }
+
+  const finalSerialized = serializeMapState(finalMap);
   await (supabase as any).from("games").update({ map_data_json: finalSerialized }).eq("id", newGameId);
 
   // Lineage log entry on the new game
@@ -168,8 +245,8 @@ export async function forkGameFromSnapshot(params: {
     game_id: newGameId,
     turn_number: snap.turn_number,
     log_type: "game_forked",
-    message: `Forked from "${parent.name}" snapshot "${snap.label}" (turn ${snap.turn_number}).`,
-    details_json: { parent_game_id: parentGameId, parent_snapshot_id: snapshotId },
+    message: `Forked from "${parent.name}" snapshot "${snap.label}" (turn ${snap.turn_number})${hasFullState ? " [full state]" : " [legacy]"}.`,
+    details_json: { parent_game_id: parentGameId, parent_snapshot_id: snapshotId, full_state: hasFullState },
   });
 
   return {
