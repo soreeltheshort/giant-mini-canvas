@@ -15,6 +15,7 @@ import type { MapState } from "@/lib/mapTypes";
 import type { DbFacilityType } from "@/hooks/useFacilityTypes";
 import type { ShipTypeForUpkeep } from "@/lib/turnEngine";
 import type { Phase, TurnContext, PlayerCtx, ConditionalOrder } from "./types";
+import { PerfTimer, type PerfEntry } from "./perf";
 
 import { economyPhase } from "./phases/economy";
 import { movementPhase } from "./phases/movement";

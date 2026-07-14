@@ -82,6 +82,9 @@ export interface TurnContext {
 
   /** Logs queued for bulk insertion at the end of processing. */
   logs: PhaseLogEntry[];
+
+  /** Optional perf timer (admin-only). Phases may push nested timings via `perf?.time(...)`. */
+  perf?: PerfTimer;
 }
 
 /** A phase definition. Phases are pure-ish functions over the context. */
