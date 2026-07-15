@@ -106,12 +106,13 @@ function calculateCondition(planet: SystemData, facilityTypes: DbFacilityType[])
  * Calculate max ground defenses from facility bonuses.
  */
 function calculateMaxGroundDefenses(planet: SystemData, facilityTypes: DbFacilityType[]): number {
-  let total = 0;
+  const popBase = Math.floor(Math.max(0, Number(planet.current_population) || 0) / 20);
+  let bonus = 0;
   for (const f of planet.facilities || []) {
     const ft = findFT(facilityTypes, f.facility_type_id);
-    if (ft?.ground_defense_bonus) total += ft.ground_defense_bonus * f.quantity;
+    if (ft?.ground_defense_bonus) bonus += ft.ground_defense_bonus * f.quantity;
   }
-  return total;
+  return popBase + bonus;
 }
 
 /**
@@ -195,7 +196,6 @@ export function processNextTurn(
 
   // --- Step 3: Recalculate figured characteristics ---
   p.condition = calculateCondition(p, facilityTypes);
-  const figuredMaxGD = calculateMaxGroundDefenses(p, facilityTypes);
 
   // --- Step 4: Simulated events (placeholder) ---
   // TODO: apply one-time planet events here
@@ -208,6 +208,11 @@ export function processNextTurn(
   });
   p.morale = popStep.morale;
   p.current_population = popStep.current_population;
+
+  // Recompute max ground defenses AFTER population step so growth on turn N
+  // raises the ceiling on turn N. Baseline = floor(pop/20) + facility bonuses.
+  const figuredMaxGD = calculateMaxGroundDefenses(p, facilityTypes);
+  p.max_ground_defenses = figuredMaxGD;
 
   // --- Step 7: Tribute calculation ---
   // 7a: Base tribute
