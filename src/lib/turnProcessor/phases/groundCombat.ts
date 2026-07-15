@@ -1,49 +1,51 @@
 /**
- * Ground Combat Phase
+ * Ground Combat Phase — persistent surface war.
  *
  * Runs after Movement (so fleet positions are final) and before Visibility.
  *
- * Trigger (all three must be true for a fleet to launch a ground invasion):
- *   1. The fleet has a `fleet_attack` order this turn whose target is a
- *      planet/system — either via `target_system_id` directly, or via
- *      `target_fleet_id` whose target fleet sits on a system hex. The target
- *      hex must be within the attacker's ATTACK RANGE
- *      (= floor(attacker_map_speed / 2)) of the attacker's CURRENT position.
- *      Attacking does NOT move the fleet.
- *   2. At least one of the fleet's two strategy slots
- *      (`special1_role` / `special2_role`) is `Attack Planet`.
- *   3. The fleet's effective ground-invasion force is
- *      MAX(`fleets.current_ground_invasion`, sum of `ground_invasion`
- *      capacity across game-fleet-ships in the `Attack Planet` tactical
- *      group). The larger of the two values is what fights.
+ * TWO STAGES per turn:
  *
- * Resolution per planet (single round, deterministic):
- *   1. Phase A — Inter-invader attrition.
- *      If 2+ invaders are present, shuffle them deterministically and pair
- *      them up. Each pair fights ONE simultaneous round of GI-vs-GI: every
- *      unit on each side has a `ground_combat_kill_chance` (default 0.8) of
- *      destroying one enemy unit. Both sides apply losses simultaneously.
- *      An odd unpaired invader sits Phase A out.
- *   2. Phase B — Planet assault.
- *      The surviving invader with the highest remaining effective GI (ties
- *      broken deterministically) makes ONE simultaneous round vs the
- *      planet's `current_ground_defenses` using the same kill chance.
- *      Other surviving invaders do not attack this turn.
- *   3. If `current_ground_defenses` reaches 0, the planet's owner changes
- *      to the attacking fleet's owner. If the planet had 0 population it's
- *      logged as "colonize"; otherwise "capture". Surviving GI stays in the
- *      fleet (write-back to `fleets.current_ground_invasion` only — ship
- *      ground-invasion capacity is a derived stat from the fleet's roster).
+ * ─── Stage 1 — LANDING ────────────────────────────────────────────────────
+ * For every `fleet_attack` order this turn that resolves to a planet AND
+ * meets the invasion eligibility rules (Attack Planet strategy + effective
+ * ground-invasion force + attack range), the attacker's effective GI is
+ * deposited onto the target system as a `landed_forces` bucket keyed by
+ * owner_classification. Landing does NOT resolve combat — troops simply
+ * disembark. The fleet's `current_ground_invasion` is zeroed and, for INFECT
+ * attackers, the Attack-Planet ground-transport ships are consumed as today.
+ *
+ * ─── Stage 2 — SURFACE COMBAT ────────────────────────────────────────────
+ * For EVERY system with a non-empty `landed_forces`, run one deterministic
+ * round per turn (independent of any orders, so combat persists across
+ * turns until one side is gone):
+ *
+ *   Phase A — Hostile-vs-hostile attrition among landed_forces owner buckets
+ *   (shuffle, pair, simultaneous kill rolls, odd bucket sits out).
+ *
+ *   Phase B — Champion attacks garrison. The surviving landed bucket with
+ *   the largest force (deterministic tiebreak) fights ONE simultaneous round
+ *   vs `current_ground_defenses`.
+ *
+ * Ownership resolution:
+ *   - If defenses hit 0 and exactly one non-owner bucket remains, that
+ *     faction captures the planet. Its remaining troops become the new
+ *     `current_ground_defenses`, that bucket is cleared. Synod purge and
+ *     colonize logic apply exactly as today.
+ *   - If defenses hit 0 and >1 hostile buckets remain, the planet stays
+ *     unowned this turn — combat continues next round.
+ *   - If defenses > 0 and any hostile force remains, combat continues.
+ *
+ * INFECT rules (unchanged in intent, applied inside Stage 2):
+ *   - `infect_survivor_multiplier` applies when an INFECT champion survives
+ *     Phase B with the defender also surviving.
+ *   - Transport destruction happens on landing (Stage 1), not per round.
  */
 import type { Phase, TurnContext } from "../types";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
 import { applyPopulationStep } from "@/lib/turnEngine";
 import { destroyFleet } from "../fleetCleanup";
 
-
-
-// Inline mulberry32 RNG (kept in sync with battleEngine.ts so ground combat
-// is fully deterministic per game/turn).
+// Inline mulberry32 RNG (kept in sync with battleEngine.ts).
 function createRNG(seed: number) {
   let s = seed | 0;
   return () => {
@@ -61,7 +63,6 @@ function hashSeed(str: string): number {
   return hash;
 }
 
-/** Fisher-Yates shuffle using a seeded RNG. Mutates `arr`. */
 function shuffleInPlace<T>(arr: T[], rng: () => number): T[] {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -70,19 +71,12 @@ function shuffleInPlace<T>(arr: T[], rng: () => number): T[] {
   return arr;
 }
 
-/** Per-unit die roll captured during a combat round for debug transcripts. */
 export interface RollRecord { i: number; roll: number; hit: boolean; }
 export interface RoundResult {
   aLeft: number; bLeft: number; aKilled: number; bKilled: number;
   aRolls: RollRecord[]; bRolls: RollRecord[];
 }
 
-/**
- * One simultaneous round of attrition.
- * Each unit on each side rolls independently against `killChance` to kill
- * one enemy unit. Both sides apply losses at the same time. Returns the
- * survivor counts plus per-unit rolls so callers can build a debug transcript.
- */
 function resolveRound(a: number, b: number, killChance: number, rng: () => number): RoundResult {
   const aRolls: RollRecord[] = [];
   let aKills = 0;
@@ -109,12 +103,9 @@ function resolveRound(a: number, b: number, killChance: number, rng: () => numbe
   };
 }
 
-/** Compact roll list into a readable one-liner: "0.213 HIT  0.884 miss  … → N hits". */
 function formatRollLine(rolls: RollRecord[]): string {
   if (rolls.length === 0) return "(no units)";
-  const MAX = 40;
-  const HEAD = 20;
-  const TAIL = 20;
+  const MAX = 40, HEAD = 20, TAIL = 20;
   let render = rolls;
   let elided = 0;
   if (rolls.length > MAX) {
@@ -130,14 +121,10 @@ function formatRollLine(rolls: RollRecord[]): string {
   return `${parts.join("  ")}   → ${hits}/${rolls.length} hits`;
 }
 
-interface InvaderEntry {
-  game_fleet_id: string;
-  source_fleet_id: string;
-  fleet_name: string;
+/** Runtime bucket for one owner's landed forces on a planet. */
+interface SurfaceBucket {
   owner_classification: string;
-  /** Effective GI for this engagement = MAX(fleet GI, capacity in "Attack Planet" group). */
   gi: number;
-  /** Original starting GI before any attrition this turn. */
   starting_gi: number;
 }
 
@@ -147,11 +134,7 @@ export const groundCombatPhase: Phase = {
   async run(ctx: TurnContext) {
     const { supabase, gameId, currentTurn, mapState, orders } = ctx;
 
-    // 1. Load constants from combat_constants.
-    //    - ground_combat_kill_chance (default 0.8)
-    //    - infect_survivor_multiplier (default 5) — applied to an INFECT
-    //      invader's surviving GI when both sides still have ground forces
-    //      after a Phase B round.
+    // ── Load constants ──
     const { data: kcRows } = await (supabase as any)
       .from("combat_constants")
       .select("key, value")
@@ -161,16 +144,11 @@ export const groundCombatPhase: Phase = {
     const killChance = constByKey.has("ground_combat_kill_chance") ? constByKey.get("ground_combat_kill_chance")! : 0.8;
     const infectMultiplier = constByKey.has("infect_survivor_multiplier") ? constByKey.get("infect_survivor_multiplier")! : 5;
 
-
-    // Load faction INFECT flags so we can route invasions through the
-    // alternate (Synod-style) logic when the attacking faction has INFECT=true.
-    // Build a lookup keyed by every owner-classification variant (name,
-    // code_name, lower-cased) so the runtime string on a fleet matches.
+    // ── Faction INFECT lookup ──
     const infectByOwner = new Map<string, boolean>();
     {
       const { data: facRows } = await (supabase as any)
-        .from("factions")
-        .select("name, code_name, infect");
+        .from("factions").select("name, code_name, infect");
       for (const f of (facRows || [])) {
         const v = !!f.infect;
         if (f.name) infectByOwner.set(String(f.name).toLowerCase(), v);
@@ -183,216 +161,7 @@ export const groundCombatPhase: Phase = {
       return infectByOwner.get(k) === true;
     };
 
-
-    // 2. Map hex (x,y) -> system on that hex (only ones we can invade).
-    const systemsByHex = new Map<string, any>();
-    for (const sys of mapState.systems.values()) {
-      const hex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
-      if (!hex) continue;
-      systemsByHex.set(`${hex.x},${hex.y}`, sys);
-    }
-
-    // 3. Find all fleet_attack orders for this turn and resolve each into a
-    //    candidate (attacker fleet, target system) pair.
-    const attackOrders = orders.filter(
-      (o) => o.order_type === "other" && (o.order_json as any)?.kind === "fleet_attack",
-    );
-
-    if (attackOrders.length === 0) {
-      ctx.logs.push({
-        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
-        log_type: "noop", message: "No attack orders this turn — no ground invasions.",
-      });
-      return;
-    }
-
-    // Helper: find the system on a given hex coord (returns undefined if none).
-    const sysOnHex = (x: number, y: number) => systemsByHex.get(`${x},${y}`);
-
-    // Build (attackerGameFleetId -> targetSystem) candidates.
-    interface Candidate { mf: any; sys: any; reason: "direct_planet" | "fleet_on_planet"; distance: number; range: number; }
-    const candidates: Candidate[] = [];
-    const outOfRangeLogs: string[] = [];
-    // Cache attacker map-speed lookups so we hit the DB at most once per fleet.
-    const speedCache = new Map<string, number>();
-    const speedFor = async (gameFleetId: string) => {
-      if (speedCache.has(gameFleetId)) return speedCache.get(gameFleetId)!;
-      const sp = await fetchFleetMapSpeed(supabase as any, gameFleetId);
-      speedCache.set(gameFleetId, sp);
-      return sp;
-    };
-
-    for (const o of attackOrders) {
-      const oj = o.order_json as any;
-      const attackerGameFleetId: string = oj.fleet_id;
-      const attacker = mapState.fleets.find(f => f.fleet_id === attackerGameFleetId);
-      if (!attacker) continue;
-
-      // Resolve target system (and the hex it sits on).
-      let sys: any | undefined;
-      let reason: "direct_planet" | "fleet_on_planet" | undefined;
-      if (oj.target_system_id != null) {
-        sys = mapState.systems.get(Number(oj.target_system_id));
-        reason = "direct_planet";
-      } else if (oj.target_fleet_id) {
-        const tgtFleet = mapState.fleets.find(f => f.fleet_id === oj.target_fleet_id);
-        if (tgtFleet) {
-          sys = sysOnHex(tgtFleet.hex_x, tgtFleet.hex_y);
-          reason = "fleet_on_planet";
-        }
-      }
-      if (!sys || !reason) continue;
-
-      const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
-      if (!sysHex) continue;
-
-      // Range rule: target hex must be within floor(map_speed / 2) of the
-      // attacker's CURRENT (post-movement) position. Attacking does not move.
-      const speed = await speedFor(attackerGameFleetId);
-      const range = attackRangeFromMapSpeed(speed);
-      const distance = hexDistance(attacker.hex_x, attacker.hex_y, sysHex.x, sysHex.y);
-      if (distance > range) {
-        outOfRangeLogs.push(
-          `${attacker.fleet_name}: planet ${sys.system_name} is ${distance} hex(es) away — exceeds attack range ${range} (map speed ${speed}).`,
-        );
-        continue;
-      }
-
-      candidates.push({ mf: attacker, sys, reason, distance, range });
-    }
-
-    for (const m of outOfRangeLogs) {
-      ctx.logs.push({
-        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
-        log_type: "ground_invasion_out_of_range", message: m,
-      });
-    }
-
-
-    if (candidates.length === 0) {
-      ctx.logs.push({
-        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
-        log_type: "noop", message: "No fleet_attack orders resolved to a planetary invasion.",
-      });
-      return;
-    }
-
-    // 4. Filter candidates: skip same-owner (garrison), then enforce strategy + capacity rules.
-    const sourceFleetIdByGameFleet = new Map<string, string>();
-    {
-      const gameFleetIds = Array.from(new Set(candidates.map(c => c.mf.fleet_id)));
-      const { data: gfRows } = await (supabase as any)
-        .from("game_fleets").select("id, fleet_id").in("id", gameFleetIds);
-      for (const r of (gfRows || [])) sourceFleetIdByGameFleet.set(r.id, r.fleet_id);
-    }
-    const sourceIds = Array.from(new Set(Array.from(sourceFleetIdByGameFleet.values())));
-
-    // Pull strategy roles + current GI for each source fleet.
-    const fleetMetaBySource = new Map<string, { gi: number; special1: string; special2: string }>();
-    if (sourceIds.length > 0) {
-      const { data: flRows } = await (supabase as any)
-        .from("fleets")
-        .select("id, current_ground_invasion, special1_role, special2_role")
-        .in("id", sourceIds);
-      for (const r of (flRows || [])) {
-        fleetMetaBySource.set(r.id, {
-          gi: Number(r.current_ground_invasion) || 0,
-          special1: r.special1_role || "",
-          special2: r.special2_role || "",
-        });
-      }
-    }
-
-    // Compute "Attack Planet" tactical-group ground-invasion capacity per
-    // game-fleet from the per-game roster (`game_fleet_ships`).
-    const capacityByGameFleet = new Map<string, number>();
-    {
-      const gameFleetIds = Array.from(new Set(candidates.map(c => c.mf.fleet_id)));
-      if (gameFleetIds.length > 0) {
-        const { data: rows } = await (supabase as any)
-          .from("game_fleet_ships")
-          .select("game_fleet_id, quantity, tactical_group, ship_types(ground_invasion)")
-          .in("game_fleet_id", gameFleetIds);
-        for (const r of (rows || [])) {
-          if ((r.tactical_group || "") !== "Attack Planet") continue;
-          const cap = Number(r.ship_types?.ground_invasion) || 0;
-          const qty = Number(r.quantity) || 0;
-          capacityByGameFleet.set(
-            r.game_fleet_id,
-            (capacityByGameFleet.get(r.game_fleet_id) || 0) + cap * qty,
-          );
-        }
-      }
-    }
-
-    const skipLogs: string[] = [];
-
-    // 5. Group qualified invaders by target system.
-    const bySystem = new Map<number, { sys: any; invaders: InvaderEntry[] }>();
-    for (const c of candidates) {
-      const sourceId = sourceFleetIdByGameFleet.get(c.mf.fleet_id);
-      if (!sourceId) continue;
-
-      // Same-owner garrison movement isn't an invasion.
-      const fleetOwner = (c.mf.owner_classification || "").trim();
-      const planetOwner = (c.sys.owner || "").trim();
-      if (fleetOwner && planetOwner && fleetOwner.toLowerCase() === planetOwner.toLowerCase()) {
-        skipLogs.push(`${c.mf.fleet_name}: target planet ${c.sys.system_name} is already owned by attacker.`);
-        continue;
-      }
-
-      const meta = fleetMetaBySource.get(sourceId);
-      if (!meta) continue;
-
-      // Rule (2): one of the two strategies must be "Attack Planet".
-      const hasAttackPlanetStrategy =
-        meta.special1 === "Attack Planet" || meta.special2 === "Attack Planet";
-      if (!hasAttackPlanetStrategy) {
-        skipLogs.push(`${c.mf.fleet_name}: cannot invade ${c.sys.system_name} — no "Attack Planet" strategy assigned.`);
-        continue;
-      }
-
-      // Rule (3): effective GI = MAX(fleet GI, ship "Attack Planet" capacity).
-      const fleetGi = meta.gi;
-      const capGi = capacityByGameFleet.get(c.mf.fleet_id) || 0;
-      const effectiveGi = Math.max(fleetGi, capGi);
-      if (effectiveGi <= 0) {
-        skipLogs.push(`${c.mf.fleet_name}: zero ground-invasion force — invasion of ${c.sys.system_name} aborted.`);
-        continue;
-      }
-
-      const bucket = bySystem.get(c.sys.system_id) || { sys: c.sys, invaders: [] };
-      bucket.invaders.push({
-        game_fleet_id: c.mf.fleet_id,
-        source_fleet_id: sourceId,
-        fleet_name: c.mf.fleet_name || `Fleet ${String(c.mf.fleet_id).slice(0, 8)}`,
-        owner_classification: c.mf.owner_classification || "",
-        gi: effectiveGi,
-        starting_gi: effectiveGi,
-      });
-      bySystem.set(c.sys.system_id, bucket);
-    }
-
-    for (const m of skipLogs) {
-      ctx.logs.push({
-        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
-        log_type: "ground_invasion_skipped", message: m,
-      });
-    }
-
-    if (bySystem.size === 0) {
-      ctx.logs.push({
-        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
-        log_type: "noop", message: "No qualifying ground invasions this turn.",
-      });
-      return;
-    }
-
-    // Track GI changes to write back at the end (source_fleet_id -> new GI).
-    const giDelta = new Map<string, number>();
-
-    // Build a factions-catalog lookup by every alias so we can resolve an
-    // owner classification string to a `factions.id` (matches ctx.players.faction_id).
+    // Faction alias → id + display lookups (used by dispatches).
     const factionIdByAlias = new Map<string, string>();
     const factionMetaById = new Map<string, { display: string; is_infect: boolean }>();
     for (const f of ctx.factions as any[]) {
@@ -412,22 +181,276 @@ export const groundCombatPhase: Phase = {
       return meta?.display || owner || "Unknown";
     };
 
-    // Pre-load intel visibility for this turn — one query for all engaged
-    // systems is cheaper than one per engagement. Maps system_id -> set of
-    // observer_player_id (game_factions.id) that had `last_seen_turn ==
-    // currentTurn`, i.e. sensors currently see the system.
-    const engagedSystemIds = Array.from(bySystem.keys());
+    // ── Helper: hex-to-system lookup ──
+    const systemsByHex = new Map<string, any>();
+    for (const sys of mapState.systems.values()) {
+      const hex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+      if (!hex) continue;
+      systemsByHex.set(`${hex.x},${hex.y}`, sys);
+    }
+    const sysOnHex = (x: number, y: number) => systemsByHex.get(`${x},${y}`);
+
+    // Ensure landed_forces bucket for owner exists on sys; returns the array.
+    const ensureLanded = (sys: any): SurfaceBucket[] => {
+      if (!Array.isArray(sys.landed_forces)) sys.landed_forces = [];
+      return sys.landed_forces as SurfaceBucket[];
+    };
+    const addLanded = (sys: any, owner: string, qty: number) => {
+      const arr = ensureLanded(sys);
+      const existing = arr.find(b => (b.owner_classification || "").toLowerCase() === (owner || "").toLowerCase());
+      if (existing) existing.quantity = (existing.quantity || 0) + qty;
+      else arr.push({ owner_classification: owner, quantity: qty } as any);
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STAGE 1 — LANDING (translate fleet_attack orders → landed_forces)
+    // ═══════════════════════════════════════════════════════════════════════
+    const attackOrders = orders.filter(
+      (o) => o.order_type === "other" && (o.order_json as any)?.kind === "fleet_attack",
+    );
+
+    // (fleet_id → resolved landing candidate)
+    interface LandingCandidate {
+      mf: any;                // MapFleet
+      sys: any;
+      distance: number;
+      range: number;
+    }
+    const landingCandidates: LandingCandidate[] = [];
+    const outOfRangeLogs: string[] = [];
+    const skipLogs: string[] = [];
+
+    const speedCache = new Map<string, number>();
+    const speedFor = async (gameFleetId: string) => {
+      if (speedCache.has(gameFleetId)) return speedCache.get(gameFleetId)!;
+      const sp = await fetchFleetMapSpeed(supabase as any, gameFleetId);
+      speedCache.set(gameFleetId, sp);
+      return sp;
+    };
+
+    for (const o of attackOrders) {
+      const oj = o.order_json as any;
+      const attackerGameFleetId: string = oj.fleet_id;
+      const attacker = mapState.fleets.find(f => f.fleet_id === attackerGameFleetId);
+      if (!attacker) continue;
+
+      let sys: any | undefined;
+      if (oj.target_system_id != null) {
+        sys = mapState.systems.get(Number(oj.target_system_id));
+      } else if (oj.target_fleet_id) {
+        const tgtFleet = mapState.fleets.find(f => f.fleet_id === oj.target_fleet_id);
+        if (tgtFleet) sys = sysOnHex(tgtFleet.hex_x, tgtFleet.hex_y);
+      }
+      if (!sys) continue;
+
+      const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+      if (!sysHex) continue;
+
+      const speed = await speedFor(attackerGameFleetId);
+      const range = attackRangeFromMapSpeed(speed);
+      const distance = hexDistance(attacker.hex_x, attacker.hex_y, sysHex.x, sysHex.y);
+      if (distance > range) {
+        outOfRangeLogs.push(
+          `${attacker.fleet_name}: planet ${sys.system_name} is ${distance} hex(es) away — exceeds attack range ${range} (map speed ${speed}).`,
+        );
+        continue;
+      }
+      landingCandidates.push({ mf: attacker, sys, distance, range });
+    }
+
+    for (const m of outOfRangeLogs) {
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+        log_type: "ground_invasion_out_of_range", message: m,
+      });
+    }
+
+    // Resolve source_fleet_id + strategy + GI + Attack-Planet capacity per candidate.
+    const sourceFleetIdByGameFleet = new Map<string, string>();
+    if (landingCandidates.length > 0) {
+      const gameFleetIds = Array.from(new Set(landingCandidates.map(c => c.mf.fleet_id)));
+      const { data: gfRows } = await (supabase as any)
+        .from("game_fleets").select("id, fleet_id").in("id", gameFleetIds);
+      for (const r of (gfRows || [])) sourceFleetIdByGameFleet.set(r.id, r.fleet_id);
+    }
+    const sourceIds = Array.from(new Set(Array.from(sourceFleetIdByGameFleet.values())));
+    const fleetMetaBySource = new Map<string, { gi: number; special1: string; special2: string }>();
+    if (sourceIds.length > 0) {
+      const { data: flRows } = await (supabase as any)
+        .from("fleets")
+        .select("id, current_ground_invasion, special1_role, special2_role")
+        .in("id", sourceIds);
+      for (const r of (flRows || [])) {
+        fleetMetaBySource.set(r.id, {
+          gi: Number(r.current_ground_invasion) || 0,
+          special1: r.special1_role || "",
+          special2: r.special2_role || "",
+        });
+      }
+    }
+    const capacityByGameFleet = new Map<string, number>();
+    if (landingCandidates.length > 0) {
+      const gameFleetIds = Array.from(new Set(landingCandidates.map(c => c.mf.fleet_id)));
+      const { data: rows } = await (supabase as any)
+        .from("game_fleet_ships")
+        .select("game_fleet_id, quantity, tactical_group, ship_types(ground_invasion)")
+        .in("game_fleet_id", gameFleetIds);
+      for (const r of (rows || [])) {
+        if ((r.tactical_group || "") !== "Attack Planet") continue;
+        const cap = Number(r.ship_types?.ground_invasion) || 0;
+        const qty = Number(r.quantity) || 0;
+        capacityByGameFleet.set(
+          r.game_fleet_id,
+          (capacityByGameFleet.get(r.game_fleet_id) || 0) + cap * qty,
+        );
+      }
+    }
+
+    // Track fleets whose GI must be zeroed post-landing.
+    const fleetsThatLanded = new Set<string>();
+
+    // Track systems newly touched by landings this turn — even if they were
+    // already contested from a prior turn, we still emit the landing log.
+    const landedThisTurn: Array<{
+      sys: any; owner: string; qty: number; fleet_name: string;
+      game_fleet_id: string; source_fleet_id: string; is_infect: boolean;
+    }> = [];
+
+    for (const c of landingCandidates) {
+      const sourceId = sourceFleetIdByGameFleet.get(c.mf.fleet_id);
+      if (!sourceId) continue;
+      const fleetOwner = (c.mf.owner_classification || "").trim();
+      const planetOwner = (c.sys.owner || "").trim();
+      const meta = fleetMetaBySource.get(sourceId);
+      if (!meta) continue;
+
+      const hasAttackPlanetStrategy =
+        meta.special1 === "Attack Planet" || meta.special2 === "Attack Planet";
+      if (!hasAttackPlanetStrategy) {
+        skipLogs.push(`${c.mf.fleet_name}: cannot invade ${c.sys.system_name} — no "Attack Planet" strategy assigned.`);
+        continue;
+      }
+      const effectiveGi = Math.max(meta.gi, capacityByGameFleet.get(c.mf.fleet_id) || 0);
+      if (effectiveGi <= 0) {
+        skipLogs.push(`${c.mf.fleet_name}: zero ground-invasion force — landing on ${c.sys.system_name} aborted.`);
+        continue;
+      }
+
+      // Same-owner: this is reinforcement — fold straight into garrison.
+      if (fleetOwner && planetOwner && fleetOwner.toLowerCase() === planetOwner.toLowerCase()) {
+        c.sys.current_ground_defenses = (Number(c.sys.current_ground_defenses) || 0) + effectiveGi;
+        fleetsThatLanded.add(sourceId);
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+          log_type: "troops_reinforced",
+          message: `${c.mf.fleet_name} reinforces ${c.sys.system_name} with ${effectiveGi} ground unit(s).`,
+          details_json: {
+            system_id: c.sys.system_id, system_name: c.sys.system_name,
+            owner: fleetOwner, quantity: effectiveGi,
+          },
+        });
+        mapState.systems.set(c.sys.system_id, c.sys);
+        continue;
+      }
+
+      // Hostile landing → deposit into landed_forces bucket.
+      addLanded(c.sys, fleetOwner, effectiveGi);
+      mapState.systems.set(c.sys.system_id, c.sys);
+      fleetsThatLanded.add(sourceId);
+      landedThisTurn.push({
+        sys: c.sys, owner: fleetOwner, qty: effectiveGi,
+        fleet_name: c.mf.fleet_name || `Fleet ${String(c.mf.fleet_id).slice(0, 8)}`,
+        game_fleet_id: c.mf.fleet_id, source_fleet_id: sourceId,
+        is_infect: isInfectOwner(fleetOwner),
+      });
+
+      // INFECT: consume Attack-Planet transports on drop (existing rule).
+      if (isInfectOwner(fleetOwner)) {
+        const { data: shipRows } = await (supabase as any)
+          .from("game_fleet_ships")
+          .select("id, ship_types(ground_invasion)")
+          .eq("game_fleet_id", c.mf.fleet_id)
+          .eq("tactical_group", "Attack Planet");
+        const toDelete = (shipRows || [])
+          .filter((r: any) => (Number(r.ship_types?.ground_invasion) || 0) > 0)
+          .map((r: any) => r.id);
+        if (toDelete.length > 0) {
+          await (supabase as any).from("game_fleet_ships").delete().in("id", toDelete);
+          const { count } = await (supabase as any)
+            .from("game_fleet_ships")
+            .select("id", { count: "exact", head: true })
+            .eq("game_fleet_id", c.mf.fleet_id);
+          if ((count || 0) <= 0) {
+            await destroyFleet({
+              ctx,
+              gameFleetId: c.mf.fleet_id,
+              sourceFleetId: sourceId,
+              fleetName: c.mf.fleet_name || "",
+              reason: "ground_transports_expended",
+              phase: "ground_combat",
+            });
+          }
+        }
+      }
+    }
+
+    for (const m of skipLogs) {
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+        log_type: "ground_invasion_skipped", message: m,
+      });
+    }
+
+    // Emit troops_landed logs for hostile landings.
+    for (const l of landedThisTurn) {
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+        log_type: l.is_infect ? "planet_infected" : "planet_invaded",
+        message: l.is_infect
+          ? `${l.sys.system_name} — ${l.owner || "an INFECT force"} lands ${l.qty} infestation unit(s).`
+          : `${l.sys.system_name} — ${l.owner || "an enemy force"} lands ${l.qty} ground unit(s).`,
+        details_json: {
+          system_id: l.sys.system_id, system_name: l.sys.system_name,
+          attacker_owner: l.owner, attacker_fleet: l.fleet_name,
+          landed_quantity: l.qty, defender_owner: l.sys.owner || "",
+          invader_infect: l.is_infect,
+        },
+      });
+    }
+
+    // Zero out GI for every fleet that landed (troops disembarked).
+    for (const sourceId of fleetsThatLanded) {
+      await (supabase as any).from("fleets").update({ current_ground_invasion: 0 }).eq("id", sourceId);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STAGE 2 — SURFACE COMBAT (one round per contested planet, every turn)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Pre-load intel observers for logging/dispatch fog.
+    const contestedSystemIds: number[] = [];
+    for (const sys of mapState.systems.values()) {
+      if (Array.isArray(sys.landed_forces) && sys.landed_forces.length > 0) {
+        contestedSystemIds.push(sys.system_id);
+      }
+    }
+
+    if (contestedSystemIds.length === 0) {
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+        log_type: "noop", message: "No contested planets — no surface combat.",
+      });
+      return;
+    }
+
     const observersBySystem = new Map<number, Set<string>>();
-    if (engagedSystemIds.length > 0) {
+    {
       const { data: intelRows } = await (supabase as any)
         .from("player_system_intel")
         .select("observer_player_id, system_id, last_seen_turn")
         .eq("game_id", gameId)
-        .in("system_id", engagedSystemIds);
+        .in("system_id", contestedSystemIds);
       for (const r of (intelRows || [])) {
-        // "Sees this turn" = last_seen_turn is at or after current turn
-        // (visibility phase writes rows at currentTurn+1 during processing;
-        // stale rows for older turns count as "scouted" via scouted_hex_ids).
         if (Number(r.last_seen_turn) < currentTurn) continue;
         const sid = Number(r.system_id);
         if (!observersBySystem.has(sid)) observersBySystem.set(sid, new Set());
@@ -435,29 +458,19 @@ export const groundCombatPhase: Phase = {
       }
     }
 
-    /**
-     * Emit one DISPATCH log per observing player for a single engagement.
-     * `basePayload` is the shared v1 payload; `debugLines` is the pretty-print.
-     * We tag observer role/fog_level per player and redact attacker fleet name
-     * when the observer only has scouted-hex visibility.
-     */
     const emitDispatches = (args: {
       sys: any;
       basePayload: any;
       message: string;
-      debugLines: string[];
       attackerOwner: string;
       previousOwner: string;
-      championFleetName: string;
     }) => {
-      const { sys, basePayload, message, debugLines, attackerOwner, previousOwner, championFleetName } = args;
-      const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+      const { sys, basePayload, message, attackerOwner, previousOwner } = args;
       const hexId = sys.hex_id;
       const clearObservers = observersBySystem.get(sys.system_id) || new Set<string>();
       const attackerFid = resolveFactionId(attackerOwner);
       const previousFid = resolveFactionId(previousOwner);
 
-      // Union: current-turn intel viewers + scouted-hex holders + involved parties.
       const roleByPlayer = new Map<string, "attacker" | "previous_owner" | "defender" | "third_party">();
       const fogByPlayer = new Map<string, "clear" | "scouted" | "reported">();
 
@@ -472,7 +485,6 @@ export const groundCombatPhase: Phase = {
         else if (Array.isArray(p.visible_system_ids) && p.visible_system_ids.includes(sys.system_id)) fog = "scouted";
 
         if (!role && !fog) continue;
-        // Involved parties always get the dispatch, even if fog is dark.
         if (role && !fog) fog = "reported";
         roleByPlayer.set(p.id, role || "third_party");
         fogByPlayer.set(p.id, fog!);
@@ -484,7 +496,6 @@ export const groundCombatPhase: Phase = {
         const observerFactionId = p?.faction_id || null;
         const observerFactionName = observerFactionId ? factionMetaById.get(observerFactionId)?.display || "" : "";
 
-        // Redact for scouted-only observers (not involved).
         const redact = fog === "scouted" && role === "third_party";
         const attackerBlock = redact
           ? { ...basePayload.attacker, fleet_name: "Unidentified force" }
@@ -503,9 +514,7 @@ export const groundCombatPhase: Phase = {
         };
 
         ctx.logs.push({
-          game_id: gameId,
-          turn_number: currentTurn,
-          phase: "ground_combat",
+          game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
           log_type: "dispatch_ground_combat",
           message: observerFactionName ? `[${observerFactionName}] ${message}` : message,
           details_json: payload,
@@ -514,40 +523,51 @@ export const groundCombatPhase: Phase = {
     };
 
     let resolved = 0;
-    // Process systems in deterministic order (by system_id).
-    const systemEntries = Array.from(bySystem.entries()).sort((a, b) => a[0] - b[0]);
+    const contestedSystems = contestedSystemIds
+      .map(id => mapState.systems.get(id))
+      .filter(Boolean)
+      .sort((a: any, b: any) => a.system_id - b.system_id);
 
-
-
-
-
-    for (const [systemId, bucket] of systemEntries) {
-      const sys = bucket.sys;
-      const invaders = bucket.invaders;
+    for (const sys of contestedSystems as any[]) {
+      const systemId = sys.system_id;
       const seed = `${gameId}-t${currentTurn}-gc-sys${systemId}`;
       const rng = createRNG(hashSeed(seed));
 
-      // ── Phase A: pair-fight inter-invader attrition ──
+      // Snapshot buckets for logging/starts.
+      const bucketsRaw: SurfaceBucket[] = ((sys.landed_forces || []) as any[])
+        .map(b => ({
+          owner_classification: b.owner_classification || "",
+          gi: Number(b.quantity) || 0,
+          starting_gi: Number(b.quantity) || 0,
+        }))
+        .filter(b => b.gi > 0);
+
+      if (bucketsRaw.length === 0) {
+        sys.landed_forces = [];
+        mapState.systems.set(systemId, sys);
+        continue;
+      }
+
+      // ── Phase A ── pair hostile owner buckets and fight.
       const phaseAEvents: any[] = [];
       const phaseATranscript: any[] = [];
-      if (invaders.length >= 2) {
-        const order = shuffleInPlace([...invaders], rng);
+      const workBuckets = [...bucketsRaw];
+      if (workBuckets.length >= 2) {
+        const order = shuffleInPlace([...workBuckets], rng);
         const sittingOut = order.length % 2 === 1 ? order.pop()! : null;
         for (let i = 0; i < order.length; i += 2) {
-          const A = order[i];
-          const B = order[i + 1];
+          const A = order[i], B = order[i + 1];
           const aStart = A.gi, bStart = B.gi;
           const round = resolveRound(A.gi, B.gi, killChance, rng);
           A.gi = round.aLeft;
           B.gi = round.bLeft;
           phaseAEvents.push({
-            attacker: A.fleet_name, attacker_owner: A.owner_classification,
-            defender: B.fleet_name, defender_owner: B.owner_classification,
+            attacker: A.owner_classification, defender: B.owner_classification,
             attacker_losses: round.bKilled, defender_losses: round.aKilled,
             attacker_left: A.gi, defender_left: B.gi,
           });
           phaseATranscript.push({
-            attacker: A.fleet_name, defender: B.fleet_name,
+            attacker: A.owner_classification, defender: B.owner_classification,
             a_start: aStart, b_start: bStart,
             a_rolls: round.aRolls, b_rolls: round.bRolls,
             a_kills_on_b: round.bKilled, b_kills_on_a: round.aKilled,
@@ -555,169 +575,66 @@ export const groundCombatPhase: Phase = {
           });
         }
         if (sittingOut) {
-          phaseAEvents.push({ sitting_out: sittingOut.fleet_name, owner: sittingOut.owner_classification, gi: sittingOut.gi });
-          phaseATranscript.push({ sitting_out: sittingOut.fleet_name, gi: sittingOut.gi });
+          phaseAEvents.push({ sitting_out: sittingOut.owner_classification, gi: sittingOut.gi });
+          phaseATranscript.push({ sitting_out: sittingOut.owner_classification, gi: sittingOut.gi });
         }
       }
 
+      const survivors = workBuckets.filter(b => b.gi > 0);
 
-      // Drop any invaders that were wiped out in Phase A.
-      const survivors = invaders.filter(inv => inv.gi > 0);
-
-      // Apply effective-GI losses back to the fleet's stored current_ground_invasion.
-      // Each invader's stored GI is reduced by the same number of casualties
-      // taken in this engagement (capped at 0).
-      const writeBackGi = (inv: InvaderEntry) => {
-        const casualties = inv.starting_gi - inv.gi;
-        // Use the stored fleet GI as the basis (not effective GI), so capacity
-        // never inflates the stored value above what was there before combat.
-        const meta = fleetMetaBySource.get(inv.source_fleet_id);
-        const baseStored = meta ? meta.gi : inv.starting_gi;
-        const next = Math.max(0, baseStored - casualties);
-        giDelta.set(inv.source_fleet_id, next);
-      };
-
-      if (survivors.length === 0) {
-        for (const inv of invaders) writeBackGi(inv);
-        ctx.logs.push({
-          game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
-          log_type: "ground_combat_resolved",
-          message: `Ground combat at ${sys.system_name}: all invaders destroyed each other in inter-fleet skirmishes.`,
-          details_json: {
-            system_id: systemId, system_name: sys.system_name, planet_owner: sys.owner,
-            kill_chance: killChance, phase_a: phaseAEvents,
-            phase_b: null, outcome: "mutual_annihilation",
-          },
-        });
-
-        // Emit per-observer dispatches for this mutual-annihilation event.
-        {
-          const debugLines: string[] = [
-            `${sys.system_name} — turn ${currentTurn} — seed ${seed} — killChance ${killChance.toFixed(2)}`,
-            `PHASE A (${phaseATranscript.length} pairing${phaseATranscript.length === 1 ? "" : "s"}):`,
-          ];
-          for (const t of phaseATranscript) {
-            if (t.sitting_out) {
-              debugLines.push(`  ${t.sitting_out} sits out with ${t.gi} GI`);
-              continue;
-            }
-            debugLines.push(`  ${t.attacker} (${t.a_start}) vs ${t.defender} (${t.b_start})`);
-            debugLines.push(`    A rolls: ${formatRollLine(t.a_rolls)}`);
-            debugLines.push(`    B rolls: ${formatRollLine(t.b_rolls)}`);
-            debugLines.push(`    applied: A −${t.b_kills_on_a} → ${t.a_end}, B −${t.a_kills_on_b} → ${t.b_end}`);
-          }
-          debugLines.push(`RESULT: all invaders wiped out; planet untouched.`);
-
-          const basePayload = {
-            schema: "dispatch.ground_combat.v1",
-            turn: currentTurn,
-            system: {
-              id: systemId, name: sys.system_name,
-              hex: (() => { const h = Array.from(mapState.hexes.values()).find(hx => hx.hex_id === sys.hex_id); return h ? { x: h.x, y: h.y } : null; })(),
-              planet_type: sys.planet_type_id || null,
-              population_before: Number(sys.current_population) || 0,
-              population_after: Number(sys.current_population) || 0,
-            },
-            attacker: {
-              faction: null, faction_display: null, is_infect: false,
-              fleet_name: `${invaders.length} invaders`,
-              ground_force_start: invaders.reduce((s, i) => s + i.starting_gi, 0),
-              ground_force_end: 0,
-              transports_destroyed: 0,
-            },
-            defender: {
-              faction: sys.owner || null,
-              faction_display: displayForOwner(sys.owner),
-              ground_defenses_start: Number(sys.current_ground_defenses) || 0,
-              ground_defenses_end: Number(sys.current_ground_defenses) || 0,
-            },
-            outcome: {
-              kind: "mutual_annihilation",
-              rule_path: "standard",
-              new_owner: sys.owner || null,
-              previous_owner: sys.owner || null,
-              kill_chance: killChance,
-              synod_purge: null,
-            },
-            combat_transcript: { seed, kill_chance: killChance, phase_a: phaseATranscript, phase_b: null },
-            debug_lines: debugLines,
-            narration_hints: {
-              tone: "grim",
-              headline_seed: `Invaders annihilate one another at ${sys.system_name}`,
-            },
-          };
-          emitDispatches({
-            sys, basePayload,
-            message: `Sensors report mutual annihilation of invading forces at ${sys.system_name}.`,
-            debugLines,
-            attackerOwner: invaders[0]?.owner_classification || "",
-            previousOwner: sys.owner || "",
-            championFleetName: "(none)",
-          });
-        }
-
-        resolved++;
-        continue;
-      }
-
-
-      // ── Phase B: champion attacks the planet ──
-      survivors.sort((a, b) => {
-        if (b.gi !== a.gi) return b.gi - a.gi;
-        return rng() < 0.5 ? -1 : 1;
-      });
-      const champion = survivors[0];
+      // ── Phase B ── champion attacks garrison (if any hostile survives).
       const startingDefenses = Number(sys.current_ground_defenses) || 0;
-      const planetWasUnpopulated = (Number(sys.current_population) || 0) <= 0;
       const previousOwner = sys.owner || "";
-      const championInfects = isInfectOwner(champion.owner_classification);
+      const planetWasUnpopulated = (Number(sys.current_population) || 0) <= 0;
 
-      // Notify the defender that the planet is under attack THIS turn.
-      // INFECT factions show "planet_infected"; everyone else "planet_invaded".
-      ctx.logs.push({
-        game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
-        log_type: championInfects ? "planet_infected" : "planet_invaded",
-        message: championInfects
-          ? `${sys.system_name} is being infected by ${champion.owner_classification || "an INFECT force"}.`
-          : `${sys.system_name} is being invaded by ${champion.owner_classification || "an enemy force"}.`,
-        details_json: {
-          system_id: systemId,
-          system_name: sys.system_name,
-          defender_owner: previousOwner,
-          attacker_owner: champion.owner_classification,
-          attacker_fleet: champion.fleet_name,
-          invader_infect: championInfects,
-        },
-      });
-
-      // Run the regular ground combat round (same engine for both routes).
-      const round = resolveRound(champion.gi, startingDefenses, killChance, rng);
-      champion.gi = round.aLeft;
-      const newDefenses = round.bLeft;
-
-      // ── INFECT route ──
-      // If the INFECT invader and the defender both have surviving ground
-      // forces after the round, the INFECT side's survivors multiply by
-      // `infect_survivor_multiplier` (configurable in Map Config). This
-      // represents the infection spreading from each survivor.
+      let champion: SurfaceBucket | null = null;
+      let round: RoundResult | null = null;
+      let preMultiplyGi = 0;
+      let newDefenses = startingDefenses;
       let infectMultiplied = false;
-      let preMultiplyGi = champion.gi;
-      if (championInfects && champion.gi > 0 && newDefenses > 0 && infectMultiplier > 1) {
-        champion.gi = Math.floor(champion.gi * infectMultiplier);
-        // Treat the multiplied force as the new "starting" pool for write-back
-        // accounting so we don't record negative casualties.
-        champion.starting_gi = Math.max(champion.starting_gi, champion.gi);
-        infectMultiplied = true;
+      let championInfects = false;
+
+      if (survivors.length > 0 && startingDefenses > 0) {
+        survivors.sort((a, b) => {
+          if (b.gi !== a.gi) return b.gi - a.gi;
+          return rng() < 0.5 ? -1 : 1;
+        });
+        champion = survivors[0];
+        championInfects = isInfectOwner(champion.owner_classification);
+
+        round = resolveRound(champion.gi, startingDefenses, killChance, rng);
+        champion.gi = round.aLeft;
+        newDefenses = round.bLeft;
+        preMultiplyGi = champion.gi;
+
+        if (championInfects && champion.gi > 0 && newDefenses > 0 && infectMultiplier > 1) {
+          champion.gi = Math.floor(champion.gi * infectMultiplier);
+          champion.starting_gi = Math.max(champion.starting_gi, champion.gi);
+          infectMultiplied = true;
+        }
+      } else if (survivors.length > 0 && startingDefenses <= 0) {
+        // No garrison — champion candidate exists but no Phase B combat needed.
+        survivors.sort((a, b) => {
+          if (b.gi !== a.gi) return b.gi - a.gi;
+          return rng() < 0.5 ? -1 : 1;
+        });
+        champion = survivors[0];
+        championInfects = isInfectOwner(champion.owner_classification);
       }
+
       sys.current_ground_defenses = newDefenses;
 
-      let outcome: "capture" | "colonize" | "repulsed" | "stalemate" = "stalemate";
+      // ── Ownership resolution ──
+      let outcome: "capture" | "colonize" | "repulsed" | "stalemate" | "ongoing" | "mutual_annihilation" = "ongoing";
       let synodPurge: { removed_facility_ids: string[]; removed_population: number } | null = null;
-      if (newDefenses <= 0) {
+
+      const remainingHostileOwners = survivors.filter(b => b.gi > 0);
+
+      if (newDefenses <= 0 && remainingHostileOwners.length === 1 && champion && champion.gi > 0) {
+        // Capture / colonize by sole surviving faction.
         sys.owner = champion.owner_classification;
         outcome = planetWasUnpopulated ? "colonize" : "capture";
 
-        // If the planet was Synod-owned, strip all Synod facilities and wipe population on conquest.
         if ((previousOwner || "").toLowerCase() === "synod") {
           const synodIds = new Set(
             (ctx.facilityTypes || [])
@@ -725,91 +642,70 @@ export const groundCombatPhase: Phase = {
               .map((ft: any) => String(ft.id))
           );
           const before = sys.facilities || [];
-          const removed = before.filter(f => synodIds.has(String(f.facility_type_id)));
-          sys.facilities = before.filter(f => !synodIds.has(String(f.facility_type_id)));
+          const removed = before.filter((f: any) => synodIds.has(String(f.facility_type_id)));
+          sys.facilities = before.filter((f: any) => !synodIds.has(String(f.facility_type_id)));
           sys.facilities_in_production = (sys.facilities_in_production || [])
-            .filter(p => !synodIds.has(String(p.facility_type_id)));
+            .filter((p: any) => !synodIds.has(String(p.facility_type_id)));
           const removedPop = Number(sys.current_population) || 0;
           sys.current_population = 0;
           synodPurge = {
-            removed_facility_ids: removed.map(r => String(r.facility_type_id)),
+            removed_facility_ids: removed.map((r: any) => String(r.facility_type_id)),
             removed_population: removedPop,
           };
         }
 
         if (outcome === "colonize") {
-          // Seed baseline values, then immediately run one population-change
-          // tick so the colony shows growth on the same turn it falls.
           if (!Number(sys.condition) || sys.condition <= 0) sys.condition = 5;
           if (!Number(sys.morale) || sys.morale <= 0) sys.morale = 5;
           sys.current_population = 1;
           const step = applyPopulationStep({
-            condition: sys.condition,
-            morale: sys.morale,
+            condition: sys.condition, morale: sys.morale,
             current_population: sys.current_population,
           });
           sys.morale = step.morale;
           sys.current_population = Math.max(1, step.current_population);
         }
-      } else if (champion.gi <= 0) {
+
+        // New garrison = champion's remaining troops. Clear their bucket.
+        sys.current_ground_defenses = champion.gi;
+        champion.gi = 0;
+      } else if (newDefenses <= 0 && remainingHostileOwners.length === 0) {
+        // Defender wiped, no invader survives — mutual annihilation.
+        outcome = "mutual_annihilation";
+      } else if (remainingHostileOwners.length === 0 && newDefenses > 0) {
+        // All invaders wiped this round, defender held.
         outcome = "repulsed";
+      } else {
+        // Something remains on both sides — combat persists next turn.
+        outcome = newDefenses > 0 && remainingHostileOwners.length > 0 ? "ongoing" : "ongoing";
       }
 
-      // Ground troops landed — INFECT only: destroy the champion's
-      // ground-transport ships (every Attack-Planet group ship with
-      // ground_invasion > 0). Each such ship is consumed in the drop.
-      // Non-INFECT invasions leave their transports intact.
-      let transportsDestroyed = 0;
-      if (championInfects) {
+      // Write surviving buckets back to sys.landed_forces (drop zeros).
+      sys.landed_forces = workBuckets
+        .filter(b => b.gi > 0)
+        .map(b => ({ owner_classification: b.owner_classification, quantity: b.gi }));
 
-        const { data: shipRows } = await (supabase as any)
-          .from("game_fleet_ships")
-          .select("id, ship_types(ground_invasion)")
-          .eq("game_fleet_id", champion.game_fleet_id)
-          .eq("tactical_group", "Attack Planet");
-        const toDelete = (shipRows || [])
-          .filter((r: any) => (Number(r.ship_types?.ground_invasion) || 0) > 0)
-          .map((r: any) => r.id);
-        if (toDelete.length > 0) {
-          await (supabase as any).from("game_fleet_ships").delete().in("id", toDelete);
-          transportsDestroyed = toDelete.length;
-          // If the fleet now has zero ships, remove it from the map.
-          const { count } = await (supabase as any)
-            .from("game_fleet_ships")
-            .select("id", { count: "exact", head: true })
-            .eq("game_fleet_id", champion.game_fleet_id);
-          if ((count || 0) <= 0) {
-            await destroyFleet({
-              ctx,
-              gameFleetId: champion.game_fleet_id,
-              sourceFleetId: champion.source_fleet_id,
-              fleetName: champion.fleet_name,
-              reason: "ground_transports_expended",
-              phase: "ground_combat",
-            });
-          }
-        }
-      }
+      mapState.systems.set(systemId, sys);
 
-
-      // Write back surviving GI for every invader involved at this system.
-      for (const inv of invaders) writeBackGi(inv);
-
-      // Persist the system update via mapState.
-      mapState.systems.set(sys.system_id, sys);
+      // ── Logs ──
+      const attackerOwnerForLog = champion?.owner_classification || bucketsRaw[0]?.owner_classification || "";
+      const attackerDisplay = displayForOwner(attackerOwnerForLog);
+      const defenderDisplay = displayForOwner(previousOwner);
 
       const msg =
-        outcome === "colonize" ? `${champion.owner_classification || "Invader"} colonizes ${sys.system_name}.`
-        : outcome === "capture"  ? `${champion.owner_classification || "Invader"} captures ${sys.system_name} from ${previousOwner || "no one"}.`
-        : outcome === "repulsed" ? `Invasion of ${sys.system_name} repulsed — attackers wiped, defenses ${newDefenses} remain.`
-        : `Inconclusive ground combat at ${sys.system_name} — defenses ${newDefenses} vs invaders ${champion.gi}.`;
+        outcome === "colonize" ? `${attackerDisplay} colonizes ${sys.system_name}.`
+        : outcome === "capture"  ? `${attackerDisplay} captures ${sys.system_name} from ${defenderDisplay}.`
+        : outcome === "repulsed" ? `Ground invasion of ${sys.system_name} repulsed — defenses ${newDefenses} remain.`
+        : outcome === "mutual_annihilation" ? `${sys.system_name}: mutual annihilation — no defender or invaders remain.`
+        : `Surface combat on ${sys.system_name} continues — defenses ${newDefenses} vs invaders ${remainingHostileOwners.reduce((s, b) => s + b.gi, 0)}.`;
 
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
         log_type: outcome === "colonize" ? "planet_colonized"
                  : outcome === "capture" ? "planet_captured"
                  : outcome === "repulsed" ? "ground_invasion_repulsed"
-                 : "ground_combat_resolved",
+                 : outcome === "mutual_annihilation" ? "ground_combat_resolved"
+                 : "surface_combat_ongoing",
         message: msg,
         details_json: {
           system_id: systemId,
@@ -819,15 +715,9 @@ export const groundCombatPhase: Phase = {
           kill_chance: killChance,
           starting_defenses: startingDefenses,
           ending_defenses: newDefenses,
-          champion_fleet: champion.fleet_name,
-          champion_owner: champion.owner_classification,
-          champion_starting_gi: champion.starting_gi,
-          champion_ending_gi: champion.gi,
-          population_at_start: Number(sys.current_population) || 0,
           phase_a: phaseAEvents,
-          phase_b: {
-            champion: champion.fleet_name,
-            champion_owner: champion.owner_classification,
+          phase_b: champion && round ? {
+            champion: champion.owner_classification,
             kills_against_defenses: round.bKilled,
             losses_to_defenses: round.aKilled,
             ending_invader_gi: champion.gi,
@@ -835,12 +725,11 @@ export const groundCombatPhase: Phase = {
             infect_multiplied: infectMultiplied,
             infect_multiplier: infectMultiplied ? infectMultiplier : null,
             invader_gi_before_multiplier: infectMultiplied ? preMultiplyGi : null,
-            transports_destroyed: transportsDestroyed,
-          },
+          } : null,
+          landed_forces_after: sys.landed_forces,
           outcome,
           invader_infect: championInfects,
           rule_path: championInfects ? "infect" : "standard",
-
         },
       });
 
@@ -850,33 +739,21 @@ export const groundCombatPhase: Phase = {
           log_type: "synod_planet_purged",
           message: `Synod facilities and population purged from ${sys.system_name} upon conquest by ${sys.owner || "invader"}.`,
           details_json: {
-            system_id: systemId,
-            system_name: sys.system_name,
-            previous_owner: previousOwner,
-            new_owner: sys.owner,
+            system_id: systemId, system_name: sys.system_name,
+            previous_owner: previousOwner, new_owner: sys.owner,
             removed_facility_ids: synodPurge.removed_facility_ids,
             removed_population: synodPurge.removed_population,
           },
         });
       }
 
-      // ── Emit per-observer DISPATCH for this engagement ──
+      // ── Dispatch (per-observer) ──
       {
-        const outcomeVerb =
-          outcome === "colonize" ? "colonizes"
-          : outcome === "capture" ? "captures"
-          : outcome === "repulsed" ? "attempts to invade"
-          : "engages";
-        const attackerDisplay = displayForOwner(champion.owner_classification);
-        const defenderDisplay = displayForOwner(previousOwner);
-
-        // Build human debug lines.
-        const debugLines: string[] = [];
-        debugLines.push(
+        const debugLines: string[] = [
           `${sys.system_name} — turn ${currentTurn} — seed ${seed} — killChance ${killChance.toFixed(2)}`,
-        );
+        ];
         if (phaseATranscript.length === 0) {
-          debugLines.push(`PHASE A: (no other invaders)`);
+          debugLines.push(`PHASE A: (single or no hostile bucket)`);
         } else {
           debugLines.push(`PHASE A (${phaseATranscript.length} pairing${phaseATranscript.length === 1 ? "" : "s"}):`);
           for (const t of phaseATranscript) {
@@ -890,59 +767,47 @@ export const groundCombatPhase: Phase = {
             debugLines.push(`    applied: A −${t.b_kills_on_a} → ${t.a_end}, B −${t.a_kills_on_b} → ${t.b_end}`);
           }
         }
+        if (champion && round) {
+          debugLines.push(`PHASE B: ${champion.owner_classification} (${round.aRolls.length}) vs defenses (${startingDefenses})`);
+          debugLines.push(`  attacker rolls: ${formatRollLine(round.aRolls)}`);
+          debugLines.push(`  defense  rolls: ${formatRollLine(round.bRolls)}`);
+          debugLines.push(`  applied simultaneously — attacker −${round.aKilled} → ${preMultiplyGi}, defenses −${round.bKilled} → ${newDefenses}`);
+          if (infectMultiplied) debugLines.push(`  INFECT multiplier ×${infectMultiplier}: ${preMultiplyGi} → ${champion.gi}`);
+        } else {
+          debugLines.push(`PHASE B: (skipped — no garrison or no hostile survivors)`);
+        }
         debugLines.push(
-          `PHASE B: ${champion.fleet_name} (${champion.starting_gi}) vs defenses (${startingDefenses})`,
+          outcome === "capture" ? `  RESULT: CAPTURE by ${attackerDisplay}`
+          : outcome === "colonize" ? `  RESULT: COLONIZE by ${attackerDisplay}`
+          : outcome === "repulsed" ? `  RESULT: REPULSED — defenses ${newDefenses}`
+          : outcome === "mutual_annihilation" ? `  RESULT: MUTUAL ANNIHILATION`
+          : `  RESULT: ONGOING — combat continues next turn`,
         );
-        debugLines.push(`  attacker rolls: ${formatRollLine(round.aRolls)}`);
-        debugLines.push(`  defense  rolls: ${formatRollLine(round.bRolls)}`);
-        debugLines.push(
-          `  applied simultaneously — attacker −${round.aKilled} → ${preMultiplyGi}, defenses −${round.bKilled} → ${newDefenses}`,
-        );
-        if (infectMultiplied) {
-          debugLines.push(
-            `  INFECT multiplier ×${infectMultiplier}: attacker ${preMultiplyGi} → ${champion.gi}`,
-          );
-        }
-        const resultLine =
-          outcome === "capture" ? `  RESULT: defenses eliminated, attacker survives with ${champion.gi} GI → CAPTURE from ${previousOwner || "unowned"}`
-          : outcome === "colonize" ? `  RESULT: unpopulated world colonized, attacker holds with ${champion.gi} GI → COLONIZE`
-          : outcome === "repulsed" ? `  RESULT: attacker wiped, defenses ${newDefenses} remain → REPULSED`
-          : `  RESULT: stalemate — defenses ${newDefenses}, invader ${champion.gi}`;
-        debugLines.push(resultLine);
-        if (transportsDestroyed > 0) {
-          debugLines.push(`  transports destroyed: ${transportsDestroyed} (INFECT drop)`);
-        }
-        if (synodPurge) {
-          debugLines.push(
-            `  Synod purge: ${synodPurge.removed_facility_ids.length} facility/ies removed, population −${synodPurge.removed_population}`,
-          );
-        }
 
         const basePayload = {
           schema: "dispatch.ground_combat.v1",
           turn: currentTurn,
           system: {
-            id: systemId,
-            name: sys.system_name,
+            id: systemId, name: sys.system_name,
             hex: (() => { const h = Array.from(mapState.hexes.values()).find(hx => hx.hex_id === sys.hex_id); return h ? { x: h.x, y: h.y } : null; })(),
             planet_type: sys.planet_type_id || null,
             population_before: Number(sys.current_population) || 0,
             population_after: Number(sys.current_population) || 0,
           },
           attacker: {
-            faction: champion.owner_classification || null,
+            faction: attackerOwnerForLog || null,
             faction_display: attackerDisplay,
             is_infect: championInfects,
-            fleet_name: champion.fleet_name,
-            ground_force_start: champion.starting_gi,
-            ground_force_end: champion.gi,
-            transports_destroyed: transportsDestroyed,
+            fleet_name: "surface forces",
+            ground_force_start: bucketsRaw.reduce((s, b) => s + b.starting_gi, 0),
+            ground_force_end: (sys.landed_forces || []).reduce((s: number, b: any) => s + (b.quantity || 0), 0),
+            transports_destroyed: 0,
           },
           defender: {
             faction: previousOwner || null,
             faction_display: defenderDisplay,
             ground_defenses_start: startingDefenses,
-            ground_defenses_end: newDefenses,
+            ground_defenses_end: sys.current_ground_defenses,
           },
           outcome: {
             kind: outcome,
@@ -953,11 +818,10 @@ export const groundCombatPhase: Phase = {
             synod_purge: synodPurge,
           },
           combat_transcript: {
-            seed,
-            kill_chance: killChance,
+            seed, kill_chance: killChance,
             phase_a: phaseATranscript,
-            phase_b: {
-              champion: champion.fleet_name,
+            phase_b: champion && round ? {
+              champion: champion.owner_classification,
               defenses_start: startingDefenses,
               champion_rolls: round.aRolls,
               defense_rolls: round.bRolls,
@@ -968,49 +832,45 @@ export const groundCombatPhase: Phase = {
               infect_multiplied: infectMultiplied,
               infect_multiplier: infectMultiplied ? infectMultiplier : null,
               invader_gi_before_multiplier: infectMultiplied ? preMultiplyGi : null,
-            },
+            } : null,
           },
           debug_lines: debugLines,
           narration_hints: {
-            tone: championInfects && (outcome === "capture" || outcome === "colonize") ? "grim"
-              : outcome === "repulsed" ? "heroic"
+            tone: outcome === "repulsed" ? "heroic"
               : outcome === "colonize" ? "neutral"
+              : outcome === "ongoing" ? "tense"
               : "grim",
             headline_seed:
               outcome === "capture" ? `${sys.system_name} falls to ${attackerDisplay}`
               : outcome === "colonize" ? `${attackerDisplay} colonizes ${sys.system_name}`
-              : outcome === "repulsed" ? `${sys.system_name} repulses ${attackerDisplay} invasion`
-              : `Ground fighting rages on ${sys.system_name}`,
+              : outcome === "repulsed" ? `${sys.system_name} repulses invasion`
+              : outcome === "ongoing" ? `Ground war continues on ${sys.system_name}`
+              : `Ground fighting on ${sys.system_name}`,
           },
         };
 
+        const outcomeVerb =
+          outcome === "colonize" ? "colonizes"
+          : outcome === "capture" ? "captures"
+          : outcome === "repulsed" ? "fails to take"
+          : outcome === "ongoing" ? "continues attacking"
+          : "engages";
+
         emitDispatches({
-          sys,
-          basePayload,
+          sys, basePayload,
           message: `${attackerDisplay} ${outcomeVerb} ${sys.system_name}${previousOwner ? ` (defender: ${defenderDisplay})` : ""}.`,
-          debugLines,
-          attackerOwner: champion.owner_classification || "",
+          attackerOwner: attackerOwnerForLog,
           previousOwner,
-          championFleetName: champion.fleet_name,
         });
       }
 
       resolved++;
     }
 
-
-    // 6. Persist GI changes for all touched fleets.
-    for (const [sourceId, newGi] of giDelta) {
-      await (supabase as any)
-        .from("fleets")
-        .update({ current_ground_invasion: Math.max(0, newGi) })
-        .eq("id", sourceId);
-    }
-
     ctx.logs.push({
       game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
       log_type: "ground_combat_summary",
-      message: `Ground combat phase complete — resolved ${resolved} planetary engagement(s).`,
+      message: `Ground combat phase complete — ${landedThisTurn.length} landing(s), ${resolved} surface engagement(s).`,
     });
   },
 };
