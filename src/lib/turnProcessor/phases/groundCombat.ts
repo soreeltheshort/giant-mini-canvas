@@ -139,6 +139,8 @@ interface InvaderEntry {
   gi: number;
   /** Original starting GI before any attrition this turn. */
   starting_gi: number;
+  /** Originating player_orders.player_id — used to re-queue the order on stalemate. */
+  player_id: string | null;
 }
 
 export const groundCombatPhase: Phase = {
