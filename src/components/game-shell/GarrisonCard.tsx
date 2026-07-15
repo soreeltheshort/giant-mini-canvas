@@ -88,7 +88,10 @@ export default function GarrisonCard({
     ? popBase + facilityBonus
     : Number(system?.max_ground_defenses ?? 0);
   const owner = String(system?.owner ?? "");
-  const isOwner = !!viewerOwner && viewerOwner === owner;
+  const viewerFactionLabel = viewerOwner
+    ? (CLASSIFICATION_LABELS[viewerOwner as HexClassification] ?? null)
+    : null;
+  const isOwner = !!viewerOwner && (owner === viewerOwner || (!!viewerFactionLabel && owner === viewerFactionLabel));
   const canRecruit = isOwner && cur < max && (viewerTreasury ?? 0) >= DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost;
   const canDisband = isOwner && cur > 0;
   const upkeepPerTurn = cur * DEFAULT_TURN_CONSTANTS.ground_defense_maintenance;
