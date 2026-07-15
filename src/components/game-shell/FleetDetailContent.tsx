@@ -7,6 +7,7 @@ import { ImperialCard } from "./ImperialCard";
 import FleetCompositionEditor, { type FleetShipRow } from "./FleetCompositionEditor";
 import type { MapFleet, SystemData, HexData } from "@/lib/mapTypes";
 import type { ShipTypeLookup } from "./ContextPanel";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 const PROVINCE_FACTION_NAMES: Record<string, string> = {
   PROVINCE_1: "Valerian",
@@ -601,7 +602,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   if (canEdit) {
     for (const s of allSystems) {
       const hex = allHexes?.get(`${fleet.hex_x},${fleet.hex_y}`);
-      if (hex && s.hex_id === hex.hex_id && s.owner === fleet.owner_classification) {
+      if (hex && s.hex_id === hex.hex_id && ownerMatchesFaction(s.owner, fleet.owner_classification)) {
         atOwnedPlanet = true;
         break;
       }
@@ -661,7 +662,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       if (!sys) return `Attack → ${planetName}`;
       const pop = sys.current_population ?? 0;
       if (pop <= 0) return `Colonize → ${planetName}`;
-      if (sys.owner === fleet.owner_classification) return `Defend → ${planetName}`;
+      if (ownerMatchesFaction(sys.owner, fleet.owner_classification)) return `Defend → ${planetName}`;
       return `Invade → ${planetName}`;
     }
     // Fleet-targeted attack
@@ -747,12 +748,12 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
   const friendlyFleets = allFleets
     .filter(f =>
       f.fleet_id !== fleet.fleet_id &&
-      f.owner_classification === fleet.owner_classification
+      ownerMatchesFaction(f.owner_classification, fleet.owner_classification)
     )
     .sort((a, b) => a.fleet_name.localeCompare(b.fleet_name));
   // Any owned system — planet drop-off.
   const ownedSystems = allSystems
-    .filter(s => s.owner === fleet.owner_classification)
+    .filter(s => ownerMatchesFaction(s.owner, fleet.owner_classification))
     .sort((a, b) => a.system_name.localeCompare(b.system_name));
   const transferActive = detail.special1_role === "Transfer" || detail.special2_role === "Transfer";
 

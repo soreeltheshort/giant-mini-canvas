@@ -7,6 +7,7 @@ import {
   hexKey,
 } from "@/lib/mapTypes";
 import { hexToPixel, pixelToHex, hexCorners } from "@/lib/hexUtils";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 interface Props {
   hexes: Map<string, HexData>;
@@ -160,7 +161,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   const visibleFleets = React.useMemo(() => {
     if (revealAllFleets) return fleets;
     return fleets.filter(f => {
-      if (ownClassification && f.owner_classification === ownClassification) return true;
+      if (ownerMatchesFaction(f.owner_classification, ownClassification)) return true;
       return visibleHexKeys.has(hexKey(f.hex_x, f.hex_y));
     });
   }, [fleets, visibleHexKeys, ownClassification, revealAllFleets]);
