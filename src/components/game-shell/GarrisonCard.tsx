@@ -170,23 +170,25 @@ export default function GarrisonCard({
           <span>{upkeepPerTurn} ₡ / turn</span>
         </div>
 
-        {isOwner && (onRecruitGarrison || onDisbandGarrison) ? (
+        {(onRecruitGarrison || onDisbandGarrison) ? (
           <div className="flex gap-1.5 pt-0.5">
             {onRecruitGarrison ? (
               <button
                 disabled={!canRecruit}
                 onClick={() => onRecruitGarrison(systemId)}
                 title={
-                  cur >= max
-                    ? "At maximum — build facilities that grant ground defense capacity"
-                    : (viewerTreasury ?? 0) < DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost
-                      ? "Insufficient treasury"
-                      : `Recruit +1 (${DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost} ₡)`
+                  !isOwner
+                    ? "You do not control this system"
+                    : cur >= max
+                      ? "At maximum — build facilities that grant ground defense capacity"
+                      : (viewerTreasury ?? 0) < DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost
+                        ? "Insufficient treasury"
+                        : `Draft +1 (${DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost} ₡)`
                 }
                 className={`flex-1 h-6 rounded-sm text-[9px] font-heading uppercase tracking-wider ${
                   canRecruit
                     ? "bg-crimson text-primary-foreground hover:bg-crimson-light"
-                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                    : "bg-crimson/40 text-primary-foreground/70 cursor-not-allowed"
                 }`}
               >
                 Draft Garrison · {DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost}₡
@@ -196,6 +198,7 @@ export default function GarrisonCard({
               <button
                 disabled={!canDisband}
                 onClick={() => onDisbandGarrison(systemId)}
+                title={!isOwner ? "You do not control this system" : cur <= 0 ? "No garrison to disband" : "Disband −1"}
                 className={`flex-1 h-6 rounded-sm text-[9px] font-heading uppercase tracking-wider ${
                   canDisband
                     ? "bg-muted text-foreground hover:bg-destructive hover:text-destructive-foreground"
@@ -281,27 +284,6 @@ export default function GarrisonCard({
         )}
       </div>
 
-      {/* --- Invaders in orbit --- */}
-      <div className="mt-3 pt-2 border-t border-border">
-        <div className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground mb-1">
-          Invaders in Orbit
-        </div>
-        {invadersReal.length === 0 ? (
-          <p className="text-[10px] text-muted-foreground italic">None detected.</p>
-        ) : (
-          <div className="space-y-1">
-            {invadersReal.map((f) => (
-              <div
-                key={f.fleet_id}
-                className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
-              >
-                <span className="text-crimson truncate">{f.fleet_name}</span>
-                <span className="text-[9px] uppercase text-muted-foreground">{f.owner_classification}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </ImperialCard>
   );
 }
