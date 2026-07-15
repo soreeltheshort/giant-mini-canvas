@@ -507,7 +507,7 @@ export const groundCombatPhase: Phase = {
           turn_number: currentTurn,
           phase: "ground_combat",
           log_type: "dispatch_ground_combat",
-          message,
+          message: observerFactionName ? `[${observerFactionName}] ${message}` : message,
           details_json: payload,
         });
       }
