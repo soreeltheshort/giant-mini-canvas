@@ -66,17 +66,17 @@ export default function GarrisonCard({
   onRecruitGarrison,
   onDisbandGarrison,
   onTestSetGarrison,
-  facilityTypes,
 }: Props) {
   const [loading, setLoading] = useState(true);
   const [ships, setShips] = useState<GarrisonShipRow[]>([]);
   const [ensured, setEnsured] = useState(false);
+  const { facilityTypes } = useFacilityTypes();
 
   const cur = Number(system?.current_ground_defenses ?? 0);
   const pop = Number(system?.current_population ?? 0);
   const popBase = Math.floor(Math.max(0, pop) / 20);
   const facilityBonus = useMemo(() => {
-    if (!system || !facilityTypes) return 0;
+    if (!system || !facilityTypes || facilityTypes.length === 0) return 0;
     let sum = 0;
     for (const f of system.facilities || []) {
       const ft = facilityTypes.find((t) => String(t.id) === String(f.facility_type_id));
@@ -84,7 +84,7 @@ export default function GarrisonCard({
     }
     return sum;
   }, [system, facilityTypes]);
-  const max = facilityTypes
+  const max = facilityTypes && facilityTypes.length > 0
     ? popBase + facilityBonus
     : Number(system?.max_ground_defenses ?? 0);
   const owner = String(system?.owner ?? "");
