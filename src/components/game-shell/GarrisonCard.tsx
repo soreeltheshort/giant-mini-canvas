@@ -68,13 +68,27 @@ export default function GarrisonCard({
   onRecruitGarrison,
   onDisbandGarrison,
   onTestSetGarrison,
+  facilityTypes,
 }: Props) {
   const [loading, setLoading] = useState(true);
   const [ships, setShips] = useState<GarrisonShipRow[]>([]);
   const [ensured, setEnsured] = useState(false);
 
   const cur = Number(system?.current_ground_defenses ?? 0);
-  const max = Number(system?.max_ground_defenses ?? 0);
+  const pop = Number(system?.current_population ?? 0);
+  const popBase = Math.floor(Math.max(0, pop) / 20);
+  const facilityBonus = useMemo(() => {
+    if (!system || !facilityTypes) return 0;
+    let sum = 0;
+    for (const f of system.facilities || []) {
+      const ft = facilityTypes.find((t) => String(t.id) === String(f.facility_type_id));
+      if (ft?.ground_defense_bonus) sum += ft.ground_defense_bonus * f.quantity;
+    }
+    return sum;
+  }, [system, facilityTypes]);
+  const max = facilityTypes
+    ? popBase + facilityBonus
+    : Number(system?.max_ground_defenses ?? 0);
   const owner = String(system?.owner ?? "");
   const isOwner = !!viewerOwner && viewerOwner === owner;
   const canRecruit = isOwner && cur < max && (viewerTreasury ?? 0) >= DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost;
