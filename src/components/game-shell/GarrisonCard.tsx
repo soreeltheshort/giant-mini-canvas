@@ -171,7 +171,7 @@ export default function GarrisonCard({
           <span className="text-muted-foreground">Ground Defenses</span>
           <span
             className="font-semibold text-bronze"
-            title={`Current garrison / maximum capacity. Max (${max}) is the sum of ground_defense_bonus from built facilities on this planet — no such facility means max 0.`}
+            title={`Current garrison / maximum capacity. Max ${max} = floor(population ${pop} / 20) = ${popBase}${facilityBonus ? ` + facility bonuses ${facilityBonus}` : ""}.`}
           >
             {cur} / {max}
           </span>
