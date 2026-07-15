@@ -118,7 +118,23 @@ export interface SystemData {
   stationed_fighters: StationedStrikecraft[];
   stationed_gunships: StationedStrikecraft[];
   planet_type_id?: string;
+  /**
+   * Persistent hostile ground forces present on the planet's surface.
+   * Populated when a fleet lands ground troops via a fleet_attack order.
+   * The ground_combat phase runs one deterministic round per turn for every
+   * system whose landed_forces is non-empty, so combat continues across
+   * turns until one side is eliminated. A bucket's owner_classification is
+   * always DIFFERENT from `sys.owner` (a same-owner reinforcement folds
+   * straight into `current_ground_defenses`).
+   */
+  landed_forces?: LandedForce[];
 }
+
+export interface LandedForce {
+  owner_classification: string;
+  quantity: number;
+}
+
 
 export interface ProvinceRegion {
   region_id: number;
