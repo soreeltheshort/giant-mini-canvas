@@ -139,6 +139,8 @@ interface InvaderEntry {
   gi: number;
   /** Original starting GI before any attrition this turn. */
   starting_gi: number;
+  /** Originating player_orders.player_id — used to re-queue the order on stalemate. */
+  player_id: string | null;
 }
 
 export const groundCombatPhase: Phase = {
@@ -210,7 +212,7 @@ export const groundCombatPhase: Phase = {
     const sysOnHex = (x: number, y: number) => systemsByHex.get(`${x},${y}`);
 
     // Build (attackerGameFleetId -> targetSystem) candidates.
-    interface Candidate { mf: any; sys: any; reason: "direct_planet" | "fleet_on_planet"; distance: number; range: number; }
+    interface Candidate { mf: any; sys: any; reason: "direct_planet" | "fleet_on_planet"; distance: number; range: number; player_id: string | null; }
     const candidates: Candidate[] = [];
     const outOfRangeLogs: string[] = [];
     // Cache attacker map-speed lookups so we hit the DB at most once per fleet.
@@ -258,7 +260,7 @@ export const groundCombatPhase: Phase = {
         continue;
       }
 
-      candidates.push({ mf: attacker, sys, reason, distance, range });
+      candidates.push({ mf: attacker, sys, reason, distance, range, player_id: (o as any).player_id ?? null });
     }
 
     for (const m of outOfRangeLogs) {
@@ -369,6 +371,7 @@ export const groundCombatPhase: Phase = {
         owner_classification: c.mf.owner_classification || "",
         gi: effectiveGi,
         starting_gi: effectiveGi,
+        player_id: c.player_id,
       });
       bySystem.set(c.sys.system_id, bucket);
     }
@@ -797,6 +800,55 @@ export const groundCombatPhase: Phase = {
 
       // Persist the system update via mapState.
       mapState.systems.set(sys.system_id, sys);
+
+      // Inconclusive (stalemate): the invasion continues next turn without
+      // requiring the player to re-issue an Attack Planet order. Re-queue a
+      // fleet_attack order (turn_number = currentTurn + 1) for every surviving
+      // invader with GI remaining. Skip if the fleet has no player_id (AI or
+      // orphaned) — the AI planner will re-issue on its own cycle.
+      if (outcome === "stalemate") {
+        const nextTurn = currentTurn + 1;
+        const rows: any[] = [];
+        for (const inv of invaders) {
+          if (!inv.player_id) continue;
+          if (inv.gi <= 0) continue;
+          rows.push({
+            game_id: gameId,
+            player_id: inv.player_id,
+            turn_number: nextTurn,
+            order_type: "other",
+            order_json: {
+              kind: "fleet_attack",
+              fleet_id: inv.game_fleet_id,
+              target_system_id: systemId,
+              auto_requeued: true,
+            },
+            notes: "Auto-requeued after inconclusive ground combat.",
+          });
+        }
+        if (rows.length > 0) {
+          // Clear any manual attack orders these fleets already have queued
+          // for next turn so we don't double-book them.
+          const fleetIds = rows.map(r => r.order_json.fleet_id);
+          for (const fid of fleetIds) {
+            await (supabase as any).from("player_orders")
+              .delete()
+              .eq("game_id", gameId)
+              .eq("turn_number", nextTurn)
+              .eq("order_type", "other")
+              .filter("order_json->>kind", "eq", "fleet_attack")
+              .filter("order_json->>fleet_id", "eq", fid);
+          }
+          await (supabase as any).from("player_orders").insert(rows);
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "ground_combat",
+            log_type: "ground_invasion_continues",
+            message: `Invasion of ${sys.system_name} continues next turn — ${rows.length} attacker(s) re-queued.`,
+            details_json: { system_id: systemId, fleet_ids: fleetIds, next_turn: nextTurn },
+          });
+        }
+      }
+
 
       const msg =
         outcome === "colonize" ? `${champion.owner_classification || "Invader"} colonizes ${sys.system_name}.`
