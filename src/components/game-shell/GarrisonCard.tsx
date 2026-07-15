@@ -53,8 +53,6 @@ interface Props {
   onDisbandGarrison?: (systemId: number) => void;
   /** TEST MODE: set current/max ground defenses on this system. */
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
-  /** Facility catalog — used to compute the live max = floor(pop/20) + Σ bonuses. */
-  facilityTypes?: DbFacilityType[];
 }
 
 export default function GarrisonCard({
