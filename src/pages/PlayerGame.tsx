@@ -1241,7 +1241,7 @@ const PlayerGame = () => {
 
   const handleTestSetGarrison = useCallback(async (systemId: number, current: number, max: number) => {
     const m = Math.max(0, Math.floor(max));
-    const c = Math.max(0, Math.min(m, Math.floor(current)));
+    const c = Math.max(0, Math.floor(current));
     await writeSystemEdit(systemId, (sys) => ({
       ...sys,
       max_ground_defenses: m,
