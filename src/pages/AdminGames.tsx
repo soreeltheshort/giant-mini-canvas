@@ -405,6 +405,8 @@ const AdminGames = () => {
     };
     if (meta.turn_phase) gameUpdate.turn_phase = meta.turn_phase;
     await (supabase as any).from("games").update(gameUpdate).eq("id", gameId);
+    // Wipe stale forward-timeline logs so a re-run of this turn doesn't leave orphans.
+    await (supabase as any).from("game_logs").delete().eq("game_id", gameId).gt("turn_number", snapshot.turn_number);
     await addLog(gameId, "snapshot_restored", `Restored to snapshot: "${snapshot.label}" (turn ${snapshot.turn_number})${isFull ? " [full]" : " [legacy: map only]"}`);
 
     // Reload local state
