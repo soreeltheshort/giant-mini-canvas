@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ImperialCard } from "./ImperialCard";
 import { DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
 import type { SystemData, MapFleet } from "@/lib/mapTypes";
+import type { DbFacilityType } from "@/hooks/useFacilityTypes";
 
 interface GarrisonShipRow {
   id: string;
