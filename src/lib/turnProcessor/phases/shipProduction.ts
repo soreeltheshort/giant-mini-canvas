@@ -19,6 +19,7 @@
  */
 import type { Phase, TurnContext } from "../types";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 interface MiniShipType {
   id: string;
@@ -153,7 +154,7 @@ export const shipProductionPhase: Phase = {
       }
       // Reroute: nearest garrison of same owner
       const garrisons = mapState.fleets.filter(f =>
-        (f as any).owner_classification === ownerClass
+        ownerMatchesFaction((f as any).owner_classification, ownerClass)
       );
       if (garrisons.length === 0) return null;
       let best: any = null;

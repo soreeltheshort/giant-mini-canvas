@@ -15,6 +15,7 @@
  * call `isHexBlockedForPlayer` so all rules stay consistent.
  */
 import type { HexData, SystemData } from "./mapTypes";
+import { ownerProvinceSlot } from "./factionUtils";
 
 /** Player slot (1-6) → province classification string. */
 export function slotToProvince(slot: number): string | null {
@@ -57,8 +58,8 @@ export function isHexBlockedForPlayer(
 
   if (system) {
     const ownerSlot =
-      provinceToSlot(system.owner) ??
-      provinceToSlot(system.classification) ??
+      ownerProvinceSlot(system.owner) ??
+      ownerProvinceSlot(system.classification) ??
       provinceToSlot(hex.classification);
     if (ownerSlot !== undefined && ownerSlot !== playerSlot) {
       return {

@@ -21,6 +21,7 @@
  */
 import type { Phase, TurnContext } from "../types";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 const HEX_RANGE = 8;
 
@@ -144,7 +145,7 @@ export const threatAssessmentPhase: Phase = {
       for (const h of mapState.hexes.values()) hexByHexId.set(h.hex_id, { x: h.x, y: h.y });
       const ownedHexes: Array<[number, number]> = [];
       for (const sys of mapState.systems.values()) {
-        if ((sys.owner || "").trim() === factionCode) {
+        if (ownerMatchesFaction(sys.owner, factionCode)) {
           const hex = hexByHexId.get(sys.hex_id);
           if (hex) ownedHexes.push([hex.x, hex.y]);
         }
@@ -158,7 +159,7 @@ export const threatAssessmentPhase: Phase = {
         if (agg.last_seen_turn !== currentTurn) continue;
         const fleet = fleetById.get(fid);
         if (!fleet) continue;
-        if (fleet.owner === factionCode) continue; // own fleet, skip
+        if (ownerMatchesFaction(fleet.owner, factionCode)) continue; // own fleet, skip
         const [cx, cy, cz] = offsetToCube(fleet.hex_x, fleet.hex_y);
         let minDist = Infinity;
         for (const [ox, oy, oz] of ownedCubes) {

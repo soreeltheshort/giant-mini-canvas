@@ -17,6 +17,7 @@
  */
 import type { Phase, TurnContext } from "../types";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 function distHex(ax: number, ay: number, bx: number, by: number) {
   const [a1, a2, a3] = offsetToCube(ax, ay);
@@ -86,7 +87,7 @@ export const transferShipsPhase: Phase = {
           });
           continue;
         }
-        if ((dest as any).owner_classification !== (source as any).owner_classification) {
+        if (!ownerMatchesFaction((dest as any).owner_classification, (source as any).owner_classification)) {
           ctx.logs.push({
             game_id: gameId, turn_number: currentTurn, phase: "movement",
             log_type: "transfer_failed",
@@ -106,7 +107,7 @@ export const transferShipsPhase: Phase = {
         if (!sysHex) continue;
         // Verify owner still controls the system.
         const ownerClass = (source as any).owner_classification;
-        if ((sys as any).owner !== ownerClass) {
+        if (!ownerMatchesFaction((sys as any).owner, ownerClass)) {
           ctx.logs.push({
             game_id: gameId, turn_number: currentTurn, phase: "movement",
             log_type: "transfer_failed",
@@ -117,7 +118,7 @@ export const transferShipsPhase: Phase = {
         }
         // Find or create a friendly non-garrison fleet at the system's hex.
         const existing = mapState.fleets.find(f =>
-          (f as any).owner_classification === ownerClass &&
+          ownerMatchesFaction((f as any).owner_classification, ownerClass) &&
           f.hex_x === sysHex.x && f.hex_y === sysHex.y &&
           f.fleet_id !== source.fleet_id &&
           !(f as any).is_garrison,

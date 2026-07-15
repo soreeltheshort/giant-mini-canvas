@@ -70,9 +70,6 @@ export function ownerAliasKeys(owner: string | null | undefined): Set<string> {
     if (name) keys.add(ownerCompareKey(name));
   }
 
-  const stripped = value.replace(/_int\d*$/i, "");
-  if (stripped !== value) keys.add(ownerCompareKey(stripped));
-
   return keys;
 }
 
