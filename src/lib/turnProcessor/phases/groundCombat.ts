@@ -191,16 +191,18 @@ export const groundCombatPhase: Phase = {
     const sysOnHex = (x: number, y: number) => systemsByHex.get(`${x},${y}`);
 
     // Ensure landed_forces bucket for owner exists on sys; returns the array.
-    const ensureLanded = (sys: any): SurfaceBucket[] => {
+    interface StoredBucket { owner_classification: string; quantity: number }
+    const ensureLanded = (sys: any): StoredBucket[] => {
       if (!Array.isArray(sys.landed_forces)) sys.landed_forces = [];
-      return sys.landed_forces as SurfaceBucket[];
+      return sys.landed_forces as StoredBucket[];
     };
     const addLanded = (sys: any, owner: string, qty: number) => {
       const arr = ensureLanded(sys);
       const existing = arr.find(b => (b.owner_classification || "").toLowerCase() === (owner || "").toLowerCase());
       if (existing) existing.quantity = (existing.quantity || 0) + qty;
-      else arr.push({ owner_classification: owner, quantity: qty } as any);
+      else arr.push({ owner_classification: owner, quantity: qty });
     };
+
 
     // ═══════════════════════════════════════════════════════════════════════
     // STAGE 1 — LANDING (translate fleet_attack orders → landed_forces)
