@@ -284,27 +284,6 @@ export default function GarrisonCard({
         )}
       </div>
 
-      {/* --- Invaders in orbit --- */}
-      <div className="mt-3 pt-2 border-t border-border">
-        <div className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground mb-1">
-          Invaders in Orbit
-        </div>
-        {invadersReal.length === 0 ? (
-          <p className="text-[10px] text-muted-foreground italic">None detected.</p>
-        ) : (
-          <div className="space-y-1">
-            {invadersReal.map((f) => (
-              <div
-                key={f.fleet_id}
-                className="flex items-center justify-between text-xs py-1 border-b border-border last:border-0 gap-2"
-              >
-                <span className="text-crimson truncate">{f.fleet_name}</span>
-                <span className="text-[9px] uppercase text-muted-foreground">{f.owner_classification}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </ImperialCard>
   );
 }
