@@ -1424,7 +1424,7 @@ const PlayerGame = () => {
       const sys = Array.from(mapState.systems.values()).find(s => s.hex_id === destHex.hex_id);
       const ownsSystem = !!sys && ownerMatchesFaction(sys.owner, player.own_classification);
       const isOwnProvince = destHex.classification === player.own_classification;
-      const isOwnInfectedHex = infectedHexOwners.get(hexKey(hex.x, hex.y)) === player.own_classification;
+      const isOwnInfectedHex = ownerMatchesFaction(infectedHexOwners.get(hexKey(hex.x, hex.y)), player.own_classification);
       if (!ownsSystem && !isOwnProvince && !isOwnInfectedHex) {
         toast({ title: "Not an owned hex", description: "Commission fleets only on your province hexes, owned systems, or hexes you control.", variant: "destructive" });
         return;
