@@ -156,6 +156,18 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     });
   }
 
+  // Consume resolved fleet_attack orders so they don't linger past the turn
+  // they were executed in (e.g. after snapshot restore or a re-run cycle).
+  await perf.time("orders.deleteAttack", async () => {
+    const attackOrderIds = orders
+      .filter((o) => o.order_type === "other" && (o.order_json as any)?.kind === "fleet_attack")
+      .map((o) => o.id);
+    if (attackOrderIds.length > 0) {
+      await (supabase as any).from("player_orders").delete().in("id", attackOrderIds);
+    }
+  });
+
+
   // Bulk insert all logs (single round trip). First clear any prior logs for
   // this turn so re-runs (e.g. after snapshot restore) don't accumulate duplicates.
   await perf.time("logs.deleteExisting", async () => {
