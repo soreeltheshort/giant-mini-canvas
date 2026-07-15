@@ -1,37 +1,59 @@
-## Problem
+## Goal
 
-Vesta Line has a facility with `ground_defense_bonus ≥ 1`, but the Garrison card reads `system.max_ground_defenses` directly — a stored value that's only recomputed inside `processNextTurn` (turnEngine.ts, Step 3). Between turns the display can lag arbitrarily behind the current facility list. There is also no population-based baseline: an inhabited planet with no defense facility currently shows a max of 0.
+Stop duplicate turn logs from piling up when a turn is processed more than once (either by re-running it, or by restoring/loading a snapshot and then reprocessing).
 
-## New rule
+## Approach (Option B)
 
-`max_ground_defenses = floor(current_population / 20) + Σ (facility.ground_defense_bonus × quantity)`
+Before writing new logs for a turn, delete any existing logs for that (game_id, turn_number). Also, when a snapshot is restored in-place, wipe forward logs so stale future-turn entries from the abandoned timeline don't linger.
 
-- Baseline comes from population (1 unit per 20 inhabitants, floored).
-- Facilities are additive on top.
-- Uninhabited planets (`current_population = 0`) get a baseline of 0.
+No schema changes. No snapshot payload bloat. One extra indexed DELETE per turn run.
 
-## Fix
+## Changes
 
-### 1. Live display — `src/components/game-shell/GarrisonCard.tsx`
-- Accept optional `facilityTypes?: DbFacilityType[]` (from `@/hooks/useFacilityTypes`).
-- Compute `figuredMax = floor(system.current_population / 20) + Σ ft.ground_defense_bonus × f.quantity` (match facility types by `String(id)` like `findFT` does).
-- Use `figuredMax` for the readout, progress bar, tooltip, and the `canRecruit` check.
-- Fallback to `system.max_ground_defenses` only when `facilityTypes` is missing.
-- Update the tooltip text to reflect the population baseline + facility bonuses.
+### 1. `src/lib/turnProcessor/index.ts`
 
-### 2. Wire the prop
-- `src/components/game-shell/LeftPanel.tsx` — `InlineSystemDetail`: pass `facilityTypes={gameData.facilityTypes}` to `GarrisonCard` (~line 1052).
-- `src/components/game-shell/ContextPanel.tsx`: same at line 529 for parity.
+In `runTurnProcessor`, immediately before the `logs.bulkInsert` step (and after all phases finish, so a mid-run failure doesn't wipe the previous good log until we're about to replace it), delete existing logs for the turn:
 
-### 3. Turn engine — `src/lib/turnEngine.ts`
-- Change `calculateMaxGroundDefenses` (or inline the change in `processNextTurn` Step 3) to add `Math.floor(planet.current_population / 20)` to the facility sum. This keeps auto-replenishment and stored `max_ground_defenses` in sync with the new formula after each Next-Turn.
-- Uses `planet.current_population` AFTER the population step (Steps 5–6), so growth on turn N raises the ceiling on turn N.
+```ts
+await perf.time("logs.deleteExisting", async () => {
+  await (supabase as any)
+    .from("game_logs")
+    .delete()
+    .eq("game_id", gameId)
+    .eq("turn_number", currentTurn);
+});
+```
 
-No DB migration or RPC change. The stored `max_ground_defenses` field remains — the turn engine keeps refreshing it; the UI just no longer trusts it as the source of truth between turns.
+Then the existing bulk insert runs and writes the fresh set. Net effect: exactly one log set per (game, turn), always reflecting the most recent run.
+
+Note: the `snapshot_restored` / `fork` marker logs written by `AdminGames.loadSnapshot` and `forkGameFromSnapshot` are keyed to the *snapshot's* turn number. Since restore is typically followed by re-running that turn, those marker logs would be wiped by the next run. That's acceptable — the audit trail for restore lives in `game_snapshots` itself. If we want to preserve them, we can move those markers to `turn_number = snapshot.turn_number - 1` or a sentinel, but leaving as-is is simpler and matches "log reflects current state of turn N."
+
+### 2. `src/pages/AdminGames.tsx` — `loadSnapshot`
+
+After the snapshot rows are re-inserted and `games.turn_number` is reset to `snapshot.turn_number`, delete any logs for turns strictly greater than the snapshot's turn (stale future-timeline entries):
+
+```ts
+await (supabase as any)
+  .from("game_logs")
+  .delete()
+  .eq("game_id", gameId)
+  .gt("turn_number", snapshot.turn_number);
+```
+
+This runs before the `snapshot_restored` marker log insert so the marker survives.
+
+### 3. No change needed to `forkGameFromSnapshot.ts`
+
+Forks already start with an empty `game_logs` for the new game (only the fork marker is inserted).
 
 ## Out of scope
 
-- Backfilling stored `max_ground_defenses` for existing systems (turn engine will overwrite on next Next-Turn).
-- Making the divisor (20) configurable — hardcoded for now, alongside the other constants in the engine.
-- Changing recruit cost, upkeep, or ground-force replacement math beyond consuming the new max.
-- Any planet-type or faction modifier to the baseline.
+- Preserving prior runs' logs for forensic diffing (that would be Option C).
+- Copying logs into snapshot payloads (Option A).
+- Any UI change to `TurnLogViewer` — with duplicates gone, the existing viewer just works.
+
+## Performance
+
+- Turn processing: one extra `DELETE ... WHERE game_id = ? AND turn_number = ?`. `game_logs` is already indexed on `game_id` (used by the existing viewer query); the extra filter on `turn_number` is a cheap in-memory filter on a small result set. Sub-millisecond in practice.
+- Snapshot restore: one extra `DELETE ... WHERE game_id = ? AND turn_number > ?`. Runs once per manual restore action. Negligible.
+- Snapshot save/load size: unchanged.
