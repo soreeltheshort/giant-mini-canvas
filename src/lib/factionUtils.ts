@@ -27,6 +27,69 @@ const PROVINCE_NAME_TO_SLOT = new Map<string, number>(
   Object.entries(PROVINCE_NAMES).map(([slot, name]) => [name.toLowerCase(), parseInt(slot, 10)])
 );
 
+function cleanOwner(value: string | null | undefined): string {
+  return String(value ?? "").trim();
+}
+
+function ownerCompareKey(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+export function ownerProvinceSlot(owner: string | null | undefined): number | undefined {
+  const value = cleanOwner(owner);
+  if (!value || value.toLowerCase() === "unowned") return undefined;
+
+  const provMatch = value.match(/^PROVINCE_(\d+)$/i);
+  if (provMatch) return parseInt(provMatch[1], 10);
+
+  const direct = PROVINCE_NAME_TO_SLOT.get(value.toLowerCase());
+  if (direct != null) return direct;
+
+  const stripped = value.toLowerCase().replace(/_int\d*$/i, "");
+  return PROVINCE_NAME_TO_SLOT.get(stripped);
+}
+
+/**
+ * Canonical alias set for faction ownership comparisons.
+ *
+ * A map row may store ownership as `PROVINCE_4`, `Dravian`, or legacy/coded
+ * variants like `Dravian_int1`. Player code should compare via this helper
+ * instead of direct string equality so UI gating and order validation agree.
+ */
+export function ownerAliasKeys(owner: string | null | undefined): Set<string> {
+  const value = cleanOwner(owner);
+  const keys = new Set<string>();
+  if (!value || value.toLowerCase() === "unowned") return keys;
+
+  keys.add(ownerCompareKey(value));
+
+  const slot = ownerProvinceSlot(value);
+  if (slot != null) {
+    keys.add(ownerCompareKey(`PROVINCE_${slot}`));
+    const name = PROVINCE_NAMES[slot];
+    if (name) keys.add(ownerCompareKey(name));
+  }
+
+  const stripped = value.replace(/_int\d*$/i, "");
+  if (stripped !== value) keys.add(ownerCompareKey(stripped));
+
+  return keys;
+}
+
+/** Single source of truth for "does this owner string belong to this faction?" */
+export function ownerMatchesFaction(
+  owner: string | null | undefined,
+  factionOwnerClassification: string | null | undefined,
+): boolean {
+  const ownerKeys = ownerAliasKeys(owner);
+  if (ownerKeys.size === 0) return false;
+
+  for (const factionKey of ownerAliasKeys(factionOwnerClassification)) {
+    if (ownerKeys.has(factionKey)) return true;
+  }
+  return false;
+}
+
 export function factionDisplayFromCode(value: string | null | undefined): string {
   if (!value) return "";
   return value.replace(/_int\d*$/i, "");

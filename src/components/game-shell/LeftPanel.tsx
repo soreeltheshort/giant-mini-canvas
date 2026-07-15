@@ -28,6 +28,7 @@ import BuildShipsDialog from "./BuildShipsDialog";
 import ShipProductionList from "./ShipProductionList";
 import type { HexClassification } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS } from "@/lib/mapTypes";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 interface LeftPanelProps {
   stats: GlobalStats;
@@ -486,10 +487,9 @@ function CreateFleetCard({
   // purely to gate the Commission button label.
   const hasEligibleHex = (() => {
     if (!gameData || !playerOwnerClassification || !gameData.hexes) return false;
-    const factionLabel = CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null;
     const ownedSystemHexIds = new Set<number>();
     for (const s of gameData.systems.values()) {
-      if (s.owner === playerOwnerClassification || (factionLabel && s.owner === factionLabel)) {
+      if (ownerMatchesFaction(s.owner, playerOwnerClassification)) {
         ownedSystemHexIds.add(s.hex_id);
       }
     }
@@ -670,12 +670,8 @@ function InlineEmptyState({
   combatPointsAvailable?: number;
 }) {
   if (mode === "military") {
-    const playerFactionName = playerOwnerClassification
-      ? (CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null)
-      : null;
     const matchesOwner = (owner: string | undefined | null) => {
-      if (!owner || !playerOwnerClassification) return false;
-      return owner === playerOwnerClassification || (!!playerFactionName && owner === playerFactionName);
+      return ownerMatchesFaction(owner, playerOwnerClassification);
     };
     const ownedSystems = gameData
       ? Array.from(gameData.systems.values())
@@ -733,12 +729,8 @@ function InlineEmptyState({
   }
 
   if (mode === "production") {
-    const playerFactionName = playerOwnerClassification
-      ? (CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null)
-      : null;
     const matchesOwner = (owner: string | undefined | null) => {
-      if (!owner || !playerOwnerClassification) return false;
-      return owner === playerOwnerClassification || (!!playerFactionName && owner === playerFactionName);
+      return ownerMatchesFaction(owner, playerOwnerClassification);
     };
     const ownedSystems = gameData
       ? Array.from(gameData.systems.values())
@@ -1249,7 +1241,7 @@ function InlineRegionDetail({
             if (!gameData || !playerOwnerClassification) return [];
             const sysHex = Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id);
             return gameData.fleets
-              .filter((f) => f.owner_classification === playerOwnerClassification)
+              .filter((f) => ownerMatchesFaction(f.owner_classification, playerOwnerClassification))
               .map((f) => ({
                 fleet_id: f.fleet_id,
                 fleet_name: f.fleet_name,
@@ -1430,7 +1422,7 @@ function InlineArmyDetail({
   const realFleet = fleetId && gameData ? gameData.fleets.find((f) => f.fleet_id === fleetId) : undefined;
 
   if (realFleet) {
-    const canEdit = !!playerOwnerClassification && realFleet.owner_classification === playerOwnerClassification;
+    const canEdit = ownerMatchesFaction(realFleet.owner_classification, playerOwnerClassification);
     return (
       <FleetDetailContent
         fleet={realFleet}

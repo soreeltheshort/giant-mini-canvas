@@ -21,7 +21,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ImperialCard } from "./ImperialCard";
 import { DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
-import { CLASSIFICATION_LABELS, type SystemData, type MapFleet, type HexClassification } from "@/lib/mapTypes";
+import { type SystemData, type MapFleet } from "@/lib/mapTypes";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 
 interface GarrisonShipRow {
@@ -88,10 +89,7 @@ export default function GarrisonCard({
     ? popBase + facilityBonus
     : Number(system?.max_ground_defenses ?? 0);
   const owner = String(system?.owner ?? "");
-  const viewerFactionLabel = viewerOwner
-    ? (CLASSIFICATION_LABELS[viewerOwner as HexClassification] ?? null)
-    : null;
-  const isOwner = !!viewerOwner && (owner === viewerOwner || (!!viewerFactionLabel && owner === viewerFactionLabel));
+  const isOwner = ownerMatchesFaction(owner, viewerOwner);
   const canRecruit = isOwner && cur < max && (viewerTreasury ?? 0) >= DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost;
   const canDisband = isOwner && cur > 0;
   const upkeepPerTurn = cur * DEFAULT_TURN_CONSTANTS.ground_defense_maintenance;
@@ -113,7 +111,7 @@ export default function GarrisonCard({
         !f.is_garrison &&
         f.hex_x === garrison.hex_x &&
         f.hex_y === garrison.hex_y &&
-        f.owner_classification !== owner,
+        !ownerMatchesFaction(f.owner_classification, owner),
     );
   }, [system, fleets, owner]);
 

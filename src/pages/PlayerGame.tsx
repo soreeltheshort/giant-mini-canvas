@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import type { MapState, SystemData, MapFleet, FacilityType, HexData } from "@/lib/mapTypes";
-import { hexKey, CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
+import { hexKey } from "@/lib/mapTypes";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 import { isHexBlockedForPlayer } from "@/lib/hexAccess";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
@@ -135,7 +136,7 @@ function useComputedVisibility(
       if (sysHex.classification === "CORE" || sysHex.classification === ownProvince) {
         live.add(sys.system_id);
       }
-      if (sys.owner === ownProvince) live.add(sys.system_id);
+      if (ownerMatchesFaction(sys.owner, ownProvince)) live.add(sys.system_id);
     }
 
     // 2. Sensor scan: scan centers = owned fleets + owned systems, each with
@@ -143,13 +144,13 @@ function useComputedVisibility(
     //    sensor_rating across the ships they carry (defaults to baseline).
     const scanCenters: Array<[number, number, number]> = []; // x, y, radius
     for (const sys of allSystems) {
-      if (sys.owner === ownProvince) {
+      if (ownerMatchesFaction(sys.owner, ownProvince)) {
         const sysHex = hexById.get(sys.hex_id);
         if (sysHex) scanCenters.push([sysHex.x, sysHex.y, BASE_RADIUS]);
       }
     }
     for (const f of mapState.fleets ?? []) {
-      if (f.owner_classification === ownProvince) {
+      if (ownerMatchesFaction(f.owner_classification, ownProvince)) {
         const r = fleetSensorRanges.get(f.fleet_id) ?? BASE_RADIUS;
         scanCenters.push([f.hex_x, f.hex_y, r]);
       }
@@ -217,13 +218,13 @@ function useVisibleHexKeys(
 
     const scanCenters: Array<[number, number, number]> = [];
     for (const sys of mapState.systems.values()) {
-      if (sys.owner === ownProvince) {
+      if (ownerMatchesFaction(sys.owner, ownProvince)) {
         const sysHex = hexById.get(sys.hex_id);
         if (sysHex) scanCenters.push([sysHex.x, sysHex.y, BASE_RADIUS]);
       }
     }
     for (const f of mapState.fleets ?? []) {
-      if (f.owner_classification === ownProvince) {
+      if (ownerMatchesFaction(f.owner_classification, ownProvince)) {
         const r = fleetSensorRanges.get(f.fleet_id) ?? BASE_RADIUS;
         scanCenters.push([f.hex_x, f.hex_y, r]);
       }
@@ -777,7 +778,7 @@ const PlayerGame = () => {
       const set = new Set<string>();
       for (const l of (logs || []) as any[]) {
         const d = l.details_json || {};
-        if (d.defender_owner === ownClass && typeof d.attacker_hex_x === "number" && typeof d.attacker_hex_y === "number") {
+        if (ownerMatchesFaction(d.defender_owner, ownClass) && typeof d.attacker_hex_x === "number" && typeof d.attacker_hex_y === "number") {
           set.add(hexKey(d.attacker_hex_x, d.attacker_hex_y));
         }
       }
@@ -794,7 +795,7 @@ const PlayerGame = () => {
     if (!player) return set;
     const own = player.own_classification;
     for (const [k, owner] of infectedHexOwners) {
-      if (owner === own) set.add(k);
+      if (ownerMatchesFaction(owner, own)) set.add(k);
     }
     return set;
   }, [infectedHexOwners, player?.own_classification]);
@@ -859,7 +860,7 @@ const PlayerGame = () => {
       const matches = (s?: string) => {
         if (!s) return false;
         const lc = s.toLowerCase();
-        return s === ownClass || lc === factionLc;
+        return ownerMatchesFaction(s, ownClass) || lc === factionLc;
       };
 
       const stories: import("@/components/game-shell/gameShellTypes").NewsStory[] = [];
@@ -926,7 +927,7 @@ const PlayerGame = () => {
   useEffect(() => {
     if (!player || !game || !mapState) return;
     const ownClass = player.own_classification;
-    const myFleets = mapState.fleets.filter(f => f.owner_classification === ownClass);
+    const myFleets = mapState.fleets.filter(f => ownerMatchesFaction(f.owner_classification, ownClass));
     if (myFleets.length === 0) {
       setSubmissionIssues([]);
       return;
@@ -1133,7 +1134,7 @@ const PlayerGame = () => {
       return;
     }
     const sys = Array.from(mapState.systems.values()).find(s => s.hex_id === hex.hex_id);
-    const owns = hex.classification === ownClass || (sys && sys.owner === ownClass);
+    const owns = hex.classification === ownClass || (sys && ownerMatchesFaction(sys.owner, ownClass));
     if (!owns) {
       toast({ title: "Not your hex", description: "You can only place fleets on hexes you own.", variant: "destructive" });
       return;
@@ -1258,7 +1259,7 @@ const PlayerGame = () => {
     if (!player || !game || !mapState) return;
     const sys = mapState.systems.get(systemId);
     if (!sys) return;
-    if (sys.owner !== player.own_classification) {
+    if (!ownerMatchesFaction(sys.owner, player.own_classification)) {
       toast({ title: "Not your system", variant: "destructive" }); return;
     }
     if ((sys.current_ground_defenses ?? 0) >= (sys.max_ground_defenses ?? 0)) {
@@ -1289,7 +1290,7 @@ const PlayerGame = () => {
     if (!player || !game || !mapState) return;
     const sys = mapState.systems.get(systemId);
     if (!sys) return;
-    if (sys.owner !== player.own_classification) {
+    if (!ownerMatchesFaction(sys.owner, player.own_classification)) {
       toast({ title: "Not your system", variant: "destructive" }); return;
     }
     if ((sys.current_ground_defenses ?? 0) <= 0) return;
@@ -1414,9 +1415,6 @@ const PlayerGame = () => {
 
     // ── Commission fleet branch: validate hex is owned + unoccupied, then create
     if (targeting.orderType === "commission_fleet") {
-      const factionLabel = player.own_classification
-        ? (CLASSIFICATION_LABELS[player.own_classification as HexClassification] ?? null)
-        : null;
       const destHex = mapState?.hexes.get(hexKey(hex.x, hex.y));
       if (!destHex || !mapState) {
         toast({ title: "Invalid hex", description: "Unknown location.", variant: "destructive" });
@@ -1424,7 +1422,7 @@ const PlayerGame = () => {
         return;
       }
       const sys = Array.from(mapState.systems.values()).find(s => s.hex_id === destHex.hex_id);
-      const ownsSystem = !!sys && (sys.owner === player.own_classification || (factionLabel && sys.owner === factionLabel));
+      const ownsSystem = !!sys && ownerMatchesFaction(sys.owner, player.own_classification);
       const isOwnProvince = destHex.classification === player.own_classification;
       const isOwnInfectedHex = infectedHexOwners.get(hexKey(hex.x, hex.y)) === player.own_classification;
       if (!ownsSystem && !isOwnProvince && !isOwnInfectedHex) {
@@ -1538,7 +1536,7 @@ const PlayerGame = () => {
     if (!player || !game || !targeting || targeting.mode !== "fleet") return;
     // Look up the source fleet to validate ownership rule (don't attack own planet).
     const sourceFleet = mapState?.fleets.find(f => f.fleet_id === targeting.fleetId);
-    if (sourceFleet && (system.owner || "").trim().toLowerCase() === (sourceFleet.owner_classification || "").trim().toLowerCase() && (system.owner || "").trim() !== "") {
+    if (sourceFleet && ownerMatchesFaction(system.owner, sourceFleet.owner_classification)) {
       toast({ title: "Invalid target", description: "Cannot invade your own planet.", variant: "destructive" });
       setTargeting(null);
       return;

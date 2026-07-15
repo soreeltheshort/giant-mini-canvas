@@ -12,6 +12,7 @@ import BuildShipsDialog from "./BuildShipsDialog";
 import ShipProductionList from "./ShipProductionList";
 import type { SystemData, MapFleet, FacilityType } from "@/lib/mapTypes";
 import { CLASSIFICATION_LABELS, type HexClassification } from "@/lib/mapTypes";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 const NEWS_CATEGORY_VARIANT: Record<NewsStory["category"], "info" | "danger" | "success" | "warning"> = {
   diplomatic: "info",
@@ -325,12 +326,8 @@ function StrategicOverviewEmpty({
   playerOwnerClassification?: string;
   onSelect?: (selection: MapSelection) => void;
 }) {
-  const playerFactionName = playerOwnerClassification
-    ? CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null
-    : null;
   const matchesOwner = (owner: string | undefined | null) => {
-    if (!owner || !playerOwnerClassification) return false;
-    return owner === playerOwnerClassification || (!!playerFactionName && owner === playerFactionName);
+    return ownerMatchesFaction(owner, playerOwnerClassification);
   };
   const ownedSystems = gameData
     ? Array.from(gameData.systems.values())
@@ -394,12 +391,8 @@ function ProductionOverviewEmpty({
   playerOwnerClassification?: string;
   onSelect?: (selection: MapSelection) => void;
 }) {
-  const playerFactionName = playerOwnerClassification
-    ? CLASSIFICATION_LABELS[playerOwnerClassification as HexClassification] ?? null
-    : null;
   const matchesOwner = (owner: string | undefined | null) => {
-    if (!owner || !playerOwnerClassification) return false;
-    return owner === playerOwnerClassification || (!!playerFactionName && owner === playerFactionName);
+    return ownerMatchesFaction(owner, playerOwnerClassification);
   };
   const ownedSystems = gameData
     ? Array.from(gameData.systems.values())
@@ -526,7 +519,14 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
         </ImperialCard>
 
         {mode === "military" && gameId ? (
-          <GarrisonCard gameId={gameId} systemId={realSys.system_id} />
+          <GarrisonCard
+            gameId={gameId}
+            systemId={realSys.system_id}
+            system={realSys}
+            fleets={gameData?.fleets}
+            viewerOwner={playerOwnerClassification}
+            viewerTreasury={playerTreasury}
+          />
         ) : null}
 
         <ImperialCard title="Production Queue">
@@ -661,7 +661,7 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
             if (!gameData || !playerOwnerClassification) return [];
             const sysHex = Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id);
             return gameData.fleets
-              .filter((f) => f.owner_classification === playerOwnerClassification)
+              .filter((f) => ownerMatchesFaction(f.owner_classification, playerOwnerClassification))
               .map((f) => ({
                 fleet_id: f.fleet_id,
                 fleet_name: f.fleet_name,
@@ -767,7 +767,7 @@ function ArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext
   const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
 
   if (realFleet) {
-    const canEdit = !!playerOwnerClassification && realFleet.owner_classification === playerOwnerClassification;
+    const canEdit = ownerMatchesFaction(realFleet.owner_classification, playerOwnerClassification);
     const allSystems = gameData ? Array.from(gameData.systems.values()) : [];
     return (
       <FleetDetailContent
