@@ -21,7 +21,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ImperialCard } from "./ImperialCard";
 import { DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
-import type { SystemData, MapFleet } from "@/lib/mapTypes";
+import { CLASSIFICATION_LABELS, type SystemData, type MapFleet, type HexClassification } from "@/lib/mapTypes";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 
 interface GarrisonShipRow {
