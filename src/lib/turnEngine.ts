@@ -196,7 +196,6 @@ export function processNextTurn(
 
   // --- Step 3: Recalculate figured characteristics ---
   p.condition = calculateCondition(p, facilityTypes);
-  const figuredMaxGD = calculateMaxGroundDefenses(p, facilityTypes);
 
   // --- Step 4: Simulated events (placeholder) ---
   // TODO: apply one-time planet events here
@@ -209,6 +208,11 @@ export function processNextTurn(
   });
   p.morale = popStep.morale;
   p.current_population = popStep.current_population;
+
+  // Recompute max ground defenses AFTER population step so growth on turn N
+  // raises the ceiling on turn N. Baseline = floor(pop/20) + facility bonuses.
+  const figuredMaxGD = calculateMaxGroundDefenses(p, facilityTypes);
+  p.max_ground_defenses = figuredMaxGD;
 
   // --- Step 7: Tribute calculation ---
   // 7a: Base tribute
