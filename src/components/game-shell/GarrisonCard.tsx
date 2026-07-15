@@ -232,18 +232,18 @@ export default function GarrisonCard({
             <div className="text-[9px] font-heading uppercase tracking-wider text-muted-foreground">
               Test Mode Override
             </div>
-            <div className="flex items-center gap-1.5">
-              <label className="text-[10px] text-slate-500 w-10">Cur</label>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <label className="text-[10px] text-slate-500">Cur</label>
               <input
-                type="number" min={0} value={curInput}
+                type="number" min={0} max={999} value={curInput}
                 onChange={(e) => setCurInput(e.target.value)}
-                className="flex-1 h-6 px-1.5 rounded-sm border border-border bg-background text-xs"
+                className="w-12 h-6 px-1 rounded-sm border border-border bg-background text-xs"
               />
-              <label className="text-[10px] text-slate-500 w-8 text-right">Max</label>
+              <label className="text-[10px] text-slate-500">Max</label>
               <input
-                type="number" min={0} value={maxInput}
+                type="number" min={0} max={999} value={maxInput}
                 onChange={(e) => setMaxInput(e.target.value)}
-                className="flex-1 h-6 px-1.5 rounded-sm border border-border bg-background text-xs"
+                className="w-12 h-6 px-1 rounded-sm border border-border bg-background text-xs"
               />
               <button
                 onClick={() =>
