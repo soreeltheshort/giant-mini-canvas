@@ -156,7 +156,15 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     });
   }
 
-  // Bulk insert all logs (single round trip)
+  // Bulk insert all logs (single round trip). First clear any prior logs for
+  // this turn so re-runs (e.g. after snapshot restore) don't accumulate duplicates.
+  await perf.time("logs.deleteExisting", async () => {
+    await (supabase as any)
+      .from("game_logs")
+      .delete()
+      .eq("game_id", gameId)
+      .eq("turn_number", currentTurn);
+  });
   await perf.time("logs.bulkInsert", async () => {
     if (ctx.logs.length > 0) {
       await (supabase as any).from("game_logs").insert(
