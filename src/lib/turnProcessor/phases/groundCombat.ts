@@ -260,7 +260,7 @@ export const groundCombatPhase: Phase = {
         continue;
       }
 
-      candidates.push({ mf: attacker, sys, reason, distance, range });
+      candidates.push({ mf: attacker, sys, reason, distance, range, player_id: (o as any).player_id ?? null });
     }
 
     for (const m of outOfRangeLogs) {
