@@ -152,7 +152,12 @@ export default function GarrisonCard({
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">Ground Defenses</span>
-          <span className="font-semibold text-bronze">{cur} / {max}</span>
+          <span
+            className="font-semibold text-bronze"
+            title={`Current garrison / maximum capacity. Max (${max}) is the sum of ground_defense_bonus from built facilities on this planet — no such facility means max 0.`}
+          >
+            {cur} / {max}
+          </span>
         </div>
         <div className="h-1.5 rounded-sm bg-muted overflow-hidden">
           <div
@@ -184,7 +189,7 @@ export default function GarrisonCard({
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 }`}
               >
-                Recruit +1 · {DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost}₡
+                Draft Garrison · {DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost}₡
               </button>
             ) : null}
             {onDisbandGarrison ? (
