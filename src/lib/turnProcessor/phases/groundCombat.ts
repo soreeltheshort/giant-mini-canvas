@@ -371,6 +371,7 @@ export const groundCombatPhase: Phase = {
         owner_classification: c.mf.owner_classification || "",
         gi: effectiveGi,
         starting_gi: effectiveGi,
+        player_id: c.player_id,
       });
       bySystem.set(c.sys.system_id, bucket);
     }
