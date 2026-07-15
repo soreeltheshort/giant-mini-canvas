@@ -212,7 +212,7 @@ export const groundCombatPhase: Phase = {
     const sysOnHex = (x: number, y: number) => systemsByHex.get(`${x},${y}`);
 
     // Build (attackerGameFleetId -> targetSystem) candidates.
-    interface Candidate { mf: any; sys: any; reason: "direct_planet" | "fleet_on_planet"; distance: number; range: number; }
+    interface Candidate { mf: any; sys: any; reason: "direct_planet" | "fleet_on_planet"; distance: number; range: number; player_id: string | null; }
     const candidates: Candidate[] = [];
     const outOfRangeLogs: string[] = [];
     // Cache attacker map-speed lookups so we hit the DB at most once per fleet.
