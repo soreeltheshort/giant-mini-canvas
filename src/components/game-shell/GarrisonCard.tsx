@@ -189,7 +189,7 @@ export default function GarrisonCard({
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 }`}
               >
-                Recruit +1 · {DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost}₡
+                Draft Garrison · {DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost}₡
               </button>
             ) : null}
             {onDisbandGarrison ? (
