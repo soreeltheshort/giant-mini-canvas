@@ -1060,6 +1060,7 @@ function InlineRegionDetail({
             onRecruitGarrison={onRecruitGarrison}
             onDisbandGarrison={onDisbandGarrison}
             onTestSetGarrison={onTestSetGarrison}
+            facilityTypes={gameData?.facilityTypes}
           />
         ) : null}
 
