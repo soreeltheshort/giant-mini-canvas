@@ -340,7 +340,7 @@ export const groundCombatPhase: Phase = {
       }
 
       // Same-owner: this is reinforcement — fold straight into garrison.
-      if (fleetOwner && planetOwner && fleetOwner.toLowerCase() === planetOwner.toLowerCase()) {
+      if (fleetOwner && planetOwner && ownerMatchesFaction(fleetOwner, planetOwner)) {
         c.sys.current_ground_defenses = (Number(c.sys.current_ground_defenses) || 0) + effectiveGi;
         fleetsThatLanded.add(sourceId);
         ctx.logs.push({
