@@ -329,6 +329,10 @@ function InlineContextContent({
   onTestSetGarrison,
   onRecruitGarrison,
   onDisbandGarrison,
+  onUndoGarrisonOrders,
+  pendingGarrisonOrders,
+
+
 
 }: {
   mode: GameMode;
