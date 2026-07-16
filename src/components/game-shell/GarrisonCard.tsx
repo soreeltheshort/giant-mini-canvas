@@ -52,6 +52,10 @@ interface Props {
   testMode?: boolean;
   onRecruitGarrison?: (systemId: number) => void;
   onDisbandGarrison?: (systemId: number) => void;
+  /** Undo all queued recruit/disband garrison orders for this system. */
+  onUndoGarrisonOrders?: (systemId: number) => void;
+  /** Pending queued orders for this system this turn. */
+  pendingGarrison?: { recruit: number; disband: number };
   /** TEST MODE: set current/max ground defenses on this system. */
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
 }
@@ -66,6 +70,8 @@ export default function GarrisonCard({
   testMode,
   onRecruitGarrison,
   onDisbandGarrison,
+  onUndoGarrisonOrders,
+  pendingGarrison,
   onTestSetGarrison,
 }: Props) {
   const [loading, setLoading] = useState(true);
@@ -90,9 +96,23 @@ export default function GarrisonCard({
     : Number(system?.max_ground_defenses ?? 0);
   const owner = String(system?.owner ?? "");
   const isOwner = ownerMatchesFaction(owner, viewerOwner);
-  const canRecruit = isOwner && cur < max && (viewerTreasury ?? 0) >= DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost;
-  const canDisband = isOwner && cur > 0;
+  const pendingRecruit = pendingGarrison?.recruit ?? 0;
+  const pendingDisband = pendingGarrison?.disband ?? 0;
+  const projectedCur = Math.max(0, cur + pendingRecruit - pendingDisband);
+  const cost = DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost;
+  const projectedTreasury = (viewerTreasury ?? 0) - pendingRecruit * cost;
+  const canRecruit = isOwner && projectedCur < max && projectedTreasury >= cost;
+  const canDisband = isOwner && projectedCur > 0;
   const upkeepPerTurn = cur * DEFAULT_TURN_CONSTANTS.ground_defense_maintenance;
+
+  // Hostile surface forces (post-refactor invaders). Fold any accidental
+  // same-owner buckets back into `cur` display so the owner never appears to
+  // hold enemy troops.
+  const hostileLanded = useMemo(() => {
+    const list = (system?.landed_forces || []) as { owner_classification: string; quantity: number }[];
+    return list.filter(b => !ownerMatchesFaction(b.owner_classification, owner) && (b.quantity || 0) > 0);
+  }, [system, owner]);
+
 
   const [curInput, setCurInput] = useState<string>(String(cur));
   const [maxInput, setMaxInput] = useState<string>(String(max));
@@ -173,6 +193,11 @@ export default function GarrisonCard({
             title={`Current garrison / maximum capacity. Max ${max} = floor(population ${pop} / 20) = ${popBase}${facilityBonus ? ` + facility bonuses ${facilityBonus}` : ""}.`}
           >
             {cur} / {max}
+            {(pendingRecruit - pendingDisband) !== 0 ? (
+              <span className={`ml-1 ${pendingRecruit - pendingDisband > 0 ? "text-emerald-600" : "text-crimson"}`}>
+                ({pendingRecruit - pendingDisband > 0 ? "+" : ""}{pendingRecruit - pendingDisband} queued)
+              </span>
+            ) : null}
           </span>
         </div>
         <div className="h-1.5 rounded-sm bg-muted overflow-hidden">
@@ -195,11 +220,11 @@ export default function GarrisonCard({
                 title={
                   !isOwner
                     ? "You do not control this system"
-                    : cur >= max
-                      ? "At maximum — build facilities that grant ground defense capacity"
-                      : (viewerTreasury ?? 0) < DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost
-                        ? "Insufficient treasury"
-                        : `Draft +1 (${DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost} ₡)`
+                    : projectedCur >= max
+                      ? "At maximum (including queued orders) — build facilities that grant capacity"
+                      : projectedTreasury < cost
+                        ? "Insufficient treasury after queued orders"
+                        : `Queue Draft +1 (${cost} ₡ next turn)`
                 }
                 className={`flex-1 h-6 rounded-sm text-[9px] font-heading uppercase tracking-wider ${
                   canRecruit
@@ -207,14 +232,14 @@ export default function GarrisonCard({
                     : "bg-crimson/40 text-primary-foreground/70 cursor-not-allowed"
                 }`}
               >
-                Draft Garrison · {DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost}₡
+                Draft Garrison · {cost}₡
               </button>
             ) : null}
             {onDisbandGarrison ? (
               <button
                 disabled={!canDisband}
                 onClick={() => onDisbandGarrison(systemId)}
-                title={!isOwner ? "You do not control this system" : cur <= 0 ? "No garrison to disband" : "Disband −1"}
+                title={!isOwner ? "You do not control this system" : projectedCur <= 0 ? "No garrison to disband" : "Queue Disband −1"}
                 className={`flex-1 h-6 rounded-sm text-[9px] font-heading uppercase tracking-wider ${
                   canDisband
                     ? "bg-muted text-foreground hover:bg-destructive hover:text-destructive-foreground"
@@ -226,6 +251,36 @@ export default function GarrisonCard({
             ) : null}
           </div>
         ) : null}
+
+        {(pendingRecruit + pendingDisband) > 0 && onUndoGarrisonOrders ? (
+          <div className="flex items-center justify-between text-[10px] pt-0.5">
+            <span className="text-muted-foreground">
+              Queued this turn: {pendingRecruit > 0 ? `+${pendingRecruit}` : ""}{pendingRecruit > 0 && pendingDisband > 0 ? " / " : ""}{pendingDisband > 0 ? `−${pendingDisband}` : ""}
+            </span>
+            <button
+              onClick={() => onUndoGarrisonOrders(systemId)}
+              className="text-[9px] uppercase tracking-wider text-bronze hover:text-bronze-dark"
+              title="Undo all queued garrison orders for this system"
+            >
+              Undo
+            </button>
+          </div>
+        ) : null}
+
+        {hostileLanded.length > 0 ? (
+          <div className="pt-1.5 mt-1.5 border-t border-border space-y-1">
+            <div className="text-[9px] font-heading uppercase tracking-wider text-crimson">
+              Hostile Forces on Surface
+            </div>
+            {hostileLanded.map((b, i) => (
+              <div key={i} className="flex items-center justify-between text-[10px]">
+                <span className="text-slate-600 truncate">{b.owner_classification || "Unknown"}</span>
+                <span className="font-semibold text-crimson">×{b.quantity}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
 
         {testMode && onTestSetGarrison ? (
           <div className="pt-1.5 mt-1.5 border-t border-border space-y-1">

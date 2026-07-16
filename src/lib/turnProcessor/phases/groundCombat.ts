@@ -44,6 +44,7 @@ import type { Phase, TurnContext } from "../types";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
 import { applyPopulationStep } from "@/lib/turnEngine";
 import { destroyFleet } from "../fleetCleanup";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 // Inline mulberry32 RNG (kept in sync with battleEngine.ts).
 function createRNG(seed: number) {
@@ -339,7 +340,7 @@ export const groundCombatPhase: Phase = {
       }
 
       // Same-owner: this is reinforcement — fold straight into garrison.
-      if (fleetOwner && planetOwner && fleetOwner.toLowerCase() === planetOwner.toLowerCase()) {
+      if (fleetOwner && planetOwner && ownerMatchesFaction(fleetOwner, planetOwner)) {
         c.sys.current_ground_defenses = (Number(c.sys.current_ground_defenses) || 0) + effectiveGi;
         fleetsThatLanded.add(sourceId);
         ctx.logs.push({

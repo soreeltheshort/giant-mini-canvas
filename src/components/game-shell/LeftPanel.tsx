@@ -100,6 +100,10 @@ interface LeftPanelProps {
     onRecruitGarrison?: (systemId: number) => void;
     /** Player action: disband one ground defense unit at a system they own. */
     onDisbandGarrison?: (systemId: number) => void;
+    /** Undo all queued recruit/disband garrison orders for a system this turn. */
+    onUndoGarrisonOrders?: (systemId: number) => void;
+    /** Pending recruit/disband garrison orders this turn, keyed by system_id. */
+    pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
   };
 }
 
@@ -325,6 +329,10 @@ function InlineContextContent({
   onTestSetGarrison,
   onRecruitGarrison,
   onDisbandGarrison,
+  onUndoGarrisonOrders,
+  pendingGarrisonOrders,
+
+
 
 }: {
   mode: GameMode;
@@ -357,6 +365,8 @@ function InlineContextContent({
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
   onRecruitGarrison?: (systemId: number) => void;
   onDisbandGarrison?: (systemId: number) => void;
+  onUndoGarrisonOrders?: (systemId: number) => void;
+  pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
 
 }) {
   const getModeIcon = () => {
@@ -411,6 +421,10 @@ function InlineContextContent({
             onTestSetGarrison={onTestSetGarrison}
             onRecruitGarrison={onRecruitGarrison}
             onDisbandGarrison={onDisbandGarrison}
+            onUndoGarrisonOrders={onUndoGarrisonOrders}
+            pendingGarrisonOrders={pendingGarrisonOrders}
+
+
 
           />
         ) : selection.type === "army" ? (
@@ -944,6 +958,8 @@ function InlineRegionDetail({
   onTestSetGarrison,
   onRecruitGarrison,
   onDisbandGarrison,
+  onUndoGarrisonOrders,
+  pendingGarrisonOrders,
 }: {
   id: string;
   gameData?: GameMapData;
@@ -963,6 +979,8 @@ function InlineRegionDetail({
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
   onRecruitGarrison?: (systemId: number) => void;
   onDisbandGarrison?: (systemId: number) => void;
+  onUndoGarrisonOrders?: (systemId: number) => void;
+  pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
 }) {
 
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
@@ -1051,6 +1069,8 @@ function InlineRegionDetail({
             testMode={testMode}
             onRecruitGarrison={onRecruitGarrison}
             onDisbandGarrison={onDisbandGarrison}
+            onUndoGarrisonOrders={onUndoGarrisonOrders}
+            pendingGarrison={pendingGarrisonOrders?.get(realSys.system_id)}
             onTestSetGarrison={onTestSetGarrison}
           />
         ) : null}
