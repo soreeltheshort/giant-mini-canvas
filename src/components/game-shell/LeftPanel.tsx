@@ -421,6 +421,10 @@ function InlineContextContent({
             onTestSetGarrison={onTestSetGarrison}
             onRecruitGarrison={onRecruitGarrison}
             onDisbandGarrison={onDisbandGarrison}
+            onUndoGarrisonOrders={onUndoGarrisonOrders}
+            pendingGarrisonOrders={pendingGarrisonOrders}
+
+
 
           />
         ) : selection.type === "army" ? (
