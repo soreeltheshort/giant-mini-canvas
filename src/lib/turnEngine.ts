@@ -19,6 +19,8 @@ export interface TurnConstants {
   ground_force_replacement_cost: number;
   /** Per-unit per-turn upkeep charged for every current ground defense unit. */
   ground_defense_maintenance: number;
+  /** Divisor applied to population when computing max ground defenses (⌊pop / divisor⌋). */
+  ground_defense_pop_divisor: number;
 }
 
 export const DEFAULT_TURN_CONSTANTS: TurnConstants = {
@@ -26,7 +28,9 @@ export const DEFAULT_TURN_CONSTANTS: TurnConstants = {
   pop_or_resources_tribute: 0.5,
   ground_force_replacement_cost: 2,
   ground_defense_maintenance: 1,
+  ground_defense_pop_divisor: 20,
 };
+
 
 
 /**
@@ -105,8 +109,9 @@ function calculateCondition(planet: SystemData, facilityTypes: DbFacilityType[])
 /**
  * Calculate max ground defenses from facility bonuses.
  */
-function calculateMaxGroundDefenses(planet: SystemData, facilityTypes: DbFacilityType[]): number {
-  const popBase = Math.floor(Math.max(0, Number(planet.current_population) || 0) / 20);
+function calculateMaxGroundDefenses(planet: SystemData, facilityTypes: DbFacilityType[], popDivisor: number): number {
+  const divisor = Math.max(1, Number(popDivisor) || 1);
+  const popBase = Math.floor(Math.max(0, Number(planet.current_population) || 0) / divisor);
   let bonus = 0;
   for (const f of planet.facilities || []) {
     const ft = findFT(facilityTypes, f.facility_type_id);
@@ -210,8 +215,8 @@ export function processNextTurn(
   p.current_population = popStep.current_population;
 
   // Recompute max ground defenses AFTER population step so growth on turn N
-  // raises the ceiling on turn N. Baseline = floor(pop/20) + facility bonuses.
-  const figuredMaxGD = calculateMaxGroundDefenses(p, facilityTypes);
+  // raises the ceiling on turn N. Baseline = floor(pop / ground_defense_pop_divisor) + facility bonuses.
+  const figuredMaxGD = calculateMaxGroundDefenses(p, facilityTypes, constants.ground_defense_pop_divisor);
   p.max_ground_defenses = figuredMaxGD;
 
   // --- Step 7: Tribute calculation ---

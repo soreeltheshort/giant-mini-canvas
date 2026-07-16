@@ -113,6 +113,7 @@ const PlanetTesting = () => {
           pop_or_resources_tribute: map.pop_or_resources_tribute ?? DEFAULT_TURN_CONSTANTS.pop_or_resources_tribute,
           ground_force_replacement_cost: map.ground_force_replacement_cost ?? DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost,
           ground_defense_maintenance: map.ground_defense_maintenance ?? DEFAULT_TURN_CONSTANTS.ground_defense_maintenance,
+          ground_defense_pop_divisor: map.ground_defense_pop_divisor ?? DEFAULT_TURN_CONSTANTS.ground_defense_pop_divisor,
         });
 
       }
