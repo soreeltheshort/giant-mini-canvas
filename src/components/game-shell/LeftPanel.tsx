@@ -100,6 +100,10 @@ interface LeftPanelProps {
     onRecruitGarrison?: (systemId: number) => void;
     /** Player action: disband one ground defense unit at a system they own. */
     onDisbandGarrison?: (systemId: number) => void;
+    /** Undo all queued recruit/disband garrison orders for a system this turn. */
+    onUndoGarrisonOrders?: (systemId: number) => void;
+    /** Pending recruit/disband garrison orders this turn, keyed by system_id. */
+    pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
   };
 }
 
