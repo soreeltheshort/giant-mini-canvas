@@ -78,6 +78,112 @@ export const economyPhase: Phase = {
       });
     }
 
+    // 0c. Apply queued recruit_garrison / disband_garrison orders.
+    //     Each recruit: +1 current_ground_defenses (bounded by max), charged
+    //     ground_force_replacement_cost to the owning player's maintenance
+    //     accumulator. Each disband: -1 (no refund, floor at 0). Owner
+    //     validation is re-checked here — orders for planets that flipped
+    //     ownership since the click are dropped.
+    const recruitOrders = ctx.orders.filter(
+      o => o.order_type === "other" && (o.order_json as any)?.kind === "recruit_garrison",
+    );
+    const disbandOrders = ctx.orders.filter(
+      o => o.order_type === "other" && (o.order_json as any)?.kind === "disband_garrison",
+    );
+    const recruitCost = DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost;
+    for (const order of recruitOrders) {
+      const sysId = Number((order.order_json as any)?.system_id);
+      if (!Number.isFinite(sysId)) continue;
+      const sys = mapState.systems.get(sysId);
+      if (!sys) continue;
+      const orderingPlayer = ctx.players.find(p => p.id === order.player_id);
+      const playerFaction = orderingPlayer
+        ? ctx.factions.find(f => f.id === (orderingPlayer as any).faction_id)
+        : undefined;
+      const playerOwner = playerFaction?.name || (playerFaction as any)?.code_name;
+      if (!ownerMatchesFaction(sys.owner, playerOwner)) {
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "garrison_recruit_skipped",
+          message: `${sys.system_name}: recruit order dropped — no longer owned by ${playerOwner || "player"}`,
+          details_json: { system_id: sysId, sys_owner: sys.owner, requested_by: playerOwner },
+        });
+        continue;
+      }
+      const curVal = Number(sys.current_ground_defenses) || 0;
+      const maxVal = Number(sys.max_ground_defenses) || 0;
+      if (curVal >= maxVal) {
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "garrison_recruit_skipped",
+          message: `${sys.system_name}: recruit skipped — at capacity (${curVal}/${maxVal})`,
+          details_json: { system_id: sysId, cur: curVal, max: maxVal },
+        });
+        continue;
+      }
+      mapState.systems.set(sysId, { ...sys, current_ground_defenses: curVal + 1 });
+      const key = ownerToEconKey(sys.owner, ctx.factions);
+      if (key) {
+        const econ = ctx.playerEcon.get(key) || { tribute: 0, maintenance: 0 };
+        econ.maintenance += recruitCost;
+        ctx.playerEcon.set(key, econ);
+      }
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "economy",
+        log_type: "garrison_recruited",
+        message: `${sys.system_name}: drafted +1 ground defense (₡${recruitCost})`,
+        details_json: { system_id: sysId, cost: recruitCost, cur_after: curVal + 1, max: maxVal },
+      });
+    }
+    for (const order of disbandOrders) {
+      const sysId = Number((order.order_json as any)?.system_id);
+      if (!Number.isFinite(sysId)) continue;
+      const sys = mapState.systems.get(sysId);
+      if (!sys) continue;
+      const orderingPlayer = ctx.players.find(p => p.id === order.player_id);
+      const playerFaction = orderingPlayer
+        ? ctx.factions.find(f => f.id === (orderingPlayer as any).faction_id)
+        : undefined;
+      const playerOwner = playerFaction?.name || (playerFaction as any)?.code_name;
+      if (!ownerMatchesFaction(sys.owner, playerOwner)) continue;
+      const curVal = Number(sys.current_ground_defenses) || 0;
+      if (curVal <= 0) continue;
+      mapState.systems.set(sysId, { ...sys, current_ground_defenses: curVal - 1 });
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "economy",
+        log_type: "garrison_disbanded",
+        message: `${sys.system_name}: disbanded 1 ground defense (no refund)`,
+        details_json: { system_id: sysId, cur_after: curVal - 1 },
+      });
+    }
+
+    // 0d. Defensive normalization — any landed_forces bucket whose owner
+    //     matches the system's owner is friendly reinforcement, not an
+    //     invader; fold it into current_ground_defenses so the owner is
+    //     never billed maintenance for enemy troops, and enemy troops are
+    //     never shown as friendly garrison. Post-refactor Stage 1 already
+    //     handles this on landing; this catches pre-refactor state.
+    for (const sys of mapState.systems.values()) {
+      const buckets = (sys as any).landed_forces as Array<{ owner_classification: string; quantity: number }> | undefined;
+      if (!buckets || buckets.length === 0) continue;
+      let friendlyFolded = 0;
+      const kept: typeof buckets = [];
+      for (const b of buckets) {
+        if (ownerMatchesFaction(b.owner_classification, sys.owner) && (b.quantity || 0) > 0) {
+          friendlyFolded += b.quantity;
+        } else if ((b.quantity || 0) > 0) {
+          kept.push(b);
+        }
+      }
+      if (friendlyFolded > 0 || kept.length !== buckets.length) {
+        mapState.systems.set(sys.system_id, {
+          ...sys,
+          current_ground_defenses: (Number(sys.current_ground_defenses) || 0) + friendlyFolded,
+          landed_forces: kept,
+        } as any);
+      }
+    }
+
     // 1. Per-system economics
     const systems = Array.from(mapState.systems.values());
     const eligible = systems.filter(
