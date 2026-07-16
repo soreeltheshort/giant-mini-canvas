@@ -388,6 +388,10 @@ const PlayerGame = () => {
   const [pendingCancelBuildOrders, setPendingCancelBuildOrders] = useState<
     Map<number, Set<string>>
   >(new Map());
+  /** Pending recruit/disband garrison orders this turn, keyed by system_id. */
+  const [pendingGarrisonOrders, setPendingGarrisonOrders] = useState<
+    Map<number, { recruit: number; disband: number }>
+  >(new Map());
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
   const [isSolo, setIsSolo] = useState(false);
   const [processingTurn, setProcessingTurn] = useState(false);
