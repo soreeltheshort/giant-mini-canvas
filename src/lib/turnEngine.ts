@@ -215,8 +215,8 @@ export function processNextTurn(
   p.current_population = popStep.current_population;
 
   // Recompute max ground defenses AFTER population step so growth on turn N
-  // raises the ceiling on turn N. Baseline = floor(pop/20) + facility bonuses.
-  const figuredMaxGD = calculateMaxGroundDefenses(p, facilityTypes);
+  // raises the ceiling on turn N. Baseline = floor(pop / ground_defense_pop_divisor) + facility bonuses.
+  const figuredMaxGD = calculateMaxGroundDefenses(p, facilityTypes, constants.ground_defense_pop_divisor);
   p.max_ground_defenses = figuredMaxGD;
 
   // --- Step 7: Tribute calculation ---
