@@ -13,6 +13,7 @@
 import { processNextTurn, DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
 import type { Phase, TurnContext } from "../types";
 import { ownerToEconKey, rowEconKey } from "../ownerKey";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 export const economyPhase: Phase = {
   name: "economy",
