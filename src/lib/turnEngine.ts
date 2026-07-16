@@ -264,14 +264,20 @@ export function processNextTurn(
     if (ship) gunshipUpkeep += ship.maintenance * sg.quantity;
   }
 
-  // --- Step 9: Ground force replacement ---
+  // --- Step 9: Ground force auto-replacement ---
+  // Automatic (free-conscription) replenishment is capped at the population
+  // baseline: floor(pop / ground_defense_pop_divisor). Facility bonuses above
+  // that only count when the player pays to draft garrison via recruit orders
+  // (see economy phase), which may raise defenses up to figuredMaxGD.
+  const divisor = Math.max(1, Number(constants.ground_defense_pop_divisor) || 1);
+  const autoCeiling = Math.floor(Math.max(0, Number(p.current_population) || 0) / divisor);
   let groundForceReplacement = 0;
-  if (p.current_ground_defenses < figuredMaxGD) {
-    const deficit = figuredMaxGD - p.current_ground_defenses;
+  if (p.current_ground_defenses < autoCeiling) {
+    const deficit = autoCeiling - p.current_ground_defenses;
     const replenish = Math.ceil(deficit / 2);
     p.current_ground_defenses = Math.min(
       p.current_ground_defenses + replenish,
-      figuredMaxGD
+      autoCeiling
     );
     groundForceReplacement = replenish * constants.ground_force_replacement_cost;
   }
