@@ -193,6 +193,11 @@ export default function GarrisonCard({
             title={`Current garrison / maximum capacity. Max ${max} = floor(population ${pop} / 20) = ${popBase}${facilityBonus ? ` + facility bonuses ${facilityBonus}` : ""}.`}
           >
             {cur} / {max}
+            {(pendingRecruit - pendingDisband) !== 0 ? (
+              <span className={`ml-1 ${pendingRecruit - pendingDisband > 0 ? "text-emerald-600" : "text-crimson"}`}>
+                ({pendingRecruit - pendingDisband > 0 ? "+" : ""}{pendingRecruit - pendingDisband} queued)
+              </span>
+            ) : null}
           </span>
         </div>
         <div className="h-1.5 rounded-sm bg-muted overflow-hidden">
@@ -215,11 +220,11 @@ export default function GarrisonCard({
                 title={
                   !isOwner
                     ? "You do not control this system"
-                    : cur >= max
-                      ? "At maximum — build facilities that grant ground defense capacity"
-                      : (viewerTreasury ?? 0) < DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost
-                        ? "Insufficient treasury"
-                        : `Draft +1 (${DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost} ₡)`
+                    : projectedCur >= max
+                      ? "At maximum (including queued orders) — build facilities that grant capacity"
+                      : projectedTreasury < cost
+                        ? "Insufficient treasury after queued orders"
+                        : `Queue Draft +1 (${cost} ₡ next turn)`
                 }
                 className={`flex-1 h-6 rounded-sm text-[9px] font-heading uppercase tracking-wider ${
                   canRecruit
@@ -227,14 +232,14 @@ export default function GarrisonCard({
                     : "bg-crimson/40 text-primary-foreground/70 cursor-not-allowed"
                 }`}
               >
-                Draft Garrison · {DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost}₡
+                Draft Garrison · {cost}₡
               </button>
             ) : null}
             {onDisbandGarrison ? (
               <button
                 disabled={!canDisband}
                 onClick={() => onDisbandGarrison(systemId)}
-                title={!isOwner ? "You do not control this system" : cur <= 0 ? "No garrison to disband" : "Disband −1"}
+                title={!isOwner ? "You do not control this system" : projectedCur <= 0 ? "No garrison to disband" : "Queue Disband −1"}
                 className={`flex-1 h-6 rounded-sm text-[9px] font-heading uppercase tracking-wider ${
                   canDisband
                     ? "bg-muted text-foreground hover:bg-destructive hover:text-destructive-foreground"
@@ -246,6 +251,36 @@ export default function GarrisonCard({
             ) : null}
           </div>
         ) : null}
+
+        {(pendingRecruit + pendingDisband) > 0 && onUndoGarrisonOrders ? (
+          <div className="flex items-center justify-between text-[10px] pt-0.5">
+            <span className="text-muted-foreground">
+              Queued this turn: {pendingRecruit > 0 ? `+${pendingRecruit}` : ""}{pendingRecruit > 0 && pendingDisband > 0 ? " / " : ""}{pendingDisband > 0 ? `−${pendingDisband}` : ""}
+            </span>
+            <button
+              onClick={() => onUndoGarrisonOrders(systemId)}
+              className="text-[9px] uppercase tracking-wider text-bronze hover:text-bronze-dark"
+              title="Undo all queued garrison orders for this system"
+            >
+              Undo
+            </button>
+          </div>
+        ) : null}
+
+        {hostileLanded.length > 0 ? (
+          <div className="pt-1.5 mt-1.5 border-t border-border space-y-1">
+            <div className="text-[9px] font-heading uppercase tracking-wider text-crimson">
+              Hostile Forces on Surface
+            </div>
+            {hostileLanded.map((b, i) => (
+              <div key={i} className="flex items-center justify-between text-[10px]">
+                <span className="text-slate-600 truncate">{b.owner_classification || "Unknown"}</span>
+                <span className="font-semibold text-crimson">×{b.quantity}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
 
         {testMode && onTestSetGarrison ? (
           <div className="pt-1.5 mt-1.5 border-t border-border space-y-1">
