@@ -19,6 +19,8 @@ export interface TurnConstants {
   ground_force_replacement_cost: number;
   /** Per-unit per-turn upkeep charged for every current ground defense unit. */
   ground_defense_maintenance: number;
+  /** Divisor applied to population when computing max ground defenses (⌊pop / divisor⌋). */
+  ground_defense_pop_divisor: number;
 }
 
 export const DEFAULT_TURN_CONSTANTS: TurnConstants = {
@@ -26,7 +28,9 @@ export const DEFAULT_TURN_CONSTANTS: TurnConstants = {
   pop_or_resources_tribute: 0.5,
   ground_force_replacement_cost: 2,
   ground_defense_maintenance: 1,
+  ground_defense_pop_divisor: 20,
 };
+
 
 
 /**
