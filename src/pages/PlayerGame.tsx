@@ -1262,29 +1262,37 @@ const PlayerGame = () => {
     if (!ownerMatchesFaction(sys.owner, player.own_classification)) {
       toast({ title: "Not your system", variant: "destructive" }); return;
     }
-    if ((sys.current_ground_defenses ?? 0) >= (sys.max_ground_defenses ?? 0)) {
+    const pending = pendingGarrisonOrders.get(systemId) || { recruit: 0, disband: 0 };
+    const projectedCur = (sys.current_ground_defenses ?? 0) + pending.recruit - pending.disband;
+    if (projectedCur >= (sys.max_ground_defenses ?? 0)) {
       toast({ title: "Garrison at maximum", description: "Build facilities that grant more capacity." });
       return;
     }
     const cost = 2; // DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost
-    if ((player.treasury ?? 0) < cost) {
+    const projectedTreasury = (player.treasury ?? 0) - pending.recruit * cost;
+    if (projectedTreasury < cost) {
       toast({ title: "Insufficient treasury", variant: "destructive" }); return;
     }
-    const newTreasury = (player.treasury ?? 0) - cost;
-    const { error: tErr } = await (supabase as any)
-      .from("game_factions").update({ treasury: newTreasury }).eq("id", player.id);
-    if (tErr) { toast({ title: "Failed", description: tErr.message, variant: "destructive" }); return; }
-    setPlayer(p => p ? { ...p, treasury: newTreasury } : p);
-    await writeSystemEdit(
-      systemId,
-      (s) => ({ ...s, current_ground_defenses: Math.min(s.max_ground_defenses ?? 0, (s.current_ground_defenses ?? 0) + 1) }),
-      `recruit garrison at system ${systemId} (cost ${cost} ₡)`,
-      { action: "recruit_garrison", cost, player_id: player.id },
-    );
-  }, [player, game, mapState, writeSystemEdit, toast]);
+    try {
+      await (supabase as any).from("player_orders").insert({
+        game_id: game.id,
+        player_id: player.id,
+        turn_number: game.turn_number,
+        order_type: "other",
+        order_json: { kind: "recruit_garrison", system_id: systemId },
+        notes: "",
+      });
+      playOrderPlaced();
+      toast({ title: "Order Submitted", description: `Draft +1 garrison queued (${cost} ₡ next turn).` });
+      refreshOrders();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  }, [player, game, mapState, toast, pendingGarrisonOrders, refreshOrders]);
 
   /**
-   * Disband -1 ground defense: no refund. Owner-only.
+   * Disband -1 ground defense: queued as a between-turn order (no refund).
+   * Applied in the economy phase alongside recruit_garrison orders.
    */
   const handleDisbandGarrison = useCallback(async (systemId: number) => {
     if (!player || !game || !mapState) return;
@@ -1293,14 +1301,50 @@ const PlayerGame = () => {
     if (!ownerMatchesFaction(sys.owner, player.own_classification)) {
       toast({ title: "Not your system", variant: "destructive" }); return;
     }
-    if ((sys.current_ground_defenses ?? 0) <= 0) return;
-    await writeSystemEdit(
-      systemId,
-      (s) => ({ ...s, current_ground_defenses: Math.max(0, (s.current_ground_defenses ?? 0) - 1) }),
-      `disband garrison at system ${systemId}`,
-      { action: "disband_garrison", player_id: player.id },
-    );
-  }, [player, game, mapState, writeSystemEdit, toast]);
+    const pending = pendingGarrisonOrders.get(systemId) || { recruit: 0, disband: 0 };
+    const projectedCur = (sys.current_ground_defenses ?? 0) + pending.recruit - pending.disband;
+    if (projectedCur <= 0) return;
+    try {
+      await (supabase as any).from("player_orders").insert({
+        game_id: game.id,
+        player_id: player.id,
+        turn_number: game.turn_number,
+        order_type: "other",
+        order_json: { kind: "disband_garrison", system_id: systemId },
+        notes: "",
+      });
+      playOrderPlaced();
+      toast({ title: "Order Submitted", description: "Disband −1 garrison queued." });
+      refreshOrders();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  }, [player, game, mapState, toast, pendingGarrisonOrders, refreshOrders]);
+
+  /** Undo all queued recruit/disband garrison orders for this system (this turn). */
+  const handleUndoGarrisonOrders = useCallback(async (systemId: number) => {
+    if (!player || !game) return;
+    try {
+      const { data: rows } = await (supabase as any)
+        .from("player_orders")
+        .select("id, order_json")
+        .eq("game_id", game.id)
+        .eq("player_id", player.id)
+        .eq("turn_number", game.turn_number)
+        .eq("order_type", "other");
+      const targets = (rows || []).filter(
+        (r: any) =>
+          (r.order_json?.kind === "recruit_garrison" || r.order_json?.kind === "disband_garrison") &&
+          Number(r.order_json?.system_id) === systemId,
+      );
+      if (targets.length > 0) {
+        await (supabase as any).from("player_orders").delete().in("id", targets.map((t: any) => t.id));
+        refreshOrders();
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  }, [player, game, toast, refreshOrders]);
 
 
 
