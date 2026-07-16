@@ -640,6 +640,7 @@ const PlayerGame = () => {
       let buildCost = 0;
       const buildBySys = new Map<number, Array<{ orderId: string; facilityTypeId: string; cost: number; maintenance: number }>>();
       const cancelBySys = new Map<number, Set<string>>();
+      const garrisonBySys = new Map<number, { recruit: number; disband: number }>();
       const facilityCostLookup = new Map<string, { cost: number; maintenance: number }>();
       for (const ft of dbFacilityTypesFull) {
         facilityCostLookup.set(ft.facility_type_id, { cost: ft.cost ?? 0, maintenance: ft.maintenance ?? 0 });
