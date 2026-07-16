@@ -958,6 +958,8 @@ function InlineRegionDetail({
   onTestSetGarrison,
   onRecruitGarrison,
   onDisbandGarrison,
+  onUndoGarrisonOrders,
+  pendingGarrisonOrders,
 }: {
   id: string;
   gameData?: GameMapData;
@@ -977,6 +979,8 @@ function InlineRegionDetail({
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
   onRecruitGarrison?: (systemId: number) => void;
   onDisbandGarrison?: (systemId: number) => void;
+  onUndoGarrisonOrders?: (systemId: number) => void;
+  pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
 }) {
 
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
