@@ -1877,6 +1877,8 @@ const PlayerGame = () => {
             onTestSetGarrison: handleTestSetGarrison,
             onRecruitGarrison: handleRecruitGarrison,
             onDisbandGarrison: handleDisbandGarrison,
+            onUndoGarrisonOrders: handleUndoGarrisonOrders,
+            pendingGarrisonOrders,
 
           }}
           fullWidth={isMobile}
