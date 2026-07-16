@@ -96,9 +96,23 @@ export default function GarrisonCard({
     : Number(system?.max_ground_defenses ?? 0);
   const owner = String(system?.owner ?? "");
   const isOwner = ownerMatchesFaction(owner, viewerOwner);
-  const canRecruit = isOwner && cur < max && (viewerTreasury ?? 0) >= DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost;
-  const canDisband = isOwner && cur > 0;
+  const pendingRecruit = pendingGarrison?.recruit ?? 0;
+  const pendingDisband = pendingGarrison?.disband ?? 0;
+  const projectedCur = Math.max(0, cur + pendingRecruit - pendingDisband);
+  const cost = DEFAULT_TURN_CONSTANTS.ground_force_replacement_cost;
+  const projectedTreasury = (viewerTreasury ?? 0) - pendingRecruit * cost;
+  const canRecruit = isOwner && projectedCur < max && projectedTreasury >= cost;
+  const canDisband = isOwner && projectedCur > 0;
   const upkeepPerTurn = cur * DEFAULT_TURN_CONSTANTS.ground_defense_maintenance;
+
+  // Hostile surface forces (post-refactor invaders). Fold any accidental
+  // same-owner buckets back into `cur` display so the owner never appears to
+  // hold enemy troops.
+  const hostileLanded = useMemo(() => {
+    const list = (system?.landed_forces || []) as { owner_classification: string; quantity: number }[];
+    return list.filter(b => !ownerMatchesFaction(b.owner_classification, owner) && (b.quantity || 0) > 0);
+  }, [system, owner]);
+
 
   const [curInput, setCurInput] = useState<string>(String(cur));
   const [maxInput, setMaxInput] = useState<string>(String(max));
