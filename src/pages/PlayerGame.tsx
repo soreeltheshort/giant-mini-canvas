@@ -689,6 +689,17 @@ const PlayerGame = () => {
             set.add(String(fid));
             cancelBySys.set(sysId, set);
           }
+        } else if (
+          o.order_type === "other" &&
+          (o.order_json?.kind === "recruit_garrison" || o.order_json?.kind === "disband_garrison")
+        ) {
+          const sysId = Number(o.order_json.system_id);
+          if (!Number.isNaN(sysId)) {
+            const cur = garrisonBySys.get(sysId) || { recruit: 0, disband: 0 };
+            if (o.order_json.kind === "recruit_garrison") cur.recruit += 1;
+            else cur.disband += 1;
+            garrisonBySys.set(sysId, cur);
+          }
         }
       }
       setPendingFleetOrders(map);
@@ -697,6 +708,7 @@ const PlayerGame = () => {
       setPendingBuildCost(buildCost);
       setPendingBuildOrders(buildBySys);
       setPendingCancelBuildOrders(cancelBySys);
+      setPendingGarrisonOrders(garrisonBySys);
     })();
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number, orderRefreshTick, dbFacilityTypesFull]);
