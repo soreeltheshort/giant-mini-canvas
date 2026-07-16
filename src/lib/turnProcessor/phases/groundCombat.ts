@@ -44,6 +44,7 @@ import type { Phase, TurnContext } from "../types";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
 import { applyPopulationStep } from "@/lib/turnEngine";
 import { destroyFleet } from "../fleetCleanup";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 // Inline mulberry32 RNG (kept in sync with battleEngine.ts).
 function createRNG(seed: number) {
