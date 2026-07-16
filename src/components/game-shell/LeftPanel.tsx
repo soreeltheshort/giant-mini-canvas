@@ -365,6 +365,8 @@ function InlineContextContent({
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
   onRecruitGarrison?: (systemId: number) => void;
   onDisbandGarrison?: (systemId: number) => void;
+  onUndoGarrisonOrders?: (systemId: number) => void;
+  pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
 
 }) {
   const getModeIcon = () => {
