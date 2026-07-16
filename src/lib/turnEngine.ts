@@ -109,8 +109,9 @@ function calculateCondition(planet: SystemData, facilityTypes: DbFacilityType[])
 /**
  * Calculate max ground defenses from facility bonuses.
  */
-function calculateMaxGroundDefenses(planet: SystemData, facilityTypes: DbFacilityType[]): number {
-  const popBase = Math.floor(Math.max(0, Number(planet.current_population) || 0) / 20);
+function calculateMaxGroundDefenses(planet: SystemData, facilityTypes: DbFacilityType[], popDivisor: number): number {
+  const divisor = Math.max(1, Number(popDivisor) || 1);
+  const popBase = Math.floor(Math.max(0, Number(planet.current_population) || 0) / divisor);
   let bonus = 0;
   for (const f of planet.facilities || []) {
     const ft = findFT(facilityTypes, f.facility_type_id);
