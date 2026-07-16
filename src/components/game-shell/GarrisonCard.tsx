@@ -52,6 +52,10 @@ interface Props {
   testMode?: boolean;
   onRecruitGarrison?: (systemId: number) => void;
   onDisbandGarrison?: (systemId: number) => void;
+  /** Undo all queued recruit/disband garrison orders for this system. */
+  onUndoGarrisonOrders?: (systemId: number) => void;
+  /** Pending queued orders for this system this turn. */
+  pendingGarrison?: { recruit: number; disband: number };
   /** TEST MODE: set current/max ground defenses on this system. */
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
 }
@@ -66,6 +70,8 @@ export default function GarrisonCard({
   testMode,
   onRecruitGarrison,
   onDisbandGarrison,
+  onUndoGarrisonOrders,
+  pendingGarrison,
   onTestSetGarrison,
 }: Props) {
   const [loading, setLoading] = useState(true);
