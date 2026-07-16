@@ -1069,6 +1069,8 @@ function InlineRegionDetail({
             testMode={testMode}
             onRecruitGarrison={onRecruitGarrison}
             onDisbandGarrison={onDisbandGarrison}
+            onUndoGarrisonOrders={onUndoGarrisonOrders}
+            pendingGarrison={pendingGarrisonOrders?.get(realSys.system_id)}
             onTestSetGarrison={onTestSetGarrison}
           />
         ) : null}
