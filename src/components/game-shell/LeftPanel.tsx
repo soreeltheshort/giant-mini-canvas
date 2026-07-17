@@ -427,6 +427,8 @@ function InlineContextContent({
             testMode={testMode}
             onTestSetFacilityQty={onTestSetFacilityQty}
             onTestSetGarrison={onTestSetGarrison}
+            onTestSetSystemOwner={onTestSetSystemOwner}
+            ownerOptions={ownerOptions}
             onRecruitGarrison={onRecruitGarrison}
             onDisbandGarrison={onDisbandGarrison}
             onUndoGarrisonOrders={onUndoGarrisonOrders}
