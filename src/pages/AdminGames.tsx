@@ -422,6 +422,42 @@ const AdminGames = () => {
       if (fleetIntel.length) await (supabase as any).from("player_fleet_intel").insert(fleetIntel);
       const orders = (data.player_orders_json as any[]) || [];
       if (orders.length) await (supabase as any).from("player_orders").insert(orders);
+
+      // 2b) Restore AI state (slates/goals/plans/beliefs/relationships/decisions).
+      //     Delete children before parents (FK); insert parents before children.
+      const ai = (data.ai_state_json as any) || null;
+      if (ai) {
+        // Delete existing AI rows for this game.
+        // ai_plan_steps has FK to ai_plans; delete via plan_id lookup.
+        const { data: existingPlans } = await (supabase as any)
+          .from("ai_plans").select("id").eq("game_id", gameId);
+        const existingPlanIds = ((existingPlans as any[]) || []).map((r) => r.id);
+        if (existingPlanIds.length > 0) {
+          await (supabase as any).from("ai_plan_steps").delete().in("plan_id", existingPlanIds);
+        }
+        await (supabase as any).from("ai_plans").delete().eq("game_id", gameId);
+        await (supabase as any).from("ai_decision_log").delete().eq("game_id", gameId);
+        await (supabase as any).from("ai_relationship_events").delete().eq("game_id", gameId);
+        await (supabase as any).from("ai_relationships").delete().eq("game_id", gameId);
+        await (supabase as any).from("ai_world_beliefs").delete().eq("game_id", gameId);
+        await (supabase as any).from("ai_goals").delete().eq("game_id", gameId);
+        await (supabase as any).from("ai_goal_slates").delete().eq("game_id", gameId);
+
+        const ins = async (table: string, rows: any[]) => {
+          if (Array.isArray(rows) && rows.length) {
+            await (supabase as any).from(table).insert(rows);
+          }
+        };
+        // Insert parents first.
+        await ins("ai_goal_slates", ai.ai_goal_slates || []);
+        await ins("ai_goals", ai.ai_goals || []);
+        await ins("ai_world_beliefs", ai.ai_world_beliefs || []);
+        await ins("ai_relationships", ai.ai_relationships || []);
+        await ins("ai_relationship_events", ai.ai_relationship_events || []);
+        await ins("ai_plans", ai.ai_plans || []);
+        await ins("ai_plan_steps", ai.ai_plan_steps || []);
+        await ins("ai_decision_log", ai.ai_decision_log || []);
+      }
     }
 
     // 3) Restore the game row (map JSON + turn + turn_phase).
