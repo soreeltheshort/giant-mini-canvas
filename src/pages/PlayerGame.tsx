@@ -1269,6 +1269,17 @@ const PlayerGame = () => {
     }), `set garrison on system ${systemId} → ${c}/${m}`, { current_ground_defenses: c, max_ground_defenses: m });
   }, [writeSystemEdit]);
 
+  const handleTestSetSystemOwner = useCallback(async (systemId: number, newOwner: string) => {
+    const owner = (newOwner || "").trim();
+    await writeSystemEdit(
+      systemId,
+      (sys) => ({ ...sys, owner }),
+      `set owner on system ${systemId} → ${owner || "(unclaimed)"}`,
+      { owner },
+    );
+  }, [writeSystemEdit]);
+
+
   /**
    * Recruit +1 ground defense: charges ground_force_replacement_cost from
    * treasury, requires current<max, only allowed for the owning faction.
