@@ -406,6 +406,9 @@ const PlayerGame = () => {
   const [teleportArmed, setTeleportArmed] = useState(false);
   const [createFleetArmed, setCreateFleetArmed] = useState(false);
   const [testModeMapReloadTick, setTestModeMapReloadTick] = useState(0);
+  /** Admin Test Mode: options for the system-owner picker. Loaded from all
+   *  game_factions in this game so admins can reassign a system to any faction. */
+  const [ownerOptions, setOwnerOptions] = useState<Array<{ value: string; label: string }>>([]);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
