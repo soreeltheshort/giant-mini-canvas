@@ -256,6 +256,34 @@ export default function TestModePanel({
         </div>
       </div>
 
+      {/* Create Fleet (any hex) */}
+      <div className="space-y-1 border-t border-crimson/30 pt-2">
+        <label className="text-[9px] font-heading uppercase tracking-wider text-white font-bold block">
+          Create Fleet ({factionName})
+        </label>
+        <div className="flex gap-1">
+          <input
+            type="text"
+            value={newFleetName}
+            onChange={(e) => setNewFleetName(e.target.value)}
+            placeholder="Fleet name"
+            className="flex-1 h-7 rounded-sm border border-input bg-background px-2 text-[11px]"
+          />
+        </div>
+        <button
+          onClick={() => onArmCreateFleet(!createFleetArmed, newFleetName)}
+          disabled={busy || !newFleetName.trim()}
+          className={`w-full h-7 rounded-sm text-[10px] font-heading uppercase tracking-wider disabled:opacity-50 ${
+            createFleetArmed
+              ? "bg-crimson text-primary-foreground"
+              : "bg-background border border-crimson/60 text-crimson"
+          }`}
+        >
+          {createFleetArmed ? "Click a hex to place fleet" : "Create fleet on hex"}
+        </button>
+      </div>
+
+
       {/* Fleet-scoped section */}
       {selected ? (
         <div className="space-y-2 border-t border-crimson/30 pt-2">
