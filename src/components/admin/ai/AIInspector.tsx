@@ -221,6 +221,7 @@ export default function AIInspector() {
         <div className="space-y-6">
           <ThreatAssessmentSection gameId={gameId} playerId={playerId} turn={turn} isTestMode={isTestMode} />
           <GoalSlateSection gameId={gameId} playerId={playerId} turn={turn} onTurnChange={setTurn} />
+          <BoundPlansSection gameId={gameId} playerId={playerId} />
 
           <InspectorSection
             title="Decision log"
@@ -228,6 +229,7 @@ export default function AIInspector() {
             filter={{ game_id: gameId, player_id: playerId, turn_number: turn }}
             columns={["phase", "summary"]}
           />
+
           <InspectorSection
             title="Goals"
             table="ai_goals"
@@ -572,8 +574,9 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
   const runTick = async (commit: boolean) => {
     setBusy(true);
     try {
-      const [{ computeSlate }, { loadGameContext }] = await Promise.all([
+      const [{ computeSlate }, { buildPlansForFaction }, { loadGameContext }] = await Promise.all([
         import("@/lib/ai/goalSlate"),
+        import("@/lib/ai/buildPlans"),
         import("@/lib/gameLifecycle"),
       ]);
       const ctx = await loadGameContext(supabase as any, gameId);
@@ -586,15 +589,25 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
         commit,
       });
       if (!res) { toast.error("No persona for faction"); return; }
-      setPreview(res);
-      if (commit) { toast.success(`Slate ${res.reason}${res.committed ? " (committed)" : ""}`); load(); onTurnChange?.(ctx.game.turn_number); }
-      else { toast.success(`Dry-run: ${res.reason}`); onTurnChange?.(ctx.game.turn_number); }
+      // Chain plan build so preview + commit exercise the full pipeline.
+      const plans = await buildPlansForFaction({
+        supabase: supabase as any,
+        gameId,
+        currentTurn: ctx.game.turn_number,
+        mapState: ctx.mapState,
+        playerFactionId: playerId,
+        commit,
+      });
+      setPreview({ ...res, plans: plans?.plans ?? [] });
+      if (commit) { toast.success(`Slate ${res.reason} · ${plans?.plans.length ?? 0} plan(s) bound`); load(); onTurnChange?.(ctx.game.turn_number); }
+      else { toast.success(`Dry-run: ${res.reason} · ${plans?.plans.length ?? 0} plan preview(s)`); onTurnChange?.(ctx.game.turn_number); }
     } catch (e: any) {
       toast.error(e?.message ?? "Tick failed");
     } finally {
       setBusy(false);
     }
   };
+
 
   const slotLabel = (goalId: string | null) => goalId ? goalId.slice(0, 8) : "—";
 
@@ -647,3 +660,73 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
     </div>
   );
 }
+
+function BoundPlansSection({ gameId, playerId }: { gameId: string; playerId: string }) {
+  const [plans, setPlans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("ai_plans" as any)
+      .select("*")
+      .eq("game_id", gameId)
+      .eq("player_id", playerId)
+      .eq("status", "active")
+      .order("slate_slot", { ascending: true });
+    setPlans((data as any[]) ?? []);
+    setLoading(false);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [gameId, playerId]);
+
+  const feasColor = (f: number) => f >= 0.75 ? "bg-emerald-500" : f >= 0.4 ? "bg-amber-500" : "bg-red-500";
+
+  return (
+    <div className="rounded border border-border">
+      <div className="border-b border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+        <span>Bound plans</span>
+        <Button size="sm" variant="ghost" onClick={load} disabled={loading}>Refresh</Button>
+      </div>
+      <div className="p-3 text-xs">
+        {plans.length === 0 ? (
+          <p className="text-muted-foreground">No active plans. Run a Commit tick after the slate exists.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {[1, 2, 3].map((slot) => {
+              const p = plans.find((x) => x.slate_slot === slot);
+              if (!p) return (
+                <div key={slot} className="rounded border border-dashed border-border/60 p-2">
+                  <div className="text-[10px] text-muted-foreground">P{slot}</div>
+                  <div className="font-mono text-muted-foreground">— empty —</div>
+                </div>
+              );
+              const feas = Number(p.feasibility) || 0;
+              return (
+                <div key={slot} className="rounded border border-border/60 p-2 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[10px] text-muted-foreground">P{p.slate_slot}</div>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${p.feasibility_reason === "ok" ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}>{p.feasibility_reason}</span>
+                  </div>
+                  <div className="font-mono text-sm">{p.target_label || "—"}</div>
+                  <div className="text-[10px] text-muted-foreground">{p.target_kind}{p.target_id ? ` · ${String(p.target_id).slice(0, 8)}` : ""}</div>
+                  <div className="h-1.5 rounded bg-muted overflow-hidden">
+                    <div className={`h-full ${feasColor(feas)}`} style={{ width: `${Math.round(feas * 100)}%` }} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-[10px] text-muted-foreground pt-0.5">
+                    <div>cost: <span className="font-mono text-foreground">{p.estimated_cost_credits}</span></div>
+                    <div>turns: <span className="font-mono text-foreground">{p.estimated_cost_turns}</span></div>
+                  </div>
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-[10px] text-muted-foreground">why this target</summary>
+                    <pre className="mt-1 whitespace-pre-wrap text-[10px]">{JSON.stringify(p.scoring_breakdown_json, null, 2)}</pre>
+                  </details>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
