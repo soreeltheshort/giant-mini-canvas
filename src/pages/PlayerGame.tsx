@@ -1999,6 +1999,8 @@ const PlayerGame = () => {
             testMode: isAdmin && testMode,
             onTestSetFacilityQty: handleTestSetFacilityQty,
             onTestSetGarrison: handleTestSetGarrison,
+            onTestSetSystemOwner: handleTestSetSystemOwner,
+            ownerOptions,
             onRecruitGarrison: handleRecruitGarrison,
             onDisbandGarrison: handleDisbandGarrison,
             onUndoGarrisonOrders: handleUndoGarrisonOrders,
