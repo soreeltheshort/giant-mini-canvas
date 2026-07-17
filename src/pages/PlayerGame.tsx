@@ -369,6 +369,7 @@ const PlayerGame = () => {
     | { mode: "fleet"; orderType: "attack"; fleetId: string }
     | { mode: "hex"; orderType: "commission_fleet"; fleetName: string }
     | { mode: "hex"; orderType: "test_teleport"; fleetId: string; fleetName: string; fromX: number; fromY: number }
+    | { mode: "hex"; orderType: "test_create_fleet"; fleetName: string; ownerClassification: string }
     | null
   >(null);
   // Number of fleet-related orders the player has issued this turn (each costs 1 combat point)
@@ -403,6 +404,7 @@ const PlayerGame = () => {
    *  supply, teleport, add/remove ships). Never persists. */
   const [testMode, setTestMode] = useState(false);
   const [teleportArmed, setTeleportArmed] = useState(false);
+  const [createFleetArmed, setCreateFleetArmed] = useState(false);
   const [testModeMapReloadTick, setTestModeMapReloadTick] = useState(0);
 
   const load = useCallback(async () => {
@@ -1468,6 +1470,63 @@ const PlayerGame = () => {
       return;
     }
 
+    // ── Test Mode create fleet: admin bypass, no CP cost, any hex.
+    if (targeting.orderType === "test_create_fleet") {
+      const { fleetName, ownerClassification } = targeting;
+      setTargeting(null);
+      setCreateFleetArmed(false);
+      if (!mapState) return;
+      if (mapState.fleets.some(f => f.hex_x === hex.x && f.hex_y === hex.y)) {
+        toast({ title: "Hex occupied", description: "Another fleet already occupies this hex.", variant: "destructive" });
+        return;
+      }
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) throw new Error("Not signed in");
+        const { data: tpl, error: e1 } = await (supabase as any)
+          .from("fleets")
+          .insert({ owner_user_id: authUser.id, name: fleetName, points_budget: 0 })
+          .select("id").single();
+        if (e1 || !tpl) throw e1 || new Error("fleet create failed");
+        const { data: gf, error: e2 } = await (supabase as any)
+          .from("game_fleets")
+          .insert({
+            game_id: game.id, fleet_id: tpl.id, fleet_name: fleetName,
+            owner_classification: ownerClassification, hex_x: hex.x, hex_y: hex.y,
+          })
+          .select("id").single();
+        if (e2 || !gf) throw e2 || new Error("game fleet create failed");
+        const newMapFleet: MapFleet = {
+          fleet_id: gf.id, fleet_name: fleetName, owner_classification: ownerClassification,
+          hex_x: hex.x, hex_y: hex.y, source_fleet_id: tpl.id,
+        };
+        const updated: MapState = { ...mapState, fleets: [...mapState.fleets, newMapFleet] };
+        const serialized = {
+          mapData: updated.mapData,
+          hexes: Array.from(updated.hexes.entries()),
+          systems: Array.from(updated.systems.entries()),
+          regions: updated.regions,
+          facilityTypes: updated.facilityTypes,
+          fleets: updated.fleets,
+        };
+        await (supabase as any).from("games").update({ map_data_json: serialized }).eq("id", game.id);
+        setMapState(updated);
+        const { logTestFleetCreated } = await import("@/lib/testMode/testActions");
+        await logTestFleetCreated({
+          gameId: game.id, turnNumber: game.turn_number,
+          fleetName, hexX: hex.x, hexY: hex.y,
+          ownerClassification, gameFleetId: gf.id,
+        });
+        setTestModeMapReloadTick(t => t + 1);
+        toast({ title: "Fleet created", description: `${fleetName} at (${hex.x}, ${hex.y})` });
+      } catch (e: any) {
+        toast({ title: "Create failed", description: e.message ?? String(e), variant: "destructive" });
+      }
+      return;
+    }
+
+
+
     if (combatPointsAvailable <= 0) {
       toast({ title: "No combat points", description: "Cancel another order first.", variant: "destructive" });
       setTargeting(null);
@@ -1812,6 +1871,24 @@ const PlayerGame = () => {
                   fromX: sel.hex_x, fromY: sel.hex_y,
                 });
               }}
+              createFleetArmed={createFleetArmed}
+              onArmCreateFleet={(armed, name) => {
+                setCreateFleetArmed(armed);
+                if (!armed) {
+                  if (targeting?.orderType === "test_create_fleet") setTargeting(null);
+                  return;
+                }
+                const trimmed = (name || "").trim();
+                if (!trimmed) {
+                  toast({ title: "Name required", variant: "destructive" });
+                  setCreateFleetArmed(false);
+                  return;
+                }
+                setTargeting({
+                  mode: "hex", orderType: "test_create_fleet",
+                  fleetName: trimmed, ownerClassification: player.own_classification,
+                });
+              }}
               onChanged={() => setTestModeMapReloadTick(t => t + 1)}
             />
           ) : undefined}
@@ -1905,7 +1982,7 @@ const PlayerGame = () => {
                 <input
                   type="checkbox"
                   checked={testMode}
-                  onChange={(e) => { setTestMode(e.target.checked); if (!e.target.checked) { setTeleportArmed(false); if (targeting?.orderType === "test_teleport") setTargeting(null); } }}
+                  onChange={(e) => { setTestMode(e.target.checked); if (!e.target.checked) { setTeleportArmed(false); setCreateFleetArmed(false); if (targeting?.orderType === "test_teleport" || targeting?.orderType === "test_create_fleet") setTargeting(null); } }}
                   className="h-3 w-3 accent-crimson"
                 />
                 Test Mode
@@ -1927,7 +2004,9 @@ const PlayerGame = () => {
                   ? `Click an owned, unoccupied hex to station "${(targeting as any).fleetName}"`
                   : targeting?.orderType === "test_teleport"
                     ? `TEST MODE: click any hex to teleport "${(targeting as any).fleetName}"`
-                    : undefined
+                    : targeting?.orderType === "test_create_fleet"
+                      ? `TEST MODE: click any hex to create "${(targeting as any).fleetName}"`
+                      : undefined
               }
               onHexTargetPicked={handleHexTargetPicked}
               onFleetTargetPicked={handleFleetTargetPicked}

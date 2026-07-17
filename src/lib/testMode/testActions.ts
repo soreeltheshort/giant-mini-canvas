@@ -132,3 +132,19 @@ export async function setFleetGroundInvasion(args: {
     details: { fleets_row_id: args.fleetsRowId, from: args.fromValue, to: toValue },
   });
 }
+
+export async function logTestFleetCreated(args: {
+  gameId: string; turnNumber: number;
+  fleetName: string; hexX: number; hexY: number;
+  ownerClassification: string; gameFleetId: string;
+}) {
+  await writeLog({
+    gameId: args.gameId, turnNumber: args.turnNumber,
+    message: `created fleet "${args.fleetName}" for ${args.ownerClassification} at (${args.hexX},${args.hexY})`,
+    details: {
+      game_fleet_id: args.gameFleetId,
+      hex: [args.hexX, args.hexY],
+      owner_classification: args.ownerClassification,
+    },
+  });
+}
