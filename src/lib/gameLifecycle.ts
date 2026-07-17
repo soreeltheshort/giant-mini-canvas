@@ -46,7 +46,7 @@ export function deserializeMapState(json: any): MapState {
   };
 }
 
-async function loadGameContext(supabase: SupabaseClient, gameId: string) {
+export async function loadGameContext(supabase: SupabaseClient, gameId: string) {
   const [{ data: g }, { data: ft }, { data: st }] = await Promise.all([
     (supabase as any).from("games").select("id, name, status, turn_number, map_data_json").eq("id", gameId).single(),
     (supabase as any).from("facility_types").select("*"),
