@@ -369,6 +369,7 @@ const PlayerGame = () => {
     | { mode: "fleet"; orderType: "attack"; fleetId: string }
     | { mode: "hex"; orderType: "commission_fleet"; fleetName: string }
     | { mode: "hex"; orderType: "test_teleport"; fleetId: string; fleetName: string; fromX: number; fromY: number }
+    | { mode: "hex"; orderType: "test_create_fleet"; fleetName: string; ownerClassification: string }
     | null
   >(null);
   // Number of fleet-related orders the player has issued this turn (each costs 1 combat point)
@@ -403,6 +404,7 @@ const PlayerGame = () => {
    *  supply, teleport, add/remove ships). Never persists. */
   const [testMode, setTestMode] = useState(false);
   const [teleportArmed, setTeleportArmed] = useState(false);
+  const [createFleetArmed, setCreateFleetArmed] = useState(false);
   const [testModeMapReloadTick, setTestModeMapReloadTick] = useState(0);
 
   const load = useCallback(async () => {
