@@ -1982,7 +1982,7 @@ const PlayerGame = () => {
                 <input
                   type="checkbox"
                   checked={testMode}
-                  onChange={(e) => { setTestMode(e.target.checked); if (!e.target.checked) { setTeleportArmed(false); if (targeting?.orderType === "test_teleport") setTargeting(null); } }}
+                  onChange={(e) => { setTestMode(e.target.checked); if (!e.target.checked) { setTeleportArmed(false); setCreateFleetArmed(false); if (targeting?.orderType === "test_teleport" || targeting?.orderType === "test_create_fleet") setTargeting(null); } }}
                   className="h-3 w-3 accent-crimson"
                 />
                 Test Mode
@@ -2004,7 +2004,9 @@ const PlayerGame = () => {
                   ? `Click an owned, unoccupied hex to station "${(targeting as any).fleetName}"`
                   : targeting?.orderType === "test_teleport"
                     ? `TEST MODE: click any hex to teleport "${(targeting as any).fleetName}"`
-                    : undefined
+                    : targeting?.orderType === "test_create_fleet"
+                      ? `TEST MODE: click any hex to create "${(targeting as any).fleetName}"`
+                      : undefined
               }
               onHexTargetPicked={handleHexTargetPicked}
               onFleetTargetPicked={handleFleetTargetPicked}
