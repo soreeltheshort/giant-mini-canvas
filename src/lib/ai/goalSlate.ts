@@ -77,7 +77,7 @@ export async function computeSlate(args: ComputeSlateArgs): Promise<SlateCompute
   // 2. Load goal weights, world beliefs, relationships, own+hostile fleets
   const [{ data: weights }, { data: beliefs }, { data: rels }, { data: fleets }, { data: shipRows }, { data: slateRow }] = await Promise.all([
     (supabase as any).from("ai_persona_goal_weights").select("goal_type, base_weight, urgency_multiplier").eq("persona_id", personaId),
-    (supabase as any).from("ai_world_beliefs").select("belief_key, value_json").eq("game_id", gameId).eq("player_id", playerFactionId).in("belief_key", ["enemy_strength_total", "enemy_strength_nearby"]),
+    (supabase as any).from("ai_world_beliefs").select("belief_key, value_json, turn_number").eq("game_id", gameId).eq("player_id", playerFactionId).in("belief_key", ["enemy_strength_total", "enemy_strength_nearby"]).lte("turn_number", currentTurn).order("turn_number", { ascending: false }),
     (supabase as any).from("ai_relationships").select("target_player_id, opinion, derived_class").eq("game_id", gameId).eq("player_id", playerFactionId),
     (supabase as any).from("game_fleets").select("id, hex_x, hex_y, owner_classification").eq("game_id", gameId),
     (supabase as any).from("game_fleet_ships").select("game_fleet_id, ship_type_id"),
@@ -108,7 +108,10 @@ export async function computeSlate(args: ComputeSlateArgs): Promise<SlateCompute
 
   const beliefMap = new Map<string, number>();
   for (const b of beliefs || []) {
-    beliefMap.set(b.belief_key, Number((b.value_json as any)?.points) || 0);
+    // rows are ordered by turn_number desc; keep only the newest per key
+    if (!beliefMap.has(b.belief_key)) {
+      beliefMap.set(b.belief_key, Number((b.value_json as any)?.points) || 0);
+    }
   }
 
   // 3. Fingerprint
