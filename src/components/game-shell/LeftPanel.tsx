@@ -1069,6 +1069,8 @@ function InlineRegionDetail({
             system={realSys}
             gameData={gameData}
             onSetFacilityQty={onTestSetFacilityQty}
+            onSetOwner={onTestSetSystemOwner}
+            ownerOptions={ownerOptions}
           />
         ) : null}
 
