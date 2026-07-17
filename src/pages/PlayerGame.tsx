@@ -406,6 +406,9 @@ const PlayerGame = () => {
   const [teleportArmed, setTeleportArmed] = useState(false);
   const [createFleetArmed, setCreateFleetArmed] = useState(false);
   const [testModeMapReloadTick, setTestModeMapReloadTick] = useState(0);
+  /** Admin Test Mode: options for the system-owner picker. Loaded from all
+   *  game_factions in this game so admins can reassign a system to any faction. */
+  const [ownerOptions, setOwnerOptions] = useState<Array<{ value: string; label: string }>>([]);
 
   const load = useCallback(async () => {
     if (!user || !gameId) return;
@@ -620,6 +623,39 @@ const PlayerGame = () => {
   }, [user, gameId, navigate, toast, isAdmin, asFactionId]);
 
   useEffect(() => { load(); }, [load, testModeMapReloadTick]);
+
+  // Admin Test Mode: load owner-classification options for all factions in
+  // this game so the system-owner picker offers the same values used by
+  // ownership checks elsewhere (PROVINCE_<slot> for provinces, code_name for
+  // AI factions). Only runs for admins when test mode is enabled.
+  useEffect(() => {
+    if (!isAdmin || !testMode || !gameId) { setOwnerOptions([]); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("game_factions")
+        .select("player_slot, factions:faction_id(name, code_name)")
+        .eq("game_id", gameId);
+      if (cancelled) return;
+      const opts: Array<{ value: string; label: string }> = [{ value: "", label: "(unclaimed)" }];
+      for (const row of (data || []) as any[]) {
+        const slot = row.player_slot as number | null;
+        const fname = row.factions?.name || row.factions?.code_name || null;
+        if (slot != null) {
+          const provName = PROVINCE_NAMES[slot] || `Slot ${slot}`;
+          opts.push({ value: `PROVINCE_${slot}`, label: `${provName} (PROVINCE_${slot})` });
+        } else if (fname) {
+          const code = row.factions?.code_name || row.factions?.name;
+          opts.push({ value: code, label: `${fname} (${code})` });
+        }
+      }
+      // Dedupe by value.
+      const seen = new Set<string>();
+      setOwnerOptions(opts.filter(o => (seen.has(o.value) ? false : (seen.add(o.value), true))));
+    })();
+    return () => { cancelled = true; };
+  }, [isAdmin, testMode, gameId]);
+
 
   // Count player's fleet move/attack orders for this turn (each costs 1 combat point).
   // Load player's fleet move/attack orders for this turn (each costs 1 combat point)
@@ -1268,6 +1304,17 @@ const PlayerGame = () => {
       current_ground_defenses: c,
     }), `set garrison on system ${systemId} → ${c}/${m}`, { current_ground_defenses: c, max_ground_defenses: m });
   }, [writeSystemEdit]);
+
+  const handleTestSetSystemOwner = useCallback(async (systemId: number, newOwner: string) => {
+    const owner = (newOwner || "").trim();
+    await writeSystemEdit(
+      systemId,
+      (sys) => ({ ...sys, owner }),
+      `set owner on system ${systemId} → ${owner || "(unclaimed)"}`,
+      { owner },
+    );
+  }, [writeSystemEdit]);
+
 
   /**
    * Recruit +1 ground defense: charges ground_force_replacement_cost from
@@ -1952,6 +1999,8 @@ const PlayerGame = () => {
             testMode: isAdmin && testMode,
             onTestSetFacilityQty: handleTestSetFacilityQty,
             onTestSetGarrison: handleTestSetGarrison,
+            onTestSetSystemOwner: handleTestSetSystemOwner,
+            ownerOptions,
             onRecruitGarrison: handleRecruitGarrison,
             onDisbandGarrison: handleDisbandGarrison,
             onUndoGarrisonOrders: handleUndoGarrisonOrders,

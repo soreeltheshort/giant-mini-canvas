@@ -96,6 +96,10 @@ interface LeftPanelProps {
     onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
     /** TEST MODE: set garrison current/max on a system. */
     onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
+    /** TEST MODE: reassign a system's owner-classification. */
+    onTestSetSystemOwner?: (systemId: number, newOwner: string) => void;
+    /** TEST MODE: available owner-classification options for the picker. */
+    ownerOptions?: Array<{ value: string; label: string }>;
     /** Player action: recruit one ground defense unit at a system they own. */
     onRecruitGarrison?: (systemId: number) => void;
     /** Player action: disband one ground defense unit at a system they own. */
@@ -327,6 +331,8 @@ function InlineContextContent({
   testMode,
   onTestSetFacilityQty,
   onTestSetGarrison,
+  onTestSetSystemOwner,
+  ownerOptions,
   onRecruitGarrison,
   onDisbandGarrison,
   onUndoGarrisonOrders,
@@ -363,6 +369,8 @@ function InlineContextContent({
   testMode?: boolean;
   onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
+  onTestSetSystemOwner?: (systemId: number, newOwner: string) => void;
+  ownerOptions?: Array<{ value: string; label: string }>;
   onRecruitGarrison?: (systemId: number) => void;
   onDisbandGarrison?: (systemId: number) => void;
   onUndoGarrisonOrders?: (systemId: number) => void;
@@ -419,6 +427,8 @@ function InlineContextContent({
             testMode={testMode}
             onTestSetFacilityQty={onTestSetFacilityQty}
             onTestSetGarrison={onTestSetGarrison}
+            onTestSetSystemOwner={onTestSetSystemOwner}
+            ownerOptions={ownerOptions}
             onRecruitGarrison={onRecruitGarrison}
             onDisbandGarrison={onDisbandGarrison}
             onUndoGarrisonOrders={onUndoGarrisonOrders}
@@ -821,24 +831,65 @@ function SystemTestEditor({
   system,
   gameData,
   onSetFacilityQty,
+  onSetOwner,
+  ownerOptions,
 }: {
   system: import("@/lib/mapTypes").SystemData;
   gameData: GameMapData;
   onSetFacilityQty: (systemId: number, facilityTypeId: string, quantity: number) => void;
+  onSetOwner?: (systemId: number, newOwner: string) => void;
+  ownerOptions?: Array<{ value: string; label: string }>;
 }) {
   const [addFacilityId, setAddFacilityId] = useState<string>("");
+  const [ownerDraft, setOwnerDraft] = useState<string>(system.owner || "");
 
   const sysId = system.system_id;
   useEffect(() => {
     setAddFacilityId("");
-  }, [sysId]);
+    setOwnerDraft(system.owner || "");
+  }, [sysId, system.owner]);
 
   const existingIds = new Set((system.facilities || []).map((f) => f.facility_type_id));
   const addable = (gameData.facilityTypes || []).filter((ft) => !existingIds.has(ft.facility_type_id));
+  const opts = ownerOptions && ownerOptions.length > 0 ? ownerOptions : [{ value: "", label: "(unclaimed)" }];
+  // Ensure the current owner (even if not in options) is selectable.
+  const hasCurrent = opts.some(o => o.value === (system.owner || ""));
+  const effectiveOpts = hasCurrent ? opts : [...opts, { value: system.owner || "", label: `${system.owner || "(unclaimed)"} (current)` }];
+  const ownerDirty = (ownerDraft || "") !== (system.owner || "");
 
   return (
-    <ImperialCard title="Test Mode · Edit Facilities" subtitle="Admin only — writes immediately">
+    <ImperialCard title="Test Mode · Edit System" subtitle="Admin only — writes immediately">
       <div className="space-y-3">
+
+        {/* Owner picker */}
+        {onSetOwner ? (
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground">Owner</div>
+            <div className="flex items-center gap-2">
+              <select
+                value={ownerDraft}
+                onChange={(e) => setOwnerDraft(e.target.value)}
+                className="flex-1 h-7 px-2 rounded-sm border border-border bg-background text-xs"
+              >
+                {effectiveOpts.map((o) => (
+                  <option key={o.value || "__unclaimed__"} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <button
+                disabled={!ownerDirty}
+                onClick={() => onSetOwner(sysId, ownerDraft)}
+                className={`h-7 px-3 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider ${ownerDirty ? "bg-crimson text-primary-foreground hover:bg-crimson-light" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+              >
+                Save
+              </button>
+            </div>
+            <p className="text-[10px] text-muted-foreground italic">
+              Current: {system.owner || "(unclaimed)"}
+            </p>
+          </div>
+        ) : null}
+
+
 
 
         {/* Facility editor */}
@@ -956,6 +1007,8 @@ function InlineRegionDetail({
   testMode,
   onTestSetFacilityQty,
   onTestSetGarrison,
+  onTestSetSystemOwner,
+  ownerOptions,
   onRecruitGarrison,
   onDisbandGarrison,
   onUndoGarrisonOrders,
@@ -977,6 +1030,8 @@ function InlineRegionDetail({
   testMode?: boolean;
   onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
+  onTestSetSystemOwner?: (systemId: number, newOwner: string) => void;
+  ownerOptions?: Array<{ value: string; label: string }>;
   onRecruitGarrison?: (systemId: number) => void;
   onDisbandGarrison?: (systemId: number) => void;
   onUndoGarrisonOrders?: (systemId: number) => void;
@@ -1055,6 +1110,8 @@ function InlineRegionDetail({
             system={realSys}
             gameData={gameData}
             onSetFacilityQty={onTestSetFacilityQty}
+            onSetOwner={onTestSetSystemOwner}
+            ownerOptions={ownerOptions}
           />
         ) : null}
 
