@@ -236,7 +236,7 @@ export default function AIInspector() {
       ) : (
         <div className="space-y-6">
           <ThreatAssessmentSection gameId={gameId} playerId={playerId} turn={turn} isTestMode={isTestMode} />
-          <GoalSlateSection gameId={gameId} playerId={playerId} turn={turn} />
+          <GoalSlateSection gameId={gameId} playerId={playerId} turn={turn} onTurnChange={setTurn} />
 
           <InspectorSection
             title="Decision log"
@@ -569,7 +569,7 @@ function ThreatAssessmentSection({ gameId, playerId, turn, isTestMode }: { gameI
 }
 
 
-function GoalSlateSection({ gameId, playerId, turn }: { gameId: string; playerId: string; turn: number }) {
+function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: string; playerId: string; turn: number; onTurnChange?: (t: number) => void }) {
   const [slate, setSlate] = useState<any | null>(null);
   const [preview, setPreview] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
@@ -603,8 +603,8 @@ function GoalSlateSection({ gameId, playerId, turn }: { gameId: string; playerId
       });
       if (!res) { toast.error("No persona for faction"); return; }
       setPreview(res);
-      if (commit) { toast.success(`Slate ${res.reason}${res.committed ? " (committed)" : ""}`); load(); }
-      else toast.success(`Dry-run: ${res.reason}`);
+      if (commit) { toast.success(`Slate ${res.reason}${res.committed ? " (committed)" : ""}`); load(); onTurnChange?.(ctx.game.turn_number); }
+      else { toast.success(`Dry-run: ${res.reason}`); onTurnChange?.(ctx.game.turn_number); }
     } catch (e: any) {
       toast.error(e?.message ?? "Tick failed");
     } finally {
