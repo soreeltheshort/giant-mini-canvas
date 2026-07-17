@@ -371,7 +371,7 @@ const AdminGames = () => {
     // Fetch full snapshot including new baked-in state columns
     const { data, error: fetchErr } = await (supabase as any)
       .from("game_snapshots")
-      .select("map_data_json, game_fleets_json, game_fleet_ships_json, game_factions_json, player_system_intel_json, player_fleet_intel_json, player_orders_json, game_meta_json")
+      .select("map_data_json, game_fleets_json, game_fleet_ships_json, game_factions_json, player_system_intel_json, player_fleet_intel_json, player_orders_json, game_meta_json, ai_state_json")
       .eq("id", snapshot.id)
       .single();
     if (fetchErr || !data) { toast({ title: "Restore failed", description: fetchErr?.message || "Snapshot missing", variant: "destructive" }); return; }
