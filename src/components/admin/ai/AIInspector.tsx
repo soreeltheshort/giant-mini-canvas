@@ -568,3 +568,98 @@ function ThreatAssessmentSection({ gameId, playerId, turn, isTestMode }: { gameI
   );
 }
 
+
+function GoalSlateSection({ gameId, playerId, turn }: { gameId: string; playerId: string; turn: number }) {
+  const [slate, setSlate] = useState<any | null>(null);
+  const [preview, setPreview] = useState<any | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    const { data } = await supabase
+      .from("ai_goal_slates" as any)
+      .select("*")
+      .eq("game_id", gameId)
+      .eq("player_id", playerId)
+      .maybeSingle();
+    setSlate(data ?? null);
+  };
+  useEffect(() => { load(); setPreview(null); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [gameId, playerId, turn]);
+
+  const runTick = async (commit: boolean) => {
+    setBusy(true);
+    try {
+      const [{ computeSlate }, { loadGameContext }] = await Promise.all([
+        import("@/lib/ai/goalSlate"),
+        import("@/lib/gameLifecycle"),
+      ]);
+      const ctx = await loadGameContext(supabase as any, gameId);
+      const res = await computeSlate({
+        supabase: supabase as any,
+        gameId,
+        currentTurn: ctx.game.turn_number,
+        mapState: ctx.mapState,
+        playerFactionId: playerId,
+        commit,
+      });
+      if (!res) { toast.error("No persona for faction"); return; }
+      setPreview(res);
+      if (commit) { toast.success(`Slate ${res.reason}${res.committed ? " (committed)" : ""}`); load(); }
+      else toast.success(`Dry-run: ${res.reason}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Tick failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const slotLabel = (goalId: string | null) => goalId ? goalId.slice(0, 8) : "—";
+
+  return (
+    <div className="rounded border border-border">
+      <div className="border-b border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+        <span>Goal slate</span>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => runTick(false)}>Dry-run tick</Button>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => runTick(true)}>Commit tick</Button>
+        </div>
+      </div>
+      <div className="p-3 text-xs space-y-3">
+        {!slate ? (
+          <p className="text-muted-foreground">No slate committed yet. Run a Commit tick to create one.</p>
+        ) : (
+          <div className="space-y-1">
+            <div><span className="text-muted-foreground">Committed turn:</span> <span className="font-mono">{slate.committed_turn}</span></div>
+            <div><span className="text-muted-foreground">Next mandatory review:</span> <span className="font-mono">{slate.next_mandatory_review_turn}</span></div>
+            <div><span className="text-muted-foreground">Last reason:</span> <span className="font-mono">{slate.last_revision_reason}</span></div>
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="rounded border border-border/60 p-2"><div className="text-[10px] text-muted-foreground">P1</div><div className="font-mono">{slotLabel(slate.slot1_goal_id)}</div></div>
+              <div className="rounded border border-border/60 p-2"><div className="text-[10px] text-muted-foreground">P2</div><div className="font-mono">{slotLabel(slate.slot2_goal_id)}</div></div>
+              <div className="rounded border border-border/60 p-2"><div className="text-[10px] text-muted-foreground">P3</div><div className="font-mono">{slotLabel(slate.slot3_goal_id)}</div></div>
+            </div>
+          </div>
+        )}
+        {preview && (
+          <div className="mt-3 rounded border border-dashed border-border p-2 space-y-2">
+            <div className="font-semibold text-[11px] uppercase tracking-wider text-muted-foreground">Last tick trace</div>
+            <div><span className="text-muted-foreground">Reason:</span> <span className="font-mono">{preview.reason}</span> {preview.committed && <span className="text-emerald-600">(committed)</span>}</div>
+            {preview.breaches?.length > 0 && (
+              <div><span className="text-muted-foreground">Breaches:</span> <span className="font-mono">{preview.breaches.map((b: any) => `${b.dim}(${JSON.stringify(b.from)}→${JSON.stringify(b.to)})`).join(", ")}</span></div>
+            )}
+            <div>
+              <div className="text-muted-foreground mb-1">Proposed slate:</div>
+              <table className="w-full font-mono">
+                <thead><tr className="text-muted-foreground text-[10px]"><th className="text-left">slot</th><th className="text-left">goal</th><th className="text-right">score</th><th className="text-right">base</th><th className="text-right">urg</th><th className="text-right">trait</th><th className="text-right">rel</th><th className="text-right">belief</th></tr></thead>
+                <tbody>
+                  {preview.slate.map((g: any, i: number) => (
+                    <tr key={i}><td>{i + 1}</td><td>{g.goal_code}</td><td className="text-right">{g.score.toFixed(2)}</td><td className="text-right">{g.breakdown.base.toFixed(2)}</td><td className="text-right">{g.breakdown.urgency.toFixed(2)}</td><td className="text-right">{g.breakdown.trait.toFixed(2)}</td><td className="text-right">{g.breakdown.relationship.toFixed(2)}</td><td className="text-right">{g.breakdown.belief.toFixed(2)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <details><summary className="cursor-pointer text-muted-foreground">Worldview dims</summary><pre className="mt-1 whitespace-pre-wrap text-[10px]">{JSON.stringify(preview.worldview, null, 2)}</pre></details>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
