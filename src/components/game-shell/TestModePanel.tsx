@@ -28,6 +28,9 @@ interface Props {
   /** Toggle teleport picker: when armed, next map click moves the selected fleet. */
   teleportArmed: boolean;
   onArmTeleport: (armed: boolean) => void;
+  /** Toggle create-fleet picker: when armed, next map click creates a fleet at that hex. */
+  createFleetArmed: boolean;
+  onArmCreateFleet: (armed: boolean, name: string) => void;
   /** Notify parent when any DB change happens so it can reload the map. */
   onChanged: () => void;
 }
@@ -53,10 +56,12 @@ export default function TestModePanel({
   gameFactionId, factionName, treasury,
   fleets, shipTypes,
   selectedGameFleetId, teleportArmed, onArmTeleport,
+  createFleetArmed, onArmCreateFleet,
   onChanged,
 }: Props) {
   const { toast } = useToast();
   const [treasuryInput, setTreasuryInput] = useState(String(treasury));
+  const [newFleetName, setNewFleetName] = useState("New Fleet");
   useEffect(() => { setTreasuryInput(String(treasury)); }, [treasury]);
 
   const selected = selectedGameFleetId
