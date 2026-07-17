@@ -221,6 +221,7 @@ export default function AIInspector() {
         <div className="space-y-6">
           <ThreatAssessmentSection gameId={gameId} playerId={playerId} turn={turn} isTestMode={isTestMode} />
           <GoalSlateSection gameId={gameId} playerId={playerId} turn={turn} onTurnChange={setTurn} />
+          <BoundPlansSection gameId={gameId} playerId={playerId} />
 
           <InspectorSection
             title="Decision log"
@@ -228,6 +229,7 @@ export default function AIInspector() {
             filter={{ game_id: gameId, player_id: playerId, turn_number: turn }}
             columns={["phase", "summary"]}
           />
+
           <InspectorSection
             title="Goals"
             table="ai_goals"
