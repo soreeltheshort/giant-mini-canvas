@@ -369,6 +369,8 @@ function InlineContextContent({
   testMode?: boolean;
   onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
+  onTestSetSystemOwner?: (systemId: number, newOwner: string) => void;
+  ownerOptions?: Array<{ value: string; label: string }>;
   onRecruitGarrison?: (systemId: number) => void;
   onDisbandGarrison?: (systemId: number) => void;
   onUndoGarrisonOrders?: (systemId: number) => void;
