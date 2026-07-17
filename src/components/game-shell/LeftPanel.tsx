@@ -966,6 +966,8 @@ function InlineRegionDetail({
   testMode,
   onTestSetFacilityQty,
   onTestSetGarrison,
+  onTestSetSystemOwner,
+  ownerOptions,
   onRecruitGarrison,
   onDisbandGarrison,
   onUndoGarrisonOrders,
