@@ -17,6 +17,7 @@ interface Game {
   name: string;
   turn_number: number;
   is_test_mode: boolean;
+  enable_ai_slates?: boolean;
 }
 
 interface PlayerRow {
@@ -54,7 +55,7 @@ export default function AIInspector() {
     (async () => {
       const { data } = await supabase
         .from("games")
-        .select("id, name, turn_number, is_test_mode")
+        .select("id, name, turn_number, is_test_mode, enable_ai_slates")
         .order("updated_at", { ascending: false });
       setGames((data ?? []) as any);
     })();
@@ -148,26 +149,49 @@ export default function AIInspector() {
       </div>
 
       {gameId && (
-        <div className="flex items-center justify-between gap-3 rounded border border-border/60 bg-muted/30 px-3 py-2">
-          <div className="text-xs">
-            <span className="font-semibold">Test mode:</span>{" "}
-            {isTestMode
-              ? "ON — AI beliefs are recorded for every processed turn. You can scrub the Turn field to inspect history."
-              : "OFF — only the current/most-recent AI belief snapshot is retained. Turn selector is locked."}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3 rounded border border-border/60 bg-muted/30 px-3 py-2">
+            <div className="text-xs">
+              <span className="font-semibold">Test mode:</span>{" "}
+              {isTestMode
+                ? "ON — AI beliefs are recorded for every processed turn. You can scrub the Turn field to inspect history."
+                : "OFF — only the current/most-recent AI belief snapshot is retained. Turn selector is locked."}
+            </div>
+            <Button
+              size="sm"
+              variant={isTestMode ? "secondary" : "outline"}
+              onClick={async () => {
+                const next = !isTestMode;
+                const { error } = await supabase.from("games").update({ is_test_mode: next } as any).eq("id", gameId);
+                if (error) { toast.error(error.message); return; }
+                setGames((gs) => gs.map((g) => g.id === gameId ? { ...g, is_test_mode: next } : g));
+                toast.success(`Test mode ${next ? "enabled" : "disabled"}`);
+              }}
+            >
+              {isTestMode ? "Disable test mode" : "Enable test mode"}
+            </Button>
           </div>
-          <Button
-            size="sm"
-            variant={isTestMode ? "secondary" : "outline"}
-            onClick={async () => {
-              const next = !isTestMode;
-              const { error } = await supabase.from("games").update({ is_test_mode: next } as any).eq("id", gameId);
-              if (error) { toast.error(error.message); return; }
-              setGames((gs) => gs.map((g) => g.id === gameId ? { ...g, is_test_mode: next } : g));
-              toast.success(`Test mode ${next ? "enabled" : "disabled"}`);
-            }}
-          >
-            {isTestMode ? "Disable test mode" : "Enable test mode"}
-          </Button>
+          <div className="flex items-center justify-between gap-3 rounded border border-border/60 bg-muted/30 px-3 py-2">
+            <div className="text-xs">
+              <span className="font-semibold">AI goal slates (Phase 2a):</span>{" "}
+              {currentGame?.enable_ai_slates
+                ? "ON — every processed turn will recompute the 3-slot goal slate for each AI faction."
+                : "OFF — no slate work runs during turn processing. Dry-run buttons below still work."}
+            </div>
+            <Button
+              size="sm"
+              variant={currentGame?.enable_ai_slates ? "secondary" : "outline"}
+              onClick={async () => {
+                const next = !currentGame?.enable_ai_slates;
+                const { error } = await supabase.from("games").update({ enable_ai_slates: next } as any).eq("id", gameId);
+                if (error) { toast.error(error.message); return; }
+                setGames((gs) => gs.map((g) => g.id === gameId ? { ...g, enable_ai_slates: next } : g));
+                toast.success(`AI slates ${next ? "enabled" : "disabled"}`);
+              }}
+            >
+              {currentGame?.enable_ai_slates ? "Disable AI slates" : "Enable AI slates"}
+            </Button>
+          </div>
         </div>
       )}
 
