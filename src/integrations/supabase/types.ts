@@ -413,39 +413,69 @@ export type Database = {
       }
       ai_plans: {
         Row: {
+          committed_turn: number | null
           created_at: string
           created_turn: number
+          estimated_cost_credits: number | null
+          estimated_cost_turns: number | null
+          feasibility: number | null
+          feasibility_reason: string | null
           game_id: string
           goal_id: string
           id: string
           player_id: string
           rationale: string
+          scoring_breakdown_json: Json | null
+          slate_slot: number | null
           status: string
           target_completion_turn: number | null
+          target_id: string | null
+          target_kind: string | null
+          target_label: string | null
           updated_at: string
         }
         Insert: {
+          committed_turn?: number | null
           created_at?: string
           created_turn?: number
+          estimated_cost_credits?: number | null
+          estimated_cost_turns?: number | null
+          feasibility?: number | null
+          feasibility_reason?: string | null
           game_id: string
           goal_id: string
           id?: string
           player_id: string
           rationale?: string
+          scoring_breakdown_json?: Json | null
+          slate_slot?: number | null
           status?: string
           target_completion_turn?: number | null
+          target_id?: string | null
+          target_kind?: string | null
+          target_label?: string | null
           updated_at?: string
         }
         Update: {
+          committed_turn?: number | null
           created_at?: string
           created_turn?: number
+          estimated_cost_credits?: number | null
+          estimated_cost_turns?: number | null
+          feasibility?: number | null
+          feasibility_reason?: string | null
           game_id?: string
           goal_id?: string
           id?: string
           player_id?: string
           rationale?: string
+          scoring_breakdown_json?: Json | null
+          slate_slot?: number | null
           status?: string
           target_completion_turn?: number | null
+          target_id?: string | null
+          target_kind?: string | null
+          target_label?: string | null
           updated_at?: string
         }
         Relationships: [
