@@ -236,6 +236,8 @@ export default function AIInspector() {
       ) : (
         <div className="space-y-6">
           <ThreatAssessmentSection gameId={gameId} playerId={playerId} turn={turn} isTestMode={isTestMode} />
+          <GoalSlateSection gameId={gameId} playerId={playerId} turn={turn} />
+
           <InspectorSection
             title="Decision log"
             table="ai_decision_log"
