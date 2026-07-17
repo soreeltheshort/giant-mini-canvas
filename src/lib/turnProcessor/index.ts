@@ -27,21 +27,12 @@ import { shipProductionPhase } from "./phases/shipProduction";
 import { transferShipsPhase } from "./phases/transferShips";
 import { infectIntelLeechPhase } from "./phases/infectIntelLeech";
 import { threatAssessmentPhase } from "./phases/threatAssessment";
+import { aiSlatesPhase } from "./phases/aiSlates";
 import { seedFactionPlayers } from "@/lib/gameLifecycle";
 
-// Order matters:
-//   - economy: tribute, upkeep, repairs, builds.
-//   - ship_production: advance per-system ship build queues + virtual transit.
-//   - combat: fleet-vs-fleet engagements.
-//   - movement: fleets advance toward destinations.
-//   - transfer_ships: redistribute ships between co-located friendly fleets.
-//   - ground_combat: any fleet that ended movement on an enemy/unowned planet
-//     with current_ground_invasion > 0 invades. Must run AFTER movement (so
-//     positions are final) and BEFORE visibility (so new ownership propagates).
-//   - infect_intel_leech: INFECT factions that survived combat absorb the
-//     loser's full intel. Must run AFTER combat and BEFORE visibility (so
-//     newly granted systems get fresh snapshots).
-//   - visibility: scout/intel updates pick up the new owner.
+// Order matters (see turnProcessor.md for the full explanation).
+// ai_slates runs LAST, after threat_assessment has published fresh beliefs,
+// so the slate builder reads a consistent snapshot for the turn.
 export const PHASE_ORDER: Phase[] = [
   economyPhase,
   shipProductionPhase,
@@ -53,6 +44,7 @@ export const PHASE_ORDER: Phase[] = [
   infectIntelLeechPhase,
   visibilityPhase,
   threatAssessmentPhase,
+  aiSlatesPhase,
 ];
 
 

@@ -12,7 +12,7 @@ import type { ShipTypeForUpkeep } from "@/lib/turnEngine";
 import type { FactionMeta } from "./ownerKey";
 import type { PerfTimer } from "./perf";
 
-export type PhaseName = "economy" | "movement" | "visibility" | "combat" | "ground_combat" | "infect_intel_leech" | "threat_assessment";
+export type PhaseName = "economy" | "movement" | "visibility" | "combat" | "ground_combat" | "infect_intel_leech" | "threat_assessment" | "ai_slates";
 
 /** A single conditional order, as stored in player_orders. */
 export interface ConditionalOrder {

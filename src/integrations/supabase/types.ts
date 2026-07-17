@@ -62,6 +62,93 @@ export type Database = {
           },
         ]
       }
+      ai_goal_slates: {
+        Row: {
+          committed_turn: number
+          created_at: string
+          faction_key: string | null
+          game_id: string
+          id: string
+          last_revision_reason: string
+          next_mandatory_review_turn: number
+          player_id: string
+          slot1_goal_id: string | null
+          slot2_goal_id: string | null
+          slot3_goal_id: string | null
+          updated_at: string
+          worldview_hash: string
+          worldview_snapshot_json: Json
+        }
+        Insert: {
+          committed_turn?: number
+          created_at?: string
+          faction_key?: string | null
+          game_id: string
+          id?: string
+          last_revision_reason?: string
+          next_mandatory_review_turn?: number
+          player_id: string
+          slot1_goal_id?: string | null
+          slot2_goal_id?: string | null
+          slot3_goal_id?: string | null
+          updated_at?: string
+          worldview_hash?: string
+          worldview_snapshot_json?: Json
+        }
+        Update: {
+          committed_turn?: number
+          created_at?: string
+          faction_key?: string | null
+          game_id?: string
+          id?: string
+          last_revision_reason?: string
+          next_mandatory_review_turn?: number
+          player_id?: string
+          slot1_goal_id?: string | null
+          slot2_goal_id?: string | null
+          slot3_goal_id?: string | null
+          updated_at?: string
+          worldview_hash?: string
+          worldview_snapshot_json?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_goal_slates_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_goal_slates_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "game_factions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_goal_slates_slot1_goal_id_fkey"
+            columns: ["slot1_goal_id"]
+            isOneToOne: false
+            referencedRelation: "ai_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_goal_slates_slot2_goal_id_fkey"
+            columns: ["slot2_goal_id"]
+            isOneToOne: false
+            referencedRelation: "ai_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_goal_slates_slot3_goal_id_fkey"
+            columns: ["slot3_goal_id"]
+            isOneToOne: false
+            referencedRelation: "ai_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_goals: {
         Row: {
           created_at: string
@@ -69,10 +156,13 @@ export type Database = {
           game_id: string
           goal_type: string
           id: string
+          outcome: string
           parent_goal_id: string | null
           player_id: string
           priority: number
+          progress_json: Json
           resolved_turn: number | null
+          slate_slot: number | null
           status: string
           target_json: Json
           updated_at: string
@@ -83,10 +173,13 @@ export type Database = {
           game_id: string
           goal_type: string
           id?: string
+          outcome?: string
           parent_goal_id?: string | null
           player_id: string
           priority?: number
+          progress_json?: Json
           resolved_turn?: number | null
+          slate_slot?: number | null
           status?: string
           target_json?: Json
           updated_at?: string
@@ -97,10 +190,13 @@ export type Database = {
           game_id?: string
           goal_type?: string
           id?: string
+          outcome?: string
           parent_goal_id?: string | null
           player_id?: string
           priority?: number
+          progress_json?: Json
           resolved_turn?: number | null
+          slate_slot?: number | null
           status?: string
           target_json?: Json
           updated_at?: string
@@ -1602,6 +1698,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          enable_ai_slates: boolean
           forked_at: string | null
           id: string
           is_test_mode: boolean
@@ -1618,6 +1715,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          enable_ai_slates?: boolean
           forked_at?: string | null
           id?: string
           is_test_mode?: boolean
@@ -1634,6 +1732,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          enable_ai_slates?: boolean
           forked_at?: string | null
           id?: string
           is_test_mode?: boolean
