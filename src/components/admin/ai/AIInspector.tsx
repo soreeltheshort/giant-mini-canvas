@@ -574,8 +574,9 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
   const runTick = async (commit: boolean) => {
     setBusy(true);
     try {
-      const [{ computeSlate }, { loadGameContext }] = await Promise.all([
+      const [{ computeSlate }, { buildPlansForFaction }, { loadGameContext }] = await Promise.all([
         import("@/lib/ai/goalSlate"),
+        import("@/lib/ai/buildPlans"),
         import("@/lib/gameLifecycle"),
       ]);
       const ctx = await loadGameContext(supabase as any, gameId);
@@ -588,15 +589,25 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
         commit,
       });
       if (!res) { toast.error("No persona for faction"); return; }
-      setPreview(res);
-      if (commit) { toast.success(`Slate ${res.reason}${res.committed ? " (committed)" : ""}`); load(); onTurnChange?.(ctx.game.turn_number); }
-      else { toast.success(`Dry-run: ${res.reason}`); onTurnChange?.(ctx.game.turn_number); }
+      // Chain plan build so preview + commit exercise the full pipeline.
+      const plans = await buildPlansForFaction({
+        supabase: supabase as any,
+        gameId,
+        currentTurn: ctx.game.turn_number,
+        mapState: ctx.mapState,
+        playerFactionId: playerId,
+        commit,
+      });
+      setPreview({ ...res, plans: plans?.plans ?? [] });
+      if (commit) { toast.success(`Slate ${res.reason} · ${plans?.plans.length ?? 0} plan(s) bound`); load(); onTurnChange?.(ctx.game.turn_number); }
+      else { toast.success(`Dry-run: ${res.reason} · ${plans?.plans.length ?? 0} plan preview(s)`); onTurnChange?.(ctx.game.turn_number); }
     } catch (e: any) {
       toast.error(e?.message ?? "Tick failed");
     } finally {
       setBusy(false);
     }
   };
+
 
   const slotLabel = (goalId: string | null) => goalId ? goalId.slice(0, 8) : "—";
 
