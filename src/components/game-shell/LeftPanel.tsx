@@ -331,6 +331,8 @@ function InlineContextContent({
   testMode,
   onTestSetFacilityQty,
   onTestSetGarrison,
+  onTestSetSystemOwner,
+  ownerOptions,
   onRecruitGarrison,
   onDisbandGarrison,
   onUndoGarrisonOrders,
