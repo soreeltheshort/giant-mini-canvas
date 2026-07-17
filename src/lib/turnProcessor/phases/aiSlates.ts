@@ -14,12 +14,7 @@ export const aiSlatesPhase: Phase = {
   async run(ctx: TurnContext) {
     const { supabase, gameId, currentTurn, mapState } = ctx;
 
-    const { data: gameRow } = await (supabase as any)
-      .from("games")
-      .select("enable_ai_slates")
-      .eq("id", gameId)
-      .maybeSingle();
-    if (!gameRow?.enable_ai_slates) return;
+
 
     const { data: gfRows } = await (supabase as any)
       .from("game_factions")
