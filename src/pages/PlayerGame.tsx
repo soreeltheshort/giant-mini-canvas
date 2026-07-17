@@ -624,6 +624,39 @@ const PlayerGame = () => {
 
   useEffect(() => { load(); }, [load, testModeMapReloadTick]);
 
+  // Admin Test Mode: load owner-classification options for all factions in
+  // this game so the system-owner picker offers the same values used by
+  // ownership checks elsewhere (PROVINCE_<slot> for provinces, code_name for
+  // AI factions). Only runs for admins when test mode is enabled.
+  useEffect(() => {
+    if (!isAdmin || !testMode || !gameId) { setOwnerOptions([]); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("game_factions")
+        .select("player_slot, factions:faction_id(name, code_name)")
+        .eq("game_id", gameId);
+      if (cancelled) return;
+      const opts: Array<{ value: string; label: string }> = [{ value: "", label: "(unclaimed)" }];
+      for (const row of (data || []) as any[]) {
+        const slot = row.player_slot as number | null;
+        const fname = row.factions?.name || row.factions?.code_name || null;
+        if (slot != null) {
+          const provName = PROVINCE_NAMES[slot] || `Slot ${slot}`;
+          opts.push({ value: `PROVINCE_${slot}`, label: `${provName} (PROVINCE_${slot})` });
+        } else if (fname) {
+          const code = row.factions?.code_name || row.factions?.name;
+          opts.push({ value: code, label: `${fname} (${code})` });
+        }
+      }
+      // Dedupe by value.
+      const seen = new Set<string>();
+      setOwnerOptions(opts.filter(o => (seen.has(o.value) ? false : (seen.add(o.value), true))));
+    })();
+    return () => { cancelled = true; };
+  }, [isAdmin, testMode, gameId]);
+
+
   // Count player's fleet move/attack orders for this turn (each costs 1 combat point).
   // Load player's fleet move/attack orders for this turn (each costs 1 combat point)
   // and stash them so we can both count points and draw arrows for the selected fleet.
