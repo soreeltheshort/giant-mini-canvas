@@ -1871,6 +1871,24 @@ const PlayerGame = () => {
                   fromX: sel.hex_x, fromY: sel.hex_y,
                 });
               }}
+              createFleetArmed={createFleetArmed}
+              onArmCreateFleet={(armed, name) => {
+                setCreateFleetArmed(armed);
+                if (!armed) {
+                  if (targeting?.orderType === "test_create_fleet") setTargeting(null);
+                  return;
+                }
+                const trimmed = (name || "").trim();
+                if (!trimmed) {
+                  toast({ title: "Name required", variant: "destructive" });
+                  setCreateFleetArmed(false);
+                  return;
+                }
+                setTargeting({
+                  mode: "hex", orderType: "test_create_fleet",
+                  fleetName: trimmed, ownerClassification: player.own_classification,
+                });
+              }}
               onChanged={() => setTestModeMapReloadTick(t => t + 1)}
             />
           ) : undefined}
