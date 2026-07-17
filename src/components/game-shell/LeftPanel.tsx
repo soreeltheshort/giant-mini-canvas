@@ -96,6 +96,10 @@ interface LeftPanelProps {
     onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
     /** TEST MODE: set garrison current/max on a system. */
     onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
+    /** TEST MODE: reassign a system's owner-classification. */
+    onTestSetSystemOwner?: (systemId: number, newOwner: string) => void;
+    /** TEST MODE: available owner-classification options for the picker. */
+    ownerOptions?: Array<{ value: string; label: string }>;
     /** Player action: recruit one ground defense unit at a system they own. */
     onRecruitGarrison?: (systemId: number) => void;
     /** Player action: disband one ground defense unit at a system they own. */
