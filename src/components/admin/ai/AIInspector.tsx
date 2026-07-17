@@ -660,3 +660,73 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
     </div>
   );
 }
+
+function BoundPlansSection({ gameId, playerId }: { gameId: string; playerId: string }) {
+  const [plans, setPlans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("ai_plans" as any)
+      .select("*")
+      .eq("game_id", gameId)
+      .eq("player_id", playerId)
+      .eq("status", "active")
+      .order("slate_slot", { ascending: true });
+    setPlans((data as any[]) ?? []);
+    setLoading(false);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [gameId, playerId]);
+
+  const feasColor = (f: number) => f >= 0.75 ? "bg-emerald-500" : f >= 0.4 ? "bg-amber-500" : "bg-red-500";
+
+  return (
+    <div className="rounded border border-border">
+      <div className="border-b border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+        <span>Bound plans</span>
+        <Button size="sm" variant="ghost" onClick={load} disabled={loading}>Refresh</Button>
+      </div>
+      <div className="p-3 text-xs">
+        {plans.length === 0 ? (
+          <p className="text-muted-foreground">No active plans. Run a Commit tick after the slate exists.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {[1, 2, 3].map((slot) => {
+              const p = plans.find((x) => x.slate_slot === slot);
+              if (!p) return (
+                <div key={slot} className="rounded border border-dashed border-border/60 p-2">
+                  <div className="text-[10px] text-muted-foreground">P{slot}</div>
+                  <div className="font-mono text-muted-foreground">— empty —</div>
+                </div>
+              );
+              const feas = Number(p.feasibility) || 0;
+              return (
+                <div key={slot} className="rounded border border-border/60 p-2 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[10px] text-muted-foreground">P{p.slate_slot}</div>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${p.feasibility_reason === "ok" ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}>{p.feasibility_reason}</span>
+                  </div>
+                  <div className="font-mono text-sm">{p.target_label || "—"}</div>
+                  <div className="text-[10px] text-muted-foreground">{p.target_kind}{p.target_id ? ` · ${String(p.target_id).slice(0, 8)}` : ""}</div>
+                  <div className="h-1.5 rounded bg-muted overflow-hidden">
+                    <div className={`h-full ${feasColor(feas)}`} style={{ width: `${Math.round(feas * 100)}%` }} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-[10px] text-muted-foreground pt-0.5">
+                    <div>cost: <span className="font-mono text-foreground">{p.estimated_cost_credits}</span></div>
+                    <div>turns: <span className="font-mono text-foreground">{p.estimated_cost_turns}</span></div>
+                  </div>
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-[10px] text-muted-foreground">why this target</summary>
+                    <pre className="mt-1 whitespace-pre-wrap text-[10px]">{JSON.stringify(p.scoring_breakdown_json, null, 2)}</pre>
+                  </details>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
