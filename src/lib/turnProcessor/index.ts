@@ -28,11 +28,13 @@ import { transferShipsPhase } from "./phases/transferShips";
 import { infectIntelLeechPhase } from "./phases/infectIntelLeech";
 import { threatAssessmentPhase } from "./phases/threatAssessment";
 import { aiSlatesPhase } from "./phases/aiSlates";
+import { aiPlansPhase } from "./phases/aiPlans";
 import { seedFactionPlayers } from "@/lib/gameLifecycle";
 
 // Order matters (see turnProcessor.md for the full explanation).
 // ai_slates runs LAST, after threat_assessment has published fresh beliefs,
 // so the slate builder reads a consistent snapshot for the turn.
+// ai_plans runs right after ai_slates, binding each slot to a concrete target.
 export const PHASE_ORDER: Phase[] = [
   economyPhase,
   shipProductionPhase,
@@ -45,7 +47,9 @@ export const PHASE_ORDER: Phase[] = [
   visibilityPhase,
   threatAssessmentPhase,
   aiSlatesPhase,
+  aiPlansPhase,
 ];
+
 
 
 export interface RunTurnArgs {
