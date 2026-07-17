@@ -192,6 +192,11 @@ Load Test050 → enable `enable_ai_slates` on the game → set Synod's persona t
 
 ---
 
+### Open tests (deferred, still to run)
+- **Test 9** — not yet run. Skipped during the Phase 2a acceptance pass; revisit and run before closing Phase 2a.
+
+---
+
 ### Out of scope (explicitly still deferred)
 - Planners that emit `player_orders` (Phase 3+).
 - Follow-through queue *execution* (table exists from Slice 1).
