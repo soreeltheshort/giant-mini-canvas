@@ -1640,6 +1640,7 @@ export type Database = {
       }
       game_snapshots: {
         Row: {
+          ai_state_json: Json | null
           created_at: string
           game_factions_json: Json | null
           game_fleet_ships_json: Json | null
@@ -1655,6 +1656,7 @@ export type Database = {
           turn_number: number
         }
         Insert: {
+          ai_state_json?: Json | null
           created_at?: string
           game_factions_json?: Json | null
           game_fleet_ships_json?: Json | null
@@ -1670,6 +1672,7 @@ export type Database = {
           turn_number?: number
         }
         Update: {
+          ai_state_json?: Json | null
           created_at?: string
           game_factions_json?: Json | null
           game_fleet_ships_json?: Json | null

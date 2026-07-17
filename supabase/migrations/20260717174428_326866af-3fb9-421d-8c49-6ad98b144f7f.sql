@@ -1,0 +1,1 @@
+ALTER TABLE public.game_snapshots ADD COLUMN IF NOT EXISTS ai_state_json jsonb;
