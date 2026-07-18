@@ -356,6 +356,7 @@ const PlayerGame = () => {
   const [dbFacilityTypes, setDbFacilityTypes] = useState<FacilityType[]>([]);
   const [dbFacilityTypesFull, setDbFacilityTypesFull] = useState<FacilityTypeFull[]>([]);
   const [dbShipTypes, setDbShipTypes] = useState<ShipTypeLookup[]>([]);
+  const [allShipTypeNames, setAllShipTypeNames] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [initStep, setInitStep] = useState(0);
 
@@ -557,6 +558,9 @@ const PlayerGame = () => {
       missile_100kg: Number(s.missile_100kg) || 0,
       missile_half_kt: Number(s.missile_half_kt) || 0,
     })));
+    // Test Mode (admin-only) needs to render ALL ship type names, including
+    // Synod-flagged ones filtered out of the player-visible catalog above.
+    setAllShipTypeNames(new Map<string, string>((stData || []).map((s: any) => [s.id, s.name])));
 
     const { data: mapRow } = await (supabase as any)
       .from("games")
@@ -1890,6 +1894,7 @@ const PlayerGame = () => {
               treasury={player.treasury ?? 0}
               fleets={mapState?.fleets ?? []}
               shipTypes={dbShipTypes}
+              allShipTypeNames={allShipTypeNames}
               selectedGameFleetId={
                 selection.type === "army" && selection.id.startsWith("fleet-")
                   ? selection.id.slice("fleet-".length)

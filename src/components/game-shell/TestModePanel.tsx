@@ -23,6 +23,8 @@ interface Props {
   fleets: MapFleet[];
   /** Ships available to add. */
   shipTypes: ShipTypeLookup[];
+  /** Full id→name lookup for ALL ship types (admin/test view sees Synod ships too). */
+  allShipTypeNames?: Map<string, string>;
   /** Currently selected fleet's game_fleets.id (may be null). */
   selectedGameFleetId: string | null;
   /** Toggle teleport picker: when armed, next map click moves the selected fleet. */
@@ -54,7 +56,7 @@ interface FleetMeta {
 export default function TestModePanel({
   gameId, turnNumber,
   gameFactionId, factionName, treasury,
-  fleets, shipTypes,
+  fleets, shipTypes, allShipTypeNames,
   selectedGameFleetId, teleportArmed, onArmTeleport,
   createFleetArmed, onArmCreateFleet,
   onChanged,
@@ -388,9 +390,10 @@ export default function TestModePanel({
               <div className="text-[9px] font-heading uppercase tracking-wider text-white font-bold">Composition</div>
               {Array.from(aggregated.values()).map(a => {
                 const type = shipTypes.find(t => t.id === a.shipTypeId);
+                const name = type?.name ?? allShipTypeNames?.get(a.shipTypeId) ?? a.shipTypeId;
                 return (
                   <div key={`${a.shipTypeId}|${a.group}`} className="flex items-center gap-1 text-[10px]">
-                    <span className="flex-1 truncate">{type?.name ?? a.shipTypeId} · {a.group} × {a.count}</span>
+                    <span className="flex-1 truncate">{name} · {a.group} × {a.count}</span>
                     <button
                       title="Remove one"
                       onClick={() => removeRow(a.rowIds[0], a.shipTypeId)}
