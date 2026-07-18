@@ -356,6 +356,7 @@ const PlayerGame = () => {
   const [dbFacilityTypes, setDbFacilityTypes] = useState<FacilityType[]>([]);
   const [dbFacilityTypesFull, setDbFacilityTypesFull] = useState<FacilityTypeFull[]>([]);
   const [dbShipTypes, setDbShipTypes] = useState<ShipTypeLookup[]>([]);
+  const [allShipTypeNames, setAllShipTypeNames] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [initStep, setInitStep] = useState(0);
 
