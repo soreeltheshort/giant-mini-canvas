@@ -682,8 +682,24 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
   );
 }
 
+const PLAN_GOAL_INTENT: Record<string, string> = {
+  conquer: "Conquer — take enemy systems",
+  bolster_defense: "Bolster defense — reinforce owned systems",
+  degrade_enemy: "Degrade enemy — weaken rival fleets/planets",
+  enhance_offense: "Enhance offense — build up strike power",
+};
+const PLAN_FEAS_REASON: Record<string, string> = {
+  ok: "Ready to execute",
+  no_target: "No valid target this turn",
+  insufficient_credits: "Not enough treasury",
+  insufficient_fleet: "No suitable fleet available",
+  out_of_range: "Target out of range",
+  blocked: "Blocked by another condition",
+};
+
 function BoundPlansSection({ gameId, playerId }: { gameId: string; playerId: string }) {
   const [plans, setPlans] = useState<any[]>([]);
+  const [goalMap, setGoalMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   const load = async () => {
@@ -695,12 +711,23 @@ function BoundPlansSection({ gameId, playerId }: { gameId: string; playerId: str
       .eq("player_id", playerId)
       .eq("status", "active")
       .order("slate_slot", { ascending: true });
-    setPlans((data as any[]) ?? []);
+    const rows = (data as any[]) ?? [];
+    setPlans(rows);
+    const ids = Array.from(new Set(rows.map((r) => r.goal_id).filter(Boolean))) as string[];
+    if (ids.length) {
+      const { data: gs } = await supabase.from("ai_goals" as any).select("id, goal_type").in("id", ids);
+      const m: Record<string, string> = {};
+      (gs as any[] | null)?.forEach((g) => { m[g.id] = g.goal_type; });
+      setGoalMap(m);
+    } else {
+      setGoalMap({});
+    }
     setLoading(false);
   };
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [gameId, playerId]);
 
   const feasColor = (f: number) => f >= 0.75 ? "bg-emerald-500" : f >= 0.4 ? "bg-amber-500" : "bg-red-500";
+
 
   return (
     <div className="rounded border border-border">
