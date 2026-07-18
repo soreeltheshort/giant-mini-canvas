@@ -749,12 +749,17 @@ function BoundPlansSection({ gameId, playerId }: { gameId: string; playerId: str
                 </div>
               );
               const feas = Number(p.feasibility) || 0;
+              const goalType = p.goal_id ? goalMap[p.goal_id] : null;
+              const intent = goalType ? (PLAN_GOAL_INTENT[goalType] || goalType) : "— no goal —";
+              const reasonHuman = PLAN_FEAS_REASON[p.feasibility_reason] || p.feasibility_reason || "unknown";
               return (
                 <div key={slot} className="rounded border border-border/60 p-2 space-y-1">
                   <div className="flex items-center justify-between">
                     <div className="text-[10px] text-muted-foreground">P{p.slate_slot}</div>
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${p.feasibility_reason === "ok" ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}>{p.feasibility_reason}</span>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${p.feasibility_reason === "ok" ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`} title={reasonHuman}>{p.feasibility_reason}</span>
                   </div>
+                  <div className="text-[11px] font-semibold">{intent}</div>
+                  <div className="text-[10px] text-muted-foreground">{reasonHuman}</div>
                   <div className="font-mono text-sm">{p.target_label || "—"}</div>
                   <div className="text-[10px] text-muted-foreground">{p.target_kind}{p.target_id ? ` · ${String(p.target_id).slice(0, 8)}` : ""}</div>
                   <div className="h-1.5 rounded bg-muted overflow-hidden">
