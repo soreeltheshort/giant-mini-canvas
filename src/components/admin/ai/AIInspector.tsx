@@ -569,7 +569,7 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
       .eq("player_id", playerId)
       .maybeSingle();
     setSlate(data ?? null);
-    const ids = [data?.slot1_goal_id, data?.slot2_goal_id, data?.slot3_goal_id].filter(Boolean) as string[];
+    const ids = [(data as any)?.slot1_goal_id, (data as any)?.slot2_goal_id, (data as any)?.slot3_goal_id].filter(Boolean) as string[];
     if (ids.length) {
       const { data: gs } = await supabase.from("ai_goals" as any).select("id, goal_type").in("id", ids);
       const m: Record<string, string> = {};
