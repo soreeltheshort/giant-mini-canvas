@@ -29,6 +29,7 @@ import { infectIntelLeechPhase } from "./phases/infectIntelLeech";
 import { threatAssessmentPhase } from "./phases/threatAssessment";
 import { aiSlatesPhase } from "./phases/aiSlates";
 import { aiPlansPhase } from "./phases/aiPlans";
+import { aiActionsPhase } from "./phases/aiActions";
 import { seedFactionPlayers } from "@/lib/gameLifecycle";
 
 // Order matters (see turnProcessor.md for the full explanation).
