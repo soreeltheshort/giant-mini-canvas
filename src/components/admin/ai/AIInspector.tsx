@@ -557,6 +557,7 @@ function ThreatAssessmentSection({ gameId, playerId, turn, isTestMode }: { gameI
 
 function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: string; playerId: string; turn: number; onTurnChange?: (t: number) => void }) {
   const [slate, setSlate] = useState<any | null>(null);
+  const [goalMap, setGoalMap] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -568,8 +569,18 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
       .eq("player_id", playerId)
       .maybeSingle();
     setSlate(data ?? null);
+    const ids = [data?.slot1_goal_id, data?.slot2_goal_id, data?.slot3_goal_id].filter(Boolean) as string[];
+    if (ids.length) {
+      const { data: gs } = await supabase.from("ai_goals" as any).select("id, goal_type").in("id", ids);
+      const m: Record<string, string> = {};
+      (gs as any[] | null)?.forEach((g) => { m[g.id] = g.goal_type; });
+      setGoalMap(m);
+    } else {
+      setGoalMap({});
+    }
   };
   useEffect(() => { load(); setPreview(null); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [gameId, playerId, turn]);
+
 
   const runTick = async (commit: boolean) => {
     setBusy(true);
