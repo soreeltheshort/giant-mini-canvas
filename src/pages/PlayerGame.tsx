@@ -557,6 +557,9 @@ const PlayerGame = () => {
       missile_100kg: Number(s.missile_100kg) || 0,
       missile_half_kt: Number(s.missile_half_kt) || 0,
     })));
+    // Test Mode (admin-only) needs to render ALL ship type names, including
+    // Synod-flagged ones filtered out of the player-visible catalog above.
+    setAllShipTypeNames(new Map<string, string>((stData || []).map((s: any) => [s.id, s.name])));
 
     const { data: mapRow } = await (supabase as any)
       .from("games")
