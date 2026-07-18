@@ -23,6 +23,8 @@ interface Props {
   fleets: MapFleet[];
   /** Ships available to add. */
   shipTypes: ShipTypeLookup[];
+  /** Full id→name lookup for ALL ship types (admin/test view sees Synod ships too). */
+  allShipTypeNames?: Map<string, string>;
   /** Currently selected fleet's game_fleets.id (may be null). */
   selectedGameFleetId: string | null;
   /** Toggle teleport picker: when armed, next map click moves the selected fleet. */
