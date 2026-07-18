@@ -56,7 +56,7 @@ interface FleetMeta {
 export default function TestModePanel({
   gameId, turnNumber,
   gameFactionId, factionName, treasury,
-  fleets, shipTypes,
+  fleets, shipTypes, allShipTypeNames,
   selectedGameFleetId, teleportArmed, onArmTeleport,
   createFleetArmed, onArmCreateFleet,
   onChanged,
