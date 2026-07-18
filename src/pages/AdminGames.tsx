@@ -247,6 +247,17 @@ const AdminGames = () => {
           "map_imported",
           `Map imported from file: ${file.name} (fleets materialized: ${created} new, ${reused} reused)`,
         );
+        // Auto-seed AI / map-owner faction rows so they appear in the picker
+        // immediately on Turn 0, without requiring an admin to log in as them
+        // first. Idempotent.
+        try {
+          const seed = await seedFactionPlayers(supabase as any, selectedGame.id, updatedMap);
+          console.log(`[Import Map] seedFactionPlayers — inserted=${seed.inserted}, backfilled=${seed.backfilled}, skipped=${seed.skipped}`);
+          if (seed.inserted > 0 || seed.backfilled > 0) {
+            const { data: pData } = await (supabase as any).from("game_factions").select("*, factions:faction_id(id, name, code_name, is_player_faction)").eq("game_id", selectedGame.id).order("player_slot");
+            setPlayers(pData || []);
+          }
+        } catch (e) { console.warn("[Import Map] seedFactionPlayers failed", e); }
         toast({ title: "Map imported and saved" });
         await refreshLogs(selectedGame.id);
       } catch (err: any) {
