@@ -620,7 +620,17 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
   };
 
 
-  const slotLabel = (goalId: string | null) => goalId ? goalId.slice(0, 8) : "—";
+  const GOAL_INTENT: Record<string, string> = {
+    conquer: "Conquer — take enemy systems",
+    bolster_defense: "Bolster defense — reinforce owned systems",
+    degrade_enemy: "Degrade enemy — weaken rival fleets/planets",
+    enhance_offense: "Enhance offense — build up strike power",
+  };
+  const slotLabel = (goalId: string | null) => {
+    if (!goalId) return "— empty —";
+    const t = goalMap[goalId];
+    return t ? (GOAL_INTENT[t] || t) : goalId.slice(0, 8);
+  };
 
   return (
     <div className="rounded border border-border">
