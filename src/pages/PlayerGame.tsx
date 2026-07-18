@@ -1894,6 +1894,7 @@ const PlayerGame = () => {
               treasury={player.treasury ?? 0}
               fleets={mapState?.fleets ?? []}
               shipTypes={dbShipTypes}
+              allShipTypeNames={allShipTypeNames}
               selectedGameFleetId={
                 selection.type === "army" && selection.id.startsWith("fleet-")
                   ? selection.id.slice("fleet-".length)
