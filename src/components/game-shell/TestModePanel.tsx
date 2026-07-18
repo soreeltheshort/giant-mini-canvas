@@ -390,9 +390,10 @@ export default function TestModePanel({
               <div className="text-[9px] font-heading uppercase tracking-wider text-white font-bold">Composition</div>
               {Array.from(aggregated.values()).map(a => {
                 const type = shipTypes.find(t => t.id === a.shipTypeId);
+                const name = type?.name ?? allShipTypeNames?.get(a.shipTypeId) ?? a.shipTypeId;
                 return (
                   <div key={`${a.shipTypeId}|${a.group}`} className="flex items-center gap-1 text-[10px]">
-                    <span className="flex-1 truncate">{type?.name ?? a.shipTypeId} · {a.group} × {a.count}</span>
+                    <span className="flex-1 truncate">{name} · {a.group} × {a.count}</span>
                     <button
                       title="Remove one"
                       onClick={() => removeRow(a.rowIds[0], a.shipTypeId)}
