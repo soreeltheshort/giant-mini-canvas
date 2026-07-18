@@ -557,6 +557,7 @@ function ThreatAssessmentSection({ gameId, playerId, turn, isTestMode }: { gameI
 
 function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: string; playerId: string; turn: number; onTurnChange?: (t: number) => void }) {
   const [slate, setSlate] = useState<any | null>(null);
+  const [goalMap, setGoalMap] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -568,8 +569,18 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
       .eq("player_id", playerId)
       .maybeSingle();
     setSlate(data ?? null);
+    const ids = [(data as any)?.slot1_goal_id, (data as any)?.slot2_goal_id, (data as any)?.slot3_goal_id].filter(Boolean) as string[];
+    if (ids.length) {
+      const { data: gs } = await supabase.from("ai_goals" as any).select("id, goal_type").in("id", ids);
+      const m: Record<string, string> = {};
+      (gs as any[] | null)?.forEach((g) => { m[g.id] = g.goal_type; });
+      setGoalMap(m);
+    } else {
+      setGoalMap({});
+    }
   };
   useEffect(() => { load(); setPreview(null); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [gameId, playerId, turn]);
+
 
   const runTick = async (commit: boolean) => {
     setBusy(true);
@@ -609,7 +620,17 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
   };
 
 
-  const slotLabel = (goalId: string | null) => goalId ? goalId.slice(0, 8) : "—";
+  const GOAL_INTENT: Record<string, string> = {
+    conquer: "Conquer — take enemy systems",
+    bolster_defense: "Bolster defense — reinforce owned systems",
+    degrade_enemy: "Degrade enemy — weaken rival fleets/planets",
+    enhance_offense: "Enhance offense — build up strike power",
+  };
+  const slotLabel = (goalId: string | null) => {
+    if (!goalId) return "— empty —";
+    const t = goalMap[goalId];
+    return t ? (GOAL_INTENT[t] || t) : goalId.slice(0, 8);
+  };
 
   return (
     <div className="rounded border border-border">
@@ -661,8 +682,24 @@ function GoalSlateSection({ gameId, playerId, turn, onTurnChange }: { gameId: st
   );
 }
 
+const PLAN_GOAL_INTENT: Record<string, string> = {
+  conquer: "Conquer — take enemy systems",
+  bolster_defense: "Bolster defense — reinforce owned systems",
+  degrade_enemy: "Degrade enemy — weaken rival fleets/planets",
+  enhance_offense: "Enhance offense — build up strike power",
+};
+const PLAN_FEAS_REASON: Record<string, string> = {
+  ok: "Ready to execute",
+  no_target: "No valid target this turn",
+  insufficient_credits: "Not enough treasury",
+  insufficient_fleet: "No suitable fleet available",
+  out_of_range: "Target out of range",
+  blocked: "Blocked by another condition",
+};
+
 function BoundPlansSection({ gameId, playerId }: { gameId: string; playerId: string }) {
   const [plans, setPlans] = useState<any[]>([]);
+  const [goalMap, setGoalMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   const load = async () => {
@@ -674,12 +711,23 @@ function BoundPlansSection({ gameId, playerId }: { gameId: string; playerId: str
       .eq("player_id", playerId)
       .eq("status", "active")
       .order("slate_slot", { ascending: true });
-    setPlans((data as any[]) ?? []);
+    const rows = (data as any[]) ?? [];
+    setPlans(rows);
+    const ids = Array.from(new Set(rows.map((r) => r.goal_id).filter(Boolean))) as string[];
+    if (ids.length) {
+      const { data: gs } = await supabase.from("ai_goals" as any).select("id, goal_type").in("id", ids);
+      const m: Record<string, string> = {};
+      (gs as any[] | null)?.forEach((g) => { m[g.id] = g.goal_type; });
+      setGoalMap(m);
+    } else {
+      setGoalMap({});
+    }
     setLoading(false);
   };
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [gameId, playerId]);
 
   const feasColor = (f: number) => f >= 0.75 ? "bg-emerald-500" : f >= 0.4 ? "bg-amber-500" : "bg-red-500";
+
 
   return (
     <div className="rounded border border-border">
@@ -701,12 +749,17 @@ function BoundPlansSection({ gameId, playerId }: { gameId: string; playerId: str
                 </div>
               );
               const feas = Number(p.feasibility) || 0;
+              const goalType = p.goal_id ? goalMap[p.goal_id] : null;
+              const intent = goalType ? (PLAN_GOAL_INTENT[goalType] || goalType) : "— no goal —";
+              const reasonHuman = PLAN_FEAS_REASON[p.feasibility_reason] || p.feasibility_reason || "unknown";
               return (
                 <div key={slot} className="rounded border border-border/60 p-2 space-y-1">
                   <div className="flex items-center justify-between">
                     <div className="text-[10px] text-muted-foreground">P{p.slate_slot}</div>
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${p.feasibility_reason === "ok" ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}>{p.feasibility_reason}</span>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${p.feasibility_reason === "ok" ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`} title={reasonHuman}>{p.feasibility_reason}</span>
                   </div>
+                  <div className="text-[11px] font-semibold">{intent}</div>
+                  <div className="text-[10px] text-muted-foreground">{reasonHuman}</div>
                   <div className="font-mono text-sm">{p.target_label || "—"}</div>
                   <div className="text-[10px] text-muted-foreground">{p.target_kind}{p.target_id ? ` · ${String(p.target_id).slice(0, 8)}` : ""}</div>
                   <div className="h-1.5 rounded bg-muted overflow-hidden">
