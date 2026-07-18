@@ -49,6 +49,7 @@ export const PHASE_ORDER: Phase[] = [
   threatAssessmentPhase,
   aiSlatesPhase,
   aiPlansPhase,
+  aiActionsPhase,
 ];
 
 
