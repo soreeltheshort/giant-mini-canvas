@@ -184,15 +184,30 @@ const AdminGames = () => {
     setSnapshots(sData || []);
     // map state from json
     const { data: gData } = await perf.time("map.download", () => (supabase as any).from("games").select("map_data_json").eq("id", game.id).single());
+    let loadedMap: MapState | null = null;
     await perf.time("map.deserialize", async () => {
       if (gData?.map_data_json && Object.keys(gData.map_data_json).length > 0) {
         try {
-          setMapState(deserializeMapState(gData.map_data_json));
+          loadedMap = deserializeMapState(gData.map_data_json);
+          setMapState(loadedMap);
         } catch { setMapState(null); }
       } else {
         setMapState(null);
       }
     });
+    // Auto-seed AI / map-owner faction rows if the map is present but they
+    // haven't been seeded yet (e.g. game was started before a map was imported,
+    // or map was imported into an already-active game). Idempotent.
+    if (loadedMap) {
+      try {
+        const seed = await seedFactionPlayers(supabase as any, game.id, loadedMap);
+        if (seed.inserted > 0 || seed.backfilled > 0) {
+          console.log(`[Load Game] seedFactionPlayers — inserted=${seed.inserted}, backfilled=${seed.backfilled}, skipped=${seed.skipped}`);
+          const { data: pData2 } = await (supabase as any).from("game_factions").select("*, factions:faction_id(id, name, code_name, is_player_faction)").eq("game_id", game.id).order("player_slot");
+          setPlayers(pData2 || []);
+        }
+      } catch (e) { console.warn("[Load Game] seedFactionPlayers failed", e); }
+    }
     perf.logTable(`loadGame · ${game.name}`);
   }, [isAdmin]);
 
