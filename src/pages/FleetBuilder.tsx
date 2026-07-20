@@ -142,6 +142,9 @@ const FleetBuilder = () => {
     supabase.from("ship_types").select("*").order("hull", { ascending: false }).order("point_cost", { ascending: false }).then(({ data }) => {
       if (data) setShipTypes(data as unknown as ShipType[]);
     });
+    (supabase as any).from("factions").select("id, name, code_name").order("name").then(({ data }: any) => {
+      if (data) setAllFactions(data);
+    });
   }, []);
 
   useEffect(() => {
