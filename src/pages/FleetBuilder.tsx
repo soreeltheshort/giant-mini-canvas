@@ -337,6 +337,7 @@ const FleetBuilder = () => {
     }
     setSaving(true);
 
+    let fleetId: string | null = editId;
     if (editId) {
       await supabase.from("fleets").update({ name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, revision: revision + 1 }).eq("id", editId);
       await supabase.from("fleet_ships").delete().eq("fleet_id", editId);
@@ -347,6 +348,16 @@ const FleetBuilder = () => {
         .select().single();
       if (error || !newFleet) { toast({ title: "Error", description: error?.message, variant: "destructive" }); setSaving(false); return; }
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: newFleet.id, ...e })));
+      fleetId = newFleet.id;
+    }
+
+    // Persist faction eligibility tags.
+    if (fleetId) {
+      await (supabase as any).from("fleet_faction_tags").delete().eq("fleet_id", fleetId);
+      const tagRows = Array.from(factionTags).map((fid) => ({ fleet_id: fleetId!, faction_id: fid }));
+      if (tagRows.length > 0) {
+        await (supabase as any).from("fleet_faction_tags").insert(tagRows);
+      }
     }
 
     setSaving(false);
