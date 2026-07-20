@@ -1,177 +1,98 @@
+# Enhance Offense — Full Vertical Slice (with faction-flagged templates)
 
-## Phase 2b — Target Binding & Plan Generation
+Replace the current "queue one cheap ship" behavior with a real offensive build-up: pick a production hub, spawn a new fleet nearby seeded from **faction-appropriate** fleet templates, and queue ship production across nearby owned systems with a big-ships-first priority.
 
-Phase 2a decides *what* each AI faction wants (3 prioritized goals). Phase 2b decides *where and against whom* each goal would be pursued, and *what it would cost*, and writes that as an inspectable plan. Still zero writes to `player_orders` — you can watch the AI form concrete intent in the Inspector before Phase 3 turns intent into orders.
+## Scope
 
-### Scope in one line
-For each slot in a committed slate, resolve one concrete target and an estimated cost/feasibility, persisted as `ai_plans` + `ai_plan_steps`, revised on the same cadence as the slate.
+Only the `enhance_offense` branch of `aiActionsPhase` changes. Goal slate, plan binding, and other goal types are untouched. Runs only for AI factions, only when a bound plan has `feasibility ≥ 0.5`.
 
----
+## 1. Fleet template ↔ faction tagging (schema)
 
-### 1. Data model
+Templates are the rows in `fleets` (owned by the game creator / admin). One template may be usable by many factions, and one faction may have many templates → many-to-many.
 
-`ai_plans` and `ai_plan_steps` already exist from Slice 1. Add columns only:
+**New table `fleet_faction_tags`** (join table, migration required):
+- `fleet_id uuid` → `fleets.id` (cascade delete)
+- `faction_id uuid` → `factions.id` (cascade delete)
+- PK: `(fleet_id, faction_id)`
+- RLS: admin-only write; read to `authenticated` (needed by AI code path and admin UI). Grants: `SELECT` to `authenticated`, `ALL` to `service_role`.
 
-**`ai_plans` additions**
-```
-goal_id uuid fk ai_goals             -- which slate goal this plan realises
-slate_slot int                        -- 1|2|3, denormalised for fast join
-target_kind text                      -- 'system'|'player'|'fleet'|'none'
-target_id uuid                        -- system_id | player_id | fleet_id (nullable)
-target_label text                     -- human-readable ("Vesta Line", "Synod")
-estimated_cost_credits int
-estimated_cost_turns int
-feasibility numeric                   -- 0..1
-feasibility_reason text               -- 'ok' | 'no_target' | 'insufficient_power' | ...
-committed_turn int
-status text                           -- 'active'|'superseded'|'abandoned'|'achieved'
-scoring_breakdown_json jsonb
-```
+**Fleet admin UI (Map Editor → Fleets panel)**: add a multi-select "Available to factions" control on the fleet detail form that reads/writes `fleet_faction_tags`. Non-blocking for AI logic — untagged templates simply aren't picked by any AI.
 
-**`ai_plan_steps`** stays untouched for now (execution is Phase 3).
+**Backfill**: none. Existing templates start with zero tags; user tags them as needed. If a faction has zero tagged templates, `enhance_offense` logs `no_templates_for_faction` and skips — no silent fallback to mixed-faction pool.
 
-RLS: admins full; players read own; service_role all. Grants per house rules.
+## 2. New / changed pieces
 
-### 2. Target selectors (`src/lib/ai/targetSelectors.ts`)
+### `src/lib/ai/productionHub.ts` (new, testable in isolation)
+`selectProductionHub(gameId, factionId, ctx) → { systemId, hexX, hexY, capacity } | null`
+- Loads faction-owned systems via `ownerMatchesFaction`.
+- Ranks by summed facility `ship_build_capacity`. Tie-breakers: population desc, then lowest `system_id`.
+- Returns null if no shipyard-capable owned system.
 
-One pure function per goal code. All read-only over the existing snapshot data used by `worldview.ts` / `scoreGoals.ts`. Each returns `{ target_kind, target_id, target_label, score, breakdown }` or `null` when nothing qualifies.
+`selectSpawnHex(gameId, hubHex, ctx) → { hexX, hexY }`
+- Nearest empty adjacent hex (no `game_fleets` row) using pointy-top odd-r neighbors.
+- Deterministic neighbor ordering `(dy, dx)`; falls back to hub hex if all occupied.
 
-| Goal | Target kind | Selector logic (deterministic, ties → id asc) |
-|---|---|---|
-| `colonize` | system | Nearest unowned habitable system to any owned system; prefer higher pop baseline; exclude systems already targeted by another own active plan |
-| `expand_economy` | system | Own system with production below empire median; prefer highest headroom (max facility slots − built) |
-| `enhance_offense` | system | Own system with highest shipyard tier / production; used as build hub |
-| `bolster_defense` | system | Own system with lowest `defense_band` from worldview; break ties by frontier adjacency |
-| `degrade_enemy` | player | `top_threat_player_id`; if null, argmax of `ai_relationships.opinion * -1` |
-| `conquer` | system | Enemy-owned system adjacent to any own system with hostile intel value ≤ estimated own strike power × persona `risk_tolerance` factor; prefer lowest defender strength |
+### `src/lib/ai/fleetComposer.ts` (new)
+`composeFleetFromTemplates(pointBudget, factionId) → { ships, usedTemplates, totalPoints }`
+- Candidate pool: `fleets` rows joined through `fleet_faction_tags` where `faction_id = factionId` AND `is_garrison = false`.
+- Compute each template's point value from `fleet_ships` × `ship_types.points_value` (cached per call).
+- Greedy pack: pick largest template ≤ remaining budget, subtract, repeat until nothing fits.
+- Aggregate duplicate `ship_type_id`s across chosen templates into a single composition list.
+- Empty pool → return `{ ships: [], totalPoints: 0 }` with reason `no_templates_for_faction`.
 
-All selectors take the same `PlanCtx` (systems, own fleets, intel, relationships, worldview, persona). Output is stable across identical inputs — same determinism rules as Phase 2a.
+Target `pointBudget` comes from the goal slate (`ai_goals.target_fleet_points`). If missing, fall back to `persona.aggression * 200` and log a warning.
 
-### 3. Cost & feasibility (`src/lib/ai/planCost.ts`)
+### `src/lib/turnProcessor/phases/aiActions.ts` (rewrite enhance_offense branch)
+Per active `enhance_offense` plan:
+1. `hub = selectProductionHub(...)`. Null → skip `no_production_hub`.
+2. `spawn = selectSpawnHex(gameId, hub)`.
+3. `composition = composeFleetFromTemplates(budget, factionId)`. Empty → skip with composer reason.
+4. Insert:
+   - `fleets` row (owner = game creator, name `AI Buildup - <faction> T<turn>`, `points_budget = composition.totalPoints`).
+   - `game_fleets` row at `spawn` hex, `is_garrison=false`, owner_classification = faction label. Ship roster empty; ships arrive as production completes.
+5. Queue production: find faction-owned systems within 8 hexes of hub (Chebyshev on axial using existing range helper).
+   - Order systems by shipyard capacity desc → "most powerful spaceports".
+   - Walk `composition.ships` by `ship_types.points_value` desc → "big ships first".
+   - Assign each hull to highest-capacity system with free queue slots this turn, deducting treasury as we go; stop when treasury dry.
+   - Insert one `system_ship_production` row per assignment with `destination_game_fleet_id = new game_fleet.id`.
+6. Log `ai_action` with `{ hub, spawn, composition, queued, skipped_for_treasury }`.
 
-Uniform estimator per goal, reads existing combat/economy constants from `combat_constants`:
+### AI Inspector
+Add a **Latest Actions** panel showing the last enhance_offense action per faction (hub name, spawn hex, composition points, queued rows), sourced from `ai_action` log payload.
 
-```
-estimated_cost_credits = f(goal_code, target, persona)  -- e.g. conquer = attacker_power_needed * credits_per_ship_point
-estimated_cost_turns   = ceil(distance / effective_map_speed) + build_lead_turns
-feasibility            = clamp(0..1, own_capacity / required_capacity)
-feasibility_reason     = 'ok' | 'no_target' | 'insufficient_power' | 'insufficient_credits' | 'blocked_by_range'
-```
+### Snapshots
+No snapshot code changes — new fleets/orders/tags live in tables already baked into snapshots (tags table gets added to snapshot capture in the same migration turn).
 
-Feasibility is advisory in this phase — a plan can be recorded with `feasibility < 1` and status `active`; Phase 3 decides whether to actually spend orders on it.
+## 3. Test plan (hierarchical)
 
-### 4. Plan builder (`src/lib/ai/buildPlans.ts`)
+- **T1 Faction tagging**
+  - T1.1 Tag template A to Factions X and Y → both AIs can draw A; unrelated Faction Z cannot.
+  - T1.2 Untag template A from X → X composer no longer includes A next turn.
+  - T1.3 Faction with zero tagged templates → `enhance_offense` skips with `no_templates_for_faction`.
+- **T2 Production hub selector**
+  - T2.1 Three shipyards → highest-capacity wins.
+  - T2.2 Capacity tie → higher population wins.
+  - T2.3 No shipyards → null, skip `no_production_hub`.
+- **T3 Spawn hex selector**
+  - T3.1 Empty neighbors → first-in-order neighbor.
+  - T3.2 All neighbors occupied → falls back to hub hex.
+- **T4 Fleet composer**
+  - T4.1 Budget 500, largest tagged template 480 → returns just that template.
+  - T4.2 Budget 1000, templates 600/300/300 → returns 600 + 300 (900 total).
+  - T4.3 Budget below smallest tagged template → empty, skip logged.
+- **T5 Production queueing**
+  - T5.1 Hub + 2 owned systems within 8 hexes → big ships go to highest-capacity system first.
+  - T5.2 Owned system 9 hexes away → excluded.
+  - T5.3 Treasury runs out mid-assignment → remainder logged as `skipped_for_treasury`.
+- **T6 Vertical slice on Test052**
+  - T6.1 Tag templates for one AI faction; advance one turn; verify new `game_fleets` row, `system_ship_production` rows, treasury debited.
+  - T6.2 Advance N turns; verify completed ships enter the new game_fleet via existing production completion path.
 
-Entry point `buildPlansForFaction(gameId, playerId, opts)`. Pure over fetched data; writes only when `opts.commit = true`.
+## Files touched
 
-Algorithm per tick, for each of the 3 slate slots:
-```
-1. Load slate goal for slot.
-2. Run target selector for goal.code.
-3. If null target:
-     upsert ai_plans row status='active', feasibility=0, reason='no_target', target_kind='none'.
-4. Else estimate cost + feasibility.
-5. Upsert ai_plans keyed on (game_id, player_id, slate_slot):
-     - if existing plan same goal_id + same target_id  -> update cost/feasibility only
-     - if goal_id changed OR target_id changed         -> mark prior 'superseded', insert new
-6. Emit ai_decision_log rows: one 'plan_bound' per slot with {goal_code, target, cost, feasibility, reason}.
-```
-
-Slate revision in Phase 2a already marks prior goals `superseded`; the plan builder mirrors that on plans automatically.
-
-### 5. Turn integration
-
-New phase `src/lib/turnProcessor/phases/aiPlans.ts` runs **immediately after** `aiSlates` in the turn processor. Same try/catch isolation — a plan failure never blocks the turn. No gating flag; runs whenever an AI faction has a persona + slate (mirrors the current post-gate slate behaviour).
-
-Inspector "Compute Tick" button re-invokes `buildPlansForFaction` after `computeSlate` so dry-run and commit tests still hit the whole pipeline.
-
-### 6. Inspector UI (`src/components/admin/ai/AIInspector.tsx`)
-
-Add a **Bound Plans** block under Current Slate:
-- One card per slot: goal, target label, feasibility bar, cost credits / cost turns, reason chip, "why this target" breakdown popover.
-- Empty state when `target_kind = 'none'` with the reason.
-- Revision Trace already reads `ai_decision_log`; filter widens to include `phase in ('goals','plans')`.
-
-### 7. Snapshot integration
-
-`saveSnapshot` / `loadSnapshot` in `AdminGames.tsx` already bake AI state. Add `ai_plans` (and, once used, plan-step rows) to both dump and restore blocks so Test 9-style determinism holds through Phase 2b too.
-
-### 8. Files
-
-**New**
-- `src/lib/ai/targetSelectors.ts`
-- `src/lib/ai/planCost.ts`
-- `src/lib/ai/buildPlans.ts`
-- `src/lib/turnProcessor/phases/aiPlans.ts`
-- Migration: `ai_plans` new columns + grants unchanged
-
-**Edit**
-- `src/lib/turnProcessor/index.ts` — register phase after `aiSlates`
-- `src/components/admin/ai/AIInspector.tsx` — Bound Plans block, extended trace filter, Compute Tick chains through
-- `src/pages/AdminGames.tsx` — snapshot save/load extended with `ai_plans`
-
-**Not touched:** `player_orders`, combat, ground combat, plan step execution (Phase 3).
-
----
-
-## Test Plan (Phase 2b acceptance)
-
-Hierarchical numbering. Priority 1 = must pass before Phase 3.
-
-### 1. Plan creation
-- **1.1** Faction with a fresh slate → first Compute Tick writes exactly 3 `ai_plans` rows, one per slot, all `status='active'`, each linked to the correct `goal_id` + `slate_slot`.
-- **1.2** Each written plan has a matching `ai_decision_log` row with `phase='plans'` and `reason='plan_bound'`.
-- **1.3** Non-AI factions produce zero plans.
-
-### 2. Target selection determinism
-- **2.1** Two dry-run ticks in a row with no state change return identical `{target_id, cost, feasibility}` per slot.
-- **2.2** Snapshot → Compute Tick → restore snapshot → Compute Tick again → identical plan rows and identical `scoring_breakdown_json`.
-- **2.3** Tie-breaking: two candidate systems with identical score → selector returns the lower `system_id`.
-
-### 3. Per-goal selectors
-- **3.1** `colonize` picks the nearest unowned habitable system to any owned system; verify by moving nearest system's ownership and re-running.
-- **3.2** `expand_economy` picks an own system with production below empire median; if all systems above median, `target_kind='none'`, `reason='no_target'`.
-- **3.3** `enhance_offense` picks the highest-production own system.
-- **3.4** `bolster_defense` picks the own system with the lowest defense band; ties broken by frontier adjacency.
-- **3.5** `degrade_enemy` binds to `top_threat_player_id` when present; falls back to most-hated relationship otherwise.
-- **3.6** `conquer` picks an enemy-adjacent system whose defender strength ≤ persona-adjusted own strike power; if none, `feasibility=0` and `reason='insufficient_power'` (still recorded).
-
-### 4. Cost & feasibility
-- **4.1** `estimated_cost_credits` and `estimated_cost_turns` are non-negative integers; `feasibility` ∈ [0,1].
-- **4.2** Reducing `game_factions.credits` below cost estimate flips `feasibility_reason` to `insufficient_credits` on next tick.
-- **4.3** Removing all own systems adjacent to a `conquer` target flips reason to `blocked_by_range`.
-
-### 5. Revision continuity
-- **5.1** Slate unchanged, target still valid → plan row updated in place, no new row.
-- **5.2** Slate revised and slot's goal changed → prior plan `status='superseded'`, new plan inserted with new `committed_turn`.
-- **5.3** Slate unchanged but selector picks a new target (world moved) → prior plan `superseded`, new plan inserted; `ai_decision_log` records `target_changed`.
-- **5.4** Slot's goal marked `achieved` in Phase 2a → matching plan flipped to `status='achieved'` on next tick.
-
-### 6. Turn processor integration
-- **6.1** `aiPlans` runs immediately after `aiSlates` for every AI faction with a persona; verified by phase log order.
-- **6.2** Throwing inside `aiPlans.ts` is caught; the rest of the turn completes; a decision log entry with `reason='phase_error'` is recorded.
-- **6.3** `processTurn` runtime delta vs Phase 2a within noise (< 10%) on Test050.
-
-### 7. Inspector
-- **7.1** Bound Plans block shows 3 cards for the selected AI faction with target label, feasibility bar, cost, reason chip.
-- **7.2** "Compute Tick (dry-run)" chains slate + plan build and previews changes without writing; "Commit Tick" persists both.
-- **7.3** Revision Trace shows interleaved `phase='goals'` and `phase='plans'` rows in reverse chronological order.
-- **7.4** Empty-state card renders when `target_kind='none'` with the correct reason chip.
-
-### 8. Snapshot determinism
-- **8.1** Save snapshot, advance 2 turns, restore snapshot, re-run same turns → identical `ai_plans` rows (same target_id / cost / feasibility / breakdown) at each turn.
-
-### 9. Manual test script for Test050
-1. Load Test050, set Synod persona = Warlord.
-2. Run one turn → open Inspector → confirm P1 = `conquer` and Bound Plan targets an adjacent Dravian system with `feasibility` matching Synod's fleet power.
-3. In Test Mode, empty Synod's largest fleet → next tick: same slot, same goal, plan `superseded` with new plan showing `feasibility=0`, `reason='insufficient_power'`.
-4. Refill the fleet → plan re-binds with `feasibility ≥ 0.5` and `reason='ok'`.
-5. Snapshot before step 2, restore, replay → all plan rows match byte-for-byte in `scoring_breakdown_json`.
-
-### Deferred (still open from Phase 2a)
-- **Test 9 (Phase 2a)** — still not run; carry forward.
-
-### Out of scope (Phase 3+)
-- Writing `player_orders` from plans.
-- `ai_plan_steps` execution.
-- Multi-turn lookahead, coalitions, LLM narration.
+- migration: create `fleet_faction_tags` with grants + RLS
+- add `src/lib/ai/productionHub.ts`
+- add `src/lib/ai/fleetComposer.ts`
+- edit `src/lib/turnProcessor/phases/aiActions.ts`
+- edit `src/components/map-editor/RightPanel.tsx` (fleet detail: faction multi-select)
+- edit `src/components/admin/ai/AIInspector.tsx` (Latest Actions panel)
