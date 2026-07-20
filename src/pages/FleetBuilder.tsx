@@ -162,6 +162,9 @@ const FleetBuilder = () => {
       supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group, notes").eq("fleet_id", editId).then(({ data }) => {
         if (data) setEntries(data.map(d => ({ ...d, notes: d.notes || "" })));
       });
+      (supabase as any).from("fleet_faction_tags").select("faction_id").eq("fleet_id", editId).then(({ data }: any) => {
+        if (data) setFactionTags(new Set(data.map((r: any) => r.faction_id)));
+      });
     }
   }, [editId, user]);
 
