@@ -1305,6 +1305,39 @@ export type Database = {
           },
         ]
       }
+      fleet_faction_tags: {
+        Row: {
+          created_at: string
+          faction_id: string
+          fleet_id: string
+        }
+        Insert: {
+          created_at?: string
+          faction_id: string
+          fleet_id: string
+        }
+        Update: {
+          created_at?: string
+          faction_id?: string
+          fleet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_faction_tags_faction_id_fkey"
+            columns: ["faction_id"]
+            isOneToOne: false
+            referencedRelation: "factions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_faction_tags_fleet_id_fkey"
+            columns: ["fleet_id"]
+            isOneToOne: false
+            referencedRelation: "fleets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fleet_ships: {
         Row: {
           fleet_id: string

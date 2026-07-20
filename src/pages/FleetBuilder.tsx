@@ -102,6 +102,8 @@ const FleetBuilder = () => {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
   const [remainingGroundUnits, setRemainingGroundUnits] = useState<number | null>(null);
+  const [allFactions, setAllFactions] = useState<Array<{ id: string; name: string; code_name: string }>>([]);
+  const [factionTags, setFactionTags] = useState<Set<string>>(new Set());
 
   // Build dynamic GROUPS list: Core, Attack, [role1], [role2], Rear, Retreat
   const GROUPS = useMemo(() => [
@@ -140,6 +142,9 @@ const FleetBuilder = () => {
     supabase.from("ship_types").select("*").order("hull", { ascending: false }).order("point_cost", { ascending: false }).then(({ data }) => {
       if (data) setShipTypes(data as unknown as ShipType[]);
     });
+    (supabase as any).from("factions").select("id, name, code_name").order("name").then(({ data }: any) => {
+      if (data) setAllFactions(data);
+    });
   }, []);
 
   useEffect(() => {
@@ -156,6 +161,9 @@ const FleetBuilder = () => {
       });
       supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group, notes").eq("fleet_id", editId).then(({ data }) => {
         if (data) setEntries(data.map(d => ({ ...d, notes: d.notes || "" })));
+      });
+      (supabase as any).from("fleet_faction_tags").select("faction_id").eq("fleet_id", editId).then(({ data }: any) => {
+        if (data) setFactionTags(new Set(data.map((r: any) => r.faction_id)));
       });
     }
   }, [editId, user]);
@@ -329,6 +337,7 @@ const FleetBuilder = () => {
     }
     setSaving(true);
 
+    let fleetId: string | null = editId;
     if (editId) {
       await supabase.from("fleets").update({ name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, revision: revision + 1 }).eq("id", editId);
       await supabase.from("fleet_ships").delete().eq("fleet_id", editId);
@@ -339,6 +348,16 @@ const FleetBuilder = () => {
         .select().single();
       if (error || !newFleet) { toast({ title: "Error", description: error?.message, variant: "destructive" }); setSaving(false); return; }
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: newFleet.id, ...e })));
+      fleetId = newFleet.id;
+    }
+
+    // Persist faction eligibility tags.
+    if (fleetId) {
+      await (supabase as any).from("fleet_faction_tags").delete().eq("fleet_id", fleetId);
+      const tagRows = Array.from(factionTags).map((fid) => ({ fleet_id: fleetId!, faction_id: fid }));
+      if (tagRows.length > 0) {
+        await (supabase as any).from("fleet_faction_tags").insert(tagRows);
+      }
     }
 
     setSaving(false);
@@ -413,6 +432,49 @@ const FleetBuilder = () => {
             }}>
               {SPECIAL_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
+          </div>
+        </div>
+
+        {/* Faction eligibility — which factions may draw from this template
+            when the AI composer picks fleets. Empty = universal. */}
+        <div className="mt-4 rounded border border-border bg-card p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Available to Factions (AI Composer)
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {factionTags.size === 0 ? "Universal (all factions eligible)" : `${factionTags.size} tagged`}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {allFactions.length === 0 && (
+              <span className="text-xs text-muted-foreground italic">Loading factions…</span>
+            )}
+            {allFactions.map((f) => {
+              const active = factionTags.has(f.id);
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => {
+                    setFactionTags((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(f.id)) next.delete(f.id);
+                      else next.add(f.id);
+                      return next;
+                    });
+                  }}
+                  className={`rounded border px-2 py-0.5 text-xs transition-colors ${
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-foreground hover:bg-muted"
+                  }`}
+                  title={f.code_name}
+                >
+                  {f.name}
+                </button>
+              );
+            })}
           </div>
         </div>
 

@@ -1,34 +1,39 @@
 /**
- * AI Actions — Vertical Slice.
+ * AI Actions — enhance_offense vertical slice (v2).
  *
- * First real "AI acts on its plans" phase. Currently wires exactly one
- * goal end-to-end: `enhance_offense`. When an AI faction has an active
- * plan in that goal, is treasury-solvent, and the target hub system has
- * ship-build capacity, we queue the cheapest ship into
- * `system_ship_production` and debit the faction's treasury.
+ * When an AI faction has an active `enhance_offense` plan (feasibility
+ * >= 0.5), we:
  *
- * Guardrails:
- *  - Only AI factions (game_factions.is_ai = true) are processed.
- *  - Plan must have feasibility >= 0.5 and status = 'active'.
- *  - Skips if this AI already has an active build queued at this system
- *    (prevents unbounded stacking each turn while the plan persists).
- *  - Every action writes an audit row to `game_logs` and a breadcrumb
- *    into `ai_decision_log` (phase = 'actions').
+ *   1. Pick a **production hub** = highest-capacity owned shipyard system.
+ *   2. Pick a **spawn hex** = closest empty hex to the hub.
+ *   3. Pick a **fleet template** tagged for this faction closest in
+ *      point-cost to a per-persona budget.
+ *   4. Instantiate a new EMPTY game_fleets row at the spawn hex
+ *      (composition will be built up over turns from production).
+ *   5. Queue production for each ship in the template across all owned
+ *      shipyards within 8 hexes of the hub, biggest ships first at the
+ *      most powerful starports, subject to treasury and per-yard hull
+ *      class limits. Completed ships route to the new fleet via
+ *      destination_fleet_id (ShipProduction phase handles delivery).
  *
- * Runs AFTER aiPlansPhase so it sees this turn's freshly bound plans.
+ * Dedupe: a plan is skipped this turn if a fleet already exists whose
+ * fleet_name ends with `[plan:XXXXXXXX]` (short plan id). This means one
+ * "raise a fleet" action per plan lifetime — subsequent turns keep
+ * queueing more ships INTO that same fleet only if the plan is
+ * re-selected AFTER the previous fleet was completed and removed / the
+ * plan is rebound; ship-fill is otherwise driven by the production
+ * queue advancing each turn.
  */
 import type { Phase, TurnContext } from "../types";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
+import { selectProductionHub, selectSpawnHex, shipyardsWithinRange } from "@/lib/ai/productionHub";
+import { composeFleetFromTemplates } from "@/lib/ai/fleetComposer";
 
-interface ShipTypeLite {
-  id: string;
-  point_cost: number;
-  hull_class: string;
-  ship_name: string;
-}
+const HUB_RADIUS = 8;
+const DEFAULT_BUDGET = 300;
 
 export const aiActionsPhase: Phase = {
-  name: "ai_plans" as any, // reuse phase name for now; log_type distinguishes
+  name: "ai_plans" as any,
   label: "AI Actions",
   async run(ctx: TurnContext) {
     const { supabase, gameId, currentTurn, mapState, facilityTypes } = ctx;
@@ -45,153 +50,227 @@ export const aiActionsPhase: Phase = {
     }>;
     if (aiFactions.length === 0) return;
 
-    // 2. Active enhance_offense plans for these factions
+    // 2. Active enhance_offense plans
     const { data: planRows } = await (supabase as any)
       .from("ai_plans")
       .select("id, player_id, goal_id, slate_slot, target_kind, target_id, target_label, feasibility, ai_goals:goal_id(goal_type)")
       .eq("game_id", gameId)
       .eq("status", "active")
       .gte("feasibility", 0.5)
-      .in("player_id", aiFactions.map(f => f.id));
-    const plans = (planRows || []).filter((p: any) => p.ai_goals?.goal_type === "enhance_offense" && p.target_kind === "system" && p.target_id);
+      .in("player_id", aiFactions.map((f) => f.id));
+    const plans = (planRows || []).filter(
+      (p: any) => p.ai_goals?.goal_type === "enhance_offense",
+    );
     if (plans.length === 0) return;
 
-    // 3. Ship-type catalogue (cheapest combat-worthy build).
-    const { data: shipTypeRows } = await (supabase as any)
-      .from("ship_types")
-      .select("id, point_cost, hull_class, ship_name")
-      .gt("point_cost", 0)
-      .order("point_cost", { ascending: true });
-    const shipTypes = (shipTypeRows || []) as ShipTypeLite[];
-    if (shipTypes.length === 0) return;
-    const cheapest = shipTypes[0];
+    // 3. Hull class sort order
+    const { data: hullRows } = await (supabase as any)
+      .from("ship_hull_classes")
+      .select("code, sort_order");
+    const hullSortByCode = new Map<string, number>();
+    for (const r of (hullRows as any[]) || []) hullSortByCode.set(r.code, Number(r.sort_order) || 0);
+
+    // Cache existing fleets by name-suffix for dedupe.
+    const { data: fleetRows } = await (supabase as any)
+      .from("game_fleets")
+      .select("id, fleet_name, owner_classification")
+      .eq("game_id", gameId);
+    const existingFleetNames = new Set<string>(
+      ((fleetRows as any[]) || []).map((f) => f.fleet_name || ""),
+    );
 
     for (const plan of plans) {
-      const faction = aiFactions.find(f => f.id === plan.player_id);
+      const faction = aiFactions.find((f) => f.id === plan.player_id);
       if (!faction) continue;
       const factionCode = faction.factions?.code_name || "";
-      const targetSysId = Number(plan.target_id);
-      const sys = mapState.systems.get(targetSysId);
-      if (!sys) continue;
+      const planTag = `[plan:${String(plan.id).slice(0, 8)}]`;
 
-      // Ownership must still hold.
-      if (!ownerMatchesFaction(sys.owner, factionCode)) continue;
+      // Dedupe: skip if we already raised this fleet.
+      const already = Array.from(existingFleetNames).some((n) => n.endsWith(planTag));
+      if (already) continue;
 
-      // Shipyard capacity check.
-      let capacity = 0;
-      for (const f of sys.facilities || []) {
-        const ft = facilityTypes.find(t => String(t.id) === String(f.facility_type_id));
-        const c = Number((ft as any)?.ship_build_capacity) || 0;
-        if (c > 0) capacity += c * (f.quantity || 1);
-      }
-      if (capacity <= 0) {
+      // 3a. Hub
+      const hub = selectProductionHub(mapState, factionCode, facilityTypes, hullSortByCode);
+      if (!hub) {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
           log_type: "ai_action_skip",
-          message: `[${factionCode}] enhance_offense skipped at ${sys.system_name}: no shipyard capacity`,
-          details_json: { plan_id: plan.id, system_id: targetSysId },
+          message: `[${factionCode}] enhance_offense: no production hub (no owned shipyard)`,
+          details_json: { plan_id: plan.id },
         });
         continue;
       }
 
-      const cost = cheapest.point_cost;
-      const treasury = Number(faction.treasury) || 0;
-      if (treasury < cost) {
+      // 3b. Spawn hex
+      const spawn = selectSpawnHex(mapState, hub, 3) ?? { x: hub.hex.x, y: hub.hex.y };
+
+      // 3c. Composer — budget scales with faction treasury but capped.
+      const treasury0 = Number(faction.treasury) || 0;
+      const budget = Math.min(DEFAULT_BUDGET, Math.max(50, Math.floor(treasury0 * 0.6)));
+      const composition = await composeFleetFromTemplates(
+        supabase, faction.faction_id, budget, hullSortByCode,
+      );
+      if (!composition) {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
           log_type: "ai_action_skip",
-          message: `[${factionCode}] enhance_offense skipped at ${sys.system_name}: treasury ${treasury} < cost ${cost}`,
-          details_json: { plan_id: plan.id, treasury, cost },
+          message: `[${factionCode}] enhance_offense: no eligible fleet templates (budget ${budget})`,
+          details_json: { plan_id: plan.id, budget },
         });
         continue;
       }
 
-      // Already queued something here? One queued build per plan per system
-      // keeps the vertical slice bounded.
-      const { data: existing } = await (supabase as any)
-        .from("system_ship_production")
+      // 3d. Instantiate empty new fleet
+      const fleetName = `${composition.template_name} ${planTag}`;
+      const { data: newFleet, error: nfErr } = await (supabase as any)
+        .from("game_fleets")
+        .insert({
+          game_id: gameId,
+          owner_classification: factionCode,
+          fleet_name: fleetName,
+          hex_x: spawn.x,
+          hex_y: spawn.y,
+          system_id: null,
+          is_garrison: false,
+        })
         .select("id")
-        .eq("game_id", gameId)
-        .eq("system_id", targetSysId)
-        .eq("owner_classification", factionCode)
-        .limit(1);
-      if ((existing || []).length > 0) continue;
-
-      // Destination: nearest own fleet (prefer garrison at this system's hex).
-      const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
-      let destFleetId: string | null = null;
-      if (sysHex) {
-        const ownFleets = mapState.fleets.filter(f => ownerMatchesFaction((f as any).owner_classification, factionCode));
-        const atSystem = ownFleets.find(f => f.hex_x === sysHex.x && f.hex_y === sysHex.y);
-        destFleetId = (atSystem?.fleet_id as any) || (ownFleets[0]?.fleet_id as any) || null;
-      }
-
-      // Position at tail
-      const { data: maxRow } = await (supabase as any)
-        .from("system_ship_production")
-        .select("position")
-        .eq("game_id", gameId)
-        .eq("system_id", targetSysId)
-        .order("position", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const nextPos = (maxRow?.position ?? 0) + 1;
-
-      const { error: insErr } = await (supabase as any).from("system_ship_production").insert({
-        game_id: gameId,
-        system_id: targetSysId,
-        position: nextPos,
-        ship_type_id: cheapest.id,
-        quantity: 1,
-        destination_fleet_id: destFleetId,
-        destination_hex_x: sysHex?.x ?? null,
-        destination_hex_y: sysHex?.y ?? null,
-        points_remaining: cost,
-        cost_paid: cost,
-        owner_classification: factionCode,
-      });
-      if (insErr) {
+        .single();
+      if (nfErr || !newFleet?.id) {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
           log_type: "ai_action_error",
-          message: `[${factionCode}] enhance_offense insert failed at ${sys.system_name}: ${insErr.message}`,
-          details_json: { plan_id: plan.id, error: insErr.message },
+          message: `[${factionCode}] enhance_offense: fleet create failed: ${nfErr?.message || "unknown"}`,
+          details_json: { plan_id: plan.id, error: nfErr?.message },
         });
         continue;
       }
+      // The AFTER INSERT trigger snapshots ships when source fleet_id is a
+      // template UUID. We inserted WITHOUT fleet_id (no source) → new fleet
+      // starts empty; production will fill it. Clean up any accidental
+      // rows just in case.
+      await (supabase as any).from("game_fleet_ships").delete().eq("game_fleet_id", newFleet.id);
+      existingFleetNames.add(fleetName);
 
-      // Debit treasury.
-      await (supabase as any)
-        .from("game_factions")
-        .update({ treasury: treasury - cost })
-        .eq("id", faction.id);
-      faction.treasury = treasury - cost;
+      // 3e. Shipyards within HUB_RADIUS
+      const yards = shipyardsWithinRange(
+        mapState, factionCode, facilityTypes, hullSortByCode, hub, HUB_RADIUS,
+      );
+      if (yards.length === 0) continue;
 
-      // Audit log (visible in Turn Logs).
+      // Per-yard remaining position tail lookup (queued after existing).
+      const nextPosByYard = new Map<number, number>();
+      for (const y of yards) {
+        const { data: maxRow } = await (supabase as any)
+          .from("system_ship_production")
+          .select("position")
+          .eq("game_id", gameId)
+          .eq("system_id", y.system.system_id)
+          .order("position", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        nextPosByYard.set(y.system.system_id, (maxRow?.position ?? 0) + 1);
+      }
+
+      // 3f. Assign ships big-first across yards.
+      let treasury = treasury0;
+      const queued: Array<{ ship: string; system: string; cost: number }> = [];
+      const skipped: Array<{ ship: string; reason: string }> = [];
+      let yardCursor = 0;
+      for (const ship of composition.ships) {
+        // Find first yard (starting at cursor, round-robin) that can build
+        // this hull_class and has hull sort >= ship.hull_sort. Yards are
+        // pre-sorted by capacity+max-hull desc, so this naturally prefers
+        // the most powerful starport.
+        let placed = false;
+        for (let i = 0; i < yards.length; i++) {
+          const y = yards[(yardCursor + i) % yards.length];
+          const canBuild =
+            y.maxHullSort < 0 || y.maxHullSort >= ship.hull_sort;
+          if (!canBuild) continue;
+          if (treasury < ship.point_cost) {
+            skipped.push({ ship: ship.ship_name, reason: `treasury ${treasury} < cost ${ship.point_cost}` });
+            placed = true; // stop trying — no yard will help
+            break;
+          }
+          const pos = nextPosByYard.get(y.system.system_id) || 1;
+          const { error: qErr } = await (supabase as any)
+            .from("system_ship_production")
+            .insert({
+              game_id: gameId,
+              system_id: y.system.system_id,
+              position: pos,
+              ship_type_id: ship.ship_type_id,
+              quantity: 1,
+              destination_fleet_id: newFleet.id,
+              destination_hex_x: spawn.x,
+              destination_hex_y: spawn.y,
+              points_remaining: ship.point_cost,
+              cost_paid: ship.point_cost,
+              owner_classification: factionCode,
+            });
+          if (qErr) {
+            skipped.push({ ship: ship.ship_name, reason: `insert err: ${qErr.message}` });
+            break;
+          }
+          nextPosByYard.set(y.system.system_id, pos + 1);
+          treasury -= ship.point_cost;
+          queued.push({ ship: ship.ship_name, system: y.system.system_name, cost: ship.point_cost });
+          yardCursor = (yardCursor + i + 1) % yards.length;
+          placed = true;
+          break;
+        }
+        if (!placed) {
+          skipped.push({ ship: ship.ship_name, reason: "no yard can build this hull class" });
+        }
+        if (treasury <= 0) break;
+      }
+
+      // 3g. Debit treasury.
+      if (treasury !== treasury0) {
+        await (supabase as any)
+          .from("game_factions")
+          .update({ treasury })
+          .eq("id", faction.id);
+        faction.treasury = treasury;
+      }
+
+      // 3h. Audit logs
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
         log_type: "ai_action",
-        message: `[${factionCode}] enhance_offense: queued ${cheapest.ship_name} at ${sys.system_name} (₡${cost}, treasury ${treasury} → ${treasury - cost})`,
+        message: `[${factionCode}] enhance_offense: raised fleet "${composition.template_name}" at (${spawn.x},${spawn.y}); queued ${queued.length} ship(s) across ${yards.length} shipyard(s); treasury ${treasury0} → ${treasury}`,
         details_json: {
-          plan_id: plan.id, faction: factionCode, goal: "enhance_offense",
-          system_id: targetSysId, system_name: sys.system_name,
-          ship_type_id: cheapest.id, ship_name: cheapest.ship_name,
-          cost, treasury_before: treasury, treasury_after: treasury - cost,
-          destination_fleet_id: destFleetId,
+          plan_id: plan.id,
+          faction: factionCode,
+          goal: "enhance_offense",
+          hub_system_id: hub.system.system_id,
+          hub_system_name: hub.system.system_name,
+          spawn_hex: spawn,
+          template_id: composition.template_id,
+          template_name: composition.template_name,
+          template_points: composition.template_points,
+          budget,
+          new_fleet_id: newFleet.id,
+          new_fleet_name: fleetName,
+          queued, skipped,
+          treasury_before: treasury0, treasury_after: treasury,
         },
       });
 
-      // AI decision-log breadcrumb.
       await (supabase as any).from("ai_decision_log").insert({
         game_id: gameId,
         player_id: faction.id,
         turn_number: currentTurn,
         phase: "actions",
-        summary: `enhance_offense → build ${cheapest.ship_name} at ${sys.system_name} (₡${cost})`,
+        summary: `enhance_offense → raised "${composition.template_name}" at hub ${hub.system.system_name}; queued ${queued.length} ship(s) (₡${treasury0 - treasury})`,
         details_json: {
           plan_id: plan.id, slot: plan.slate_slot,
-          system_id: targetSysId, ship_type_id: cheapest.id,
-          cost, treasury_before: treasury, treasury_after: treasury - cost,
+          hub_system_id: hub.system.system_id,
+          new_fleet_id: newFleet.id,
+          template_id: composition.template_id,
+          queued_count: queued.length,
+          skipped_count: skipped.length,
+          treasury_before: treasury0, treasury_after: treasury,
         },
       });
     }
