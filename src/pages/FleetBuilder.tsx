@@ -435,6 +435,49 @@ const FleetBuilder = () => {
           </div>
         </div>
 
+        {/* Faction eligibility — which factions may draw from this template
+            when the AI composer picks fleets. Empty = universal. */}
+        <div className="mt-4 rounded border border-border bg-card p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Available to Factions (AI Composer)
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {factionTags.size === 0 ? "Universal (all factions eligible)" : `${factionTags.size} tagged`}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {allFactions.length === 0 && (
+              <span className="text-xs text-muted-foreground italic">Loading factions…</span>
+            )}
+            {allFactions.map((f) => {
+              const active = factionTags.has(f.id);
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => {
+                    setFactionTags((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(f.id)) next.delete(f.id);
+                      else next.add(f.id);
+                      return next;
+                    });
+                  }}
+                  className={`rounded border px-2 py-0.5 text-xs transition-colors ${
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-foreground hover:bg-muted"
+                  }`}
+                  title={f.code_name}
+                >
+                  {f.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {(overCapacity || groupsOverCapacity.length > 0) && <p className="mt-2 text-sm text-destructive font-semibold">⚠ Insufficient Fighter/Gunship Capacity</p>}
 
 
