@@ -157,6 +157,8 @@ const FleetBuilder = () => {
           setReadiness(data.readiness ?? 2);
           setSpecial1Role(data.special1_role || "Flank");
           setSpecial2Role(data.special2_role || "Flank");
+          const rgu = (data as any).remaining_ground_units;
+          if (rgu !== null && rgu !== undefined) setRemainingGroundUnits(rgu);
         }
       });
       supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group, notes").eq("fleet_id", editId).then(({ data }) => {
@@ -167,6 +169,7 @@ const FleetBuilder = () => {
       });
     }
   }, [editId, user]);
+
 
   const totalCost = entries.reduce((sum, e) => {
     const st = shipTypes.find(s => s.id === e.ship_type_id);
