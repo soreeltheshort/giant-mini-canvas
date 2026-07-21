@@ -215,10 +215,14 @@ const FleetBuilder = () => {
     return sum + (st ? st.ground_invasion * e.quantity : 0);
   }, 0);
 
-  // Auto-sync remaining ground units when max changes (unless user has manually set it)
+  // Default remaining to max on first meaningful max. Only clamp DOWN when the
+  // user's stored value exceeds the current max (ships removed). Never clamp to
+  // 0 during the initial load race, and never overwrite a user-lowered value.
   useEffect(() => {
+    if (maxGroundUnits <= 0) return;
     setRemainingGroundUnits(prev => prev === null ? maxGroundUnits : Math.min(prev, maxGroundUnits));
   }, [maxGroundUnits]);
+
 
   // Per-group capacity calculations
   const groupCapacities = useMemo(() => {
