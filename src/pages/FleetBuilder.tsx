@@ -346,13 +346,14 @@ const FleetBuilder = () => {
 
     let fleetId: string | null = editId;
     if (editId) {
-      await supabase.from("fleets").update({ name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, revision: revision + 1 }).eq("id", editId);
+      await supabase.from("fleets").update({ name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, revision: revision + 1, remaining_ground_units: remainingGroundUnits ?? maxGroundUnits } as any).eq("id", editId);
       await supabase.from("fleet_ships").delete().eq("fleet_id", editId);
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: editId, ...e })));
     } else {
       const { data: newFleet, error } = await supabase.from("fleets")
-        .insert({ owner_user_id: user!.id, name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role })
+        .insert({ owner_user_id: user!.id, name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, remaining_ground_units: remainingGroundUnits ?? maxGroundUnits } as any)
         .select().single();
+
       if (error || !newFleet) { toast({ title: "Error", description: error?.message, variant: "destructive" }); setSaving(false); return; }
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: newFleet.id, ...e })));
       fleetId = newFleet.id;
