@@ -104,6 +104,8 @@ const FleetBuilder = () => {
   const [remainingGroundUnits, setRemainingGroundUnits] = useState<number | null>(null);
   const [allFactions, setAllFactions] = useState<Array<{ id: string; name: string; code_name: string }>>([]);
   const [factionTags, setFactionTags] = useState<Set<string>>(new Set());
+  const [isInvasionFleet, setIsInvasionFleet] = useState(false);
+
 
   // Build dynamic GROUPS list: Core, Attack, [role1], [role2], Rear, Retreat
   const GROUPS = useMemo(() => [
