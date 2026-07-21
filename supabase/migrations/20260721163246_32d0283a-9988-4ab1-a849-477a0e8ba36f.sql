@@ -1,0 +1,1 @@
+ALTER TABLE public.fleets ADD COLUMN IF NOT EXISTS remaining_ground_units integer;

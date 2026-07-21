@@ -157,6 +157,8 @@ const FleetBuilder = () => {
           setReadiness(data.readiness ?? 2);
           setSpecial1Role(data.special1_role || "Flank");
           setSpecial2Role(data.special2_role || "Flank");
+          const rgu = (data as any).remaining_ground_units;
+          if (rgu !== null && rgu !== undefined) setRemainingGroundUnits(rgu);
         }
       });
       supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group, notes").eq("fleet_id", editId).then(({ data }) => {
@@ -167,6 +169,7 @@ const FleetBuilder = () => {
       });
     }
   }, [editId, user]);
+
 
   const totalCost = entries.reduce((sum, e) => {
     const st = shipTypes.find(s => s.id === e.ship_type_id);
@@ -212,10 +215,14 @@ const FleetBuilder = () => {
     return sum + (st ? st.ground_invasion * e.quantity : 0);
   }, 0);
 
-  // Auto-sync remaining ground units when max changes (unless user has manually set it)
+  // Default remaining to max on first meaningful max. Only clamp DOWN when the
+  // user's stored value exceeds the current max (ships removed). Never clamp to
+  // 0 during the initial load race, and never overwrite a user-lowered value.
   useEffect(() => {
+    if (maxGroundUnits <= 0) return;
     setRemainingGroundUnits(prev => prev === null ? maxGroundUnits : Math.min(prev, maxGroundUnits));
   }, [maxGroundUnits]);
+
 
   // Per-group capacity calculations
   const groupCapacities = useMemo(() => {
@@ -339,13 +346,14 @@ const FleetBuilder = () => {
 
     let fleetId: string | null = editId;
     if (editId) {
-      await supabase.from("fleets").update({ name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, revision: revision + 1 }).eq("id", editId);
+      await supabase.from("fleets").update({ name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, revision: revision + 1, remaining_ground_units: remainingGroundUnits ?? maxGroundUnits } as any).eq("id", editId);
       await supabase.from("fleet_ships").delete().eq("fleet_id", editId);
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: editId, ...e })));
     } else {
       const { data: newFleet, error } = await supabase.from("fleets")
-        .insert({ owner_user_id: user!.id, name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role })
+        .insert({ owner_user_id: user!.id, name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, remaining_ground_units: remainingGroundUnits ?? maxGroundUnits } as any)
         .select().single();
+
       if (error || !newFleet) { toast({ title: "Error", description: error?.message, variant: "destructive" }); setSaving(false); return; }
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: newFleet.id, ...e })));
       fleetId = newFleet.id;

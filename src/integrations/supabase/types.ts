@@ -1421,6 +1421,7 @@ export type Database = {
           owner_user_id: string
           points_budget: number
           readiness: number
+          remaining_ground_units: number | null
           revision: number
           special1_role: string
           special2_role: string
@@ -1437,6 +1438,7 @@ export type Database = {
           owner_user_id: string
           points_budget?: number
           readiness?: number
+          remaining_ground_units?: number | null
           revision?: number
           special1_role?: string
           special2_role?: string
@@ -1453,6 +1455,7 @@ export type Database = {
           owner_user_id?: string
           points_budget?: number
           readiness?: number
+          remaining_ground_units?: number | null
           revision?: number
           special1_role?: string
           special2_role?: string
