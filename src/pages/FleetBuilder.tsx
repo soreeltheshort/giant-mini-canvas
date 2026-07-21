@@ -469,9 +469,9 @@ const FleetBuilder = () => {
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-background text-foreground hover:bg-muted"
                   }`}
-                  title={f.code_name}
+                  title={f.name}
                 >
-                  {f.name}
+                  {f.code_name || f.name}
                 </button>
               );
             })}
