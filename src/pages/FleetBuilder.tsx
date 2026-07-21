@@ -104,6 +104,8 @@ const FleetBuilder = () => {
   const [remainingGroundUnits, setRemainingGroundUnits] = useState<number | null>(null);
   const [allFactions, setAllFactions] = useState<Array<{ id: string; name: string; code_name: string }>>([]);
   const [factionTags, setFactionTags] = useState<Set<string>>(new Set());
+  const [isInvasionFleet, setIsInvasionFleet] = useState(false);
+
 
   // Build dynamic GROUPS list: Core, Attack, [role1], [role2], Rear, Retreat
   const GROUPS = useMemo(() => [
@@ -159,6 +161,8 @@ const FleetBuilder = () => {
           setSpecial2Role(data.special2_role || "Flank");
           const rgu = (data as any).remaining_ground_units;
           if (rgu !== null && rgu !== undefined) setRemainingGroundUnits(rgu);
+          setIsInvasionFleet(!!(data as any).is_invasion_fleet);
+
         }
       });
       supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group, notes").eq("fleet_id", editId).then(({ data }) => {
@@ -346,13 +350,14 @@ const FleetBuilder = () => {
 
     let fleetId: string | null = editId;
     if (editId) {
-      await supabase.from("fleets").update({ name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, revision: revision + 1, remaining_ground_units: remainingGroundUnits ?? maxGroundUnits } as any).eq("id", editId);
+      await supabase.from("fleets").update({ name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, revision: revision + 1, remaining_ground_units: remainingGroundUnits ?? maxGroundUnits, is_invasion_fleet: isInvasionFleet } as any).eq("id", editId);
       await supabase.from("fleet_ships").delete().eq("fleet_id", editId);
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: editId, ...e })));
     } else {
       const { data: newFleet, error } = await supabase.from("fleets")
-        .insert({ owner_user_id: user!.id, name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, remaining_ground_units: remainingGroundUnits ?? maxGroundUnits } as any)
+        .insert({ owner_user_id: user!.id, name: fleetName, standing_order: standingOrder, readiness, special1_role: special1Role, special2_role: special2Role, remaining_ground_units: remainingGroundUnits ?? maxGroundUnits, is_invasion_fleet: isInvasionFleet } as any)
         .select().single();
+
 
       if (error || !newFleet) { toast({ title: "Error", description: error?.message, variant: "destructive" }); setSaving(false); return; }
       await supabase.from("fleet_ships").insert(entries.map(e => ({ fleet_id: newFleet.id, ...e })));
@@ -518,6 +523,16 @@ const FleetBuilder = () => {
                   onChange={e => setRemainingGroundUnits(Math.max(0, Math.min(maxGroundUnits, Number(e.target.value) || 0)))}
                 />
               </div>
+              <label className="flex items-center gap-1.5 text-xs text-foreground cursor-pointer" title="AI treats this template as a dedicated planet-conquest fleet — used when winning the war but needing more ground troops.">
+                <input
+                  type="checkbox"
+                  checked={isInvasionFleet}
+                  onChange={e => setIsInvasionFleet(e.target.checked)}
+                  className="h-3 w-3"
+                />
+                <span>🪖 Invasion Fleet (AI hint)</span>
+              </label>
+
             </div>
             {entries.length === 0 && <p className="mb-4 text-sm text-muted-foreground">Select ships from the catalog on the right to add them.</p>}
             <div className="space-y-3">
