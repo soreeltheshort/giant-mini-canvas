@@ -1,0 +1,1 @@
+ALTER TABLE public.fleets ADD COLUMN IF NOT EXISTS is_invasion_fleet boolean NOT NULL DEFAULT false;

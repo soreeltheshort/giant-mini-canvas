@@ -1416,6 +1416,7 @@ export type Database = {
           current_ground_invasion: number
           current_supply: number
           id: string
+          is_invasion_fleet: boolean
           name: string
           next_readiness: number | null
           owner_user_id: string
@@ -1433,6 +1434,7 @@ export type Database = {
           current_ground_invasion?: number
           current_supply?: number
           id?: string
+          is_invasion_fleet?: boolean
           name: string
           next_readiness?: number | null
           owner_user_id: string
@@ -1450,6 +1452,7 @@ export type Database = {
           current_ground_invasion?: number
           current_supply?: number
           id?: string
+          is_invasion_fleet?: boolean
           name?: string
           next_readiness?: number | null
           owner_user_id?: string
