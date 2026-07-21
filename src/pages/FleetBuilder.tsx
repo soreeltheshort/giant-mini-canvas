@@ -161,6 +161,8 @@ const FleetBuilder = () => {
           setSpecial2Role(data.special2_role || "Flank");
           const rgu = (data as any).remaining_ground_units;
           if (rgu !== null && rgu !== undefined) setRemainingGroundUnits(rgu);
+          setIsInvasionFleet(!!(data as any).is_invasion_fleet);
+
         }
       });
       supabase.from("fleet_ships").select("ship_type_id, quantity, tactical_group, notes").eq("fleet_id", editId).then(({ data }) => {
