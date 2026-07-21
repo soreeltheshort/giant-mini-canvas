@@ -523,6 +523,16 @@ const FleetBuilder = () => {
                   onChange={e => setRemainingGroundUnits(Math.max(0, Math.min(maxGroundUnits, Number(e.target.value) || 0)))}
                 />
               </div>
+              <label className="flex items-center gap-1.5 text-xs text-foreground cursor-pointer" title="AI treats this template as a dedicated planet-conquest fleet — used when winning the war but needing more ground troops.">
+                <input
+                  type="checkbox"
+                  checked={isInvasionFleet}
+                  onChange={e => setIsInvasionFleet(e.target.checked)}
+                  className="h-3 w-3"
+                />
+                <span>🪖 Invasion Fleet (AI hint)</span>
+              </label>
+
             </div>
             {entries.length === 0 && <p className="mb-4 text-sm text-muted-foreground">Select ships from the catalog on the right to add them.</p>}
             <div className="space-y-3">
