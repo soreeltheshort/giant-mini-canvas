@@ -30,7 +30,14 @@ import { selectProductionHub, selectSpawnHex, shipyardsWithinRange } from "@/lib
 import { composeFleetFromTemplates } from "@/lib/ai/fleetComposer";
 
 const HUB_RADIUS = 8;
+// Aspirational target size for a raised fleet. Independent of current
+// treasury — the per-ship queueing loop below only spends what the
+// faction can actually afford this turn, and #5 (resume-fill) picks up
+// the shortfall on subsequent turns. Making this treasury-scaled would
+// force poor factions to keep re-picking tiny templates instead of
+// working toward a real fleet.
 const DEFAULT_BUDGET = 300;
+
 
 export const aiActionsPhase: Phase = {
   name: "ai_plans" as any,
