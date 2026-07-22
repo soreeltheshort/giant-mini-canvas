@@ -964,14 +964,14 @@ function FacilityQtyRow({
   useEffect(() => { setQty(String(initialQty)); }, [initialQty]);
   const dirty = String(initialQty) !== qty;
   return (
-    <div className="flex items-center gap-2 text-xs py-1 border-b border-border last:border-0">
-      <span className="flex-1 truncate text-slate-500">{icon} {name}</span>
+    <div className="flex items-center gap-1.5 text-xs py-1 border-b border-border last:border-0">
+      <span className="flex-1 min-w-0 truncate text-slate-500" title={name}>{icon} {name}</span>
       <input
         type="number"
         min={0}
         value={qty}
         onChange={(e) => setQty(e.target.value)}
-        className="w-14 h-6 px-1 rounded-sm border border-border bg-background text-xs text-right"
+        className="w-10 h-6 px-1 rounded-sm border border-border bg-background text-xs text-right shrink-0"
       />
       <button
         onClick={() => onSave(Math.max(0, parseInt(qty || "0", 10) || 0))}
