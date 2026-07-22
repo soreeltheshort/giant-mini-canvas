@@ -299,10 +299,11 @@ export const aiActionsPhase: Phase = {
       }
 
       // 3h. Audit logs
+      const verb = priorFleet ? "reinforced" : "raised";
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
         log_type: "ai_action",
-        message: `[${factionCode}] enhance_offense: raised fleet "${composition.template_name}" at (${spawn.x},${spawn.y}); queued ${queued.length} ship(s) across ${yards.length} shipyard(s); treasury ${treasury0} → ${treasury}`,
+        message: `[${factionCode}] enhance_offense: ${verb} fleet "${fleetName}" at (${spawn.x},${spawn.y}); queued ${queued.length} ship(s) across ${yards.length} shipyard(s); treasury ${treasury0} → ${treasury}`,
         details_json: {
           plan_id: plan.id,
           faction: factionCode,
@@ -314,8 +315,9 @@ export const aiActionsPhase: Phase = {
           template_name: composition.template_name,
           template_points: composition.template_points,
           budget,
-          new_fleet_id: newFleet.id,
-          new_fleet_name: fleetName,
+          fleet_id: targetFleetId,
+          fleet_name: fleetName,
+          reused_prior_fleet: !!priorFleet,
           queued, skipped,
           treasury_before: treasury0, treasury_after: treasury,
         },
@@ -326,17 +328,19 @@ export const aiActionsPhase: Phase = {
         player_id: faction.id,
         turn_number: currentTurn,
         phase: "actions",
-        summary: `enhance_offense → raised "${composition.template_name}" at hub ${hub.system.system_name}; queued ${queued.length} ship(s) (₡${treasury0 - treasury})`,
+        summary: `enhance_offense → ${verb} "${fleetName}" at hub ${hub.system.system_name}; queued ${queued.length} ship(s) (₡${treasury0 - treasury})`,
         details_json: {
           plan_id: plan.id, slot: plan.slate_slot,
           hub_system_id: hub.system.system_id,
-          new_fleet_id: newFleet.id,
+          fleet_id: targetFleetId,
+          reused_prior_fleet: !!priorFleet,
           template_id: composition.template_id,
           queued_count: queued.length,
           skipped_count: skipped.length,
           treasury_before: treasury0, treasury_after: treasury,
         },
       });
+
     }
   },
 };
