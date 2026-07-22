@@ -70,14 +70,12 @@ export const aiActionsPhase: Phase = {
     const hullSortByCode = new Map<string, number>();
     for (const r of (hullRows as any[]) || []) hullSortByCode.set(r.code, Number(r.sort_order) || 0);
 
-    // Cache existing fleets by name-suffix for dedupe.
+    // Cache existing fleets (used to find prior plan fleet for resume-fill).
     const { data: fleetRows } = await (supabase as any)
       .from("game_fleets")
-      .select("id, fleet_name, owner_classification")
+      .select("id, fleet_name, owner_classification, hex_x, hex_y")
       .eq("game_id", gameId);
-    const existingFleetNames = new Set<string>(
-      ((fleetRows as any[]) || []).map((f) => f.fleet_name || ""),
-    );
+    const existingFleets = (fleetRows as any[]) || [];
 
     for (const plan of plans) {
       const faction = aiFactions.find((f) => f.id === plan.player_id);
@@ -85,9 +83,11 @@ export const aiActionsPhase: Phase = {
       const factionCode = faction.factions?.code_name || "";
       const planTag = `[plan:${String(plan.id).slice(0, 8)}]`;
 
-      // Dedupe: skip if we already raised this fleet.
-      const already = Array.from(existingFleetNames).some((n) => n.endsWith(planTag));
-      if (already) continue;
+      // #5: resume-fill. Reuse the existing plan fleet if present instead of
+      // permanently skipping the plan.
+      const priorFleet = existingFleets.find(
+        (f) => (f.fleet_name || "").endsWith(planTag),
+      );
 
       // 3a. Hub
       const hub = selectProductionHub(mapState, factionCode, facilityTypes, hullSortByCode);
@@ -101,8 +101,10 @@ export const aiActionsPhase: Phase = {
         continue;
       }
 
-      // 3b. Spawn hex
-      const spawn = selectSpawnHex(mapState, hub, 3) ?? { x: hub.hex.x, y: hub.hex.y };
+      // 3b. Spawn hex — for a new fleet only; existing fleets keep their hex.
+      const spawn = priorFleet
+        ? { x: priorFleet.hex_x, y: priorFleet.hex_y }
+        : (selectSpawnHex(mapState, hub, 3) ?? { x: hub.hex.x, y: hub.hex.y });
 
       // 3c. Composer — budget scales with faction treasury but capped.
       const treasury0 = Number(faction.treasury) || 0;
@@ -120,44 +122,91 @@ export const aiActionsPhase: Phase = {
         continue;
       }
 
-      // 3d. Instantiate empty new fleet
-      const fleetName = `${composition.template_name} ${planTag}`;
-      const { data: newFleet, error: nfErr } = await (supabase as any)
-        .from("game_fleets")
-        .insert({
-          game_id: gameId,
-          owner_classification: factionCode,
-          fleet_name: fleetName,
-          hex_x: spawn.x,
-          hex_y: spawn.y,
-          system_id: null,
-          is_garrison: false,
-        })
-        .select("id")
-        .single();
-      if (nfErr || !newFleet?.id) {
+      // 3d. Instantiate OR reuse target fleet.
+      let targetFleetId: string;
+      let fleetName: string;
+      if (priorFleet) {
+        targetFleetId = priorFleet.id;
+        fleetName = priorFleet.fleet_name;
+      } else {
+        fleetName = `${composition.template_name} ${planTag}`;
+        const { data: newFleet, error: nfErr } = await (supabase as any)
+          .from("game_fleets")
+          .insert({
+            game_id: gameId,
+            owner_classification: factionCode,
+            fleet_name: fleetName,
+            hex_x: spawn.x,
+            hex_y: spawn.y,
+            system_id: null,
+            is_garrison: false,
+          })
+          .select("id")
+          .single();
+        if (nfErr || !newFleet?.id) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+            log_type: "ai_action_error",
+            message: `[${factionCode}] enhance_offense: fleet create failed: ${nfErr?.message || "unknown"}`,
+            details_json: { plan_id: plan.id, error: nfErr?.message },
+          });
+          continue;
+        }
+        // Clean up any accidental snapshot rows.
+        await (supabase as any).from("game_fleet_ships").delete().eq("game_fleet_id", newFleet.id);
+        targetFleetId = newFleet.id;
+        existingFleets.push({ id: newFleet.id, fleet_name: fleetName, hex_x: spawn.x, hex_y: spawn.y });
+      }
+
+      // 3d-bis. Compute what the fleet ALREADY has (delivered + queued) so
+      // we only queue the remaining shortfall relative to `composition`.
+      const covered = new Map<string, number>(); // ship_type_id -> count
+      const [{ data: haveRows }, { data: queuedRows }] = await Promise.all([
+        (supabase as any)
+          .from("game_fleet_ships")
+          .select("ship_type_id, quantity")
+          .eq("game_fleet_id", targetFleetId),
+        (supabase as any)
+          .from("system_ship_production")
+          .select("ship_type_id, quantity")
+          .eq("game_id", gameId)
+          .eq("destination_fleet_id", targetFleetId),
+      ]);
+      for (const r of ((haveRows as any[]) || []).concat((queuedRows as any[]) || [])) {
+        covered.set(r.ship_type_id, (covered.get(r.ship_type_id) || 0) + (Number(r.quantity) || 0));
+      }
+      const shipsNeeded = composition.ships.filter((s) => {
+        const rem = covered.get(s.ship_type_id) || 0;
+        if (rem > 0) { covered.set(s.ship_type_id, rem - 1); return false; }
+        return true;
+      });
+
+      // #4: nothing left to build → log completion and move on. The plan
+      // will re-select next turn only if still active; that's expected.
+      if (shipsNeeded.length === 0) {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
-          log_type: "ai_action_error",
-          message: `[${factionCode}] enhance_offense: fleet create failed: ${nfErr?.message || "unknown"}`,
-          details_json: { plan_id: plan.id, error: nfErr?.message },
+          log_type: "ai_action_skip",
+          message: `[${factionCode}] enhance_offense: plan fleet "${fleetName}" already at target composition — nothing to queue`,
+          details_json: { plan_id: plan.id, fleet_id: targetFleetId, template_id: composition.template_id },
         });
         continue;
       }
-      // The AFTER INSERT trigger snapshots ships when source fleet_id is a
-      // template UUID. We inserted WITHOUT fleet_id (no source) → new fleet
-      // starts empty; production will fill it. Clean up any accidental
-      // rows just in case.
-      await (supabase as any).from("game_fleet_ships").delete().eq("game_fleet_id", newFleet.id);
-      existingFleetNames.add(fleetName);
 
       // 3e. Shipyards within HUB_RADIUS
       const yards = shipyardsWithinRange(
         mapState, factionCode, facilityTypes, hullSortByCode, hub, HUB_RADIUS,
       );
-      if (yards.length === 0) continue;
+      if (yards.length === 0) {
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+          log_type: "ai_action_skip",
+          message: `[${factionCode}] enhance_offense: no shipyards within ${HUB_RADIUS} of hub ${hub.system.system_name}`,
+          details_json: { plan_id: plan.id, hub_system_id: hub.system.system_id },
+        });
+        continue;
+      }
 
-      // Per-yard remaining position tail lookup (queued after existing).
       const nextPosByYard = new Map<number, number>();
       for (const y of yards) {
         const { data: maxRow } = await (supabase as any)
@@ -175,21 +224,18 @@ export const aiActionsPhase: Phase = {
       let treasury = treasury0;
       const queued: Array<{ ship: string; system: string; cost: number }> = [];
       const skipped: Array<{ ship: string; reason: string }> = [];
+      let unaffordableCount = 0;
       let yardCursor = 0;
-      for (const ship of composition.ships) {
-        // Find first yard (starting at cursor, round-robin) that can build
-        // this hull_class and has hull sort >= ship.hull_sort. Yards are
-        // pre-sorted by capacity+max-hull desc, so this naturally prefers
-        // the most powerful starport.
+      for (const ship of shipsNeeded) {
         let placed = false;
         for (let i = 0; i < yards.length; i++) {
           const y = yards[(yardCursor + i) % yards.length];
-          const canBuild =
-            y.maxHullSort < 0 || y.maxHullSort >= ship.hull_sort;
+          const canBuild = y.maxHullSort < 0 || y.maxHullSort >= ship.hull_sort;
           if (!canBuild) continue;
           if (treasury < ship.point_cost) {
             skipped.push({ ship: ship.ship_name, reason: `treasury ${treasury} < cost ${ship.point_cost}` });
-            placed = true; // stop trying — no yard will help
+            unaffordableCount += 1;
+            placed = true;
             break;
           }
           const pos = nextPosByYard.get(y.system.system_id) || 1;
@@ -201,7 +247,7 @@ export const aiActionsPhase: Phase = {
               position: pos,
               ship_type_id: ship.ship_type_id,
               quantity: 1,
-              destination_fleet_id: newFleet.id,
+              destination_fleet_id: targetFleetId,
               destination_hex_x: spawn.x,
               destination_hex_y: spawn.y,
               points_remaining: ship.point_cost,
@@ -222,8 +268,26 @@ export const aiActionsPhase: Phase = {
         if (!placed) {
           skipped.push({ ship: ship.ship_name, reason: "no yard can build this hull class" });
         }
-        if (treasury <= 0) break;
       }
+
+      // #4: distinct skip when treasury blocked EVERY ship this turn.
+      if (queued.length === 0) {
+        const reason = unaffordableCount === shipsNeeded.length
+          ? "no_ships_affordable"
+          : "plan_fleet_blocked";
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+          log_type: `ai_action_skip`,
+          message: `[${factionCode}] enhance_offense: ${reason} for "${fleetName}" (treasury ${treasury0}, ${shipsNeeded.length} ship(s) needed)`,
+          details_json: {
+            plan_id: plan.id, fleet_id: targetFleetId, reason,
+            treasury: treasury0, needed: shipsNeeded.length, skipped,
+          },
+        });
+        continue;
+      }
+
+
 
       // 3g. Debit treasury.
       if (treasury !== treasury0) {
