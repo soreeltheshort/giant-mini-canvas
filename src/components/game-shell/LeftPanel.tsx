@@ -916,11 +916,11 @@ function SystemTestEditor({
           )}
 
           {addable.length > 0 ? (
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-1.5 pt-1">
               <select
                 value={addFacilityId}
                 onChange={(e) => setAddFacilityId(e.target.value)}
-                className="flex-1 h-7 px-2 rounded-sm border border-border bg-background text-xs"
+                className="flex-1 min-w-0 h-7 px-2 rounded-sm border border-border bg-background text-xs"
               >
                 <option value="">+ Add facility…</option>
                 {addable.map((ft) => (
@@ -935,7 +935,7 @@ function SystemTestEditor({
                   onSetFacilityQty(sysId, addFacilityId, 1);
                   setAddFacilityId("");
                 }}
-                className={`h-7 px-3 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider ${addFacilityId ? "bg-crimson text-primary-foreground hover:bg-crimson-light" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+                className={`shrink-0 h-7 px-2 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider ${addFacilityId ? "bg-crimson text-primary-foreground hover:bg-crimson-light" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
               >
                 Add
               </button>
