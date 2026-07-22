@@ -113,9 +113,11 @@ export const aiActionsPhase: Phase = {
         ? { x: priorFleet.hex_x, y: priorFleet.hex_y }
         : (selectSpawnHex(mapState, hub, 3) ?? { x: hub.hex.x, y: hub.hex.y });
 
-      // 3c. Composer — budget scales with faction treasury but capped.
+      // 3c. Composer — aspirational target composition. Independent of
+      // current treasury; per-ship affordability is checked in 3f.
       const treasury0 = Number(faction.treasury) || 0;
-      const budget = Math.min(DEFAULT_BUDGET, Math.max(50, Math.floor(treasury0 * 0.6)));
+      const budget = DEFAULT_BUDGET;
+
       const composition = await composeFleetFromTemplates(
         supabase, faction.faction_id, budget, hullSortByCode,
       );
