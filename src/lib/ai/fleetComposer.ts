@@ -23,14 +23,32 @@ export interface ComposerShip {
   hull_sort: number;
 }
 
-export interface ComposerResult {
+export interface ComposerPick {
   template_id: string;
   template_name: string;
   template_points: number;
-  budget_points: number;
-  ships: ComposerShip[]; // one entry per ship (quantity expanded), big-first
 }
 
+export interface ComposerResult {
+  template_id: string; // primary (first) pick — kept for backward compat / naming
+  template_name: string;
+  template_points: number; // sum of all picked templates
+  budget_points: number;
+  picks: ComposerPick[]; // one or more templates chosen, in pick order
+  ships: ComposerShip[]; // combined ships across all picks, big-first
+}
+
+/**
+ * Selection rule:
+ *   1. Prefer the template whose total_points is the SMALLEST value that
+ *      still meets-or-exceeds `budgetPoints` (minimal overshoot).
+ *   2. If no template meets-or-exceeds the budget, take the LARGEST
+ *      template and then recursively apply rule (1) against the
+ *      remaining budget (budget − chosen.total_points) until either the
+ *      remaining budget is satisfied by a single template or no
+ *      candidates remain.
+ *   Deterministic tie-break: smaller total_points, then fleet_id lex.
+ */
 export async function composeFleetFromTemplates(
   supabase: SupabaseClient,
   factionId: string,
@@ -53,7 +71,7 @@ export async function composeFleetFromTemplates(
   const eligibleFleetIds: string[] = [];
   for (const fl of (fleetRows as any[]) || []) {
     const tags = tagsByFleet.get(fl.id);
-    if (!tags) eligibleFleetIds.push(fl.id); // universal fallback
+    if (!tags) eligibleFleetIds.push(fl.id);
     else if (tags.has(factionId)) eligibleFleetIds.push(fl.id);
   }
   if (eligibleFleetIds.length === 0) return null;
@@ -72,7 +90,6 @@ export async function composeFleetFromTemplates(
   const shipTypeById = new Map<string, any>();
   for (const s of (shipTypes as any[]) || []) shipTypeById.set(s.id, s);
 
-  // 3. Compute total point cost per template.
   interface TemplateAgg {
     fleet_id: string;
     name: string;
@@ -107,28 +124,66 @@ export async function composeFleetFromTemplates(
     aggByFleet.set(r.fleet_id, agg);
   }
 
-  const candidates = Array.from(aggByFleet.values()).filter((c) => c.ships.length > 0);
-  if (candidates.length === 0) return null;
+  const allCandidates = Array.from(aggByFleet.values()).filter((c) => c.ships.length > 0);
+  if (allCandidates.length === 0) return null;
 
-  // 4. Pick template closest to budget. Deterministic tie-break: smaller
-  //    fleet first, then fleet_id lex.
-  candidates.sort((a, b) => {
-    const da = Math.abs(a.total_points - budgetPoints);
-    const db = Math.abs(b.total_points - budgetPoints);
-    return da - db || a.total_points - b.total_points || a.fleet_id.localeCompare(b.fleet_id);
-  });
-  const chosen = candidates[0];
+  // Greedy selection per rule above.
+  const picks: TemplateAgg[] = [];
+  let remaining = budgetPoints;
+  // Guard against pathological loops (should never approach this bound).
+  const MAX_PICKS = 12;
 
-  // 5. Order ships big-first.
-  chosen.ships.sort(
-    (a, b) => b.hull_sort - a.hull_sort || b.point_cost - a.point_cost || a.ship_type_id.localeCompare(b.ship_type_id),
+  while (picks.length < MAX_PICKS) {
+    const meetsOrExceeds = allCandidates
+      .filter((c) => c.total_points >= remaining)
+      .sort(
+        (a, b) =>
+          a.total_points - b.total_points ||
+          a.fleet_id.localeCompare(b.fleet_id),
+      );
+    if (meetsOrExceeds.length > 0) {
+      picks.push(meetsOrExceeds[0]);
+      break; // budget satisfied
+    }
+    // None exceed → take the largest, decrement remaining, keep going.
+    const largest = [...allCandidates].sort(
+      (a, b) =>
+        b.total_points - a.total_points ||
+        a.fleet_id.localeCompare(b.fleet_id),
+    )[0];
+    picks.push(largest);
+    remaining -= largest.total_points;
+    if (remaining <= 0) break;
+  }
+
+  if (picks.length === 0) return null;
+
+  // Combine ships across picks, big-first.
+  const combinedShips: ComposerShip[] = picks.flatMap((p) => p.ships);
+  combinedShips.sort(
+    (a, b) =>
+      b.hull_sort - a.hull_sort ||
+      b.point_cost - a.point_cost ||
+      a.ship_type_id.localeCompare(b.ship_type_id),
   );
 
+  const totalPoints = picks.reduce((s, p) => s + p.total_points, 0);
+  const primary = picks[0];
+
   return {
-    template_id: chosen.fleet_id,
-    template_name: chosen.name,
-    template_points: chosen.total_points,
+    template_id: primary.fleet_id,
+    template_name:
+      picks.length === 1
+        ? primary.name
+        : `${primary.name} +${picks.length - 1}`,
+    template_points: totalPoints,
     budget_points: budgetPoints,
-    ships: chosen.ships,
+    picks: picks.map((p) => ({
+      template_id: p.fleet_id,
+      template_name: p.name,
+      template_points: p.total_points,
+    })),
+    ships: combinedShips,
   };
 }
+
