@@ -916,11 +916,11 @@ function SystemTestEditor({
           )}
 
           {addable.length > 0 ? (
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-1.5 pt-1">
               <select
                 value={addFacilityId}
                 onChange={(e) => setAddFacilityId(e.target.value)}
-                className="flex-1 h-7 px-2 rounded-sm border border-border bg-background text-xs"
+                className="flex-1 min-w-0 h-7 px-2 rounded-sm border border-border bg-background text-xs"
               >
                 <option value="">+ Add facility…</option>
                 {addable.map((ft) => (
@@ -935,7 +935,7 @@ function SystemTestEditor({
                   onSetFacilityQty(sysId, addFacilityId, 1);
                   setAddFacilityId("");
                 }}
-                className={`h-7 px-3 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider ${addFacilityId ? "bg-crimson text-primary-foreground hover:bg-crimson-light" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+                className={`shrink-0 h-7 px-2 rounded-sm text-[10px] font-heading font-semibold uppercase tracking-wider ${addFacilityId ? "bg-crimson text-primary-foreground hover:bg-crimson-light" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
               >
                 Add
               </button>
@@ -964,14 +964,14 @@ function FacilityQtyRow({
   useEffect(() => { setQty(String(initialQty)); }, [initialQty]);
   const dirty = String(initialQty) !== qty;
   return (
-    <div className="flex items-center gap-2 text-xs py-1 border-b border-border last:border-0">
-      <span className="flex-1 truncate text-slate-500">{icon} {name}</span>
+    <div className="flex items-center gap-1.5 text-xs py-1 border-b border-border last:border-0">
+      <span className="flex-1 min-w-0 truncate text-slate-500" title={name}>{icon} {name}</span>
       <input
         type="number"
         min={0}
         value={qty}
         onChange={(e) => setQty(e.target.value)}
-        className="w-14 h-6 px-1 rounded-sm border border-border bg-background text-xs text-right"
+        className="w-10 h-6 px-1 rounded-sm border border-border bg-background text-xs text-right shrink-0"
       />
       <button
         onClick={() => onSave(Math.max(0, parseInt(qty || "0", 10) || 0))}
