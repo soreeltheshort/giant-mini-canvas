@@ -36,6 +36,20 @@ export interface ComposerResult {
   budget_points: number;
   picks: ComposerPick[]; // one or more templates chosen, in pick order
   ships: ComposerShip[]; // combined ships across all picks, big-first
+  diagnostics?: ComposerDiagnostics;
+}
+
+export interface ComposerDiagnostics {
+  faction_id: string;
+  budget: number;
+  total_fleets_scanned: number;
+  tagged_fleet_ids: number;
+  eligible_fleet_ids: number;
+  ship_rows_for_eligible: number;
+  ship_types_loaded: number;
+  aggregated_templates: number;
+  nonempty_templates: number;
+  reason?: string; // populated when result is null
 }
 
 /**
