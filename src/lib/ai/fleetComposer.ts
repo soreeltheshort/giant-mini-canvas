@@ -68,12 +68,26 @@ export async function composeFleetFromTemplates(
   factionId: string,
   budgetPoints: number,
   hullSortByCode: Map<string, number>,
-): Promise<ComposerResult | null> {
+): Promise<{ result: ComposerResult | null; diagnostics: ComposerDiagnostics }> {
+  const diagnostics: ComposerDiagnostics = {
+    faction_id: factionId,
+    budget: budgetPoints,
+    total_fleets_scanned: 0,
+    tagged_fleet_ids: 0,
+    eligible_fleet_ids: 0,
+    ship_rows_for_eligible: 0,
+    ship_types_loaded: 0,
+    aggregated_templates: 0,
+    nonempty_templates: 0,
+  };
+
   // 1. Templates eligible to this faction (universal = no tags).
   const [{ data: tagRows }, { data: fleetRows }] = await Promise.all([
     (supabase as any).from("fleet_faction_tags").select("fleet_id, faction_id"),
     (supabase as any).from("fleets").select("id, name"),
   ]);
+
+  diagnostics.total_fleets_scanned = ((fleetRows as any[]) || []).length;
 
   const tagsByFleet = new Map<string, Set<string>>();
   for (const r of (tagRows as any[]) || []) {
@@ -81,6 +95,7 @@ export async function composeFleetFromTemplates(
     set.add(r.faction_id);
     tagsByFleet.set(r.fleet_id, set);
   }
+  diagnostics.tagged_fleet_ids = tagsByFleet.size;
 
   const eligibleFleetIds: string[] = [];
   for (const fl of (fleetRows as any[]) || []) {
@@ -88,7 +103,11 @@ export async function composeFleetFromTemplates(
     if (!tags) eligibleFleetIds.push(fl.id);
     else if (tags.has(factionId)) eligibleFleetIds.push(fl.id);
   }
-  if (eligibleFleetIds.length === 0) return null;
+  diagnostics.eligible_fleet_ids = eligibleFleetIds.length;
+  if (eligibleFleetIds.length === 0) {
+    diagnostics.reason = "no_eligible_templates_for_faction";
+    return { result: null, diagnostics };
+  }
 
   // 2. Load compositions and ship type costs.
   const [{ data: shipRows }, { data: shipTypes }] = await Promise.all([
@@ -100,6 +119,9 @@ export async function composeFleetFromTemplates(
       .from("ship_types")
       .select("id, ship_name, point_cost, hull_class"),
   ]);
+
+  diagnostics.ship_rows_for_eligible = ((shipRows as any[]) || []).length;
+  diagnostics.ship_types_loaded = ((shipTypes as any[]) || []).length;
 
   const shipTypeById = new Map<string, any>();
   for (const s of (shipTypes as any[]) || []) shipTypeById.set(s.id, s);
@@ -137,14 +159,21 @@ export async function composeFleetFromTemplates(
     }
     aggByFleet.set(r.fleet_id, agg);
   }
+  diagnostics.aggregated_templates = aggByFleet.size;
 
   const allCandidates = Array.from(aggByFleet.values()).filter((c) => c.ships.length > 0);
-  if (allCandidates.length === 0) return null;
+  diagnostics.nonempty_templates = allCandidates.length;
+  if (allCandidates.length === 0) {
+    diagnostics.reason =
+      diagnostics.ship_rows_for_eligible === 0
+        ? "eligible_templates_have_no_fleet_ships_rows"
+        : "eligible_templates_have_no_resolvable_ship_types";
+    return { result: null, diagnostics };
+  }
 
   // Greedy selection per rule above.
   const picks: TemplateAgg[] = [];
   let remaining = budgetPoints;
-  // Guard against pathological loops (should never approach this bound).
   const MAX_PICKS = 12;
 
   while (picks.length < MAX_PICKS) {
@@ -157,9 +186,8 @@ export async function composeFleetFromTemplates(
       );
     if (meetsOrExceeds.length > 0) {
       picks.push(meetsOrExceeds[0]);
-      break; // budget satisfied
+      break;
     }
-    // None exceed → take the largest, decrement remaining, keep going.
     const largest = [...allCandidates].sort(
       (a, b) =>
         b.total_points - a.total_points ||
@@ -170,9 +198,11 @@ export async function composeFleetFromTemplates(
     if (remaining <= 0) break;
   }
 
-  if (picks.length === 0) return null;
+  if (picks.length === 0) {
+    diagnostics.reason = "greedy_selection_yielded_no_picks";
+    return { result: null, diagnostics };
+  }
 
-  // Combine ships across picks, big-first.
   const combinedShips: ComposerShip[] = picks.flatMap((p) => p.ships);
   combinedShips.sort(
     (a, b) =>
@@ -185,19 +215,23 @@ export async function composeFleetFromTemplates(
   const primary = picks[0];
 
   return {
-    template_id: primary.fleet_id,
-    template_name:
-      picks.length === 1
-        ? primary.name
-        : `${primary.name} +${picks.length - 1}`,
-    template_points: totalPoints,
-    budget_points: budgetPoints,
-    picks: picks.map((p) => ({
-      template_id: p.fleet_id,
-      template_name: p.name,
-      template_points: p.total_points,
-    })),
-    ships: combinedShips,
+    result: {
+      template_id: primary.fleet_id,
+      template_name:
+        picks.length === 1
+          ? primary.name
+          : `${primary.name} +${picks.length - 1}`,
+      template_points: totalPoints,
+      budget_points: budgetPoints,
+      picks: picks.map((p) => ({
+        template_id: p.fleet_id,
+        template_name: p.name,
+        template_points: p.total_points,
+      })),
+      ships: combinedShips,
+      diagnostics,
+    },
+    diagnostics,
   };
 }
 
