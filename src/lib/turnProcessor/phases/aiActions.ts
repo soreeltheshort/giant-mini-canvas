@@ -118,15 +118,15 @@ export const aiActionsPhase: Phase = {
       const treasury0 = Number(faction.treasury) || 0;
       const budget = DEFAULT_BUDGET;
 
-      const composition = await composeFleetFromTemplates(
+      const { result: composition, diagnostics: composerDiag } = await composeFleetFromTemplates(
         supabase, faction.faction_id, budget, hullSortByCode,
       );
       if (!composition) {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
           log_type: "ai_action_skip",
-          message: `[${factionCode}] enhance_offense: no eligible fleet templates (budget ${budget})`,
-          details_json: { plan_id: plan.id, budget },
+          message: `[${factionCode}] enhance_offense: composer returned no template (reason: ${composerDiag.reason}); budget ${budget}, eligible=${composerDiag.eligible_fleet_ids}/${composerDiag.total_fleets_scanned}, nonempty=${composerDiag.nonempty_templates}, ship_rows=${composerDiag.ship_rows_for_eligible}`,
+          details_json: { plan_id: plan.id, budget, composer_diagnostics: composerDiag },
         });
         continue;
       }
