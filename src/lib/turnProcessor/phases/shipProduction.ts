@@ -27,6 +27,10 @@ interface MiniShipType {
   map_speed: number;
   hull_class: string;
   class: string;
+  fighter_bay: number;
+  fighter_storage: number;
+  gun_ship_link: number;
+  gunship_storage: number;
 }
 
 function stepToward(fromX: number, fromY: number, toX: number, toY: number) {
