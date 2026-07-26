@@ -313,13 +313,44 @@ export default function BuildShipsDialog({
     return base.filter(isHullAllowed);
   }, [shipTypes, activeFilter, maxHullSort, hullSort]);
 
-  /** Strikecraft can only target fleets/garrisons within 2 hexes of the producing system. */
+  /** Slots already consumed by items sitting in the LOCAL (unsaved) queueOrder. */
+  const localReservedForFleet = (fleetId: string): { fighter: number; gunship: number } => {
+    let f = 0, g = 0;
+    for (const q of queueOrder) {
+      if (q.destFleetId !== fleetId) continue;
+      const st = shipTypes.find(s => s.id === q.id);
+      if (!st) continue;
+      const cost = strikeSlotCost(String(st.class || ""));
+      f += cost.fighter * q.qty;
+      g += cost.gunship * q.qty;
+    }
+    return { fighter: f, gunship: g };
+  };
+
+  const fleetHasSlot = (fleetId: string, cls: string): boolean => {
+    const cost = strikeSlotCost(cls);
+    if (cost.fighter === 0 && cost.gunship === 0) return true;
+    const cap = fleetStrikeCap.get(fleetId);
+    if (!cap) return false;
+    const local = localReservedForFleet(fleetId);
+    return (cap.fighter_free - local.fighter) >= cost.fighter
+        && (cap.gunship_free - local.gunship) >= cost.gunship;
+  };
+
+  /**
+   * Strikecraft targeting rule (non-AI): must be within STRIKECRAFT_RANGE hexes
+   * AND the fleet must have free fighter/gunship capacity for that class.
+   */
   const fleetsForShip = (shipTypeId: string): PlayerFleetOption[] => {
     const st = shipTypes.find(s => s.id === shipTypeId);
     if (!st) return playerFleets;
     if (st.hull_class !== "Strikecraft") return playerFleets;
     if (systemHexX === undefined || systemHexY === undefined) return playerFleets;
-    return playerFleets.filter(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
+    const cls = String(st.class || "");
+    return playerFleets.filter(f =>
+      hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE
+      && fleetHasSlot(f.fleet_id, cls),
+    );
   };
 
   const selectFilter = (k: FilterKey) => {
@@ -329,21 +360,30 @@ export default function BuildShipsDialog({
   const adjust = (id: string, delta: number) => {
     setQueueOrder((prev) => {
       const idx = prev.findIndex((q) => q.id === id);
+      const st = shipTypes.find(s => s.id === id);
+      const isStrike = st?.hull_class === "Strikecraft";
+      const cls = String(st?.class || "");
+
       if (idx === -1) {
         if (delta <= 0) return prev;
-        // Strikecraft must default to a fleet within 2 hexes; otherwise blocked.
-        const st = shipTypes.find(s => s.id === id);
         let dflt = defaultDestination;
-        if (st?.hull_class === "Strikecraft" && systemHexX !== undefined && systemHexY !== undefined) {
-          const ok = playerFleets.find(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
-          if (!ok) return prev; // no eligible fleet → can't queue
+        if (isStrike && systemHexX !== undefined && systemHexY !== undefined) {
+          const ok = playerFleets.find(f =>
+            hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE
+            && fleetHasSlot(f.fleet_id, cls),
+          );
+          if (!ok) return prev;
           dflt = ok.fleet_id;
         }
-        if (!dflt) return prev; // no fleets at all → can't queue
+        if (!dflt) return prev;
         return [...prev, { id, qty: delta, destFleetId: dflt }];
       }
 
       const next = [...prev];
+      // For strikecraft, refuse an increment that would exceed the target's free slots.
+      if (delta > 0 && isStrike && !fleetHasSlot(next[idx].destFleetId, cls)) {
+        return prev;
+      }
       const v = Math.max(0, next[idx].qty + delta);
       if (v === 0) next.splice(idx, 1);
       else next[idx] = { ...next[idx], qty: v };
