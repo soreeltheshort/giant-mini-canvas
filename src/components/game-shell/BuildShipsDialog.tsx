@@ -111,6 +111,8 @@ export default function BuildShipsDialog({
   const [persisted, setPersisted] = useState<PersistedQueueRow[]>([]);
   const [persistedLoading, setPersistedLoading] = useState(false);
   const [hullSort, setHullSort] = useState<Map<string, number>>(new Map());
+  /** fleet_id -> { fighter_free, gunship_free } — reserved slots (queue + transit + existing strikecraft) already subtracted. */
+  const [fleetStrikeCap, setFleetStrikeCap] = useState<Map<string, { fighter_free: number; gunship_free: number }>>(new Map());
 
   // Load hull-class ordering once. Used to enforce shipyard max_ship_hull_class.
   useEffect(() => {
