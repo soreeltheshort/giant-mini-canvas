@@ -416,7 +416,8 @@ export const shipProductionPhase: Phase = {
         stepsLeft--;
       }
       if (cx === dest.hex_x && cy === dest.hex_y) {
-        const inserts = Array.from({ length: t.quantity }, () => ({
+        const fitQty = await clampStrikecraftArrival(dest.fleet_id, ship, t.quantity, t.owner_classification);
+        const inserts = Array.from({ length: fitQty }, () => ({
           game_fleet_id: dest.fleet_id,
           ship_type_id: ship.id,
           quantity: 1,
