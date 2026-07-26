@@ -25,7 +25,6 @@
  * queue advancing each turn.
  */
 import type { Phase, TurnContext } from "../types";
-import { ownerMatchesFaction } from "@/lib/factionUtils";
 import { selectProductionHub, selectSpawnHex, shipyardsWithinRange } from "@/lib/ai/productionHub";
 import { composeFleetFromTemplates } from "@/lib/ai/fleetComposer";
 
