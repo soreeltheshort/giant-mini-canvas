@@ -498,7 +498,11 @@ export default function BuildShipsDialog({
                     if (!st) return playerFleets;
                     if (st.hull_class !== "Strikecraft") return playerFleets;
                     if (systemHexX === undefined || systemHexY === undefined) return playerFleets;
-                    return playerFleets.filter(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
+                    const cls = String(st.class || "");
+                    return playerFleets.filter(f =>
+                      hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE
+                      && (f.fleet_id === row.destination_fleet_id || fleetHasSlot(f.fleet_id, cls)),
+                    );
                   })();
                   const currentDest = row.destination_fleet_id ?? "";
                   return (
