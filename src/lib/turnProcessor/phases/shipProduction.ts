@@ -346,8 +346,10 @@ export const shipProductionPhase: Phase = {
       // fleet regardless of distance — no transit, arrive same turn.
       const aiStrikeTeleport = isStrikecraft(ship) && isAiOwner(ownerClass);
       if (aiStrikeTeleport || dist <= ship.map_speed) {
+        // Clamp strikecraft to destination fleet's free capacity; overflow refunded.
+        const fitQty = await clampStrikecraftArrival(dest.fleet_id, ship, row.quantity, ownerClass);
         // Insert directly into game_fleet_ships — one row per ship for HP tracking.
-        const inserts = Array.from({ length: row.quantity }, () => ({
+        const inserts = Array.from({ length: fitQty }, () => ({
           game_fleet_id: dest.fleet_id,
           ship_type_id: ship.id,
           quantity: 1,
