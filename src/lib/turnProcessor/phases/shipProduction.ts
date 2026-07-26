@@ -69,7 +69,7 @@ export const shipProductionPhase: Phase = {
     // Load all ship types we may need.
     const { data: shipTypeRows } = await (supabase as any)
       .from("ship_types")
-      .select("id, point_cost, map_speed, hull_class, class");
+      .select("id, point_cost, map_speed, hull_class, class, fighter_bay, fighter_storage, gun_ship_link, gunship_storage");
     const shipTypes = new Map<string, MiniShipType>(
       (shipTypeRows || []).map((s: any) => [s.id, {
         id: s.id,
@@ -77,6 +77,10 @@ export const shipProductionPhase: Phase = {
         map_speed: Math.max(1, Number(s.map_speed) || 1),
         hull_class: String(s.hull_class || ""),
         class: String(s.class || ""),
+        fighter_bay: Number(s.fighter_bay) || 0,
+        fighter_storage: Number(s.fighter_storage) || 0,
+        gun_ship_link: Number(s.gun_ship_link) || 0,
+        gunship_storage: Number(s.gunship_storage) || 0,
       }])
     );
 
