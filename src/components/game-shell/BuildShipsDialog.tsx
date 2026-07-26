@@ -80,6 +80,15 @@ interface BuildShipsDialogProps {
 }
 
 const NEW_FLEET = "__new__";
+const STRIKECRAFT_RANGE = 4; // fighters/gunships may only target fleets within this many hexes
+
+/** Slot cost per strikecraft class. FL = 1 fighter slot, FH = 2, GS = 1 gunship slot. */
+function strikeSlotCost(cls: string): { fighter: number; gunship: number } {
+  if (cls === "FL") return { fighter: 1, gunship: 0 };
+  if (cls === "FH") return { fighter: 2, gunship: 0 };
+  if (cls === "GS") return { fighter: 0, gunship: 1 };
+  return { fighter: 0, gunship: 0 };
+}
 
 function hexDist(ax: number, ay: number, bx: number, by: number) {
   const [a1, a2, a3] = offsetToCube(ax, ay);
