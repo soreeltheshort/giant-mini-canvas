@@ -174,12 +174,13 @@ export const aiActionsPhase: Phase = {
           });
           continue;
         }
-        targetSourceFleetId = fleetTemplate.id;
+        const sourceFleetId = String(fleetTemplate.id);
+        targetSourceFleetId = sourceFleetId;
         const { data: newFleet, error: nfErr } = await (supabase as any)
           .from("game_fleets")
           .insert({
             game_id: gameId,
-            fleet_id: targetSourceFleetId,
+            fleet_id: sourceFleetId,
             owner_classification: factionCode,
             fleet_name: fleetName,
             hex_x: spawn.x,
@@ -201,14 +202,14 @@ export const aiActionsPhase: Phase = {
         // Clean up any accidental snapshot rows.
         await (supabase as any).from("game_fleet_ships").delete().eq("game_fleet_id", newFleet.id);
         targetFleetId = newFleet.id;
-        existingFleets.push({ id: newFleet.id, fleet_id: targetSourceFleetId, fleet_name: fleetName, owner_classification: factionCode, hex_x: spawn.x, hex_y: spawn.y });
+        existingFleets.push({ id: newFleet.id, fleet_id: sourceFleetId, fleet_name: fleetName, owner_classification: factionCode, hex_x: spawn.x, hex_y: spawn.y });
         mapState.fleets.push({
           fleet_id: targetFleetId,
           fleet_name: fleetName,
           owner_classification: factionCode,
           hex_x: spawn.x,
           hex_y: spawn.y,
-          source_fleet_id: targetSourceFleetId,
+          source_fleet_id: sourceFleetId,
         });
       }
 
