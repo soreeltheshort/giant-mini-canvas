@@ -50,6 +50,7 @@ export interface ComposerDiagnostics {
   aggregated_templates: number;
   nonempty_templates: number;
   reason?: string; // populated when result is null
+  read_errors?: Record<string, string>;
 }
 
 /**
@@ -82,10 +83,14 @@ export async function composeFleetFromTemplates(
   };
 
   // 1. Templates eligible to this faction (universal = no tags).
-  const [{ data: tagRows }, { data: fleetRows }] = await Promise.all([
+  const [{ data: tagRows, error: tagErr }, { data: fleetRows, error: fleetErr }] = await Promise.all([
     (supabase as any).from("fleet_faction_tags").select("fleet_id, faction_id"),
     (supabase as any).from("fleets").select("id, name"),
   ]);
+
+  const readErrors: Record<string, string> = {};
+  if (tagErr?.message) readErrors.fleet_faction_tags = tagErr.message;
+  if (fleetErr?.message) readErrors.fleets = fleetErr.message;
 
   diagnostics.total_fleets_scanned = ((fleetRows as any[]) || []).length;
 
@@ -110,15 +115,19 @@ export async function composeFleetFromTemplates(
   }
 
   // 2. Load compositions and ship type costs.
-  const [{ data: shipRows }, { data: shipTypes }] = await Promise.all([
+  const [{ data: shipRows, error: shipRowsErr }, { data: shipTypes, error: shipTypesErr }] = await Promise.all([
     (supabase as any)
       .from("fleet_ships")
       .select("fleet_id, ship_type_id, quantity")
       .in("fleet_id", eligibleFleetIds),
     (supabase as any)
       .from("ship_types")
-      .select("id, ship_name, point_cost, hull_class"),
+      .select("id, name, point_cost, hull_class"),
   ]);
+
+  if (shipRowsErr?.message) readErrors.fleet_ships = shipRowsErr.message;
+  if (shipTypesErr?.message) readErrors.ship_types = shipTypesErr.message;
+  if (Object.keys(readErrors).length > 0) diagnostics.read_errors = readErrors;
 
   diagnostics.ship_rows_for_eligible = ((shipRows as any[]) || []).length;
   diagnostics.ship_types_loaded = ((shipTypes as any[]) || []).length;
@@ -153,7 +162,7 @@ export async function composeFleetFromTemplates(
         ship_type_id: st.id,
         hull_class: st.hull_class,
         point_cost: cost,
-        ship_name: st.ship_name,
+        ship_name: st.name,
         hull_sort: hullSortByCode.get(st.hull_class) ?? 0,
       });
     }
