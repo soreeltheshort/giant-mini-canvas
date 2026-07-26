@@ -96,7 +96,9 @@ export interface ShipTypeLookup {
   scout_sensors?: number;
   sensor_rating?: number;
   fighter_bay?: number;
+  fighter_storage?: number;
   gun_ship_link?: number;
+  gunship_storage?: number;
   flavor_description?: string;
   laser_2_5cm?: number;
   laser_4_5cm?: number;

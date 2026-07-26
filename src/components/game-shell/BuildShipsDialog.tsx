@@ -80,6 +80,15 @@ interface BuildShipsDialogProps {
 }
 
 const NEW_FLEET = "__new__";
+const STRIKECRAFT_RANGE = 4; // fighters/gunships may only target fleets within this many hexes
+
+/** Slot cost per strikecraft class. FL = 1 fighter slot, FH = 2, GS = 1 gunship slot. */
+function strikeSlotCost(cls: string): { fighter: number; gunship: number } {
+  if (cls === "FL") return { fighter: 1, gunship: 0 };
+  if (cls === "FH") return { fighter: 2, gunship: 0 };
+  if (cls === "GS") return { fighter: 0, gunship: 1 };
+  return { fighter: 0, gunship: 0 };
+}
 
 function hexDist(ax: number, ay: number, bx: number, by: number) {
   const [a1, a2, a3] = offsetToCube(ax, ay);
@@ -111,6 +120,8 @@ export default function BuildShipsDialog({
   const [persisted, setPersisted] = useState<PersistedQueueRow[]>([]);
   const [persistedLoading, setPersistedLoading] = useState(false);
   const [hullSort, setHullSort] = useState<Map<string, number>>(new Map());
+  /** fleet_id -> { fighter_free, gunship_free } — reserved slots (queue + transit + existing strikecraft) already subtracted. */
+  const [fleetStrikeCap, setFleetStrikeCap] = useState<Map<string, { fighter_free: number; gunship_free: number }>>(new Map());
 
   // Load hull-class ordering once. Used to enforce shipyard max_ship_hull_class.
   useEffect(() => {
@@ -192,6 +203,74 @@ export default function BuildShipsDialog({
     }
   }, [open, systemHexX, systemHexY]);
 
+  // Compute per-fleet FREE strikecraft capacity across ALL player fleets.
+  // Free = (Σ non-crippled non-strikecraft fighter_bay + fighter_storage) − slots already
+  //         consumed by fighters currently in the fleet AND slots reserved by
+  //         pending system_ship_production rows AND ships_in_transit already
+  //         targeting the fleet from any producing system.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!open || !gameId || playerFleets.length === 0) {
+        setFleetStrikeCap(new Map());
+        return;
+      }
+      const fleetIds = playerFleets.map(f => f.fleet_id);
+      const [{ data: gfsRows }, { data: pendRows }, { data: transitRows }] = await Promise.all([
+        (supabase as any)
+          .from("game_fleet_ships")
+          .select("game_fleet_id, ship_type_id, quantity, crippled, ship_types(class, fighter_bay, fighter_storage, gun_ship_link, gunship_storage)")
+          .in("game_fleet_id", fleetIds),
+        (supabase as any)
+          .from("system_ship_production")
+          .select("destination_fleet_id, ship_type_id, quantity, ship_types(class)")
+          .eq("game_id", gameId)
+          .in("destination_fleet_id", fleetIds),
+        (supabase as any)
+          .from("ships_in_transit")
+          .select("destination_fleet_id, ship_type_id, quantity, ship_types(class)")
+          .eq("game_id", gameId)
+          .in("destination_fleet_id", fleetIds),
+      ]);
+      if (cancelled) return;
+      const cap = new Map<string, { fighter_free: number; gunship_free: number }>();
+      for (const id of fleetIds) cap.set(id, { fighter_free: 0, gunship_free: 0 });
+      // 1. Base capacity + already-carried strikecraft from fleet composition.
+      for (const r of (gfsRows as any[]) || []) {
+        const st = r.ship_types || {};
+        const cls = String(st.class || "");
+        const qty = Number(r.quantity) || 1;
+        const c = cap.get(r.game_fleet_id);
+        if (!c) continue;
+        // Only non-strikecraft, non-crippled ships contribute capacity.
+        if (cls !== "FL" && cls !== "FH" && cls !== "GS" && !r.crippled) {
+          c.fighter_free += ((Number(st.fighter_bay) || 0) + (Number(st.fighter_storage) || 0)) * qty;
+          c.gunship_free += ((Number(st.gun_ship_link) || 0) + (Number(st.gunship_storage) || 0)) * qty;
+        }
+        // Strikecraft consume slots.
+        const cost = strikeSlotCost(cls);
+        c.fighter_free -= cost.fighter * qty;
+        c.gunship_free -= cost.gunship * qty;
+      }
+      // 2. Reserved by pending production + in-transit.
+      for (const src of [pendRows, transitRows]) {
+        for (const r of (src as any[]) || []) {
+          const cls = String(r.ship_types?.class || "");
+          const cost = strikeSlotCost(cls);
+          if (cost.fighter === 0 && cost.gunship === 0) continue;
+          const qty = Number(r.quantity) || 1;
+          const c = cap.get(r.destination_fleet_id);
+          if (!c) continue;
+          c.fighter_free -= cost.fighter * qty;
+          c.gunship_free -= cost.gunship * qty;
+        }
+      }
+      setFleetStrikeCap(cap);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, gameId, playerFleets.map(f => f.fleet_id).join(","), persisted.length]);
+
   const cancelPersisted = async (row: PersistedQueueRow) => {
     const { error } = await (supabase as any).from("system_ship_production").delete().eq("id", row.id);
     if (error) {
@@ -234,13 +313,44 @@ export default function BuildShipsDialog({
     return base.filter(isHullAllowed);
   }, [shipTypes, activeFilter, maxHullSort, hullSort]);
 
-  /** Strikecraft can only target fleets/garrisons within 2 hexes of the producing system. */
+  /** Slots already consumed by items sitting in the LOCAL (unsaved) queueOrder. */
+  const localReservedForFleet = (fleetId: string): { fighter: number; gunship: number } => {
+    let f = 0, g = 0;
+    for (const q of queueOrder) {
+      if (q.destFleetId !== fleetId) continue;
+      const st = shipTypes.find(s => s.id === q.id);
+      if (!st) continue;
+      const cost = strikeSlotCost(String(st.class || ""));
+      f += cost.fighter * q.qty;
+      g += cost.gunship * q.qty;
+    }
+    return { fighter: f, gunship: g };
+  };
+
+  const fleetHasSlot = (fleetId: string, cls: string): boolean => {
+    const cost = strikeSlotCost(cls);
+    if (cost.fighter === 0 && cost.gunship === 0) return true;
+    const cap = fleetStrikeCap.get(fleetId);
+    if (!cap) return false;
+    const local = localReservedForFleet(fleetId);
+    return (cap.fighter_free - local.fighter) >= cost.fighter
+        && (cap.gunship_free - local.gunship) >= cost.gunship;
+  };
+
+  /**
+   * Strikecraft targeting rule (non-AI): must be within STRIKECRAFT_RANGE hexes
+   * AND the fleet must have free fighter/gunship capacity for that class.
+   */
   const fleetsForShip = (shipTypeId: string): PlayerFleetOption[] => {
     const st = shipTypes.find(s => s.id === shipTypeId);
     if (!st) return playerFleets;
     if (st.hull_class !== "Strikecraft") return playerFleets;
     if (systemHexX === undefined || systemHexY === undefined) return playerFleets;
-    return playerFleets.filter(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
+    const cls = String(st.class || "");
+    return playerFleets.filter(f =>
+      hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE
+      && fleetHasSlot(f.fleet_id, cls),
+    );
   };
 
   const selectFilter = (k: FilterKey) => {
@@ -250,21 +360,30 @@ export default function BuildShipsDialog({
   const adjust = (id: string, delta: number) => {
     setQueueOrder((prev) => {
       const idx = prev.findIndex((q) => q.id === id);
+      const st = shipTypes.find(s => s.id === id);
+      const isStrike = st?.hull_class === "Strikecraft";
+      const cls = String(st?.class || "");
+
       if (idx === -1) {
         if (delta <= 0) return prev;
-        // Strikecraft must default to a fleet within 2 hexes; otherwise blocked.
-        const st = shipTypes.find(s => s.id === id);
         let dflt = defaultDestination;
-        if (st?.hull_class === "Strikecraft" && systemHexX !== undefined && systemHexY !== undefined) {
-          const ok = playerFleets.find(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
-          if (!ok) return prev; // no eligible fleet → can't queue
+        if (isStrike && systemHexX !== undefined && systemHexY !== undefined) {
+          const ok = playerFleets.find(f =>
+            hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE
+            && fleetHasSlot(f.fleet_id, cls),
+          );
+          if (!ok) return prev;
           dflt = ok.fleet_id;
         }
-        if (!dflt) return prev; // no fleets at all → can't queue
+        if (!dflt) return prev;
         return [...prev, { id, qty: delta, destFleetId: dflt }];
       }
 
       const next = [...prev];
+      // For strikecraft, refuse an increment that would exceed the target's free slots.
+      if (delta > 0 && isStrike && !fleetHasSlot(next[idx].destFleetId, cls)) {
+        return prev;
+      }
       const v = Math.max(0, next[idx].qty + delta);
       if (v === 0) next.splice(idx, 1);
       else next[idx] = { ...next[idx], qty: v };
@@ -379,7 +498,11 @@ export default function BuildShipsDialog({
                     if (!st) return playerFleets;
                     if (st.hull_class !== "Strikecraft") return playerFleets;
                     if (systemHexX === undefined || systemHexY === undefined) return playerFleets;
-                    return playerFleets.filter(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
+                    const cls = String(st.class || "");
+                    return playerFleets.filter(f =>
+                      hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE
+                      && (f.fleet_id === row.destination_fleet_id || fleetHasSlot(f.fleet_id, cls)),
+                    );
                   })();
                   const currentDest = row.destination_fleet_id ?? "";
                   return (
@@ -538,9 +661,17 @@ export default function BuildShipsDialog({
               if ((s.fighter_bay ?? 0)    > 0) tags.push(`FB${s.fighter_bay}`);
               if ((s.gun_ship_link ?? 0)  > 0) tags.push(`GL${s.gun_ship_link}`);
               const isStrikecraft = s.hull_class === "Strikecraft";
+              const cls = String(s.class || "");
               const strikecraftBlocked = isStrikecraft &&
                 systemHexX !== undefined && systemHexY !== undefined &&
-                !playerFleets.some(f => hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= 2);
+                !playerFleets.some(f =>
+                  hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE
+                  && fleetHasSlot(f.fleet_id, cls),
+                );
+              const blockedReason = !isStrikecraft ? "" :
+                !playerFleets.some(f => hexDist(systemHexX, systemHexY!, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE)
+                  ? `No friendly fleet within ${STRIKECRAFT_RANGE} hexes`
+                  : `No fleet within ${STRIKECRAFT_RANGE} hexes has free ${cls === "GS" ? "gunship" : "fighter"} capacity`;
               return (
                 <div key={s.id} className="border border-border rounded-sm p-2 flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -551,7 +682,7 @@ export default function BuildShipsDialog({
                         <span key={t} className="text-[9px] px-1 rounded-sm bg-bronze/20 text-bronze font-semibold">{t}</span>
                       ))}
                       {isStrikecraft && (
-                        <span className="text-[9px] text-bronze italic">requires fleet within 2 hexes</span>
+                        <span className="text-[9px] text-bronze italic">arrives instantly · needs fleet ≤{STRIKECRAFT_RANGE} hex w/ capacity</span>
                       )}
                     </div>
                     <p className="text-[10px] text-slate-500">
@@ -577,7 +708,7 @@ export default function BuildShipsDialog({
                         <button
                           onClick={() => adjust(s.id, +1)}
                           disabled={strikecraftBlocked}
-                          title={strikecraftBlocked ? "No friendly fleet within 2 hexes" : ""}
+                          title={strikecraftBlocked ? blockedReason : ""}
                           className="w-6 h-6 rounded-sm bg-muted text-foreground hover:bg-bronze/20 text-sm font-bold disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                           +
