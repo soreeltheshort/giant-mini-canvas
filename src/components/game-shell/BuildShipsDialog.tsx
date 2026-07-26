@@ -203,6 +203,74 @@ export default function BuildShipsDialog({
     }
   }, [open, systemHexX, systemHexY]);
 
+  // Compute per-fleet FREE strikecraft capacity across ALL player fleets.
+  // Free = (Σ non-crippled non-strikecraft fighter_bay + fighter_storage) − slots already
+  //         consumed by fighters currently in the fleet AND slots reserved by
+  //         pending system_ship_production rows AND ships_in_transit already
+  //         targeting the fleet from any producing system.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!open || !gameId || playerFleets.length === 0) {
+        setFleetStrikeCap(new Map());
+        return;
+      }
+      const fleetIds = playerFleets.map(f => f.fleet_id);
+      const [{ data: gfsRows }, { data: pendRows }, { data: transitRows }] = await Promise.all([
+        (supabase as any)
+          .from("game_fleet_ships")
+          .select("game_fleet_id, ship_type_id, quantity, crippled, ship_types(class, fighter_bay, fighter_storage, gun_ship_link, gunship_storage)")
+          .in("game_fleet_id", fleetIds),
+        (supabase as any)
+          .from("system_ship_production")
+          .select("destination_fleet_id, ship_type_id, quantity, ship_types(class)")
+          .eq("game_id", gameId)
+          .in("destination_fleet_id", fleetIds),
+        (supabase as any)
+          .from("ships_in_transit")
+          .select("destination_fleet_id, ship_type_id, quantity, ship_types(class)")
+          .eq("game_id", gameId)
+          .in("destination_fleet_id", fleetIds),
+      ]);
+      if (cancelled) return;
+      const cap = new Map<string, { fighter_free: number; gunship_free: number }>();
+      for (const id of fleetIds) cap.set(id, { fighter_free: 0, gunship_free: 0 });
+      // 1. Base capacity + already-carried strikecraft from fleet composition.
+      for (const r of (gfsRows as any[]) || []) {
+        const st = r.ship_types || {};
+        const cls = String(st.class || "");
+        const qty = Number(r.quantity) || 1;
+        const c = cap.get(r.game_fleet_id);
+        if (!c) continue;
+        // Only non-strikecraft, non-crippled ships contribute capacity.
+        if (cls !== "FL" && cls !== "FH" && cls !== "GS" && !r.crippled) {
+          c.fighter_free += ((Number(st.fighter_bay) || 0) + (Number(st.fighter_storage) || 0)) * qty;
+          c.gunship_free += ((Number(st.gun_ship_link) || 0) + (Number(st.gunship_storage) || 0)) * qty;
+        }
+        // Strikecraft consume slots.
+        const cost = strikeSlotCost(cls);
+        c.fighter_free -= cost.fighter * qty;
+        c.gunship_free -= cost.gunship * qty;
+      }
+      // 2. Reserved by pending production + in-transit.
+      for (const src of [pendRows, transitRows]) {
+        for (const r of (src as any[]) || []) {
+          const cls = String(r.ship_types?.class || "");
+          const cost = strikeSlotCost(cls);
+          if (cost.fighter === 0 && cost.gunship === 0) continue;
+          const qty = Number(r.quantity) || 1;
+          const c = cap.get(r.destination_fleet_id);
+          if (!c) continue;
+          c.fighter_free -= cost.fighter * qty;
+          c.gunship_free -= cost.gunship * qty;
+        }
+      }
+      setFleetStrikeCap(cap);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, gameId, playerFleets.map(f => f.fleet_id).join(","), persisted.length]);
+
   const cancelPersisted = async (row: PersistedQueueRow) => {
     const { error } = await (supabase as any).from("system_ship_production").delete().eq("id", row.id);
     if (error) {
