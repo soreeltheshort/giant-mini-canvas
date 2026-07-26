@@ -255,7 +255,10 @@ export const shipProductionPhase: Phase = {
         continue;
       }
       const dist = distHex(systemHex.x, systemHex.y, dest.hex_x, dest.hex_y);
-      if (dist <= ship.map_speed) {
+      // AI strikecraft (fighters/gunships) teleport to their destination
+      // fleet regardless of distance — no transit, arrive same turn.
+      const aiStrikeTeleport = isStrikecraft(ship) && isAiOwner(ownerClass);
+      if (aiStrikeTeleport || dist <= ship.map_speed) {
         // Insert directly into game_fleet_ships — one row per ship for HP tracking.
         const inserts = Array.from({ length: row.quantity }, () => ({
           game_fleet_id: dest.fleet_id,
