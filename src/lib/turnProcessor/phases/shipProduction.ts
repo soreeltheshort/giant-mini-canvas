@@ -97,11 +97,90 @@ export const shipProductionPhase: Phase = {
         .filter(Boolean)
     );
     const isStrikecraft = (s: MiniShipType) => s.class === "FL" || s.class === "FH" || s.class === "GS";
+    const strikeSlotCost = (cls: string): { fighter: number; gunship: number } =>
+      cls === "FL" ? { fighter: 1, gunship: 0 }
+      : cls === "FH" ? { fighter: 2, gunship: 0 }
+      : cls === "GS" ? { fighter: 0, gunship: 1 }
+      : { fighter: 0, gunship: 0 };
     const isAiOwner = (ownerClass: string) => {
       for (const code of aiFactionCodes) {
         if (ownerMatchesFaction(ownerClass, code)) return true;
       }
       return false;
+    };
+
+    /**
+     * Per-fleet strike slot ledger, lazily loaded. Tracks REMAINING free
+     * fighter/gunship slots as we insert strikecraft this phase. AI-owned
+     * arrivals are exempted (they teleport with infinite capacity).
+     */
+    const strikeCapCache = new Map<string, { fighter_free: number; gunship_free: number }>();
+    const loadStrikeCap = async (fleetId: string): Promise<{ fighter_free: number; gunship_free: number }> => {
+      const cached = strikeCapCache.get(fleetId);
+      if (cached) return cached;
+      const { data: rows } = await (supabase as any)
+        .from("game_fleet_ships")
+        .select("ship_type_id, quantity, crippled")
+        .eq("game_fleet_id", fleetId);
+      let ff = 0, gf = 0;
+      for (const r of (rows as any[]) || []) {
+        const st = shipTypes.get(r.ship_type_id);
+        if (!st) continue;
+        const qty = Number(r.quantity) || 1;
+        if (!isStrikecraft(st) && !r.crippled) {
+          ff += (st.fighter_bay + st.fighter_storage) * qty;
+          gf += (st.gun_ship_link + st.gunship_storage) * qty;
+        }
+        const cost = strikeSlotCost(st.class);
+        ff -= cost.fighter * qty;
+        gf -= cost.gunship * qty;
+      }
+      const v = { fighter_free: ff, gunship_free: gf };
+      strikeCapCache.set(fleetId, v);
+      return v;
+    };
+
+    /**
+     * Clamp a strikecraft arrival to available slots. Returns the number of
+     * ships that fit; overflow ships are refunded to the owning faction's
+     * treasury (point_cost each) as a safety-net "return to producer" rule.
+     */
+    const clampStrikecraftArrival = async (
+      fleetId: string, ship: MiniShipType, wantQty: number, ownerClass: string,
+    ): Promise<number> => {
+      if (!isStrikecraft(ship) || isAiOwner(ownerClass)) return wantQty;
+      const cap = await loadStrikeCap(fleetId);
+      const cost = strikeSlotCost(ship.class);
+      const maxByFighter = cost.fighter > 0 ? Math.max(0, Math.floor(cap.fighter_free / cost.fighter)) : Infinity;
+      const maxByGunship = cost.gunship > 0 ? Math.max(0, Math.floor(cap.gunship_free / cost.gunship)) : Infinity;
+      const fit = Math.max(0, Math.min(wantQty, maxByFighter, maxByGunship));
+      cap.fighter_free -= cost.fighter * fit;
+      cap.gunship_free -= cost.gunship * fit;
+      const overflow = wantQty - fit;
+      if (overflow > 0) {
+        // Refund to owning faction treasury.
+        const { data: factRows } = await (supabase as any)
+          .from("game_factions")
+          .select("id, treasury, factions:faction_id(code_name)")
+          .eq("game_id", gameId);
+        const owner = ((factRows as any[]) || []).find(f =>
+          ownerMatchesFaction(ownerClass, String(f.factions?.code_name || ""))
+        );
+        const refund = overflow * ship.point_cost;
+        if (owner && refund > 0) {
+          await (supabase as any)
+            .from("game_factions")
+            .update({ treasury: (Number(owner.treasury) || 0) + refund })
+            .eq("id", owner.id);
+        }
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "strikecraft_overflow_refund",
+          message: `${overflow}× ${ship.class} could not dock (capacity full); refunded ₡${refund} to ${ownerClass}.`,
+          details_json: { fleet_id: fleetId, ship_type_id: ship.id, overflow, refund_credits: refund },
+        });
+      }
+      return fit;
     };
 
     // ── 1. Advance per-system queues ────────────────────────────────
