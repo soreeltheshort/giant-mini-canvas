@@ -26,6 +26,7 @@ interface MiniShipType {
   point_cost: number;
   map_speed: number;
   hull_class: string;
+  class: string;
 }
 
 function stepToward(fromX: number, fromY: number, toX: number, toY: number) {
@@ -64,15 +65,36 @@ export const shipProductionPhase: Phase = {
     // Load all ship types we may need.
     const { data: shipTypeRows } = await (supabase as any)
       .from("ship_types")
-      .select("id, point_cost, map_speed, hull_class");
+      .select("id, point_cost, map_speed, hull_class, class");
     const shipTypes = new Map<string, MiniShipType>(
       (shipTypeRows || []).map((s: any) => [s.id, {
         id: s.id,
         point_cost: Number(s.point_cost) || 0,
         map_speed: Math.max(1, Number(s.map_speed) || 1),
         hull_class: String(s.hull_class || ""),
+        class: String(s.class || ""),
       }])
     );
+
+    // AI factions in this game — strikecraft they build teleport directly
+    // to their destination fleet regardless of distance.
+    const { data: aiFactionRows } = await (supabase as any)
+      .from("game_factions")
+      .select("is_ai, factions:faction_id(code_name)")
+      .eq("game_id", gameId)
+      .eq("is_ai", true);
+    const aiFactionCodes = new Set<string>(
+      ((aiFactionRows as any[]) || [])
+        .map(r => String(r.factions?.code_name || ""))
+        .filter(Boolean)
+    );
+    const isStrikecraft = (s: MiniShipType) => s.class === "FL" || s.class === "FH" || s.class === "GS";
+    const isAiOwner = (ownerClass: string) => {
+      for (const code of aiFactionCodes) {
+        if (ownerMatchesFaction(ownerClass, code)) return true;
+      }
+      return false;
+    };
 
     // ── 1. Advance per-system queues ────────────────────────────────
     const { data: queueRows } = await (supabase as any)
@@ -233,7 +255,10 @@ export const shipProductionPhase: Phase = {
         continue;
       }
       const dist = distHex(systemHex.x, systemHex.y, dest.hex_x, dest.hex_y);
-      if (dist <= ship.map_speed) {
+      // AI strikecraft (fighters/gunships) teleport to their destination
+      // fleet regardless of distance — no transit, arrive same turn.
+      const aiStrikeTeleport = isStrikecraft(ship) && isAiOwner(ownerClass);
+      if (aiStrikeTeleport || dist <= ship.map_speed) {
         // Insert directly into game_fleet_ships — one row per ship for HP tracking.
         const inserts = Array.from({ length: row.quantity }, () => ({
           game_fleet_id: dest.fleet_id,
