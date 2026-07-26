@@ -682,7 +682,7 @@ export default function BuildShipsDialog({
                         <span key={t} className="text-[9px] px-1 rounded-sm bg-bronze/20 text-bronze font-semibold">{t}</span>
                       ))}
                       {isStrikecraft && (
-                        <span className="text-[9px] text-bronze italic">requires fleet within 2 hexes</span>
+                        <span className="text-[9px] text-bronze italic">arrives instantly · needs fleet ≤{STRIKECRAFT_RANGE} hex w/ capacity</span>
                       )}
                     </div>
                     <p className="text-[10px] text-slate-500">
