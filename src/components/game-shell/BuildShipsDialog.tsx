@@ -708,7 +708,7 @@ export default function BuildShipsDialog({
                         <button
                           onClick={() => adjust(s.id, +1)}
                           disabled={strikecraftBlocked}
-                          title={strikecraftBlocked ? "No friendly fleet within 2 hexes" : ""}
+                          title={strikecraftBlocked ? blockedReason : ""}
                           className="w-6 h-6 rounded-sm bg-muted text-foreground hover:bg-bronze/20 text-sm font-bold disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                           +
