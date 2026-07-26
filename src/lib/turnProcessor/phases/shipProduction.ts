@@ -26,6 +26,7 @@ interface MiniShipType {
   point_cost: number;
   map_speed: number;
   hull_class: string;
+  class: string;
 }
 
 function stepToward(fromX: number, fromY: number, toX: number, toY: number) {
