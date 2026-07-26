@@ -80,9 +80,16 @@ export const aiActionsPhase: Phase = {
     // Cache existing fleets (used to find prior plan fleet for resume-fill).
     const { data: fleetRows } = await (supabase as any)
       .from("game_fleets")
-      .select("id, fleet_name, owner_classification, hex_x, hex_y")
+      .select("id, fleet_id, fleet_name, owner_classification, hex_x, hex_y")
       .eq("game_id", gameId);
     const existingFleets = (fleetRows as any[]) || [];
+
+    const { data: gameRow } = await (supabase as any)
+      .from("games")
+      .select("created_by")
+      .eq("id", gameId)
+      .maybeSingle();
+    const gameOwnerId = gameRow?.created_by || null;
 
     for (const plan of plans) {
       const faction = aiFactions.find((f) => f.id === plan.player_id);
@@ -133,16 +140,46 @@ export const aiActionsPhase: Phase = {
 
       // 3d. Instantiate OR reuse target fleet.
       let targetFleetId: string;
+      let targetSourceFleetId: string | null = priorFleet?.fleet_id || null;
       let fleetName: string;
       if (priorFleet) {
         targetFleetId = priorFleet.id;
         fleetName = priorFleet.fleet_name;
       } else {
+        if (!gameOwnerId) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+            log_type: "ai_action_error",
+            message: `[${factionCode}] enhance_offense: fleet create failed: game owner unavailable`,
+            details_json: { plan_id: plan.id },
+          });
+          continue;
+        }
         fleetName = `${composition.template_name} ${planTag}`;
+        const { data: fleetTemplate, error: ftErr } = await (supabase as any)
+          .from("fleets")
+          .insert({
+            owner_user_id: gameOwnerId,
+            name: fleetName,
+            points_budget: composition.template_points,
+          })
+          .select("id")
+          .single();
+        if (ftErr || !fleetTemplate?.id) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+            log_type: "ai_action_error",
+            message: `[${factionCode}] enhance_offense: fleet template create failed: ${ftErr?.message || "unknown"}`,
+            details_json: { plan_id: plan.id, error: ftErr?.message },
+          });
+          continue;
+        }
+        targetSourceFleetId = fleetTemplate.id;
         const { data: newFleet, error: nfErr } = await (supabase as any)
           .from("game_fleets")
           .insert({
             game_id: gameId,
+            fleet_id: targetSourceFleetId,
             owner_classification: factionCode,
             fleet_name: fleetName,
             hex_x: spawn.x,
@@ -164,7 +201,15 @@ export const aiActionsPhase: Phase = {
         // Clean up any accidental snapshot rows.
         await (supabase as any).from("game_fleet_ships").delete().eq("game_fleet_id", newFleet.id);
         targetFleetId = newFleet.id;
-        existingFleets.push({ id: newFleet.id, fleet_name: fleetName, hex_x: spawn.x, hex_y: spawn.y });
+        existingFleets.push({ id: newFleet.id, fleet_id: targetSourceFleetId, fleet_name: fleetName, owner_classification: factionCode, hex_x: spawn.x, hex_y: spawn.y });
+        mapState.fleets.push({
+          fleet_id: targetFleetId,
+          fleet_name: fleetName,
+          owner_classification: factionCode,
+          hex_x: spawn.x,
+          hex_y: spawn.y,
+          source_fleet_id: targetSourceFleetId,
+        });
       }
 
       // 3d-bis. Compute what the fleet ALREADY has (delivered + queued) so
