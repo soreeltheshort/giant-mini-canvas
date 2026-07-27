@@ -669,7 +669,7 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
 function AddFacilityForm({ onAdd, allFacilityTypes }: { onAdd: (fields: Omit<DbFacilityType, "id">) => Promise<void>; allFacilityTypes: DbFacilityType[] }) {
   const empty: Omit<DbFacilityType, "id"> = {
     name: "", description: "", icon: "🏭",
-    cost: 0, maintenance: 0, condition_bonus: 0,
+    cost: 0, admin_cost: 1, maintenance: 0, condition_bonus: 0,
     tribute_flat: 0, tribute_percent: 0, survey_bonus: 0, ground_defense_bonus: 0,
     turns_to_build: 1, construction_kickback: 0, consumed_facility_id: null,
     fighter_capacity: 0, gunship_capacity: 0, max_per_system: 0, ship_build_capacity: 0, max_ship_hull_class: null, synod: false,

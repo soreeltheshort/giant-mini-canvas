@@ -126,6 +126,7 @@ export interface FacilityTypeFull {
   max_per_system: number;
   consumed_facility_id: string | null;
   maintenance: number;
+  admin_cost?: number;
   ship_build_capacity?: number;
   max_ship_hull_class?: string | null;
 }

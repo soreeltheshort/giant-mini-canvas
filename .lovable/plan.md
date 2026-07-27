@@ -53,3 +53,9 @@ This replaces the current "must be on an owned planet to replenish" rule with a 
 - AI awareness of supply grid (deferred to Phase 2c).
 - Movement penalties out of supply.
 - Ship-build / ground-draft supply gating.
+
+---
+
+# Facility Admin Cost (mini-feature)
+
+Added `facility_types.admin_cost` (integer, default 1). Each queued `build_facility` order now debits that facility's `admin_cost` from the player's admin points (was hardcoded to 1). AdminFacilities UI exposes the field; PlayerGame gates placement with a toast if AP is insufficient.

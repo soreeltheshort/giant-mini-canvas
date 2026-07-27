@@ -1116,6 +1116,7 @@ export type Database = {
       }
       facility_types: {
         Row: {
+          admin_cost: number
           condition_bonus: number
           construction_kickback: number
           consumed_facility_id: string | null
@@ -1140,6 +1141,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_cost?: number
           condition_bonus?: number
           construction_kickback?: number
           consumed_facility_id?: string | null
@@ -1164,6 +1166,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_cost?: number
           condition_bonus?: number
           construction_kickback?: number
           consumed_facility_id?: string | null

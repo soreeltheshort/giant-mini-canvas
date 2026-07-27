@@ -430,7 +430,7 @@ const PlayerGame = () => {
       (supabase as any).from("games").select("id, name, turn_number, status").eq("id", gameId).single(),
       factionQuery.maybeSingle(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
-      (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity, cost, turns_to_build, max_per_system, consumed_facility_id, maintenance, synod, ship_build_capacity, max_ship_hull_class"),
+      (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity, cost, admin_cost, turns_to_build, max_per_system, consumed_facility_id, maintenance, synod, ship_build_capacity, max_ship_hull_class"),
       (supabase as any).from("ship_types").select("id, name, hull_class, ship_id, class, point_cost, maintenance, map_speed, repair_pod, supply_pod, hull, ground_invasion, scout_sensors, sensor_rating, fighter_bay, fighter_storage, gun_ship_link, gunship_storage, flavor_description, synod, laser_2_5cm, laser_4_5cm, laser_6_5cm, laser_10cm, laser_14cm, laser_20cm, laser_28cm, laser_50cm, missile_10kg, missile_50kg, missile_100kg, missile_half_kt"),
     ]);
 
@@ -525,6 +525,7 @@ const PlayerGame = () => {
       max_per_system: ft.max_per_system || 0,
       consumed_facility_id: ft.consumed_facility_id || null,
       maintenance: ft.maintenance || 0,
+      admin_cost: ft.admin_cost ?? 1,
       ship_build_capacity: ft.ship_build_capacity || 0,
       max_ship_hull_class: ft.max_ship_hull_class || null,
     })));
@@ -687,9 +688,9 @@ const PlayerGame = () => {
       const buildBySys = new Map<number, Array<{ orderId: string; facilityTypeId: string; cost: number; maintenance: number }>>();
       const cancelBySys = new Map<number, Set<string>>();
       const garrisonBySys = new Map<number, { recruit: number; disband: number }>();
-      const facilityCostLookup = new Map<string, { cost: number; maintenance: number }>();
+      const facilityCostLookup = new Map<string, { cost: number; maintenance: number; admin_cost: number }>();
       for (const ft of dbFacilityTypesFull) {
-        facilityCostLookup.set(ft.facility_type_id, { cost: ft.cost ?? 0, maintenance: ft.maintenance ?? 0 });
+        facilityCostLookup.set(ft.facility_type_id, { cost: ft.cost ?? 0, maintenance: ft.maintenance ?? 0, admin_cost: (ft as any).admin_cost ?? 1 });
       }
       for (const o of (orders ?? []) as any[]) {
         if (o.order_type === "fleet_move" && o.order_json?.fleet_id) {
@@ -714,8 +715,8 @@ const PlayerGame = () => {
           // Readiness changes also cost 1 combat point per fleet
           pointsSpent += 1;
         } else if (o.order_type === "build_facility" && o.order_json?.facility_type_id) {
-          buildAdmin += 1;
-          const lookup = facilityCostLookup.get(o.order_json.facility_type_id) || { cost: 0, maintenance: 0 };
+          const lookup = facilityCostLookup.get(o.order_json.facility_type_id) || { cost: 0, maintenance: 0, admin_cost: 1 };
+          buildAdmin += lookup.admin_cost;
           buildCost += lookup.cost;
           const sysId = Number(o.order_json.system_id);
           if (!Number.isNaN(sysId)) {
@@ -1427,6 +1428,16 @@ const PlayerGame = () => {
 
   const handleBuildFacility = async (systemId: number, facilityTypeId: string) => {
     if (!player || !game) return;
+    const ft = dbFacilityTypesFull.find(f => f.facility_type_id === facilityTypeId);
+    const apCost = (ft as any)?.admin_cost ?? 1;
+    if (apCost > adminPointsAvailable) {
+      toast({
+        title: "Not enough admin points",
+        description: `${ft?.name || "Facility"} requires ${apCost} AP — you have ${adminPointsAvailable} available.`,
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       await (supabase as any).from("player_orders").insert({
         game_id: game.id,
