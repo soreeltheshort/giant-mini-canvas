@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 
 const STAT_DEFS: { key: keyof DbFacilityType; label: string; prefix?: string; suffix?: string }[] = [
   { key: "cost", label: "Cost" },
+  { key: "admin_cost", label: "Admin Cost", suffix: " AP" },
   { key: "maintenance", label: "Maint" },
   { key: "condition_bonus", label: "Condition", prefix: "+" },
   { key: "tribute_flat", label: "Tribute", prefix: "+" },
