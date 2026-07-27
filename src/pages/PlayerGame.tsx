@@ -525,6 +525,7 @@ const PlayerGame = () => {
       max_per_system: ft.max_per_system || 0,
       consumed_facility_id: ft.consumed_facility_id || null,
       maintenance: ft.maintenance || 0,
+      admin_cost: ft.admin_cost ?? 1,
       ship_build_capacity: ft.ship_build_capacity || 0,
       max_ship_hull_class: ft.max_ship_hull_class || null,
     })));
