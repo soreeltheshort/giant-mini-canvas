@@ -24,7 +24,7 @@ import { DUMMY_STATS } from "@/components/game-shell/gameShellTypes";
 import { useIsTablet } from "@/hooks/useIsTablet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useGameMusic } from "@/hooks/useGameMusic";
-import { playOrderPlaced, playOrdersSubmitted } from "@/lib/uiSounds";
+import { playClick, playOrderPlaced, playOrdersSubmitted } from "@/lib/uiSounds";
 import { computeGroupStrikecraftCapacity, type FleetShipRow } from "@/components/game-shell/FleetCompositionEditor";
 import { processTurn } from "@/lib/gameLifecycle";
 import { computeInfectedHexOwners } from "@/lib/infectedHexes";
