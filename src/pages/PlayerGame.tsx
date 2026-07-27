@@ -715,8 +715,8 @@ const PlayerGame = () => {
           // Readiness changes also cost 1 combat point per fleet
           pointsSpent += 1;
         } else if (o.order_type === "build_facility" && o.order_json?.facility_type_id) {
-          buildAdmin += 1;
-          const lookup = facilityCostLookup.get(o.order_json.facility_type_id) || { cost: 0, maintenance: 0 };
+          const lookup = facilityCostLookup.get(o.order_json.facility_type_id) || { cost: 0, maintenance: 0, admin_cost: 1 };
+          buildAdmin += lookup.admin_cost;
           buildCost += lookup.cost;
           const sysId = Number(o.order_json.system_id);
           if (!Number.isNaN(sysId)) {
