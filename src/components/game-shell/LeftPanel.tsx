@@ -24,6 +24,7 @@ import { ImperialCard } from "./ImperialCard";
 import FleetDetailContent from "./FleetDetailContent";
 import GarrisonCard from "./GarrisonCard";
 import { type GameMapData, DispatchesCard } from "./ContextPanel";
+import EconomyOverview from "./EconomyOverview";
 import BuildShipsDialog from "./BuildShipsDialog";
 import ShipProductionList from "./ShipProductionList";
 import type { HexClassification } from "@/lib/mapTypes";
@@ -461,7 +462,9 @@ function InlineContextContent({
             onCreateFleet={onCreateFleet}
             onStartCommissionTargeting={onStartCommissionTargeting}
             combatPointsAvailable={combatPointsAvailable}
+            fleetOrderContext={fleetOrderContext}
           />
+
         )}
       </div>
       {selection.type !== "none" && (
@@ -683,6 +686,7 @@ function InlineEmptyState({
   onCreateFleet,
   onStartCommissionTargeting,
   combatPointsAvailable,
+  fleetOrderContext,
 }: {
   mode: GameMode;
   news?: NewsStory[];
@@ -692,7 +696,9 @@ function InlineEmptyState({
   onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
   onStartCommissionTargeting?: (fleetName: string) => void;
   combatPointsAvailable?: number;
+  fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
 }) {
+
   if (mode === "military") {
     const matchesOwner = (owner: string | undefined | null) => {
       return ownerMatchesFaction(owner, playerOwnerClassification);
@@ -753,44 +759,17 @@ function InlineEmptyState({
   }
 
   if (mode === "production") {
-    const matchesOwner = (owner: string | undefined | null) => {
-      return ownerMatchesFaction(owner, playerOwnerClassification);
-    };
-    const ownedSystems = gameData
-      ? Array.from(gameData.systems.values())
-          .filter((s) => matchesOwner(s.owner))
-          .sort((a, b) => a.system_name.localeCompare(b.system_name))
-      : [];
     return (
-      <>
-        <DispatchesCard mode="production" news={news ?? []} onSelect={onSelect} />
-        <ImperialCard title={`Planets (${ownedSystems.length})`}>
-          {ownedSystems.length === 0 ? (
-            <p className="text-[10px] text-muted-foreground italic">No systems under your control.</p>
-          ) : (
-            <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
-              {ownedSystems.map((s) => (
-                <button
-                  key={s.system_id}
-                  onClick={() => onSelect?.({ type: "region", id: `sys-${s.system_id}` })}
-                  className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm border border-border bg-ivory hover:border-bronze/60 bronze-glow-hover transition-colors text-left"
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Globe2 className="w-3 h-3 text-bronze shrink-0" />
-                    <span className="text-[11px] font-semibold text-senate-dark truncate">{s.system_name}</span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[9px] text-senate-dark/70">Cnd {s.condition}</span>
-                    <ChevronRight className="w-3 h-3 text-senate-dark/60" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </ImperialCard>
-      </>
+      <EconomyOverview
+        gameData={gameData}
+        playerOwnerClassification={playerOwnerClassification}
+        gameId={fleetOrderContext?.gameId}
+        news={news ?? []}
+        onSelect={onSelect}
+      />
     );
   }
+
 
   const content = {
     diplomacy: {
