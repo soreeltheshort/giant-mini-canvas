@@ -190,3 +190,15 @@
     box-shadow: 0 0 8px 0 hsl(var(--bronze) / 0.3), inset 0 0 4px 0 hsl(var(--bronze) / 0.1);
   }
 }
+
+/* ------------------------------------------------------------------
+ * Global imperial "busy" cursor. Toggled via lib/ui/busyCursor.
+ * Uses `progress` so clicks are still possible but the user sees
+ * that the empire is working. The inline SVG cursor matches the
+ * bronze-on-ivory Roman theme; falls back to standard `progress`.
+ * ------------------------------------------------------------------ */
+body.app-busy,
+body.app-busy * {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'><circle cx='14' cy='14' r='11' fill='none' stroke='%23b8863b' stroke-width='2'/><path d='M14 5 A9 9 0 0 1 23 14' fill='none' stroke='%23f5ecd7' stroke-width='2.5' stroke-linecap='round'/><circle cx='14' cy='14' r='2' fill='%23b8863b'/></svg>") 14 14, progress !important;
+}
+
