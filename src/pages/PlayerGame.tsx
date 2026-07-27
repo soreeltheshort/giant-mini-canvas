@@ -1204,6 +1204,9 @@ const PlayerGame = () => {
       toast({ title: "Hex occupied", description: "There is already a fleet on that hex.", variant: "destructive" });
       return;
     }
+    // Play start sound immediately so the user hears feedback before the
+    // async DB round-trips complete; playOrderPlaced fires on success.
+    playClick();
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) throw new Error("Not signed in");
