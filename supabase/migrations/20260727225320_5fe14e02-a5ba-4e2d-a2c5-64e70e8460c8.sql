@@ -1,0 +1,1 @@
+ALTER TABLE public.facility_types ADD COLUMN IF NOT EXISTS admin_cost integer NOT NULL DEFAULT 1;
