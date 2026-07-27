@@ -10,6 +10,7 @@ import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 import { isHexBlockedForPlayer } from "@/lib/hexAccess";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
+import { useBusyCursor } from "@/hooks/useBusyCursor";
 
 import GameHeader from "@/components/game-shell/GameHeader";
 import LeftPanel from "@/components/game-shell/LeftPanel";
@@ -397,6 +398,7 @@ const PlayerGame = () => {
   const [orderRefreshTick, setOrderRefreshTick] = useState(0);
   const [isSolo, setIsSolo] = useState(false);
   const [processingTurn, setProcessingTurn] = useState(false);
+  useBusyCursor(processingTurn);
   /** Open issues that block turn submission (e.g. fleet group overcapacity). */
   const [submissionIssues, setSubmissionIssues] = useState<{ message: string; fleetId?: string }[]>([]);
   /** Player-facing dispatches sourced from game_logs (capture/colonize, etc.) */
