@@ -1428,6 +1428,16 @@ const PlayerGame = () => {
 
   const handleBuildFacility = async (systemId: number, facilityTypeId: string) => {
     if (!player || !game) return;
+    const ft = dbFacilityTypesFull.find(f => f.facility_type_id === facilityTypeId);
+    const apCost = (ft as any)?.admin_cost ?? 1;
+    if (apCost > adminPointsAvailable) {
+      toast({
+        title: "Not enough admin points",
+        description: `${ft?.name || "Facility"} requires ${apCost} AP — you have ${adminPointsAvailable} available.`,
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       await (supabase as any).from("player_orders").insert({
         game_id: game.id,
