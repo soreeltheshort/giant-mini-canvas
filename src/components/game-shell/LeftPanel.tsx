@@ -462,7 +462,9 @@ function InlineContextContent({
             onCreateFleet={onCreateFleet}
             onStartCommissionTargeting={onStartCommissionTargeting}
             combatPointsAvailable={combatPointsAvailable}
+            fleetOrderContext={fleetOrderContext}
           />
+
         )}
       </div>
       {selection.type !== "none" && (
@@ -684,6 +686,7 @@ function InlineEmptyState({
   onCreateFleet,
   onStartCommissionTargeting,
   combatPointsAvailable,
+  fleetOrderContext,
 }: {
   mode: GameMode;
   news?: NewsStory[];
@@ -693,7 +696,9 @@ function InlineEmptyState({
   onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
   onStartCommissionTargeting?: (fleetName: string) => void;
   combatPointsAvailable?: number;
+  fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
 }) {
+
   if (mode === "military") {
     const matchesOwner = (owner: string | undefined | null) => {
       return ownerMatchesFaction(owner, playerOwnerClassification);
