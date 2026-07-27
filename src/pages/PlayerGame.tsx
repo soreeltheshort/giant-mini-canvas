@@ -688,9 +688,9 @@ const PlayerGame = () => {
       const buildBySys = new Map<number, Array<{ orderId: string; facilityTypeId: string; cost: number; maintenance: number }>>();
       const cancelBySys = new Map<number, Set<string>>();
       const garrisonBySys = new Map<number, { recruit: number; disband: number }>();
-      const facilityCostLookup = new Map<string, { cost: number; maintenance: number }>();
+      const facilityCostLookup = new Map<string, { cost: number; maintenance: number; admin_cost: number }>();
       for (const ft of dbFacilityTypesFull) {
-        facilityCostLookup.set(ft.facility_type_id, { cost: ft.cost ?? 0, maintenance: ft.maintenance ?? 0 });
+        facilityCostLookup.set(ft.facility_type_id, { cost: ft.cost ?? 0, maintenance: ft.maintenance ?? 0, admin_cost: (ft as any).admin_cost ?? 1 });
       }
       for (const o of (orders ?? []) as any[]) {
         if (o.order_type === "fleet_move" && o.order_json?.fleet_id) {
