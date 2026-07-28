@@ -997,6 +997,7 @@ function InlineRegionDetail({
   onDisbandGarrison,
   onUndoGarrisonOrders,
   pendingGarrisonOrders,
+  supplyGrid,
 }: {
   id: string;
   gameData?: GameMapData;
@@ -1020,6 +1021,7 @@ function InlineRegionDetail({
   onDisbandGarrison?: (systemId: number) => void;
   onUndoGarrisonOrders?: (systemId: number) => void;
   pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
+  supplyGrid?: Set<string>;
 }) {
 
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
