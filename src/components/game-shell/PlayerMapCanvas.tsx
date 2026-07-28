@@ -122,6 +122,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   revealAllFleets = false,
   currentSelectionId = null,
   infectedHexOwners,
+  supplyGrid,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
