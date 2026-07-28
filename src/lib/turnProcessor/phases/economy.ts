@@ -23,6 +23,26 @@ export const economyPhase: Phase = {
   async run(ctx: TurnContext) {
     const { supabase, mapState, facilityTypes, shipTypes, gameId, currentTurn } = ctx;
 
+    // Per-faction supply-grid cache. Computed lazily on first use per owner
+    // classification and reused across orders. See src/lib/supplyGrid.ts.
+    const supplyGridByOwner = new Map<string, Set<string>>();
+    const getSupplyGrid = (ownerClass: string | undefined | null): Set<string> => {
+      const key = String(ownerClass || "");
+      if (!key) return new Set<string>();
+      const cached = supplyGridByOwner.get(key);
+      if (cached) return cached;
+      const grid = computeSupplyGrid(key, mapState.systems, mapState.hexes, facilityTypes as any);
+      supplyGridByOwner.set(key, grid);
+      return grid;
+    };
+    const ownerForPlayer = (playerId: string): string | undefined => {
+      const p = ctx.players.find(pp => pp.id === playerId);
+      if (!p) return undefined;
+      const f = ctx.factions.find(ff => ff.id === (p as any).faction_id);
+      return (f?.name || (f as any)?.code_name) as string | undefined;
+    };
+
+
     // 0. Apply queued cancel_build orders (no refund) — strip the matching
     //    facility from facilities_in_production BEFORE production advances.
     const cancelBuildOrders = ctx.orders.filter(o => o.order_type === "other" && o.order_json?.kind === "cancel_build");
