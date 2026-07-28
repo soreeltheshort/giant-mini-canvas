@@ -46,9 +46,10 @@ export function computeSupplyGrid(
   const grid = new Set<string>();
   if (!ownClassification) return grid;
 
-  // 1. Province hexes are always in supply.
+  // 1. Province hexes are always in supply. Compare via ownerMatchesFaction
+  //    so callers can pass any owner alias (PROVINCE_N, display name, code_name).
   for (const hex of hexes.values()) {
-    if (hex.classification === ownClassification) {
+    if (ownerMatchesFaction(hex.classification, ownClassification)) {
       grid.add(hexKey(hex.x, hex.y));
     }
   }
