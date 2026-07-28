@@ -1172,7 +1172,9 @@ function InlineRegionDetail({
           </button>
         </ImperialCard>
 
+        <ImperialCard title="Manufacturing Queue">
           <div className="space-y-1.5">
+
             <ShipProductionList
               gameId={gameId}
               systemId={realSys.system_id}
