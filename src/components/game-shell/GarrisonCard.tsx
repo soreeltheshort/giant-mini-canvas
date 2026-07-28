@@ -183,7 +183,7 @@ export default function GarrisonCard({
   }, [gameId, systemId, ensured]);
 
   return (
-    <ImperialCard title="Garrison" subtitle="Ground defenses, stationed ships, and orbiting threats">
+    <ImperialCard title="Garrison">
       {/* --- Ground defenses --- */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs">
