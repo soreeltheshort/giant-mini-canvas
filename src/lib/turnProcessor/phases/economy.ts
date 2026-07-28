@@ -78,6 +78,27 @@ export const economyPhase: Phase = {
       if (!sys) continue;
       const ft = facilityTypes.find(t => String(t.id) === String(ftId));
       if (!ft) continue;
+
+      // Supply-grid gating: reject when the target hex is not in the ordering
+      // player's supply grid AND the facility requires supply. Admin pioneer
+      // facilities can bypass by setting requires_supply=false.
+      const requiresSupply = (ft as any).requires_supply !== false;
+      if (requiresSupply) {
+        const ownerClass = ownerForPlayer(order.player_id);
+        const grid = getSupplyGrid(ownerClass);
+        const hex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+        const inGrid = hex ? grid.has(hexKey(hex.x, hex.y)) : false;
+        if (!inGrid) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "economy",
+            log_type: "facility_build_rejected",
+            message: `${sys.system_name}: ${ft.name} rejected — target hex out of supply`,
+            details_json: { system_id: sysId, facility_type_id: ftId, reason: "out_of_supply" },
+          });
+          continue;
+        }
+      }
+
       const turns = Math.max(1, Number(ft.turns_to_build) || 1);
       const list = [...(sys.facilities_in_production || []), {
         facility_type_id: ftId,
