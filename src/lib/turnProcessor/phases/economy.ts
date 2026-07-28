@@ -389,8 +389,23 @@ export const economyPhase: Phase = {
 
         // Resolve game_fleet -> source fleet (which holds current_supply)
         const { data: gf } = await (supabase as any)
-          .from("game_fleets").select("id, fleet_id, fleet_name").eq("id", gameFleetId).maybeSingle();
+          .from("game_fleets").select("id, fleet_id, fleet_name, hex_x, hex_y").eq("id", gameFleetId).maybeSingle();
         if (!gf?.fleet_id) continue;
+
+        // Supply-grid gating: fleet's current hex must be in the ordering
+        // player's supply grid (province hexes or within an emitter radius).
+        const ownerClass = ownerForPlayer(order.player_id);
+        const grid = getSupplyGrid(ownerClass);
+        if (!grid.has(hexKey(Number(gf.hex_x), Number(gf.hex_y)))) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "economy",
+            log_type: "supply_replenish_rejected",
+            message: `${gf.fleet_name || "Fleet"}: replenish rejected — out of supply at (${gf.hex_x},${gf.hex_y})`,
+            details_json: { game_fleet_id: gameFleetId, hex_x: gf.hex_x, hex_y: gf.hex_y, reason: "out_of_supply" },
+          });
+          continue;
+        }
+
 
         const { data: fl } = await (supabase as any)
           .from("fleets").select("id, current_supply").eq("id", gf.fleet_id).maybeSingle();
