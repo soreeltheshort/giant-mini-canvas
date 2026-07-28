@@ -6,7 +6,7 @@ import {
   CLASSIFICATION_COLORS,
   hexKey,
 } from "@/lib/mapTypes";
-import { hexToPixel, pixelToHex, hexCorners } from "@/lib/hexUtils";
+import { hexToPixel, pixelToHex, hexCorners, getNeighbors } from "@/lib/hexUtils";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 interface Props {
