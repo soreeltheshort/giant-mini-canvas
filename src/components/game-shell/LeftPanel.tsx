@@ -1042,6 +1042,8 @@ function InlineRegionDetail({
       : [];
     const adminPointsLeft = adminPointsAvailable ?? 0;
     const ftFull = gameData?.facilityTypesFull || [];
+    const sysHexForSupply = gameData?.hexes ? Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id) : undefined;
+    const inSupplyGrid = !!(sysHexForSupply && supplyGrid?.has(`${sysHexForSupply.x},${sysHexForSupply.y}`));
     const [shipDialogOpen, setShipDialogOpen] = useState(false);
     const [facilityDialogOpen, setFacilityDialogOpen] = useState(false);
     const [queueRefresh, setQueueRefresh] = useState(0);
