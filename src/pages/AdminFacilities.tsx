@@ -21,6 +21,7 @@ const STAT_DEFS: { key: keyof DbFacilityType; label: string; prefix?: string; su
   { key: "fighter_capacity", label: "Fighter Cap" },
   { key: "gunship_capacity", label: "Gunship Cap" },
   { key: "ship_build_capacity", label: "Ship Build Cap (pts/turn)" },
+  { key: "supply_range", label: "Supply Range", suffix: " hex" },
 ];
 
 function useHullClasses() {
