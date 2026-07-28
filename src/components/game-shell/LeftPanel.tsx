@@ -438,9 +438,7 @@ function InlineContextContent({
             onDisbandGarrison={onDisbandGarrison}
             onUndoGarrisonOrders={onUndoGarrisonOrders}
             pendingGarrisonOrders={pendingGarrisonOrders}
-
-
-
+            supplyGrid={supplyGrid}
           />
         ) : selection.type === "army" ? (
           <InlineArmyDetail
