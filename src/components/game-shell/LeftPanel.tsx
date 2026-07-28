@@ -1461,6 +1461,7 @@ function InlineArmyDetail({
   onStartTargeting,
   combatPointsAvailable,
   onOrdersChanged,
+  supplyGrid,
 }: {
   id: string;
   gameData?: GameMapData;
@@ -1473,6 +1474,7 @@ function InlineArmyDetail({
   ) => void;
   combatPointsAvailable?: number;
   onOrdersChanged?: () => void;
+  supplyGrid?: Set<string>;
 }) {
   const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
   const realFleet = fleetId && gameData ? gameData.fleets.find((f) => f.fleet_id === fleetId) : undefined;
@@ -1491,6 +1493,7 @@ function InlineArmyDetail({
         onStartTargeting={onStartTargeting}
         combatPointsAvailable={combatPointsAvailable}
         onOrdersChanged={onOrdersChanged}
+        supplyGrid={supplyGrid}
       />
     );
   }
