@@ -109,6 +109,8 @@ interface LeftPanelProps {
     onUndoGarrisonOrders?: (systemId: number) => void;
     /** Pending recruit/disband garrison orders this turn, keyed by system_id. */
     pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
+    /** Set of "x,y" hex keys currently in the viewer's supply grid. */
+    supplyGrid?: Set<string>;
   };
 }
 
