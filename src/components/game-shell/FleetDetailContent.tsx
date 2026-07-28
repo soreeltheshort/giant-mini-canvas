@@ -112,6 +112,8 @@ interface Props {
   combatPointsAvailable?: number;
   /** Notify parent when orders change so it can recompute remaining combat points. */
   onOrdersChanged?: () => void;
+  /** Set of "x,y" hex keys currently in the viewer's supply grid. */
+  supplyGrid?: Set<string>;
 }
 
 interface PendingOrder {
