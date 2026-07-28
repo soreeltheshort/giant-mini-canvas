@@ -340,6 +340,7 @@ function InlineContextContent({
   onDisbandGarrison,
   onUndoGarrisonOrders,
   pendingGarrisonOrders,
+  supplyGrid,
 
 
 
