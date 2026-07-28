@@ -528,6 +528,8 @@ const PlayerGame = () => {
       admin_cost: ft.admin_cost ?? 1,
       ship_build_capacity: ft.ship_build_capacity || 0,
       max_ship_hull_class: ft.max_ship_hull_class || null,
+      supply_range: ft.supply_range || 0,
+      requires_supply: ft.requires_supply !== false,
     })));
     // Hide Synod-flagged ships from non-Synod players in any build/list screen.
     const visibleSt = (stData || []).filter((s: any) => canUseSynod || !s.synod);
