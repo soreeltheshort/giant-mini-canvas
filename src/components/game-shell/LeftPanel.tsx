@@ -1198,6 +1198,23 @@ function InlineRegionDetail({
           </div>
         </ImperialCard>
 
+        {gameId ? (
+          <GarrisonCard
+            gameId={gameId}
+            systemId={realSys.system_id}
+            system={realSys}
+            fleets={gameData?.fleets as any}
+            viewerOwner={playerOwnerClassification}
+            viewerTreasury={playerTreasury}
+            testMode={testMode}
+            onRecruitGarrison={onRecruitGarrison}
+            onDisbandGarrison={onDisbandGarrison}
+            onUndoGarrisonOrders={onUndoGarrisonOrders}
+            pendingGarrison={pendingGarrisonOrders?.get(realSys.system_id)}
+            onTestSetGarrison={onTestSetGarrison}
+          />
+        ) : null}
+
         <Dialog open={facilityDialogOpen} onOpenChange={setFacilityDialogOpen}>
           <DialogContent>
             <DialogHeader>
