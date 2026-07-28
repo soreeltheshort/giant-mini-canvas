@@ -57,6 +57,10 @@ interface Props {
    *  hex's static `classification` — when the planet is lost, the entry
    *  simply disappears and the hex reverts to its classification color. */
   infectedHexOwners?: Map<string, string>;
+  /** Set of "x,y" hex keys currently in the viewing player's supply grid.
+   *  When provided, a bronze outline is drawn along edges where in-supply
+   *  hexes border out-of-supply hexes (or the map edge). */
+  supplyGrid?: Set<string>;
   className?: string;
 }
 
