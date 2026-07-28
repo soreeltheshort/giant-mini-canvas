@@ -2110,6 +2110,7 @@ const PlayerGame = () => {
               revealAllFleets={isAdmin && adminRevealAll}
               currentSelectionId={selection.type === "army" || selection.type === "region" ? selection.id : null}
               infectedHexOwners={infectedHexOwners}
+              supplyGrid={supplyGrid}
               className="flex-1"
             />
           ) : (
