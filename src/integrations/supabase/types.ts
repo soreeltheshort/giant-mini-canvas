@@ -1132,7 +1132,9 @@ export type Database = {
           max_per_system: number
           max_ship_hull_class: string | null
           name: string
+          requires_supply: boolean
           ship_build_capacity: number
+          supply_range: number
           survey_bonus: number
           synod: boolean
           tribute_flat: number
@@ -1157,7 +1159,9 @@ export type Database = {
           max_per_system?: number
           max_ship_hull_class?: string | null
           name: string
+          requires_supply?: boolean
           ship_build_capacity?: number
+          supply_range?: number
           survey_bonus?: number
           synod?: boolean
           tribute_flat?: number
@@ -1182,7 +1186,9 @@ export type Database = {
           max_per_system?: number
           max_ship_hull_class?: string | null
           name?: string
+          requires_supply?: boolean
           ship_build_capacity?: number
+          supply_range?: number
           survey_bonus?: number
           synod?: boolean
           tribute_flat?: number

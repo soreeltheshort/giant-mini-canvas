@@ -21,6 +21,7 @@ const STAT_DEFS: { key: keyof DbFacilityType; label: string; prefix?: string; su
   { key: "fighter_capacity", label: "Fighter Cap" },
   { key: "gunship_capacity", label: "Gunship Cap" },
   { key: "ship_build_capacity", label: "Ship Build Cap (pts/turn)" },
+  { key: "supply_range", label: "Supply Range", suffix: " hex" },
 ];
 
 function useHullClasses() {
@@ -119,6 +120,14 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
         />
         Synod facility (hidden from non-admin players)
       </label>
+      <label className="flex items-center gap-2 text-xs text-foreground pt-1">
+        <input
+          type="checkbox"
+          checked={fields.requires_supply !== false}
+          onChange={(e) => patch({ requires_supply: e.target.checked })}
+        />
+        Requires supply grid (uncheck for pioneer facilities that can be built out of supply)
+      </label>
     </div>
   );
 }
@@ -177,6 +186,7 @@ function AddFacilityForm({ onAdd, allFacilityTypes }: { onAdd: (fields: Omit<DbF
     turns_to_build: 1, construction_kickback: 0, consumed_facility_id: null,
     fighter_capacity: 0, gunship_capacity: 0, max_per_system: 0, ship_build_capacity: 0, max_ship_hull_class: null,
     synod: false,
+    supply_range: 0, requires_supply: true,
   };
   const [fields, setFields] = useState(empty);
   const patch = (p: Partial<Omit<DbFacilityType, "id">>) => setFields((prev) => ({ ...prev, ...p }));

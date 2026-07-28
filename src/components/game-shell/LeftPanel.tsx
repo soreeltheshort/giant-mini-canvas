@@ -109,6 +109,8 @@ interface LeftPanelProps {
     onUndoGarrisonOrders?: (systemId: number) => void;
     /** Pending recruit/disband garrison orders this turn, keyed by system_id. */
     pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
+    /** Set of "x,y" hex keys currently in the viewer's supply grid. */
+    supplyGrid?: Set<string>;
   };
 }
 
@@ -338,6 +340,7 @@ function InlineContextContent({
   onDisbandGarrison,
   onUndoGarrisonOrders,
   pendingGarrisonOrders,
+  supplyGrid,
 
 
 
@@ -376,6 +379,7 @@ function InlineContextContent({
   onDisbandGarrison?: (systemId: number) => void;
   onUndoGarrisonOrders?: (systemId: number) => void;
   pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
+  supplyGrid?: Set<string>;
 
 }) {
   const getModeIcon = () => {
@@ -434,9 +438,7 @@ function InlineContextContent({
             onDisbandGarrison={onDisbandGarrison}
             onUndoGarrisonOrders={onUndoGarrisonOrders}
             pendingGarrisonOrders={pendingGarrisonOrders}
-
-
-
+            supplyGrid={supplyGrid}
           />
         ) : selection.type === "army" ? (
           <InlineArmyDetail
@@ -447,6 +449,7 @@ function InlineContextContent({
             onStartTargeting={onStartTargeting}
             combatPointsAvailable={combatPointsAvailable}
             onOrdersChanged={onOrdersChanged}
+            supplyGrid={supplyGrid}
           />
         ) : selection.type === "production-center" ? (
           <InlineProductionDetail id={selection.id} />
@@ -992,6 +995,7 @@ function InlineRegionDetail({
   onDisbandGarrison,
   onUndoGarrisonOrders,
   pendingGarrisonOrders,
+  supplyGrid,
 }: {
   id: string;
   gameData?: GameMapData;
@@ -1015,6 +1019,7 @@ function InlineRegionDetail({
   onDisbandGarrison?: (systemId: number) => void;
   onUndoGarrisonOrders?: (systemId: number) => void;
   pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
+  supplyGrid?: Set<string>;
 }) {
 
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
@@ -1035,6 +1040,8 @@ function InlineRegionDetail({
       : [];
     const adminPointsLeft = adminPointsAvailable ?? 0;
     const ftFull = gameData?.facilityTypesFull || [];
+    const sysHexForSupply = gameData?.hexes ? Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id) : undefined;
+    const inSupplyGrid = !!(sysHexForSupply && supplyGrid?.has(`${sysHexForSupply.x},${sysHexForSupply.y}`));
     const [shipDialogOpen, setShipDialogOpen] = useState(false);
     const [facilityDialogOpen, setFacilityDialogOpen] = useState(false);
     const [queueRefresh, setQueueRefresh] = useState(0);
@@ -1227,10 +1234,16 @@ function InlineRegionDetail({
             {buildable.length > 0 ? (
               <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
                 {buildable.map((bf) => {
+                  const bfFull = ftFull.find((t) => String(t.facility_type_id) === String(bf.facility_type_id)) as any;
+                  const requiresSupply = bfFull?.requires_supply !== false;
+                  const supplyOk = !requiresSupply || inSupplyGrid;
+                  const bfAdminCost = Number(bfFull?.admin_cost ?? 1);
                   const canAfford = (playerTreasury ?? 0) >= bf.cost;
-                  const hasAdminPoint = adminPointsLeft > 0;
-                  const canCommission = canAfford && hasAdminPoint;
-                  const label = !canAfford
+                  const hasAdminPoint = adminPointsLeft >= bfAdminCost;
+                  const canCommission = canAfford && hasAdminPoint && supplyOk;
+                  const label = !supplyOk
+                    ? "Out of Supply"
+                    : !canAfford
                     ? "Insufficient Funds"
                     : !hasAdminPoint
                       ? "No Admin Points"
@@ -1461,6 +1474,7 @@ function InlineArmyDetail({
   onStartTargeting,
   combatPointsAvailable,
   onOrdersChanged,
+  supplyGrid,
 }: {
   id: string;
   gameData?: GameMapData;
@@ -1473,6 +1487,7 @@ function InlineArmyDetail({
   ) => void;
   combatPointsAvailable?: number;
   onOrdersChanged?: () => void;
+  supplyGrid?: Set<string>;
 }) {
   const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
   const realFleet = fleetId && gameData ? gameData.fleets.find((f) => f.fleet_id === fleetId) : undefined;
@@ -1491,6 +1506,7 @@ function InlineArmyDetail({
         onStartTargeting={onStartTargeting}
         combatPointsAvailable={combatPointsAvailable}
         onOrdersChanged={onOrdersChanged}
+        supplyGrid={supplyGrid}
       />
     );
   }

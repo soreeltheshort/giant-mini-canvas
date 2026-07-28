@@ -24,6 +24,8 @@ export interface DbFacilityType {
   max_ship_hull_class: string | null;
   synod: boolean;
   admin_cost: number;
+  supply_range: number;
+  requires_supply: boolean;
 }
 
 export function useFacilityTypes() {

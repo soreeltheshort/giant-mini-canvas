@@ -129,6 +129,8 @@ export interface FacilityTypeFull {
   admin_cost?: number;
   ship_build_capacity?: number;
   max_ship_hull_class?: string | null;
+  supply_range?: number;
+  requires_supply?: boolean;
 }
 
 export interface GameMapData {
@@ -163,9 +165,11 @@ interface ContextPanelProps {
   onOrdersChanged?: () => void;
   /** Selection setter so the empty Military Overview can list-select planets/fleets/news. */
   onSelect?: (selection: MapSelection) => void;
+  /** Set of "x,y" hex keys currently in the viewer's supply grid. */
+  supplyGrid?: Set<string>;
 }
 
-export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect }: ContextPanelProps) {
+export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect, supplyGrid }: ContextPanelProps) {
   return (
     <aside className="w-72 bg-marble border-l-2 border-bronze/40 flex flex-col relative z-20 shrink-0 animate-fade-in">
       {/* Content — header bar removed; first card sits flush at the top. */}
@@ -173,9 +177,9 @@ export default function ContextPanel({ mode, selection, news, onClose, onClearSe
         {selection.type === "news" ? (
           <NewsDetail story={news.find((n) => n.id === selection.id)} />
         ) : selection.type === "region" ? (
-          <RegionDetail id={selection.id} gameData={gameData} mode={mode} gameId={fleetOrderContext?.gameId} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} adminPointsAvailable={adminPointsAvailable} playerOwnerClassification={playerOwnerClassification} />
+          <RegionDetail id={selection.id} gameData={gameData} mode={mode} gameId={fleetOrderContext?.gameId} onBuildFacility={onBuildFacility} playerTreasury={playerTreasury} adminPointsAvailable={adminPointsAvailable} playerOwnerClassification={playerOwnerClassification} supplyGrid={supplyGrid} />
         ) : selection.type === "army" ? (
-          <ArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} />
+          <ArmyDetail id={selection.id} gameData={gameData} playerOwnerClassification={playerOwnerClassification} fleetOrderContext={fleetOrderContext} onStartTargeting={onStartTargeting} combatPointsAvailable={combatPointsAvailable} onOrdersChanged={onOrdersChanged} supplyGrid={supplyGrid} />
         ) : selection.type === "production-center" ? (
           <ProductionDetail id={selection.id} />
         ) : selection.type === "faction" ? (
@@ -440,7 +444,7 @@ function ProductionOverviewEmpty({
     </>
   );
 }
-function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification }: {
+function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification, supplyGrid }: {
   id: string;
   gameData?: GameMapData;
   mode?: GameMode;
@@ -449,6 +453,7 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
   playerTreasury?: number;
   adminPointsAvailable?: number;
   playerOwnerClassification?: string;
+  supplyGrid?: Set<string>;
 }) {
   // Try real data first (selection id = "sys-{system_id}")
   const sysId = id.startsWith("sys-") ? parseInt(id.replace("sys-", ""), 10) : NaN;
@@ -764,7 +769,7 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
   );
 }
 
-function ArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged }: { id: string; gameData?: GameMapData; playerOwnerClassification?: string; fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number }; onStartTargeting?: (t: { mode: "hex"; orderType: "fleet_move"; fleetId: string } | { mode: "fleet"; orderType: "attack"; fleetId: string }) => void; combatPointsAvailable?: number; onOrdersChanged?: () => void }) {
+function ArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, supplyGrid }: { id: string; gameData?: GameMapData; playerOwnerClassification?: string; fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number }; onStartTargeting?: (t: { mode: "hex"; orderType: "fleet_move"; fleetId: string } | { mode: "fleet"; orderType: "attack"; fleetId: string }) => void; combatPointsAvailable?: number; onOrdersChanged?: () => void; supplyGrid?: Set<string> }) {
   // Try real data (selection id = "fleet-{fleet_id}")
   const fleetId = id.startsWith("fleet-") ? id.replace("fleet-", "") : null;
   const realFleet = fleetId && gameData ? gameData.fleets.find(f => f.fleet_id === fleetId) : undefined;
@@ -784,6 +789,7 @@ function ArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext
         onStartTargeting={onStartTargeting}
         combatPointsAvailable={combatPointsAvailable}
         onOrdersChanged={onOrdersChanged}
+        supplyGrid={supplyGrid}
       />
     );
   }

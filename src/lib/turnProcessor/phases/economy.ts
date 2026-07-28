@@ -14,12 +14,34 @@ import { processNextTurn, DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
 import type { Phase, TurnContext } from "../types";
 import { ownerToEconKey, rowEconKey } from "../ownerKey";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
+import { computeSupplyGrid } from "@/lib/supplyGrid";
+import { hexKey } from "@/lib/mapTypes";
 
 export const economyPhase: Phase = {
   name: "economy",
   label: "Economy",
   async run(ctx: TurnContext) {
     const { supabase, mapState, facilityTypes, shipTypes, gameId, currentTurn } = ctx;
+
+    // Per-faction supply-grid cache. Computed lazily on first use per owner
+    // classification and reused across orders. See src/lib/supplyGrid.ts.
+    const supplyGridByOwner = new Map<string, Set<string>>();
+    const getSupplyGrid = (ownerClass: string | undefined | null): Set<string> => {
+      const key = String(ownerClass || "");
+      if (!key) return new Set<string>();
+      const cached = supplyGridByOwner.get(key);
+      if (cached) return cached;
+      const grid = computeSupplyGrid(key, mapState.systems, mapState.hexes, facilityTypes as any);
+      supplyGridByOwner.set(key, grid);
+      return grid;
+    };
+    const ownerForPlayer = (playerId: string): string | undefined => {
+      const p = ctx.players.find(pp => pp.id === playerId);
+      if (!p) return undefined;
+      const f = ctx.factions.find(ff => ff.id === (p as any).faction_id);
+      return (f?.name || (f as any)?.code_name) as string | undefined;
+    };
+
 
     // 0. Apply queued cancel_build orders (no refund) — strip the matching
     //    facility from facilities_in_production BEFORE production advances.
@@ -56,6 +78,27 @@ export const economyPhase: Phase = {
       if (!sys) continue;
       const ft = facilityTypes.find(t => String(t.id) === String(ftId));
       if (!ft) continue;
+
+      // Supply-grid gating: reject when the target hex is not in the ordering
+      // player's supply grid AND the facility requires supply. Admin pioneer
+      // facilities can bypass by setting requires_supply=false.
+      const requiresSupply = (ft as any).requires_supply !== false;
+      if (requiresSupply) {
+        const ownerClass = ownerForPlayer(order.player_id);
+        const grid = getSupplyGrid(ownerClass);
+        const hex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+        const inGrid = hex ? grid.has(hexKey(hex.x, hex.y)) : false;
+        if (!inGrid) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "economy",
+            log_type: "facility_build_rejected",
+            message: `${sys.system_name}: ${ft.name} rejected — target hex out of supply`,
+            details_json: { system_id: sysId, facility_type_id: ftId, reason: "out_of_supply" },
+          });
+          continue;
+        }
+      }
+
       const turns = Math.max(1, Number(ft.turns_to_build) || 1);
       const list = [...(sys.facilities_in_production || []), {
         facility_type_id: ftId,
@@ -346,8 +389,23 @@ export const economyPhase: Phase = {
 
         // Resolve game_fleet -> source fleet (which holds current_supply)
         const { data: gf } = await (supabase as any)
-          .from("game_fleets").select("id, fleet_id, fleet_name").eq("id", gameFleetId).maybeSingle();
+          .from("game_fleets").select("id, fleet_id, fleet_name, hex_x, hex_y").eq("id", gameFleetId).maybeSingle();
         if (!gf?.fleet_id) continue;
+
+        // Supply-grid gating: fleet's current hex must be in the ordering
+        // player's supply grid (province hexes or within an emitter radius).
+        const ownerClass = ownerForPlayer(order.player_id);
+        const grid = getSupplyGrid(ownerClass);
+        if (!grid.has(hexKey(Number(gf.hex_x), Number(gf.hex_y)))) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "economy",
+            log_type: "supply_replenish_rejected",
+            message: `${gf.fleet_name || "Fleet"}: replenish rejected — out of supply at (${gf.hex_x},${gf.hex_y})`,
+            details_json: { game_fleet_id: gameFleetId, hex_x: gf.hex_x, hex_y: gf.hex_y, reason: "out_of_supply" },
+          });
+          continue;
+        }
+
 
         const { data: fl } = await (supabase as any)
           .from("fleets").select("id, current_supply").eq("id", gf.fleet_id).maybeSingle();

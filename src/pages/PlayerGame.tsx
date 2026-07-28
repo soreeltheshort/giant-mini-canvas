@@ -10,6 +10,7 @@ import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 import { isHexBlockedForPlayer } from "@/lib/hexAccess";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
+import { computeSupplyGrid } from "@/lib/supplyGrid";
 import { useBusyCursor } from "@/hooks/useBusyCursor";
 
 import GameHeader from "@/components/game-shell/GameHeader";
@@ -430,7 +431,7 @@ const PlayerGame = () => {
       (supabase as any).from("games").select("id, name, turn_number, status").eq("id", gameId).single(),
       factionQuery.maybeSingle(),
       (supabase as any).from("profiles").select("display_name, email").eq("user_id", user.id).single(),
-      (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity, cost, admin_cost, turns_to_build, max_per_system, consumed_facility_id, maintenance, synod, ship_build_capacity, max_ship_hull_class"),
+      (supabase as any).from("facility_types").select("id, name, description, icon, fighter_capacity, gunship_capacity, cost, admin_cost, turns_to_build, max_per_system, consumed_facility_id, maintenance, synod, ship_build_capacity, max_ship_hull_class, supply_range, requires_supply"),
       (supabase as any).from("ship_types").select("id, name, hull_class, ship_id, class, point_cost, maintenance, map_speed, repair_pod, supply_pod, hull, ground_invasion, scout_sensors, sensor_rating, fighter_bay, fighter_storage, gun_ship_link, gunship_storage, flavor_description, synod, laser_2_5cm, laser_4_5cm, laser_6_5cm, laser_10cm, laser_14cm, laser_20cm, laser_28cm, laser_50cm, missile_10kg, missile_50kg, missile_100kg, missile_half_kt"),
     ]);
 
@@ -528,6 +529,8 @@ const PlayerGame = () => {
       admin_cost: ft.admin_cost ?? 1,
       ship_build_capacity: ft.ship_build_capacity || 0,
       max_ship_hull_class: ft.max_ship_hull_class || null,
+      supply_range: ft.supply_range || 0,
+      requires_supply: ft.requires_supply !== false,
     })));
     // Hide Synod-flagged ships from non-Synod players in any build/list screen.
     const visibleSt = (stData || []).filter((s: any) => canUseSynod || !s.synod);
@@ -900,6 +903,19 @@ const PlayerGame = () => {
   const effectiveLiveHexKeys = isAdmin && adminRevealAll ? allHexKeys : liveHexKeys;
   const effectiveEverSeenHexKeys = isAdmin && adminRevealAll ? allHexKeys : everSeenHexKeys;
   const effectiveScoutedHexIds = isAdmin && adminRevealAll ? allHexIds : scoutedHexIds;
+
+  // ── Supply grid for the current player (province hexes ∪ emitter radii) ──
+  const supplyGrid = useMemo(() => {
+    if (!mapState || !player?.own_classification) return new Set<string>();
+    return computeSupplyGrid(
+      player.own_classification,
+      mapState.systems,
+      mapState.hexes,
+      dbFacilityTypesFull as any,
+    );
+  }, [mapState, player?.own_classification, dbFacilityTypesFull]);
+
+
 
   // ─── Real dispatches from game_logs ───
   // Pull recent capture/colonize events affecting this player's province
@@ -2028,6 +2044,8 @@ const PlayerGame = () => {
             onDisbandGarrison: handleDisbandGarrison,
             onUndoGarrisonOrders: handleUndoGarrisonOrders,
             pendingGarrisonOrders,
+            supplyGrid,
+
 
           }}
           fullWidth={isMobile}
@@ -2092,6 +2110,7 @@ const PlayerGame = () => {
               revealAllFleets={isAdmin && adminRevealAll}
               currentSelectionId={selection.type === "army" || selection.type === "region" ? selection.id : null}
               infectedHexOwners={infectedHexOwners}
+              supplyGrid={supplyGrid}
               className="flex-1"
             />
           ) : (
