@@ -379,6 +379,7 @@ function InlineContextContent({
   onDisbandGarrison?: (systemId: number) => void;
   onUndoGarrisonOrders?: (systemId: number) => void;
   pendingGarrisonOrders?: Map<number, { recruit: number; disband: number }>;
+  supplyGrid?: Set<string>;
 
 }) {
   const getModeIcon = () => {
