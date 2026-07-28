@@ -2044,6 +2044,8 @@ const PlayerGame = () => {
             onDisbandGarrison: handleDisbandGarrison,
             onUndoGarrisonOrders: handleUndoGarrisonOrders,
             pendingGarrisonOrders,
+            supplyGrid,
+
 
           }}
           fullWidth={isMobile}
