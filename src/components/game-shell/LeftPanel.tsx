@@ -1236,10 +1236,16 @@ function InlineRegionDetail({
             {buildable.length > 0 ? (
               <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
                 {buildable.map((bf) => {
+                  const bfFull = ftFull.find((t) => String(t.facility_type_id) === String(bf.facility_type_id)) as any;
+                  const requiresSupply = bfFull?.requires_supply !== false;
+                  const supplyOk = !requiresSupply || inSupplyGrid;
+                  const bfAdminCost = Number(bfFull?.admin_cost ?? 1);
                   const canAfford = (playerTreasury ?? 0) >= bf.cost;
-                  const hasAdminPoint = adminPointsLeft > 0;
-                  const canCommission = canAfford && hasAdminPoint;
-                  const label = !canAfford
+                  const hasAdminPoint = adminPointsLeft >= bfAdminCost;
+                  const canCommission = canAfford && hasAdminPoint && supplyOk;
+                  const label = !supplyOk
+                    ? "Out of Supply"
+                    : !canAfford
                     ? "Insufficient Funds"
                     : !hasAdminPoint
                       ? "No Admin Points"
