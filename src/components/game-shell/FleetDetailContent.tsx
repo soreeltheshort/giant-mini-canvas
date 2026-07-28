@@ -599,22 +599,13 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     queueMicrotask(() => setReplenishAmount(supplyDelta));
   }
 
-  // ── Replenish eligibility: fleet must be on a hex with a player-owned system ──
-  let atOwnedPlanet = false;
-  if (canEdit) {
-    for (const s of allSystems) {
-      const hex = allHexes?.get(`${fleet.hex_x},${fleet.hex_y}`);
-      if (hex && s.hex_id === hex.hex_id && ownerMatchesFaction(s.owner, fleet.owner_classification)) {
-        atOwnedPlanet = true;
-        break;
-      }
-    }
-  }
+  // ── Replenish eligibility: fleet's current hex must be in the player's supply grid ──
+  const inSupplyGrid = canEdit ? !!supplyGrid?.has(`${fleet.hex_x},${fleet.hex_y}`) : false;
 
   const replenishOrder = pendingOrders.find(
     o => o.order_type === "other" && o.order_json?.kind === "replenish_supply",
   );
-  const projectedSupplyCost = atOwnedPlanet ? replenishAmount : 0;
+  const projectedSupplyCost = inSupplyGrid ? replenishAmount : 0;
 
   // ── Pending move/attack orders ──
   const moveOrder = pendingOrders.find(o => o.order_type === "fleet_move");
