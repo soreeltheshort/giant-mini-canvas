@@ -129,6 +129,8 @@ export interface FacilityTypeFull {
   admin_cost?: number;
   ship_build_capacity?: number;
   max_ship_hull_class?: string | null;
+  supply_range?: number;
+  requires_supply?: boolean;
 }
 
 export interface GameMapData {
