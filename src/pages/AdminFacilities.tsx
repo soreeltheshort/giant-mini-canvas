@@ -120,6 +120,14 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
         />
         Synod facility (hidden from non-admin players)
       </label>
+      <label className="flex items-center gap-2 text-xs text-foreground pt-1">
+        <input
+          type="checkbox"
+          checked={fields.requires_supply !== false}
+          onChange={(e) => patch({ requires_supply: e.target.checked })}
+        />
+        Requires supply grid (uncheck for pioneer facilities that can be built out of supply)
+      </label>
     </div>
   );
 }
