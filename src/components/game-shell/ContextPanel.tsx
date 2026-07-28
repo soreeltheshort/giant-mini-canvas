@@ -165,9 +165,11 @@ interface ContextPanelProps {
   onOrdersChanged?: () => void;
   /** Selection setter so the empty Military Overview can list-select planets/fleets/news. */
   onSelect?: (selection: MapSelection) => void;
+  /** Set of "x,y" hex keys currently in the viewer's supply grid. */
+  supplyGrid?: Set<string>;
 }
 
-export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect }: ContextPanelProps) {
+export default function ContextPanel({ mode, selection, news, onClose, onClearSelection, gameData, onBuildFacility, playerTreasury, adminPointsAvailable, playerOwnerClassification, fleetOrderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, onSelect, supplyGrid }: ContextPanelProps) {
   return (
     <aside className="w-72 bg-marble border-l-2 border-bronze/40 flex flex-col relative z-20 shrink-0 animate-fade-in">
       {/* Content — header bar removed; first card sits flush at the top. */}
