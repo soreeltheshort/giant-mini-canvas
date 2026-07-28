@@ -350,6 +350,46 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.globalAlpha = 1;
     }
 
+    // Supply-grid border overlay: draw a bronze line along every edge where
+    // an in-supply hex borders an out-of-supply neighbor (or the map edge).
+    if (supplyGrid && supplyGrid.size > 0) {
+      // Pointy-top odd-r edge-index (i → i+1) maps to a neighbor direction
+      // in getNeighbors' order [E, NE, NW, W, SW, SE]:
+      //   edge 0 (right) → E (0)
+      //   edge 1 (SE)    → SE (5)
+      //   edge 2 (SW)    → SW (4)
+      //   edge 3 (W)     → W  (3)
+      //   edge 4 (NW)    → NW (2)
+      //   edge 5 (NE)    → NE (1)
+      const edgeToNeighbor = [0, 5, 4, 3, 2, 1];
+      ctx.save();
+      ctx.strokeStyle = "rgba(200,169,110,0.95)";
+      ctx.lineWidth = Math.max(1.2, size * 0.14);
+      ctx.lineCap = "round";
+      ctx.globalAlpha = 1;
+      for (const hex of hexes.values()) {
+        const hk = hexKey(hex.x, hex.y);
+        if (!supplyGrid.has(hk)) continue;
+        const [px, py] = hexToPixel(hex.x, hex.y, size);
+        if (px < left || px > right || py < top || py > bottom) continue;
+        const corners = hexCorners(px, py, size);
+        const neighbors = getNeighbors(hex.x, hex.y);
+        for (let i = 0; i < 6; i++) {
+          const [nx, ny] = neighbors[edgeToNeighbor[i]];
+          const nk = hexKey(nx, ny);
+          if (supplyGrid.has(nk)) continue;
+          const a = corners[i];
+          const b = corners[(i + 1) % 6];
+          ctx.beginPath();
+          ctx.moveTo(a[0], a[1]);
+          ctx.lineTo(b[0], b[1]);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+
     // Build hexId -> hex lookup
     const hexIdMap = new Map<number, HexData>();
     for (const h of hexes.values()) {
