@@ -903,6 +903,19 @@ const PlayerGame = () => {
   const effectiveEverSeenHexKeys = isAdmin && adminRevealAll ? allHexKeys : everSeenHexKeys;
   const effectiveScoutedHexIds = isAdmin && adminRevealAll ? allHexIds : scoutedHexIds;
 
+  // ── Supply grid for the current player (province hexes ∪ emitter radii) ──
+  const supplyGrid = useMemo(() => {
+    if (!mapState || !player?.own_classification) return new Set<string>();
+    return computeSupplyGrid(
+      player.own_classification,
+      mapState.systems,
+      mapState.hexes,
+      dbFacilityTypesFull as any,
+    );
+  }, [mapState, player?.own_classification, dbFacilityTypesFull]);
+
+
+
   // ─── Real dispatches from game_logs ───
   // Pull recent capture/colonize events affecting this player's province
   // (either as the new owner or as the previous owner) and turn them into
