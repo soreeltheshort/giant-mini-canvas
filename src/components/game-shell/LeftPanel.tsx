@@ -451,6 +451,7 @@ function InlineContextContent({
             onStartTargeting={onStartTargeting}
             combatPointsAvailable={combatPointsAvailable}
             onOrdersChanged={onOrdersChanged}
+            supplyGrid={supplyGrid}
           />
         ) : selection.type === "production-center" ? (
           <InlineProductionDetail id={selection.id} />
