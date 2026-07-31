@@ -20,6 +20,7 @@
 import type { Phase, TurnContext } from "../types";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
+import { computeSupplyGrid } from "@/lib/supplyGrid";
 
 interface MiniShipType {
   id: string;
