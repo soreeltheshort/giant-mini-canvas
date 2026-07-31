@@ -95,3 +95,61 @@ export function computeSupplyGrid(
 export function isHexInSupply(x: number, y: number, grid: Set<string>): boolean {
   return grid.has(hexKey(x, y));
 }
+
+/**
+ * All hex coordinates of planets (systems) owned by a faction.
+ * Used for the "within half map-speed of an owned planet" resupply reach.
+ */
+export function collectOwnedPlanetHexes(
+  ownClassification: string | undefined | null,
+  systems: Map<number, SystemData>,
+  hexes: Map<string, HexData>,
+): Array<{ x: number; y: number }> {
+  const out: Array<{ x: number; y: number }> = [];
+  if (!ownClassification) return out;
+  const hexById = new Map<number, HexData>();
+  for (const h of hexes.values()) hexById.set(h.hex_id, h);
+  for (const sys of systems.values()) {
+    if (!ownerMatchesFaction(sys.owner, ownClassification)) continue;
+    const hex = hexById.get(sys.hex_id);
+    if (hex) out.push({ x: hex.x, y: hex.y });
+  }
+  return out;
+}
+
+export interface ResupplyEligibility {
+  ok: boolean;
+  /** "in_grid" | "near_owned_planet" | "out_of_supply_and_out_of_planet_range" */
+  reason: string;
+  /** Hex range derived from the fleet's map speed (floor(speed / 2)). */
+  reach: number;
+}
+
+/**
+ * A fleet may replenish supply when EITHER:
+ *   1. its hex is inside the faction's supply grid, OR
+ *   2. it sits within floor(mapSpeed / 2) hexes of any planet the faction owns.
+ *
+ * Evaluated with the fleet's START-OF-TURN hex — moving out of supply later in
+ * the same turn does not revoke supply.
+ */
+export function canFleetResupply(
+  fleetHex: { x: number; y: number },
+  fleetMapSpeed: number,
+  ownedPlanetHexes: Array<{ x: number; y: number }>,
+  grid: Set<string> | undefined | null,
+): ResupplyEligibility {
+  const reach = Math.max(0, Math.floor((Number(fleetMapSpeed) || 0) / 2));
+  if (grid?.has(hexKey(fleetHex.x, fleetHex.y))) {
+    return { ok: true, reason: "in_grid", reach };
+  }
+  const [fx, fy, fz] = offsetToCube(fleetHex.x, fleetHex.y);
+  for (const p of ownedPlanetHexes) {
+    const [px, py, pz] = offsetToCube(p.x, p.y);
+    if (cubeDistance(fx, fy, fz, px, py, pz) <= reach) {
+      return { ok: true, reason: "near_owned_planet", reach };
+    }
+  }
+  return { ok: false, reason: "out_of_supply_and_out_of_planet_range", reach };
+}
+
