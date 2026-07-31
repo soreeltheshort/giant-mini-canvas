@@ -584,6 +584,67 @@ function CreateFleetCard({
   );
 }
 
+/* ── Found Starbase (Military Overview action) ── */
+function FoundStarbaseCard({
+  adminPointsAvailable,
+  hasSupplyGrid,
+  onStartStarbaseTargeting,
+}: {
+  adminPointsAvailable: number;
+  hasSupplyGrid: boolean;
+  onStartStarbaseTargeting: (name: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const canConfirm = name.trim().length > 0 && adminPointsAvailable >= 1 && hasSupplyGrid;
+
+  return (
+    <ImperialCard title="Found Starbase">
+      <div className="space-y-1.5">
+        <p className="text-[10px] text-muted-foreground leading-snug">
+          Raise a new starbase on an empty hex inside your supply grid.
+          <span className="block text-bronze-dark font-semibold mt-0.5">Cost: 1 Admin Point</span>
+        </p>
+        {!open ? (
+          <button
+            onClick={() => setOpen(true)}
+            disabled={adminPointsAvailable < 1 || !hasSupplyGrid}
+            className="w-full py-1.5 rounded-sm bg-crimson text-ivory text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {adminPointsAvailable < 1 ? "No Admin Points" : !hasSupplyGrid ? "No Supply Grid" : "Found Starbase"}
+          </button>
+        ) : (
+          <div className="space-y-1.5">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Starbase name"
+              className="w-full px-2 py-1 text-[11px] rounded-sm border border-border bg-ivory text-senate-dark"
+            />
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => { if (!canConfirm) return; onStartStarbaseTargeting(name.trim()); setName(""); setOpen(false); }}
+                disabled={!canConfirm}
+                className="flex-1 py-1.5 rounded-sm bg-crimson text-ivory text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Pick Hex
+              </button>
+              <button
+                onClick={() => { setName(""); setOpen(false); }}
+                className="px-2 py-1.5 rounded-sm border border-border text-[11px] font-heading uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </ImperialCard>
+  );
+}
+
+
+
 interface CommissionFleetPanelProps {
   name: string;
   setName: (v: string) => void;
