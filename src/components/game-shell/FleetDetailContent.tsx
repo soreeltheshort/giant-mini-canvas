@@ -8,6 +8,7 @@ import FleetCompositionEditor, { type FleetShipRow } from "./FleetCompositionEdi
 import type { MapFleet, SystemData, HexData } from "@/lib/mapTypes";
 import type { ShipTypeLookup } from "./ContextPanel";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
+import { canFleetResupply } from "@/lib/supplyGrid";
 
 const PROVINCE_FACTION_NAMES: Record<string, string> = {
   PROVINCE_1: "Valerian",
@@ -901,6 +902,31 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       {canEdit && (
         <ImperialCard title="Logistics">
           <div className="space-y-2.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[hsl(20_25%_10%)] font-bold">Auto-resupply</span>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={detail.auto_resupply}
+                  onChange={async (e) => {
+                    const next = e.target.checked;
+                    setDetail(d => (d ? { ...d, auto_resupply: next } : d));
+                    await (supabase as any).from("fleets").update({ auto_resupply: next }).eq("id", detail.id);
+                    if (!next) await persistReplenishAmount(0);
+                    else await persistReplenishAmount(Math.min(replenishAmount, supplyDelta));
+                  }}
+                  className="accent-bronze"
+                />
+                <span className="text-[10px] text-[hsl(20_25%_10%)] font-semibold">
+                  {detail.auto_resupply ? "On" : "Off"}
+                </span>
+              </label>
+            </div>
+            {!inSupplyGrid && (
+              <p className="text-[10px] italic text-[hsl(20_25%_10%)]">
+                Out of supply — needs the supply grid or an owned planet within {resupplyEligibility.reach} hex(es).
+              </p>
+            )}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[hsl(20_25%_10%)] font-bold">Supply</span>
@@ -914,7 +940,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
                 max={maxSupply}
                 step={1}
                 value={projectedSupply + Math.min(replenishAmount, supplyDelta)}
-                disabled={supplyDelta <= 0}
+                disabled={supplyDelta <= 0 || !inSupplyGrid || !detail.auto_resupply}
                 onChange={(e) => {
                   const total = Number(e.target.value);
                   const next = Math.max(0, Math.min(supplyDelta, total - projectedSupply));
