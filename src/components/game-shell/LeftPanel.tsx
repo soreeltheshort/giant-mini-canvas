@@ -28,6 +28,9 @@ import EconomyOverview from "./EconomyOverview";
 import BuildShipsDialog from "./BuildShipsDialog";
 import ShipProductionList from "./ShipProductionList";
 import type { HexClassification } from "@/lib/mapTypes";
+import { facilityAllowedOn } from "@/hooks/useFacilityTypes";
+import { isStarbase, isUnderConstruction, computeStarbaseCombatStats } from "@/lib/starbase";
+
 import { CLASSIFICATION_LABELS } from "@/lib/mapTypes";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
 
