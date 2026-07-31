@@ -1035,11 +1035,17 @@ function InlineRegionDetail({
     const classLabel = CLASSIFICATION_LABELS[realSys.classification as HexClassification] || realSys.classification;
     const sysPending = pendingBuildOrders?.get(realSys.system_id) || [];
     const sysCancels = pendingCancelBuildOrders?.get(realSys.system_id) || new Set<string>();
-    const buildable = gameData
-      ? getBuildableFacilitiesForSystem(realSys, gameData, sysPending.map((p) => p.facilityTypeId))
-      : [];
-    const adminPointsLeft = adminPointsAvailable ?? 0;
     const ftFull = gameData?.facilityTypesFull || [];
+    // Starbase-only facilities never appear on planets and vice versa.
+    const buildable = (gameData
+      ? getBuildableFacilitiesForSystem(realSys, gameData, sysPending.map((p) => p.facilityTypeId))
+      : []
+    ).filter((bf) => {
+      const full = ftFull.find((t) => String(t.facility_type_id) === String(bf.facility_type_id)) as any;
+      return facilityAllowedOn({ allowed_on: full?.allowed_on }, realSys.system_type);
+    });
+    const adminPointsLeft = adminPointsAvailable ?? 0;
+
     const sysHexForSupply = gameData?.hexes ? Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id) : undefined;
     const inSupplyGrid = !!(sysHexForSupply && supplyGrid?.has(`${sysHexForSupply.x},${sysHexForSupply.y}`));
     const [shipDialogOpen, setShipDialogOpen] = useState(false);
