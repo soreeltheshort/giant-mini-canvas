@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useFacilityTypes, DbFacilityType } from "@/hooks/useFacilityTypes";
+import { useFacilityTypes, DbFacilityType, emptyFacilityFields, FACILITY_WEAPON_KEYS } from "@/hooks/useFacilityTypes";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -128,9 +128,40 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
         />
         Requires supply grid (uncheck for pioneer facilities that can be built out of supply)
       </label>
+
+      <div className="flex flex-col gap-0.5 pt-1">
+        <label className="text-[10px] text-muted-foreground">Allowed On</label>
+        <select
+          value={fields.allowed_on || "planet"}
+          onChange={(e) => patch({ allowed_on: e.target.value })}
+          className="h-7 text-xs rounded border border-input bg-background px-2"
+        >
+          <option value="planet">Planets only</option>
+          <option value="starbase">Starbases only</option>
+          <option value="both">Planets &amp; Starbases</option>
+        </select>
+      </div>
+
+      <details className="rounded border border-border px-2 py-1">
+        <summary className="text-[11px] cursor-pointer text-muted-foreground">Weapons &amp; Hull (starbase combat)</summary>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+          {(["hull_points", "armor", "population_bonus", ...FACILITY_WEAPON_KEYS] as const).map((k) => (
+            <div key={k} className="flex flex-col gap-0.5">
+              <label className="text-[10px] text-muted-foreground">{k.replace(/_/g, " ")}</label>
+              <Input
+                type="number"
+                value={(fields as any)[k] ?? 0}
+                onChange={(e) => patch({ [k]: parseInt(e.target.value) || 0 } as any)}
+                className="h-7 text-xs"
+              />
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }
+
 
 function FacilityTypeRow({ ft, isAdmin, onUpdate, onRemove, allFacilityTypes }: {
   ft: DbFacilityType;
@@ -179,15 +210,8 @@ function FacilityTypeRow({ ft, isAdmin, onUpdate, onRemove, allFacilityTypes }: 
 }
 
 function AddFacilityForm({ onAdd, allFacilityTypes }: { onAdd: (fields: Omit<DbFacilityType, "id">) => Promise<void>; allFacilityTypes: DbFacilityType[] }) {
-  const empty: Omit<DbFacilityType, "id"> = {
-    name: "", description: "", icon: "🏭",
-    cost: 0, admin_cost: 1, maintenance: 0, condition_bonus: 0,
-    tribute_flat: 0, tribute_percent: 0, survey_bonus: 0, ground_defense_bonus: 0,
-    turns_to_build: 1, construction_kickback: 0, consumed_facility_id: null,
-    fighter_capacity: 0, gunship_capacity: 0, max_per_system: 0, ship_build_capacity: 0, max_ship_hull_class: null,
-    synod: false,
-    supply_range: 0, requires_supply: true,
-  };
+  const empty: Omit<DbFacilityType, "id"> = emptyFacilityFields();
+
   const [fields, setFields] = useState(empty);
   const patch = (p: Partial<Omit<DbFacilityType, "id">>) => setFields((prev) => ({ ...prev, ...p }));
 

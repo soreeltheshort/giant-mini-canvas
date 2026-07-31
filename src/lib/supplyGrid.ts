@@ -71,6 +71,9 @@ export function computeSupplyGrid(
   // 2. Union of radii from owned planets with supply-emitting facilities.
   for (const sys of systems.values()) {
     if (!ownerMatchesFaction(sys.owner, ownClassification)) continue;
+    // A starbase only projects supply once construction is finished.
+    if (((sys as any).build_turns_remaining || 0) > 0) continue;
+
     let maxRange = 0;
     for (const f of (sys.facilities || [])) {
       const r = supplyRangeById.get(String(f.facility_type_id)) || 0;

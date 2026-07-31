@@ -1,45 +1,73 @@
-## Supply Rules Update
+## Starbases
 
-Four rule changes, wired end-to-end.
+Starbases are player-built map entities that behave like systems (persistent, own facilities, appear on the map) but are constructed, weaponised through facilities, and destroyed rather than captured.
 
-### 1. Resupply reach: grid OR half map-speed from an owned planet
+### 1. What a starbase is
 
-A fleet may replenish if either:
-- its hex is in the faction's supply grid (current rule), **or**
-- it is within `floor(slowest ship map_speed / 2)` hexes of any planet the faction owns (same helper already used for attack range: `attackRangeFromMapSpeed` in `src/lib/fleetRange.ts`).
+Reuses the existing `SystemData` record with `system_type = "station"` — no parallel entity, so intel, facilities, garrison, strikecraft, ownership, and map rendering already work.
 
-New shared helper `canFleetResupply(fleetHex, fleetMapSpeed, ownedSystemHexes, supplyGrid)` in `src/lib/supplyGrid.ts` so the turn processor and the UI use identical logic. Rejection log gains the reason `out_of_supply_and_out_of_planet_range`.
+- Placement: any **empty hex** (no existing system) that is inside the builder's supply grid at the moment of the order.
+- Economy: no innate population/tribute. Population, tribute, and upkeep come **only** from facilities built on it (`tribute_flat`, `tribute_percent`, `maintenance`, plus a new `population_bonus` field). Garrison max uses facility `ground_defense_bonus` only.
+- Loss condition: when a starbase's hull reaches 0 it is **removed from the map** along with its facilities and stationed strikecraft. No capture.
 
-### 2. Supply-built fighters + free transfer between in-supply points
+### 2. Facility split: planet-only vs starbase-only
 
-- Building strikecraft from fleet supply already works (`build_strikecraft`); it will additionally require the fleet to satisfy the same eligibility test above (currently ungated).
-- Strikecraft produced at a planet that is **in supply** may be sent to any friendly fleet that is **also in supply**, ignoring the 4-hex delivery limit, and arrive the turn they are built. Capacity limits still apply (a carrier's free fighter/gunship slots, counting existing + queued + in-transit), and the existing overflow-refund backstop stays. Out-of-supply producer or out-of-supply destination falls back to the current 4-hex rule.
-- Enforced in `BuildShipsDialog.tsx` (target list + validation messages) and re-checked in `shipProduction.ts` at delivery time.
+New `facility_types` columns:
 
-### 3. Supply state is locked at start of turn
+- `allowed_on` — `planet` | `starbase` | `both` (default `planet`)
+- `population_bonus` int (default 0)
+- Weapon loadout columns mirroring the ship weapon keys already in `ship_types`: `laser_light`, `laser_medium`, `laser_heavy`, `laser_hull_breaker`, `missile_10kg`, `missile_50kg`, `missile_100kg`, `missile_half_kt`, `missile_synod`, `missile_kraken`, plus `hull_points` and `armor`.
 
-A fleet is in supply if it was in supply at the *start* of the turn, even if it moves out later. The economy phase already runs before movement and reads pre-move hex coordinates, so this holds today — the plan adds an explicit comment plus a captured `startOfTurnSupplyOk` flag reused by the strikecraft-delivery check later in the same turn, so a mid-turn move can't invalidate an already-granted resupply.
+Admin → Assets → Facilities gets an "Allowed on" selector and a collapsible "Weapons & Hull" section. The build dialog filters the facility list by the target's `system_type`.
 
-### 4. Auto-resupply by default
+### 3. Building a starbase
 
-- New column `fleets.auto_resupply boolean NOT NULL DEFAULT true`.
-- Fleet detail panel: a toggle above the supply slider. When ON (default) the slider is preset to maximum (top-off) and the order is auto-written each turn; the player can still drag it down. When OFF no replenish order is generated.
-- Turn processor: for every eligible fleet with `auto_resupply = true` that has no explicit `replenish_supply` order, the economy phase generates a top-to-max replenishment and charges the treasury at `supply_cost_coefficient`. Logged as `supply_replenished` with `source: "auto"`.
+- New order (`order_type: "other"`, `kind: "build_starbase"`) issued from the map: select an empty in-supply hex → "Found Starbase".
+- Tunable constants live in `combat_constants`, editable under **Assets → Factions Config → Combat Constants** and included in the exported/imported config bundle (`combat_constants` is already in the bundle's table list):
+  - `starbase_build_turns` — **default 3**
+  - `starbase_build_cost`
+  - `starbase_admin_cost`
+- Validation on issue and again at resolution: hex empty, hex in the faction's supply grid, treasury and admin points sufficient. Rejections log `starbase_build_rejected` with the reason.
+- In-progress starbases are tracked per game and tick down each turn; the map shows a ghosted marker with turns remaining. On completion the economy phase inserts a new `SystemData` with `system_type: "station"`, owner = builder, name from the faction naming convention, and marks the hex `has_system`.
+
+### 4. Starbases in combat
+
+- A starbase joins a battle as a single synthetic combatant in the **Core** group, built in `battleSetup.ts` from the sum of its facilities' weapon/hull/armor columns. Speed is 0 in every virtual-speed slot.
+- Stationed fighters/gunships and ground defenses behave as they do for planets.
+- Damage persists in a new `current_hull` field on the system record; at ≤ 0 the starbase is deleted (`starbase_destroyed` log). Planets are unchanged.
+
+### 5. "Attack Planet" → "Attack/Defend Planet"
+
+Rename the strategy/tactical-group label everywhere it is user-visible and in the group key: `FleetBuilder.tsx`, `FleetDetailContent.tsx`, `AdminBattleConfig.tsx`, `AdminShips.tsx` group headers, and the `group_modifiers` / `battle_phases` rows (data update; ship columns such as `virtual_atk_speed_attack_planet` keep their names).
+
+Behaviour splits by target ownership:
+
+- **Hostile target** — unchanged one-shot invasion/bombardment order, consumed at end of turn.
+- **Friendly or own planet/starbase** — a **standing defence posture**: not deleted by the turn processor, no re-issue needed. The fleet joins the defender side of any battle at that hex and its ground troops reinforce the garrison rather than landing as invaders. Cleared on explicit cancel, on the fleet moving away, or if the target changes owner.
+
+Implementation: `src/lib/turnProcessor/index.ts` only consumes `fleet_attack` orders whose target is hostile; `combat.ts` and `groundCombat.ts` branch on `ownerMatchesFaction(target.owner, attackerFaction)`.
+
+### 6. Map + UI
+
+- `PlayerMapCanvas.tsx` already distinguishes `isStation`; give starbases a distinct bronze glyph, a build-in-progress ghost, and a hull bar when damaged.
+- Left panel system detail shows a Starbase header, hull, filtered facility catalog, garrison card, and no planet-condition/resources rows.
+- Manual: new "Starbases" page; updates to the Supply and Ground Combat pages for the defend posture.
 
 ### Technical notes
 
-- Migration: single `ALTER TABLE public.fleets ADD COLUMN auto_resupply boolean NOT NULL DEFAULT true;` (no new grants needed).
-- Files touched: `src/lib/supplyGrid.ts`, `src/lib/turnProcessor/phases/economy.ts`, `src/lib/turnProcessor/phases/shipProduction.ts`, `src/components/game-shell/FleetDetailContent.tsx`, `src/components/game-shell/BuildShipsDialog.tsx`, `src/pages/FleetBuilder.tsx` (persist the flag on templates), and the `supply-grid` manual page.
-- Owned-planet hex set is derived once per faction per turn from `mapState.systems` — cheap, no extra queries.
+- Migration 1: `facility_types` — `allowed_on`, `population_bonus`, weapon/hull/armor int columns (all defaulted).
+- Migration 2: seed `combat_constants` rows `starbase_build_turns` (3), `starbase_build_cost`, `starbase_admin_cost`.
+- No new tables: starbases live in `games.map_data_json`, so snapshots and forks capture them automatically.
+- Files touched: `src/lib/mapTypes.ts`, `src/hooks/useFacilityTypes.ts`, `src/pages/AdminFacilities.tsx`, `src/lib/battleSetup.ts`, `src/lib/turnProcessor/phases/{economy,combat,groundCombat}.ts`, `src/lib/turnProcessor/index.ts`, `src/components/game-shell/{PlayerMapCanvas,LeftPanel,ContextPanel,FleetDetailContent}.tsx`, `src/pages/{PlayerGame,FleetBuilder,AdminBattleConfig}.tsx`.
 
 ### Test plan
 
-- **T1 Reach** — T1.1 Fleet in province: replenishes. T1.2 Fleet 2 hexes from an owned planet, speed 4 (half = 2), outside grid: replenishes. T1.3 Same fleet 3 hexes away: rejected with log. T1.4 Speed-0 fleet outside grid: rejected.
-- **T2 Fighters** — T2.1 Build fighters from fleet supply while eligible: succeeds, supply debited. T2.2 Same fleet ineligible: rejected + logged. T2.3 In-supply planet → in-supply fleet 20 hexes away: arrives same turn. T2.4 Same but destination out of supply: blocked in dialog, 4-hex rule applies. T2.5 Overflow beyond carrier capacity: refunded.
-- **T3 Start-of-turn lock** — T3.1 Fleet starts in supply, ordered to move far out: still resupplies this turn. T3.2 Fleet starts out of supply, moves into supply: no resupply until next turn.
-- **T4 Auto-resupply** — T4.1 New fleet defaults to ON, slider at max, tops off with no manual order. T4.2 Toggle OFF: no order, no charge. T4.3 Toggle ON but slider dragged down: only the chosen amount is drawn. T4.4 Auto-resupply on an ineligible fleet: skipped silently (no charge).
+- **T1 Build** — T1.1 Found starbase on empty in-supply hex: queued, cost debited. T1.2 Out-of-supply hex: rejected + logged. T1.3 Hex already holding a planet: rejected. T1.4 Insufficient treasury/admin points: rejected. T1.5 Completes exactly 3 turns later with the default constant. T1.6 Change `starbase_build_turns` to 1 in Factions Config: next build completes next turn. T1.7 Export/import a config bundle: the constant round-trips.
+- **T2 Facilities** — T2.1 Planet-only facility absent from starbase list. T2.2 Starbase-only absent from planet list. T2.3 `both` appears in each. T2.4 Habitat facility adds population; tribute/upkeep appear in the Economy view.
+- **T3 Combat** — T3.1 Unarmed starbase takes damage, hull persists across turns. T3.2 Weapon facilities make it fire in Core group with summed weapons. T3.3 Hull to 0: starbase and facilities removed, logged. T3.4 Stationed fighters launch as today.
+- **T4 Attack/Defend** — T4.1 Label reads "Attack/Defend Planet" everywhere. T4.2 Hostile target order consumed after the turn. T4.3 Own planet order persists two turns without re-issue. T4.4 Defending fleet joins the defender side. T4.5 Fleet moves away: standing order cleared. T4.6 Manual cancel works.
 
 ### Out of scope
 
-- AI awareness of the new reach rule (AI keeps current behaviour).
-- Attrition or penalties for operating out of supply.
+- AI building or defending starbases.
+- Repairing starbase hull (later, as a facility or supply cost).

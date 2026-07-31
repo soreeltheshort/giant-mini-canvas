@@ -16,6 +16,13 @@ import { ownerToEconKey, rowEconKey } from "../ownerKey";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
 import { computeSupplyGrid, collectOwnedPlanetHexes, canFleetResupply } from "@/lib/supplyGrid";
 import { hexKey } from "@/lib/mapTypes";
+import {
+  isStarbase,
+  starbaseConstant,
+  computeStarbaseCombatStats,
+  computeStarbasePopulation,
+} from "@/lib/starbase";
+
 
 export const economyPhase: Phase = {
   name: "economy",
@@ -231,11 +238,186 @@ export const economyPhase: Phase = {
       }
     }
 
-    // 1. Per-system economics
+    // 0e. STARBASES ─────────────────────────────────────────────────────────
+    //     Starbases are SystemData records with system_type === "station".
+    //     Founding: an `other/build_starbase` order places a construction site
+    //     on an EMPTY hex inside the founder's supply grid. It ticks down one
+    //     turn per turn; on completion it becomes a live station that runs a
+    //     lightweight economy (facility maintenance + flat tribute only — a
+    //     starbase has no innate population, condition, or resources).
+    {
+      const { data: constRows } = await supabase
+        .from("combat_constants")
+        .select("key,value")
+        .in("key", ["starbase_build_turns", "starbase_build_cost", "starbase_admin_cost"]);
+      const consts: Record<string, number> = {};
+      for (const r of constRows || []) consts[(r as any).key] = Number((r as any).value);
+
+      const buildStarbaseOrders = ctx.orders.filter(
+        o => o.order_type === "other" && (o.order_json as any)?.kind === "build_starbase",
+      );
+      for (const order of buildStarbaseOrders) {
+        const hx = Number((order.order_json as any)?.hex_x);
+        const hy = Number((order.order_json as any)?.hex_y);
+        if (!Number.isFinite(hx) || !Number.isFinite(hy)) continue;
+        const ownerClass = ownerForPlayer(order.player_id);
+        if (!ownerClass) continue;
+
+        const hex = Array.from(mapState.hexes.values()).find(h => h.x === hx && h.y === hy);
+        if (!hex) continue;
+        const occupied = Array.from(mapState.systems.values()).some(s => s.hex_id === hex.hex_id);
+        if (occupied) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "economy",
+            log_type: "starbase_rejected",
+            message: `Starbase rejected at (${hx},${hy}) — hex already occupied`,
+            details_json: { hex_x: hx, hex_y: hy, reason: "hex_occupied" },
+          });
+          continue;
+        }
+        if (!getSupplyGrid(ownerClass).has(hexKey(hx, hy))) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "economy",
+            log_type: "starbase_rejected",
+            message: `Starbase rejected at (${hx},${hy}) — hex out of supply`,
+            details_json: { hex_x: hx, hex_y: hy, reason: "out_of_supply" },
+          });
+          continue;
+        }
+
+        const turns = starbaseConstant(consts, "starbase_build_turns");
+        const cost = starbaseConstant(consts, "starbase_build_cost");
+        let nextId = 1;
+        for (const s of mapState.systems.values()) nextId = Math.max(nextId, s.system_id + 1);
+        const name = String((order.order_json as any)?.name || `Starbase ${nextId}`).slice(0, 60);
+        const station: any = {
+          system_id: nextId,
+          map_id: 0,
+          hex_id: hex.hex_id,
+          system_name: name,
+          classification: hex.classification,
+          importance_rank: 0,
+          owner: ownerClass,
+          system_type: "station",
+          current_population: 0,
+          survey: 0, tribute: 0, upkeep: 0, resources: 0,
+          facilities: [], facilities_in_production: [],
+          condition: 0, morale: 0,
+          max_ground_defenses: 0, current_ground_defenses: 0,
+          initial_condition: 0, planet_index: 0,
+          stationed_fighters: [], stationed_gunships: [],
+          landed_forces: [],
+          build_turns_remaining: turns,
+          current_hull: 0,
+          built_by: ownerClass,
+        };
+        mapState.systems.set(nextId, station);
+        (hex as any).has_system = true;
+
+        const econKey = ownerToEconKey(ownerClass, ctx.factions);
+        if (econKey && cost > 0) {
+          const econ = ctx.playerEcon.get(econKey) || { tribute: 0, maintenance: 0 };
+          econ.maintenance += cost;
+          ctx.playerEcon.set(econKey, econ);
+        }
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "economy",
+          log_type: "starbase_started",
+          message: `${name}: starbase construction begun at (${hx},${hy}) — ${turns}T, ₡${cost}`,
+          details_json: { system_id: nextId, hex_x: hx, hex_y: hy, turns, cost, owner: ownerClass },
+        });
+      }
+
+      // Tick construction + run the station economy.
+      for (const sys of Array.from(mapState.systems.values())) {
+        if (!isStarbase(sys)) continue;
+
+        if ((sys.build_turns_remaining || 0) > 0) {
+          const remaining = (sys.build_turns_remaining || 0) - 1;
+          const done = remaining <= 0;
+          const stats = computeStarbaseCombatStats(sys, facilityTypes as any);
+          mapState.systems.set(sys.system_id, {
+            ...sys,
+            build_turns_remaining: Math.max(0, remaining),
+            current_hull: done ? Math.max(1, stats.maxHull) : 0,
+          });
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "economy",
+            log_type: done ? "starbase_completed" : "starbase_construction",
+            message: done
+              ? `${sys.system_name}: starbase construction complete — now operational`
+              : `${sys.system_name}: starbase under construction (${remaining}T remaining)`,
+            details_json: { system_id: sys.system_id, turns_remaining: Math.max(0, remaining) },
+          });
+          continue;
+        }
+
+        // Operational starbase: advance facility production, then bill.
+        const inProd = [...(sys.facilities_in_production || [])];
+        const finished: string[] = [];
+        const stillBuilding: typeof inProd = [];
+        for (const p of inProd) {
+          const left = (Number(p.turns_remaining) || 0) - 1;
+          if (left <= 0) finished.push(String(p.facility_type_id));
+          else stillBuilding.push({ ...p, turns_remaining: left });
+        }
+        const facilities = [...(sys.facilities || [])];
+        for (const ftId of finished) {
+          const existing = facilities.find(f => String(f.facility_type_id) === ftId);
+          if (existing) existing.quantity = (existing.quantity || 1) + 1;
+          else facilities.push({ facility_type_id: ftId, quantity: 1 });
+        }
+
+        let maintenance = 0;
+        let tribute = 0;
+        for (const f of facilities) {
+          const ft = facilityTypes.find(t => String(t.id) === String(f.facility_type_id));
+          if (!ft) continue;
+          const qty = Math.max(1, Number(f.quantity) || 1);
+          maintenance += (Number(ft.maintenance) || 0) * qty;
+          tribute += (Number(ft.tribute_flat) || 0) * qty;
+        }
+
+        const updated = {
+          ...sys,
+          facilities,
+          facilities_in_production: stillBuilding,
+          current_population: computeStarbasePopulation({ ...sys, facilities } as any, facilityTypes as any),
+          tribute,
+          upkeep: maintenance,
+        };
+        // Repair: hull regenerates fully while the starbase is not in combat.
+        const stats = computeStarbaseCombatStats(updated as any, facilityTypes as any);
+        (updated as any).current_hull = Math.min(
+          Math.max(1, stats.maxHull),
+          Math.max(0, Number(sys.current_hull) || 0) + Math.ceil(Math.max(1, stats.maxHull) * 0.25),
+        );
+        mapState.systems.set(sys.system_id, updated as any);
+
+        const econKey = ownerToEconKey(sys.owner, ctx.factions);
+        if (econKey) {
+          const econ = ctx.playerEcon.get(econKey) || { tribute: 0, maintenance: 0 };
+          econ.tribute += tribute;
+          econ.maintenance += maintenance;
+          ctx.playerEcon.set(econKey, econ);
+        }
+        if (finished.length > 0) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "economy",
+            log_type: "starbase_facility_completed",
+            message: `${sys.system_name}: ${finished.length} starbase facility(ies) completed`,
+            details_json: { system_id: sys.system_id, facility_type_ids: finished },
+          });
+        }
+      }
+    }
+
+    // 1. Per-system economics (planets only — starbases handled in 0e)
     const systems = Array.from(mapState.systems.values());
     const eligible = systems.filter(
-      s => s.current_population > 0 && s.owner && s.owner.toLowerCase() !== "unowned"
+      s => !isStarbase(s) && s.current_population > 0 && s.owner && s.owner.toLowerCase() !== "unowned"
     );
+
 
     for (const sys of eligible) {
       // Synod-owned planets bypass normal economy processing and run through

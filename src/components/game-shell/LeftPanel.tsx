@@ -28,6 +28,9 @@ import EconomyOverview from "./EconomyOverview";
 import BuildShipsDialog from "./BuildShipsDialog";
 import ShipProductionList from "./ShipProductionList";
 import type { HexClassification } from "@/lib/mapTypes";
+import { facilityAllowedOn } from "@/hooks/useFacilityTypes";
+import { isStarbase, isUnderConstruction, computeStarbaseCombatStats } from "@/lib/starbase";
+
 import { CLASSIFICATION_LABELS } from "@/lib/mapTypes";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
 
@@ -91,6 +94,9 @@ interface LeftPanelProps {
     onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
     /** Begin map-click targeting for commissioning a fleet with a chosen name. */
     onStartCommissionTargeting?: (fleetName: string) => void;
+    /** Begin map-click targeting for founding a starbase with a chosen name. */
+    onStartStarbaseTargeting?: (name: string) => void;
+
     /** Admin-only Test Mode enabled — reveals direct-edit controls on systems. */
     testMode?: boolean;
     /** TEST MODE: set (or delete when quantity=0) a facility row on a system. */
@@ -331,6 +337,8 @@ function InlineContextContent({
   adminPointsAvailable,
   onCreateFleet,
   onStartCommissionTargeting,
+  onStartStarbaseTargeting,
+
   testMode,
   onTestSetFacilityQty,
   onTestSetGarrison,
@@ -370,6 +378,8 @@ function InlineContextContent({
   adminPointsAvailable?: number;
   onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
   onStartCommissionTargeting?: (fleetName: string) => void;
+  onStartStarbaseTargeting?: (name: string) => void;
+
   testMode?: boolean;
   onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
@@ -464,9 +474,13 @@ function InlineContextContent({
             onSelect={onSelect}
             onCreateFleet={onCreateFleet}
             onStartCommissionTargeting={onStartCommissionTargeting}
+            onStartStarbaseTargeting={onStartStarbaseTargeting}
+            adminPointsAvailable={adminPointsAvailable}
+            supplyGrid={supplyGrid}
             combatPointsAvailable={combatPointsAvailable}
             fleetOrderContext={fleetOrderContext}
           />
+
 
         )}
       </div>
@@ -569,6 +583,67 @@ function CreateFleetCard({
     </ImperialCard>
   );
 }
+
+/* ── Found Starbase (Military Overview action) ── */
+function FoundStarbaseCard({
+  adminPointsAvailable,
+  hasSupplyGrid,
+  onStartStarbaseTargeting,
+}: {
+  adminPointsAvailable: number;
+  hasSupplyGrid: boolean;
+  onStartStarbaseTargeting: (name: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const canConfirm = name.trim().length > 0 && adminPointsAvailable >= 1 && hasSupplyGrid;
+
+  return (
+    <ImperialCard title="Found Starbase">
+      <div className="space-y-1.5">
+        <p className="text-[10px] text-muted-foreground leading-snug">
+          Raise a new starbase on an empty hex inside your supply grid.
+          <span className="block text-bronze-dark font-semibold mt-0.5">Cost: 1 Admin Point</span>
+        </p>
+        {!open ? (
+          <button
+            onClick={() => setOpen(true)}
+            disabled={adminPointsAvailable < 1 || !hasSupplyGrid}
+            className="w-full py-1.5 rounded-sm bg-crimson text-ivory text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {adminPointsAvailable < 1 ? "No Admin Points" : !hasSupplyGrid ? "No Supply Grid" : "Found Starbase"}
+          </button>
+        ) : (
+          <div className="space-y-1.5">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Starbase name"
+              className="w-full px-2 py-1 text-[11px] rounded-sm border border-border bg-ivory text-senate-dark"
+            />
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => { if (!canConfirm) return; onStartStarbaseTargeting(name.trim()); setName(""); setOpen(false); }}
+                disabled={!canConfirm}
+                className="flex-1 py-1.5 rounded-sm bg-crimson text-ivory text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Pick Hex
+              </button>
+              <button
+                onClick={() => { setName(""); setOpen(false); }}
+                className="px-2 py-1.5 rounded-sm border border-border text-[11px] font-heading uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </ImperialCard>
+  );
+}
+
+
 
 interface CommissionFleetPanelProps {
   name: string;
@@ -688,6 +763,9 @@ function InlineEmptyState({
   onSelect,
   onCreateFleet,
   onStartCommissionTargeting,
+  onStartStarbaseTargeting,
+  adminPointsAvailable,
+  supplyGrid,
   combatPointsAvailable,
   fleetOrderContext,
 }: {
@@ -698,8 +776,12 @@ function InlineEmptyState({
   onSelect?: (selection: MapSelection) => void;
   onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
   onStartCommissionTargeting?: (fleetName: string) => void;
+  onStartStarbaseTargeting?: (name: string) => void;
+  adminPointsAvailable?: number;
+  supplyGrid?: Set<string>;
   combatPointsAvailable?: number;
   fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
+
 }) {
 
   if (mode === "military") {
@@ -730,6 +812,16 @@ function InlineEmptyState({
             onStartCommissionTargeting={onStartCommissionTargeting}
           />
         )}
+
+        {onStartStarbaseTargeting && (
+          <FoundStarbaseCard
+            adminPointsAvailable={adminPointsAvailable ?? 0}
+            hasSupplyGrid={(supplyGrid?.size ?? 0) > 0}
+            onStartStarbaseTargeting={onStartStarbaseTargeting}
+          />
+        )}
+
+
 
         <ImperialCard title={`Fleets (${ownedFleets.length})`}>
           {ownedFleets.length === 0 ? (
@@ -1035,11 +1127,17 @@ function InlineRegionDetail({
     const classLabel = CLASSIFICATION_LABELS[realSys.classification as HexClassification] || realSys.classification;
     const sysPending = pendingBuildOrders?.get(realSys.system_id) || [];
     const sysCancels = pendingCancelBuildOrders?.get(realSys.system_id) || new Set<string>();
-    const buildable = gameData
-      ? getBuildableFacilitiesForSystem(realSys, gameData, sysPending.map((p) => p.facilityTypeId))
-      : [];
-    const adminPointsLeft = adminPointsAvailable ?? 0;
     const ftFull = gameData?.facilityTypesFull || [];
+    // Starbase-only facilities never appear on planets and vice versa.
+    const buildable = (gameData
+      ? getBuildableFacilitiesForSystem(realSys, gameData, sysPending.map((p) => p.facilityTypeId))
+      : []
+    ).filter((bf) => {
+      const full = ftFull.find((t) => String(t.facility_type_id) === String(bf.facility_type_id)) as any;
+      return facilityAllowedOn({ allowed_on: full?.allowed_on }, realSys.system_type);
+    });
+    const adminPointsLeft = adminPointsAvailable ?? 0;
+
     const sysHexForSupply = gameData?.hexes ? Array.from(gameData.hexes.values()).find((h) => h.hex_id === realSys.hex_id) : undefined;
     const inSupplyGrid = !!(sysHexForSupply && supplyGrid?.has(`${sysHexForSupply.x},${sysHexForSupply.y}`));
     const [shipDialogOpen, setShipDialogOpen] = useState(false);
@@ -1057,20 +1155,39 @@ function InlineRegionDetail({
       .map(ft => (ft?.max_ship_hull_class || null) as string | null);
     return (
       <>
-        <ImperialCard title={realSys.system_name} subtitle={classLabel}>
+        <ImperialCard
+          title={realSys.system_name}
+          subtitle={isStarbase(realSys) ? (isUnderConstruction(realSys) ? "Starbase — Under Construction" : "Starbase") : classLabel}
+        >
           <div className="space-y-2">
             <Row className="text-slate-500" label="Net Tribute" value={`₡${(realSys.tribute - realSys.upkeep).toLocaleString()}`} />
-            <Row
-              label="Population"
-              value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Uninhabited"}
-            />
-            <Row label="Condition">
-              <StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge>
-            </Row>
-            <Row label="Morale" value={`${realSys.morale}`} />
-            <Row label="Resources" value={`${realSys.resources}`} />
+            {isStarbase(realSys) ? (
+              <>
+                {isUnderConstruction(realSys) && (
+                  <Row label="Completion" value={`${realSys.build_turns_remaining}T remaining`} />
+                )}
+                <Row
+                  label="Hull"
+                  value={`${Math.max(0, Number(realSys.current_hull) || 0)} / ${Math.max(1, computeStarbaseCombatStats(realSys as any, ftFull as any).maxHull)}`}
+                />
+                <Row label="Crew" value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Skeleton"} />
+              </>
+            ) : (
+              <>
+                <Row
+                  label="Population"
+                  value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Uninhabited"}
+                />
+                <Row label="Condition">
+                  <StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge>
+                </Row>
+                <Row label="Morale" value={`${realSys.morale}`} />
+                <Row label="Resources" value={`${realSys.resources}`} />
+              </>
+            )}
           </div>
         </ImperialCard>
+
         <ImperialCard title="Facilities">
           {facilityNames.length > 0 ? (
             <div className="space-y-1.5">

@@ -373,6 +373,8 @@ const PlayerGame = () => {
     | { mode: "hex"; orderType: "commission_fleet"; fleetName: string }
     | { mode: "hex"; orderType: "test_teleport"; fleetId: string; fleetName: string; fromX: number; fromY: number }
     | { mode: "hex"; orderType: "test_create_fleet"; fleetName: string; ownerClassification: string }
+    | { mode: "hex"; orderType: "found_starbase"; name: string }
+
     | null
   >(null);
   // Number of fleet-related orders the player has issued this turn (each costs 1 combat point)
@@ -1617,6 +1619,48 @@ const PlayerGame = () => {
       return;
     }
 
+    // ── Found Starbase: queue a build_starbase order on an EMPTY hex inside
+    //    the player's supply grid. Costs one admin point; the starbase itself
+    //    is created by the economy phase and takes starbase_build_turns turns.
+    if (targeting.orderType === "found_starbase") {
+      const name = targeting.name;
+      setTargeting(null);
+      if (!mapState) return;
+      const destHex = mapState.hexes.get(hexKey(hex.x, hex.y));
+      if (!destHex) {
+        toast({ title: "Invalid hex", description: "Unknown location.", variant: "destructive" });
+        return;
+      }
+      if (Array.from(mapState.systems.values()).some(s => s.hex_id === destHex.hex_id)) {
+        toast({ title: "Hex occupied", description: "Starbases require an empty hex.", variant: "destructive" });
+        return;
+      }
+      if (!supplyGrid.has(hexKey(hex.x, hex.y))) {
+        toast({ title: "Out of supply", description: "Starbases can only be founded inside your supply grid.", variant: "destructive" });
+        return;
+      }
+      if (adminPointsAvailable <= 0) {
+        toast({ title: "No admin points", description: "Cancel another order first.", variant: "destructive" });
+        return;
+      }
+      try {
+        await (supabase as any).from("player_orders").insert({
+          game_id: game.id,
+          player_id: player.id,
+          turn_number: game.turn_number,
+          order_type: "other",
+          order_json: { kind: "build_starbase", hex_x: hex.x, hex_y: hex.y, name },
+          notes: "",
+        });
+        playOrderPlaced();
+        toast({ title: "Starbase ordered", description: `${name} at (${hex.x}, ${hex.y})` });
+        refreshOrders();
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message, variant: "destructive" });
+      }
+      return;
+    }
+
 
 
     if (combatPointsAvailable <= 0) {
@@ -2036,6 +2080,9 @@ const PlayerGame = () => {
             onCreateFleet: handleCreateFleet,
             onStartCommissionTargeting: (fleetName: string) =>
               setTargeting({ mode: "hex", orderType: "commission_fleet", fleetName }),
+            onStartStarbaseTargeting: (name: string) =>
+              setTargeting({ mode: "hex", orderType: "found_starbase", name }),
+
             onCancelInProduction: handleCancelInProduction,
             onUndoCancelBuild: handleUndoCancelBuild,
             pendingBuildOrders,
@@ -2103,7 +2150,10 @@ const PlayerGame = () => {
                     ? `TEST MODE: click any hex to teleport "${(targeting as any).fleetName}"`
                     : targeting?.orderType === "test_create_fleet"
                       ? `TEST MODE: click any hex to create "${(targeting as any).fleetName}"`
-                      : undefined
+                      : targeting?.orderType === "found_starbase"
+                        ? `Click an empty hex inside your supply grid to found "${(targeting as any).name}"`
+                        : undefined
+
               }
               onHexTargetPicked={handleHexTargetPicked}
               onFleetTargetPicked={handleFleetTargetPicked}

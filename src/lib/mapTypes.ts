@@ -128,7 +128,19 @@ export interface SystemData {
    * straight into `current_ground_defenses`).
    */
   landed_forces?: LandedForce[];
+  /**
+   * STARBASE FIELDS (only meaningful when system_type === "station").
+   * Starbases are player-built. While `build_turns_remaining` > 0 the record
+   * exists on the map as a ghosted construction site and takes no part in
+   * economy or combat. `current_hull` tracks battle damage — when it reaches
+   * zero the starbase (and its facilities) are removed from the map.
+   */
+  build_turns_remaining?: number;
+  current_hull?: number | null;
+  /** Faction classification that founded the starbase. */
+  built_by?: string;
 }
+
 
 export interface LandedForce {
   owner_classification: string;
