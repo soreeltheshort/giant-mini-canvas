@@ -647,6 +647,7 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
         </Dialog>
 
         <BuildShipsDialog
+          supplyGrid={supplyGrid}
           open={shipDialogOpen}
           onOpenChange={setShipDialogOpen}
           gameId={gameId}

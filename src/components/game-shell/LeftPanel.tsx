@@ -1277,6 +1277,7 @@ function InlineRegionDetail({
         </Dialog>
 
         <BuildShipsDialog
+          supplyGrid={supplyGrid}
           open={shipDialogOpen}
           onOpenChange={setShipDialogOpen}
           gameId={gameId}
