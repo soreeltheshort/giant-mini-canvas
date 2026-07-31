@@ -14,7 +14,7 @@ import { processNextTurn, DEFAULT_TURN_CONSTANTS } from "@/lib/turnEngine";
 import type { Phase, TurnContext } from "../types";
 import { ownerToEconKey, rowEconKey } from "../ownerKey";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
-import { computeSupplyGrid } from "@/lib/supplyGrid";
+import { computeSupplyGrid, collectOwnedPlanetHexes, canFleetResupply } from "@/lib/supplyGrid";
 import { hexKey } from "@/lib/mapTypes";
 
 export const economyPhase: Phase = {
