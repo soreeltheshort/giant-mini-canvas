@@ -337,6 +337,8 @@ function InlineContextContent({
   adminPointsAvailable,
   onCreateFleet,
   onStartCommissionTargeting,
+  onStartStarbaseTargeting,
+
   testMode,
   onTestSetFacilityQty,
   onTestSetGarrison,
@@ -470,9 +472,13 @@ function InlineContextContent({
             onSelect={onSelect}
             onCreateFleet={onCreateFleet}
             onStartCommissionTargeting={onStartCommissionTargeting}
+            onStartStarbaseTargeting={onStartStarbaseTargeting}
+            adminPointsAvailable={adminPointsAvailable}
+            supplyGrid={supplyGrid}
             combatPointsAvailable={combatPointsAvailable}
             fleetOrderContext={fleetOrderContext}
           />
+
 
         )}
       </div>
