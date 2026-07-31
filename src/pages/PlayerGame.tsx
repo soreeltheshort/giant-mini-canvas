@@ -10,7 +10,7 @@ import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 import { isHexBlockedForPlayer } from "@/lib/hexAccess";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
-import { computeSupplyGrid } from "@/lib/supplyGrid";
+import { computeSupplyGrid, collectOwnedPlanetHexes } from "@/lib/supplyGrid";
 import { useBusyCursor } from "@/hooks/useBusyCursor";
 
 import GameHeader from "@/components/game-shell/GameHeader";
