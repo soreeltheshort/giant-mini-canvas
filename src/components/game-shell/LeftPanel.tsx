@@ -752,6 +752,16 @@ function InlineEmptyState({
           />
         )}
 
+        {onStartStarbaseTargeting && (
+          <FoundStarbaseCard
+            adminPointsAvailable={adminPointsAvailable ?? 0}
+            hasSupplyGrid={(supplyGrid?.size ?? 0) > 0}
+            onStartStarbaseTargeting={onStartStarbaseTargeting}
+          />
+        )}
+
+
+
         <ImperialCard title={`Fleets (${ownedFleets.length})`}>
           {ownedFleets.length === 0 ? (
             <p className="text-[10px] text-muted-foreground italic">No fleets in service.</p>
