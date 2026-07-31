@@ -696,6 +696,19 @@ export const economyPhase: Phase = {
           .from("game_fleets").select("id, fleet_id, fleet_name").eq("id", gameFleetId).maybeSingle();
         if (!gf?.fleet_id) continue;
 
+        // Strikecraft can only be assembled from fleet supply while the fleet
+        // was in supply at the START of this turn (grid, or within half its
+        // map speed of an owned planet). Recorded during the replenish step.
+        if (supplyEligibleFleets.get(String(gameFleetId)) === false) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "economy",
+            log_type: "strikecraft_build_rejected",
+            message: `${gf.fleet_name || "Fleet"}: strikecraft construction rejected — fleet out of supply`,
+            details_json: { game_fleet_id: gameFleetId, reason: "out_of_supply" },
+          });
+          continue;
+        }
+
         const { data: fl } = await (supabase as any)
           .from("fleets").select("id, current_supply").eq("id", gf.fleet_id).maybeSingle();
         if (!fl) continue;
