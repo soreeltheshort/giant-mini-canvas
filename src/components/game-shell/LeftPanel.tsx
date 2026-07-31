@@ -1066,20 +1066,39 @@ function InlineRegionDetail({
       .map(ft => (ft?.max_ship_hull_class || null) as string | null);
     return (
       <>
-        <ImperialCard title={realSys.system_name} subtitle={classLabel}>
+        <ImperialCard
+          title={realSys.system_name}
+          subtitle={isStarbase(realSys) ? (isUnderConstruction(realSys) ? "Starbase — Under Construction" : "Starbase") : classLabel}
+        >
           <div className="space-y-2">
             <Row className="text-slate-500" label="Net Tribute" value={`₡${(realSys.tribute - realSys.upkeep).toLocaleString()}`} />
-            <Row
-              label="Population"
-              value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Uninhabited"}
-            />
-            <Row label="Condition">
-              <StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge>
-            </Row>
-            <Row label="Morale" value={`${realSys.morale}`} />
-            <Row label="Resources" value={`${realSys.resources}`} />
+            {isStarbase(realSys) ? (
+              <>
+                {isUnderConstruction(realSys) && (
+                  <Row label="Completion" value={`${realSys.build_turns_remaining}T remaining`} />
+                )}
+                <Row
+                  label="Hull"
+                  value={`${Math.max(0, Number(realSys.current_hull) || 0)} / ${Math.max(1, computeStarbaseCombatStats(realSys as any, ftFull as any).maxHull)}`}
+                />
+                <Row label="Crew" value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Skeleton"} />
+              </>
+            ) : (
+              <>
+                <Row
+                  label="Population"
+                  value={realSys.current_population > 0 ? realSys.current_population.toLocaleString() : "Uninhabited"}
+                />
+                <Row label="Condition">
+                  <StatusBadge variant={conditionVariant}>{realSys.condition}</StatusBadge>
+                </Row>
+                <Row label="Morale" value={`${realSys.morale}`} />
+                <Row label="Resources" value={`${realSys.resources}`} />
+              </>
+            )}
           </div>
         </ImperialCard>
+
         <ImperialCard title="Facilities">
           {facilityNames.length > 0 ? (
             <div className="space-y-1.5">
