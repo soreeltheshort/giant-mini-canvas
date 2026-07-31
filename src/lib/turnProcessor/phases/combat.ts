@@ -27,6 +27,9 @@ import { runBattle } from "@/lib/battleEngine";
 import { loadFleetSnapshot, loadBattleConfig, calcGroundUnits, type FleetCompositionRow } from "@/lib/battleSetup";
 import { destroyFleet } from "../fleetCleanup";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
+import { isStarbase, isUnderConstruction, computeStarbaseCombatStats, starbaseSnapshot } from "@/lib/starbase";
+
 
 /**
  * Apply battle losses back to the composition table the rows were loaded from.
