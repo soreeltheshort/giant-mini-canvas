@@ -16,6 +16,8 @@ import type { DbFacilityType } from "@/hooks/useFacilityTypes";
 import type { ShipTypeForUpkeep } from "@/lib/turnEngine";
 import type { Phase, TurnContext, PlayerCtx, ConditionalOrder } from "./types";
 import { PerfTimer, type PerfEntry } from "./perf";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
+
 
 import { economyPhase } from "./phases/economy";
 import { movementPhase } from "./phases/movement";
@@ -156,14 +158,34 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
 
   // Consume resolved fleet_attack orders so they don't linger past the turn
   // they were executed in (e.g. after snapshot restore or a re-run cycle).
+  //
+  // EXCEPTION — defensive postures are PERSISTENT: an "Attack/Defend Planet"
+  // order aimed at a system the ordering player already owns is a standing
+  // defence assignment, not a one-shot strike. Those orders survive turn
+  // processing and never need re-issuing (they are cleared by the player
+  // changing the fleet's orders).
   await perf.time("orders.deleteAttack", async () => {
+    const ownerOfPlayer = (playerId: string): string | undefined => {
+      const p = ctx.players.find((pp) => pp.id === playerId);
+      const f = ctx.factions.find((ff) => ff.id === (p as any)?.faction_id);
+      return (f?.name || (f as any)?.code_name) as string | undefined;
+    };
     const attackOrderIds = orders
-      .filter((o) => o.order_type === "other" && (o.order_json as any)?.kind === "fleet_attack")
+      .filter((o) => {
+        if (o.order_type !== "other" || (o.order_json as any)?.kind !== "fleet_attack") return false;
+        const sysId = Number((o.order_json as any)?.target_system_id);
+        if (Number.isFinite(sysId)) {
+          const sys = ctx.mapState.systems.get(sysId);
+          if (sys && ownerMatchesFaction(ownerOfPlayer(o.player_id), sys.owner)) return false; // persistent defence
+        }
+        return true;
+      })
       .map((o) => o.id);
     if (attackOrderIds.length > 0) {
       await (supabase as any).from("player_orders").delete().in("id", attackOrderIds);
     }
   });
+
 
 
   // Bulk insert all logs (single round trip). First clear any prior logs for

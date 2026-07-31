@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFacilityTypes } from "@/hooks/useFacilityTypes";
 import { useFactions } from "@/hooks/useFactions";
-import { DbFacilityType } from "@/hooks/useFacilityTypes";
+import { DbFacilityType, emptyFacilityFields } from "@/hooks/useFacilityTypes";
 import { useSystemActions } from "@/hooks/useSystemActions";
 import { usePlanetTypes, DbPlanetType } from "@/hooks/usePlanetTypes";
 import { useNamingConventions } from "@/hooks/useNamingConventions";
@@ -667,14 +667,8 @@ function FacilityNumericFields({ fields, patch, allFacilityTypes, currentId }: {
 
 /* ── Add Facility Form ── */
 function AddFacilityForm({ onAdd, allFacilityTypes }: { onAdd: (fields: Omit<DbFacilityType, "id">) => Promise<void>; allFacilityTypes: DbFacilityType[] }) {
-  const empty: Omit<DbFacilityType, "id"> = {
-    name: "", description: "", icon: "🏭",
-    cost: 0, admin_cost: 1, maintenance: 0, condition_bonus: 0,
-    tribute_flat: 0, tribute_percent: 0, survey_bonus: 0, ground_defense_bonus: 0,
-    turns_to_build: 1, construction_kickback: 0, consumed_facility_id: null,
-    fighter_capacity: 0, gunship_capacity: 0, max_per_system: 0, ship_build_capacity: 0, max_ship_hull_class: null, synod: false,
-    supply_range: 0, requires_supply: true,
-  };
+  const empty: Omit<DbFacilityType, "id"> = emptyFacilityFields();
+
   const [fields, setFields] = useState(empty);
   const patch = (p: Partial<Omit<DbFacilityType, "id">>) => setFields((prev) => ({ ...prev, ...p }));
 

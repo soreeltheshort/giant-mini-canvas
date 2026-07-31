@@ -200,9 +200,120 @@ export const combatPhase: Phase = {
       const attackerGameFleetId: string = oj.fleet_id;
       const targetGameFleetId: string | undefined = oj.target_fleet_id;
 
-      // Planet-only attack orders (target_system_id without target_fleet_id)
-      // are resolved by the ground_combat phase, not space combat. Skip silently.
-      if (!targetGameFleetId && oj.target_system_id != null) continue;
+      // Attacks aimed at a SYSTEM: a starbase (system_type "station") fights
+      // as a single Core-group combatant built from its facilities, joined by
+      // any friendly fleet sitting in the same hex. Planets are handled by the
+      // ground_combat phase instead.
+      if (!targetGameFleetId && oj.target_system_id != null) {
+        const sys = ctx.mapState.systems.get(Number(oj.target_system_id));
+        if (!sys || !isStarbase(sys) || isUnderConstruction(sys)) continue;
+
+        const attackerMF0 = ctx.mapState.fleets.find(f => f.fleet_id === attackerGameFleetId);
+        if (!attackerMF0) continue;
+        // A fleet ordered to attack/defend a system it already owns is holding
+        // station, not attacking.
+        if (ownerMatchesFaction(attackerMF0.owner_classification, sys.owner)) continue;
+
+        const hex = Array.from(ctx.mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
+        if (!hex) continue;
+        const speed0 = await fetchFleetMapSpeed(supabase as any, attackerGameFleetId);
+        const range0 = attackRangeFromMapSpeed(speed0);
+        const dist0 = hexDistance(attackerMF0.hex_x, attackerMF0.hex_y, hex.x, hex.y);
+        if (dist0 > range0) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "combat",
+            log_type: "combat_out_of_range",
+            message: `${attackerMF0.fleet_name}: starbase ${sys.system_name} is ${dist0} hex(es) away — exceeds attack range ${range0}.`,
+            details_json: { attacker_fleet_id: attackerGameFleetId, system_id: sys.system_id, distance: dist0, range: range0 },
+          });
+          continue;
+        }
+
+        const snapAtk = await loadFleetSnapshot(supabase as any, attackerMF0.source_fleet_id, attackerMF0.fleet_id);
+        if (!snapAtk || snapAtk.snapshot.ships.length === 0) continue;
+
+        // Defender snapshot = starbase + co-located friendly fleets.
+        const stats = computeStarbaseCombatStats(sys, ctx.facilityTypes as any);
+        const defSnap: any = starbaseSnapshot(sys, stats);
+        const defenderFleets: Array<{ mf: any; snap: any }> = [];
+        for (const mf of ctx.mapState.fleets) {
+          if (mf.fleet_id === attackerGameFleetId) continue;
+          if (mf.hex_x !== hex.x || mf.hex_y !== hex.y) continue;
+          if (!ownerMatchesFaction(mf.owner_classification, sys.owner)) continue;
+          const s = await loadFleetSnapshot(supabase as any, mf.source_fleet_id, mf.fleet_id);
+          if (!s || s.snapshot.ships.length === 0) continue;
+          defSnap.ships.push(...s.snapshot.ships);
+          defenderFleets.push({ mf, snap: s });
+        }
+
+        const seedS = `${gameId}-t${currentTurn}-${order.id}-starbase`;
+        const result = runBattle(
+          snapAtk.snapshot, defSnap, seedS,
+          phases, groupMods, combatConsts, weaponPrefs,
+          4, 4, groundOutcomes, 0,
+          calcGroundUnits(snapAtk.snapshot), 0,
+          weaponStats,
+        );
+
+        const aFin = result.finalState.fleetA.map((s: any) => ({ typeId: s.typeId, tacticalGroup: s.tacticalGroup, crippled: s.crippled, sourceRowId: s.sourceRowId, currentHull: s.currentHull, maxHull: s.maxHull }));
+        const bFin = result.finalState.fleetB.map((s: any) => ({ typeId: s.typeId, tacticalGroup: s.tacticalGroup, crippled: s.crippled, sourceRowId: s.sourceRowId, currentHull: s.currentHull, maxHull: s.maxHull }));
+
+        const atkLosses = await applyLosses(supabase as any, snapAtk.rows, aFin);
+        if (atkLosses.totalRemaining <= 0) {
+          await destroyFleet({
+            ctx, gameFleetId: attackerMF0.fleet_id, sourceFleetId: attackerMF0.source_fleet_id,
+            fleetName: attackerMF0.fleet_name, reason: "combat_wiped",
+          });
+        }
+        for (const d of defenderFleets) {
+          const ownRows = new Set(d.snap.rows.map((r: any) => r.id));
+          const subset = bFin.filter((s: any) => s.sourceRowId && ownRows.has(s.sourceRowId));
+          const l = await applyLosses(supabase as any, d.snap.rows, subset);
+          if (l.totalRemaining <= 0) {
+            await destroyFleet({
+              ctx, gameFleetId: d.mf.fleet_id, sourceFleetId: d.mf.source_fleet_id,
+              fleetName: d.mf.fleet_name, reason: "combat_wiped",
+            });
+          }
+        }
+
+        // Starbase damage writeback (hull only — starbases are never captured).
+        const sbFinal = bFin.find((s: any) => s.sourceRowId === `starbase-${sys.system_id}`);
+        const newHull = sbFinal ? Math.max(0, Math.floor(sbFinal.currentHull)) : 0;
+        if (newHull <= 0) {
+          ctx.mapState.systems.delete(sys.system_id);
+          const h = Array.from(ctx.mapState.hexes.values()).find(hh => hh.hex_id === sys.hex_id);
+          if (h) (h as any).has_system = false;
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "combat",
+            log_type: "starbase_destroyed",
+            message: `${sys.system_name}: starbase destroyed by ${attackerMF0.fleet_name}.`,
+            details_json: { system_id: sys.system_id, attacker_fleet_id: attackerGameFleetId },
+          });
+        } else {
+          ctx.mapState.systems.set(sys.system_id, { ...sys, current_hull: newHull });
+        }
+
+        resolved++;
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "combat",
+          log_type: "starbase_battle_resolved",
+          message: `Starbase battle: ${attackerMF0.fleet_name} vs ${sys.system_name} — winner: ${result.winner === "draw" ? "Draw" : result.winner === "A" ? "Attacker" : "Starbase"}. Starbase hull ${newHull}/${Math.max(1, stats.maxHull)}.`,
+          details_json: {
+            seed: seedS,
+            attacker_fleet_id: attackerGameFleetId,
+            system_id: sys.system_id,
+            system_name: sys.system_name,
+            winner: result.winner,
+            starbase_hull_remaining: newHull,
+            starbase_max_hull: Math.max(1, stats.maxHull),
+            defending_fleets: defenderFleets.map(d => d.mf.fleet_name),
+            attacker_survivors: atkLosses.totalAfter,
+          },
+        });
+        continue;
+      }
+
 
       const attackerMF = ctx.mapState.fleets.find(f => f.fleet_id === attackerGameFleetId);
       const targetMF = ctx.mapState.fleets.find(f => f.fleet_id === targetGameFleetId);

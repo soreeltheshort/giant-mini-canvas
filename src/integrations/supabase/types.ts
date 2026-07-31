@@ -1117,6 +1117,8 @@ export type Database = {
       facility_types: {
         Row: {
           admin_cost: number
+          allowed_on: string
+          armor: number
           condition_bonus: number
           construction_kickback: number
           consumed_facility_id: string | null
@@ -1126,12 +1128,24 @@ export type Database = {
           fighter_capacity: number
           ground_defense_bonus: number
           gunship_capacity: number
+          hull_points: number
           icon: string
           id: string
+          laser_heavy: number
+          laser_hull_breaker: number
+          laser_light: number
+          laser_medium: number
           maintenance: number
           max_per_system: number
           max_ship_hull_class: string | null
+          missile_100kg: number
+          missile_10kg: number
+          missile_50kg: number
+          missile_half_kt: number
+          missile_kraken: number
+          missile_synod: number
           name: string
+          population_bonus: number
           requires_supply: boolean
           ship_build_capacity: number
           supply_range: number
@@ -1144,6 +1158,8 @@ export type Database = {
         }
         Insert: {
           admin_cost?: number
+          allowed_on?: string
+          armor?: number
           condition_bonus?: number
           construction_kickback?: number
           consumed_facility_id?: string | null
@@ -1153,12 +1169,24 @@ export type Database = {
           fighter_capacity?: number
           ground_defense_bonus?: number
           gunship_capacity?: number
+          hull_points?: number
           icon?: string
           id?: string
+          laser_heavy?: number
+          laser_hull_breaker?: number
+          laser_light?: number
+          laser_medium?: number
           maintenance?: number
           max_per_system?: number
           max_ship_hull_class?: string | null
+          missile_100kg?: number
+          missile_10kg?: number
+          missile_50kg?: number
+          missile_half_kt?: number
+          missile_kraken?: number
+          missile_synod?: number
           name: string
+          population_bonus?: number
           requires_supply?: boolean
           ship_build_capacity?: number
           supply_range?: number
@@ -1171,6 +1199,8 @@ export type Database = {
         }
         Update: {
           admin_cost?: number
+          allowed_on?: string
+          armor?: number
           condition_bonus?: number
           construction_kickback?: number
           consumed_facility_id?: string | null
@@ -1180,12 +1210,24 @@ export type Database = {
           fighter_capacity?: number
           ground_defense_bonus?: number
           gunship_capacity?: number
+          hull_points?: number
           icon?: string
           id?: string
+          laser_heavy?: number
+          laser_hull_breaker?: number
+          laser_light?: number
+          laser_medium?: number
           maintenance?: number
           max_per_system?: number
           max_ship_hull_class?: string | null
+          missile_100kg?: number
+          missile_10kg?: number
+          missile_50kg?: number
+          missile_half_kt?: number
+          missile_kraken?: number
+          missile_synod?: number
           name?: string
+          population_bonus?: number
           requires_supply?: boolean
           ship_build_capacity?: number
           supply_range?: number
