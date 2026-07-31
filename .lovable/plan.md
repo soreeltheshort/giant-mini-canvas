@@ -1,61 +1,45 @@
+## Supply Rules Update
 
-# Supply Grid System
+Four rule changes, wired end-to-end.
 
-## Concept
+### 1. Resupply reach: grid OR half map-speed from an owned planet
 
-A per-faction **supply grid** is the set of hexes that count as "in supply" for that faction on the current turn.
+A fleet may replenish if either:
+- its hex is in the faction's supply grid (current rule), **or**
+- it is within `floor(slowest ship map_speed / 2)` hexes of any planet the faction owns (same helper already used for attack range: `attackRangeFromMapSpeed` in `src/lib/fleetRange.ts`).
 
-A hex is in supply for faction F if any of these are true:
-1. The hex's `classification` matches F's province (Core / Province_1..6). *Province hexes are always in supply.*
-2. The hex is within `supply_range` (hex distance) of a planet F owns that contains a facility with `supply_range > 0`. Largest `supply_range` on a given planet wins; multiple planets each project their own radius (union).
+New shared helper `canFleetResupply(fleetHex, fleetMapSpeed, ownedSystemHexes, supplyGrid)` in `src/lib/supplyGrid.ts` so the turn processor and the UI use identical logic. Rejection log gains the reason `out_of_supply_and_out_of_planet_range`.
 
-This replaces the current "must be on an owned planet to replenish" rule with a general test: **the fleet's current hex must be in F's supply grid**.
+### 2. Supply-built fighters + free transfer between in-supply points
 
-## Rules changed / added
+- Building strikecraft from fleet supply already works (`build_strikecraft`); it will additionally require the fleet to satisfy the same eligibility test above (currently ungated).
+- Strikecraft produced at a planet that is **in supply** may be sent to any friendly fleet that is **also in supply**, ignoring the 4-hex delivery limit, and arrive the turn they are built. Capacity limits still apply (a carrier's free fighter/gunship slots, counting existing + queued + in-transit), and the existing overflow-refund backstop stays. Out-of-supply producer or out-of-supply destination falls back to the current 4-hex rule.
+- Enforced in `BuildShipsDialog.tsx` (target list + validation messages) and re-checked in `shipProduction.ts` at delivery time.
 
-- **Replenish supply**: allowed anywhere in the supply grid, not just on an owned planet.
-- **Build facility**: target planet's hex must be in the supply grid — enforced in UI (disabled with tooltip) and at turn processing (rejected + logged).
-- **Supply-required facilities** (new flag `requires_supply`, default true): cannot be built out of supply. Admins can uncheck for pioneer facilities.
-- **Supply-emitting facilities** (new field `supply_range`): extend the grid by that many hexes from the planet they sit on.
+### 3. Supply state is locked at start of turn
 
-## Deliverables
+A fleet is in supply if it was in supply at the *start* of the turn, even if it moves out later. The economy phase already runs before movement and reads pre-move hex coordinates, so this holds today — the plan adds an explicit comment plus a captured `startOfTurnSupplyOk` flag reused by the strikecraft-delivery check later in the same turn, so a mid-turn move can't invalidate an already-granted resupply.
 
-1. **Migration**
-   - `facility_types.supply_range integer NOT NULL DEFAULT 0`
-   - `facility_types.requires_supply boolean NOT NULL DEFAULT true`
-2. **`src/lib/supplyGrid.ts`** (new): `computeSupplyGrid(factionKey, systems, hexes, facilityTypes) → Set<string>`; `isHexInSupply(x, y, grid)`.
-3. **`src/lib/turnProcessor/phases/economy.ts`**: compute grid per faction; gate `replenish_supply` and `build_facility` on it; log rejections.
-4. **`src/pages/AdminFacilities.tsx`**: `supply_range` input + `requires_supply` checkbox.
-5. **Player UI**: `FleetDetailContent.tsx` swaps `atOwnedPlanet` for `inSupplyGrid`; `ContextPanel.tsx` disables out-of-supply build rows; `PlayerGame.tsx` memoizes the current player's grid.
-6. **Map indicator** in `PlayerMapCanvas.tsx`: bronze outline along edges where in-supply hexes border out-of-supply hexes.
+### 4. Auto-resupply by default
 
-## Documentation deliverables (this turn)
+- New column `fleets.auto_resupply boolean NOT NULL DEFAULT true`.
+- Fleet detail panel: a toggle above the supply slider. When ON (default) the slider is preset to maximum (top-off) and the order is auto-written each turn; the player can still drag it down. When OFF no replenish order is generated.
+- Turn processor: for every eligible fleet with `auto_resupply = true` that has no explicit `replenish_supply` order, the economy phase generates a top-to-max replenishment and charges the treasury at `supply_cost_coefficient`. Logged as `supply_replenished` with `source: "auto"`.
 
-- **Manual entry** — insert a new `wiki_pages` row with slug `supply-grid`, title "Supply Grid", sort_order 13, explaining: what counts as in-supply (province + emitter radii, largest-wins per planet, union across planets), what the grid gates (replenish, facility construction, supply-required facilities), and the map border indicator.
-- **Developer notes** — append a new section **"Supply Grid System"** to `.lovable/plan.md` capturing: schema fields, `supplyGrid.ts` API, gating call sites in `economy.ts`, UI wiring path (`PlayerGame → ContextPanel/FleetDetailContent`), map render pass description, and the T1–T5 hierarchical test plan below.
+### Technical notes
 
-## Technical notes
+- Migration: single `ALTER TABLE public.fleets ADD COLUMN auto_resupply boolean NOT NULL DEFAULT true;` (no new grants needed).
+- Files touched: `src/lib/supplyGrid.ts`, `src/lib/turnProcessor/phases/economy.ts`, `src/lib/turnProcessor/phases/shipProduction.ts`, `src/components/game-shell/FleetDetailContent.tsx`, `src/components/game-shell/BuildShipsDialog.tsx`, `src/pages/FleetBuilder.tsx` (persist the flag on templates), and the `supply-grid` manual page.
+- Owned-planet hex set is derived once per faction per turn from `mapState.systems` — cheap, no extra queries.
 
-- Union-of-radii is cheap on 141×141 with a handful of emitters — recompute on player load / after each turn.
-- Border render: for each in-supply hex, draw only the edges shared with an out-of-supply neighbor (or map edge). Uses existing pointy-top odd-r neighbor helpers.
-- Migration alters an existing table; no new grants needed.
+### Test plan
 
-## Test plan (hierarchical)
+- **T1 Reach** — T1.1 Fleet in province: replenishes. T1.2 Fleet 2 hexes from an owned planet, speed 4 (half = 2), outside grid: replenishes. T1.3 Same fleet 3 hexes away: rejected with log. T1.4 Speed-0 fleet outside grid: rejected.
+- **T2 Fighters** — T2.1 Build fighters from fleet supply while eligible: succeeds, supply debited. T2.2 Same fleet ineligible: rejected + logged. T2.3 In-supply planet → in-supply fleet 20 hexes away: arrives same turn. T2.4 Same but destination out of supply: blocked in dialog, 4-hex rule applies. T2.5 Overflow beyond carrier capacity: refunded.
+- **T3 Start-of-turn lock** — T3.1 Fleet starts in supply, ordered to move far out: still resupplies this turn. T3.2 Fleet starts out of supply, moves into supply: no resupply until next turn.
+- **T4 Auto-resupply** — T4.1 New fleet defaults to ON, slider at max, tops off with no manual order. T4.2 Toggle OFF: no order, no charge. T4.3 Toggle ON but slider dragged down: only the chosen amount is drawn. T4.4 Auto-resupply on an ineligible fleet: skipped silently (no charge).
 
-- **T1 Schema** — T1.1 `supply_range` exists, defaults 0. T1.2 `requires_supply` exists, defaults true.
-- **T2 Grid computation** — T2.1 No supply facilities → grid = province only. T2.2 Radius-3 emitter on owned Marches planet → ring-3 added. T2.3 Two emitters → union.
-- **T3 Replenish** — T3.1 In province, works. T3.2 Owned Marches planet w/o emitter → REJECTED (behavior change; verify log). T3.3 After emitter built → works.
-- **T4 Build gating** — T4.1 Province planet build → allowed. T4.2 Out-of-supply owned planet → UI disabled + turn-time rejection logged. T4.3 `requires_supply=false` facility → allowed anywhere owned.
-- **T5 Map indicator** — T5.1 Border along province edge on fresh game. T5.2 Border expands after emitter build + turn advance.
+### Out of scope
 
-## Out of scope
-
-- AI awareness of supply grid (deferred to Phase 2c).
-- Movement penalties out of supply.
-- Ship-build / ground-draft supply gating.
-
----
-
-# Facility Admin Cost (mini-feature)
-
-Added `facility_types.admin_cost` (integer, default 1). Each queued `build_facility` order now debits that facility's `admin_cost` from the player's admin points (was hardcoded to 1). AdminFacilities UI exposes the field; PlayerGame gates placement with a toast if AP is insufficient.
+- AI awareness of the new reach rule (AI keeps current behaviour).
+- Attrition or penalties for operating out of supply.
