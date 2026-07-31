@@ -2080,6 +2080,9 @@ const PlayerGame = () => {
             onCreateFleet: handleCreateFleet,
             onStartCommissionTargeting: (fleetName: string) =>
               setTargeting({ mode: "hex", orderType: "commission_fleet", fleetName }),
+            onStartStarbaseTargeting: (name: string) =>
+              setTargeting({ mode: "hex", orderType: "found_starbase", name }),
+
             onCancelInProduction: handleCancelInProduction,
             onUndoCancelBuild: handleUndoCancelBuild,
             pendingBuildOrders,
