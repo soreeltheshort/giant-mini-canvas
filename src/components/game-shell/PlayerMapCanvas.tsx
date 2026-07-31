@@ -445,7 +445,17 @@ const PlayerMapCanvas: React.FC<Props> = ({
         ctx.beginPath();
         ctx.arc(px, py, dotSize + 1, 0, Math.PI * 2);
         ctx.stroke();
+      } else if ((sys as any).build_turns_remaining > 0) {
+        // Starbase under construction: dashed scaffold ring
+        ctx.save();
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = ownerColor;
+        ctx.beginPath();
+        ctx.arc(px, py, dotSize + 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
       }
+
 
       // System name when zoomed in enough
       if (zoom > 2.5) {
