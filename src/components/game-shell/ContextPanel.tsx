@@ -790,6 +790,7 @@ function ArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext
         combatPointsAvailable={combatPointsAvailable}
         onOrdersChanged={onOrdersChanged}
         supplyGrid={supplyGrid}
+        ownClassification={playerOwnerClassification}
       />
     );
   }

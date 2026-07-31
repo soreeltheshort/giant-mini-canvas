@@ -1496,6 +1496,7 @@ function InlineArmyDetail({
         combatPointsAvailable={combatPointsAvailable}
         onOrdersChanged={onOrdersChanged}
         supplyGrid={supplyGrid}
+        ownClassification={playerOwnerClassification}
       />
     );
   }
