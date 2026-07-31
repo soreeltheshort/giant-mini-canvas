@@ -94,6 +94,9 @@ interface LeftPanelProps {
     onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
     /** Begin map-click targeting for commissioning a fleet with a chosen name. */
     onStartCommissionTargeting?: (fleetName: string) => void;
+    /** Begin map-click targeting for founding a starbase with a chosen name. */
+    onStartStarbaseTargeting?: (name: string) => void;
+
     /** Admin-only Test Mode enabled — reveals direct-edit controls on systems. */
     testMode?: boolean;
     /** TEST MODE: set (or delete when quantity=0) a facility row on a system. */

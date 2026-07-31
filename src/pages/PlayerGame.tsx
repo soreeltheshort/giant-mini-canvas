@@ -2150,7 +2150,10 @@ const PlayerGame = () => {
                     ? `TEST MODE: click any hex to teleport "${(targeting as any).fleetName}"`
                     : targeting?.orderType === "test_create_fleet"
                       ? `TEST MODE: click any hex to create "${(targeting as any).fleetName}"`
-                      : undefined
+                      : targeting?.orderType === "found_starbase"
+                        ? `Click an empty hex inside your supply grid to found "${(targeting as any).name}"`
+                        : undefined
+
               }
               onHexTargetPicked={handleHexTargetPicked}
               onFleetTargetPicked={handleFleetTargetPicked}
