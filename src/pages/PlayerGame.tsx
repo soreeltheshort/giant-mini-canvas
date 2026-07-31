@@ -915,6 +915,13 @@ const PlayerGame = () => {
     );
   }, [mapState, player?.own_classification, dbFacilityTypesFull]);
 
+  // Hexes of planets this player owns — fleets within half their map speed of
+  // one of these may resupply even when outside the supply grid.
+  const ownedPlanetHexes = useMemo(() => {
+    if (!mapState || !player?.own_classification) return [] as Array<{ x: number; y: number }>;
+    return collectOwnedPlanetHexes(player.own_classification, mapState.systems, mapState.hexes);
+  }, [mapState, player?.own_classification]);
+
 
 
   // ─── Real dispatches from game_logs ───
