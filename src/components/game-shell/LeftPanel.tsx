@@ -378,6 +378,8 @@ function InlineContextContent({
   adminPointsAvailable?: number;
   onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
   onStartCommissionTargeting?: (fleetName: string) => void;
+  onStartStarbaseTargeting?: (name: string) => void;
+
   testMode?: boolean;
   onTestSetFacilityQty?: (systemId: number, facilityTypeId: string, quantity: number) => void;
   onTestSetGarrison?: (systemId: number, current: number, max: number) => void;
@@ -700,6 +702,9 @@ function InlineEmptyState({
   onSelect,
   onCreateFleet,
   onStartCommissionTargeting,
+  onStartStarbaseTargeting,
+  adminPointsAvailable,
+  supplyGrid,
   combatPointsAvailable,
   fleetOrderContext,
 }: {
@@ -710,8 +715,12 @@ function InlineEmptyState({
   onSelect?: (selection: MapSelection) => void;
   onCreateFleet?: (name: string, hexX: number, hexY: number) => Promise<void> | void;
   onStartCommissionTargeting?: (fleetName: string) => void;
+  onStartStarbaseTargeting?: (name: string) => void;
+  adminPointsAvailable?: number;
+  supplyGrid?: Set<string>;
   combatPointsAvailable?: number;
   fleetOrderContext?: { gameId: string; playerId: string; turnNumber: number };
+
 }) {
 
   if (mode === "military") {
