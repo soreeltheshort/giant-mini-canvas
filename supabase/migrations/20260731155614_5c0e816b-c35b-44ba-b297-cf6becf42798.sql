@@ -1,0 +1,1 @@
+ALTER TABLE public.fleets ADD COLUMN IF NOT EXISTS auto_resupply boolean NOT NULL DEFAULT true;
