@@ -358,13 +358,22 @@ export const economyPhase: Phase = {
       });
     }
 
-    // 4. Apply queued replenish_supply orders.
+    // 4. Apply supply replenishment.
+    //    Sources: explicit `replenish_supply` orders, PLUS an automatic
+    //    top-off for every eligible fleet with fleets.auto_resupply = true
+    //    that has no explicit order this turn.
+    //
+    //    Eligibility (see src/lib/supplyGrid.ts#canFleetResupply): the fleet's
+    //    hex is inside the faction's supply grid OR within floor(map_speed / 2)
+    //    hexes of an owned planet. This runs BEFORE the movement phase, so the
+    //    fleet's START-OF-TURN hex is what counts — a fleet that begins the
+    //    turn in supply keeps supply even if it moves out of it this turn.
+    //
     //    Max_Supplies = sum(ship.supply_pod * quantity) * supply_capacity_coefficient.
-    //    Add the requested amount, capped at (Max - Current); never exceed Max.
     const replenishOrders = ctx.orders.filter(
       o => o.order_type === "other" && o.order_json?.kind === "replenish_supply",
     );
-    if (replenishOrders.length > 0) {
+    {
       const { data: constRows } = await (supabase as any)
         .from("combat_constants").select("key, value")
         .in("key", ["supply_capacity_coefficient", "supply_cost_coefficient"]);
@@ -377,47 +386,113 @@ export const economyPhase: Phase = {
         : 1;
 
       const { data: allShipTypes } = await (supabase as any)
-        .from("ship_types").select("id, supply_pod");
+        .from("ship_types").select("id, supply_pod, map_speed");
       const supplyPodMap = new Map<string, number>();
-      for (const st of (allShipTypes || [])) supplyPodMap.set(st.id, Number(st.supply_pod) || 0);
+      const mapSpeedMap = new Map<string, number>();
+      for (const st of (allShipTypes || [])) {
+        supplyPodMap.set(st.id, Number(st.supply_pod) || 0);
+        mapSpeedMap.set(st.id, Number(st.map_speed) || 0);
+      }
 
-      let supplyApplied = 0;
+      // Build the task list: explicit orders first, then auto top-offs.
+      type ReplenishTask = { gameFleetId: string; requested: number | "max"; playerId: string; auto: boolean };
+      const tasks: ReplenishTask[] = [];
+      const explicitFleetIds = new Set<string>();
       for (const order of replenishOrders) {
         const gameFleetId = order.order_json?.fleet_id;
         const requested = Math.max(0, Math.floor(Number(order.order_json?.amount) || 0));
         if (!gameFleetId || requested <= 0) continue;
+        explicitFleetIds.add(String(gameFleetId));
+        tasks.push({ gameFleetId: String(gameFleetId), requested, playerId: order.player_id, auto: false });
+      }
+
+      // Auto-resupply: every non-garrison fleet in this game whose template has
+      // auto_resupply = true and that has no explicit order this turn.
+      const { data: autoFleets } = await (supabase as any)
+        .from("game_fleets")
+        .select("id, fleet_id, owner_classification, is_garrison, fleets!inner(id, auto_resupply)")
+        .eq("game_id", gameId)
+        .eq("is_garrison", false);
+      for (const gfRow of (autoFleets || []) as any[]) {
+        if (explicitFleetIds.has(String(gfRow.id))) continue;
+        if ((gfRow.fleets as any)?.auto_resupply === false) continue;
+        // Resolve the owning player from the fleet's owner_classification.
+        const ownerStr = String(gfRow.owner_classification || "");
+        const player = ctx.players.find(p => {
+          const f = ctx.factions.find(ff => ff.id === (p as any).faction_id);
+          const alias = (f?.name || (f as any)?.code_name) as string | undefined;
+          return !!alias && ownerMatchesFaction(ownerStr, alias);
+        });
+        if (!player) continue;
+        tasks.push({ gameFleetId: String(gfRow.id), requested: "max", playerId: player.id, auto: true });
+      }
+
+      // Owned-planet hex cache per faction (for the half-map-speed reach rule).
+      const ownedHexesByOwner = new Map<string, Array<{ x: number; y: number }>>();
+      const getOwnedPlanetHexes = (ownerClass: string | undefined | null) => {
+        const key = String(ownerClass || "");
+        if (!key) return [];
+        const cached = ownedHexesByOwner.get(key);
+        if (cached) return cached;
+        const list = collectOwnedPlanetHexes(key, mapState.systems, mapState.hexes);
+        ownedHexesByOwner.set(key, list);
+        return list;
+      };
+
+      let supplyApplied = 0;
+      for (const task of tasks) {
+        const gameFleetId = task.gameFleetId;
 
         // Resolve game_fleet -> source fleet (which holds current_supply)
         const { data: gf } = await (supabase as any)
           .from("game_fleets").select("id, fleet_id, fleet_name, hex_x, hex_y").eq("id", gameFleetId).maybeSingle();
         if (!gf?.fleet_id) continue;
 
-        // Supply-grid gating: fleet's current hex must be in the ordering
-        // player's supply grid (province hexes or within an emitter radius).
-        const ownerClass = ownerForPlayer(order.player_id);
-        const grid = getSupplyGrid(ownerClass);
-        if (!grid.has(hexKey(Number(gf.hex_x), Number(gf.hex_y)))) {
-          ctx.logs.push({
-            game_id: gameId, turn_number: currentTurn, phase: "economy",
-            log_type: "supply_replenish_rejected",
-            message: `${gf.fleet_name || "Fleet"}: replenish rejected — out of supply at (${gf.hex_x},${gf.hex_y})`,
-            details_json: { game_fleet_id: gameFleetId, hex_x: gf.hex_x, hex_y: gf.hex_y, reason: "out_of_supply" },
-          });
-          continue;
-        }
-
-
-        const { data: fl } = await (supabase as any)
-          .from("fleets").select("id, current_supply").eq("id", gf.fleet_id).maybeSingle();
-        if (!fl) continue;
-
-        // Compute Max_Supplies from this game fleet's roster
+        // Compute Max_Supplies and the fleet's slowest ship speed from the roster.
         const { data: gfShips } = await (supabase as any)
           .from("game_fleet_ships").select("ship_type_id, quantity").eq("game_fleet_id", gameFleetId);
         const totalSupplyPods = (gfShips || []).reduce(
           (sum: number, r: any) => sum + (supplyPodMap.get(r.ship_type_id) || 0) * (Number(r.quantity) || 0),
           0,
         );
+        let minSpeed = Infinity;
+        for (const r of (gfShips || []) as any[]) {
+          const sp = mapSpeedMap.get(r.ship_type_id) || 0;
+          if (sp > 0 && sp < minSpeed) minSpeed = sp;
+        }
+        const fleetMapSpeed = minSpeed === Infinity ? 0 : minSpeed;
+
+        // Supply reach gating: in the supply grid, or within half map speed of
+        // an owned planet. Uses the pre-movement (start-of-turn) hex.
+        const ownerClass = ownerForPlayer(task.playerId);
+        const grid = getSupplyGrid(ownerClass);
+        const eligibility = canFleetResupply(
+          { x: Number(gf.hex_x), y: Number(gf.hex_y) },
+          fleetMapSpeed,
+          getOwnedPlanetHexes(ownerClass),
+          grid,
+        );
+        supplyEligibleFleets.set(String(gameFleetId), eligibility.ok);
+        if (!eligibility.ok) {
+          // Auto top-offs are skipped silently (they'd spam the log every turn).
+          if (!task.auto) {
+            ctx.logs.push({
+              game_id: gameId, turn_number: currentTurn, phase: "economy",
+              log_type: "supply_replenish_rejected",
+              message: `${gf.fleet_name || "Fleet"}: replenish rejected — out of supply at (${gf.hex_x},${gf.hex_y}); no owned planet within ${eligibility.reach} hex(es)`,
+              details_json: {
+                game_fleet_id: gameFleetId, hex_x: gf.hex_x, hex_y: gf.hex_y,
+                reason: eligibility.reason, reach: eligibility.reach,
+              },
+            });
+          }
+          continue;
+        }
+
+        const { data: fl } = await (supabase as any)
+          .from("fleets").select("id, current_supply").eq("id", gf.fleet_id).maybeSingle();
+        if (!fl) continue;
+
         const maxSupplies = totalSupplyPods * supplyCoefficient;
         // Preserve any existing supply even if the fleet's capacity has shrunk
         // (e.g. supply-pod ships were destroyed in a prior combat). Never write
@@ -425,14 +500,16 @@ export const economyPhase: Phase = {
         const existing = Number(fl.current_supply) || 0;
         const current = existing;
         const delta = Math.max(0, maxSupplies - current);
+        const requested = task.requested === "max" ? delta : task.requested;
         const granted = Math.min(requested, delta);
+        if (granted <= 0) continue;
         const next = current + granted;
         const cost = Math.ceil(granted * supplyCostCoefficient);
 
         await (supabase as any).from("fleets").update({ current_supply: next }).eq("id", fl.id);
 
         // Charge the ordering player's treasury via the maintenance accumulator.
-        const orderingPlayer = ctx.players.find(p => p.id === order.player_id);
+        const orderingPlayer = ctx.players.find(p => p.id === task.playerId);
         const orderingKey = orderingPlayer ? rowEconKey(orderingPlayer) : undefined;
         if (orderingKey && cost > 0) {
           const econ = ctx.playerEcon.get(orderingKey) || { tribute: 0, maintenance: 0 };
@@ -447,11 +524,13 @@ export const economyPhase: Phase = {
           turn_number: currentTurn,
           phase: "economy",
           log_type: "supply_replenished",
-          message: `${gf.fleet_name || "Fleet"}: supply ${current} → ${next} / ${maxSupplies} (requested ${requested}, cost ${cost})`,
+          message: `${gf.fleet_name || "Fleet"}: supply ${current} → ${next} / ${maxSupplies}${task.auto ? " (auto)" : ` (requested ${requested})`}, cost ${cost}`,
           details_json: {
             fleet_id: fl.id, game_fleet_id: gameFleetId,
             current, granted, next, max: maxSupplies, requested,
             cost, supply_cost_coefficient: supplyCostCoefficient,
+            source: task.auto ? "auto" : "order",
+            eligibility: eligibility.reason,
           },
         });
       }
@@ -462,10 +541,11 @@ export const economyPhase: Phase = {
           turn_number: currentTurn,
           phase: "economy",
           log_type: "supply_summary",
-          message: `Applied ${supplyApplied} supply replenishment order(s).`,
+          message: `Applied ${supplyApplied} supply replenishment(s).`,
         });
       }
     }
+
 
     // 4b. Apply queued repair_fleet orders.
     //     Each unit of "amount" restores 1 HP and consumes 1 supply. Repairs are
