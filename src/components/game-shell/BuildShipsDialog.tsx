@@ -350,7 +350,7 @@ export default function BuildShipsDialog({
     !!supplyGrid?.has(`${systemHexX},${systemHexY}`);
   const strikeReachable = (f: PlayerFleetOption): boolean => {
     if (systemHexX === undefined || systemHexY === undefined) return true;
-    if (strikeReachable(f)) return true;
+    if (hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE) return true;
     return producerInSupply && !!supplyGrid?.has(`${f.hex_x},${f.hex_y}`);
   };
 
