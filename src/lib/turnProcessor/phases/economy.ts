@@ -26,6 +26,10 @@ export const economyPhase: Phase = {
     // Per-faction supply-grid cache. Computed lazily on first use per owner
     // classification and reused across orders. See src/lib/supplyGrid.ts.
     const supplyGridByOwner = new Map<string, Set<string>>();
+    // Start-of-turn supply eligibility per game_fleet id, recorded during the
+    // replenish step and reused by later steps in this same phase (e.g.
+    // strikecraft construction) so a mid-turn move can't revoke it.
+    const supplyEligibleFleets = new Map<string, boolean>();
     const getSupplyGrid = (ownerClass: string | undefined | null): Set<string> => {
       const key = String(ownerClass || "");
       if (!key) return new Set<string>();
