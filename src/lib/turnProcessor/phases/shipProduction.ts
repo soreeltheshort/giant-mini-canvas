@@ -109,6 +109,19 @@ export const shipProductionPhase: Phase = {
       return false;
     };
 
+    // Per-faction supply grid cache (used for instant strikecraft ferrying).
+    const supplyGridCache = new Map<string, Set<string>>();
+    const hexInSupply = (ownerClass: string, x: number, y: number): boolean => {
+      const key = String(ownerClass || "");
+      if (!key) return false;
+      let grid = supplyGridCache.get(key);
+      if (!grid) {
+        grid = computeSupplyGrid(key, mapState.systems, mapState.hexes, facilityTypes as any);
+        supplyGridCache.set(key, grid);
+      }
+      return grid.has(`${x},${y}`);
+    };
+
     /**
      * Per-fleet strike slot ledger, lazily loaded. Tracks REMAINING free
      * fighter/gunship slots as we insert strikecraft this phase. AI-owned
