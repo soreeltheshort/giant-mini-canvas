@@ -1277,6 +1277,7 @@ function InlineRegionDetail({
         </Dialog>
 
         <BuildShipsDialog
+          supplyGrid={supplyGrid}
           open={shipDialogOpen}
           onOpenChange={setShipDialogOpen}
           gameId={gameId}
@@ -1496,6 +1497,7 @@ function InlineArmyDetail({
         combatPointsAvailable={combatPointsAvailable}
         onOrdersChanged={onOrdersChanged}
         supplyGrid={supplyGrid}
+        ownClassification={playerOwnerClassification}
       />
     );
   }

@@ -74,6 +74,8 @@ interface BuildShipsDialogProps {
   gameId?: string;
   systemId?: number;
   ownerClassification?: string;
+  /** Viewer's supply grid ("x,y" keys). Strikecraft ferry freely between in-supply points. */
+  supplyGrid?: Set<string>;
   /** Called after a persisted-queue edit so parent lists can refetch. */
   onQueueChanged?: () => void;
   onConfirm?: (queue: QueuedShip[]) => void;
@@ -110,6 +112,7 @@ export default function BuildShipsDialog({
   gameId,
   systemId,
   ownerClassification,
+  supplyGrid,
   onQueueChanged,
   onConfirm,
 }: BuildShipsDialogProps) {
@@ -338,7 +341,21 @@ export default function BuildShipsDialog({
   };
 
   /**
-   * Strikecraft targeting rule (non-AI): must be within STRIKECRAFT_RANGE hexes
+   * Strikecraft delivery reach: within STRIKECRAFT_RANGE hexes of the producing
+   * planet, OR — when both the producing planet and the destination fleet are
+   * inside the supply grid — any distance (supply logistics ferry them).
+   */
+  const producerInSupply =
+    systemHexX !== undefined && systemHexY !== undefined &&
+    !!supplyGrid?.has(`${systemHexX},${systemHexY}`);
+  const strikeReachable = (f: PlayerFleetOption): boolean => {
+    if (systemHexX === undefined || systemHexY === undefined) return true;
+    if (hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE) return true;
+    return producerInSupply && !!supplyGrid?.has(`${f.hex_x},${f.hex_y}`);
+  };
+
+  /**
+   * Strikecraft targeting rule (non-AI): must be within delivery reach
    * AND the fleet must have free fighter/gunship capacity for that class.
    */
   const fleetsForShip = (shipTypeId: string): PlayerFleetOption[] => {
@@ -348,7 +365,7 @@ export default function BuildShipsDialog({
     if (systemHexX === undefined || systemHexY === undefined) return playerFleets;
     const cls = String(st.class || "");
     return playerFleets.filter(f =>
-      hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE
+      strikeReachable(f)
       && fleetHasSlot(f.fleet_id, cls),
     );
   };
@@ -369,7 +386,7 @@ export default function BuildShipsDialog({
         let dflt = defaultDestination;
         if (isStrike && systemHexX !== undefined && systemHexY !== undefined) {
           const ok = playerFleets.find(f =>
-            hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE
+            strikeReachable(f)
             && fleetHasSlot(f.fleet_id, cls),
           );
           if (!ok) return prev;
@@ -500,7 +517,7 @@ export default function BuildShipsDialog({
                     if (systemHexX === undefined || systemHexY === undefined) return playerFleets;
                     const cls = String(st.class || "");
                     return playerFleets.filter(f =>
-                      hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE
+                      strikeReachable(f)
                       && (f.fleet_id === row.destination_fleet_id || fleetHasSlot(f.fleet_id, cls)),
                     );
                   })();
@@ -665,13 +682,13 @@ export default function BuildShipsDialog({
               const strikecraftBlocked = isStrikecraft &&
                 systemHexX !== undefined && systemHexY !== undefined &&
                 !playerFleets.some(f =>
-                  hexDist(systemHexX, systemHexY, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE
+                  strikeReachable(f)
                   && fleetHasSlot(f.fleet_id, cls),
                 );
               const blockedReason = !isStrikecraft ? "" :
-                !playerFleets.some(f => hexDist(systemHexX, systemHexY!, f.hex_x, f.hex_y) <= STRIKECRAFT_RANGE)
-                  ? `No friendly fleet within ${STRIKECRAFT_RANGE} hexes`
-                  : `No fleet within ${STRIKECRAFT_RANGE} hexes has free ${cls === "GS" ? "gunship" : "fighter"} capacity`;
+                !playerFleets.some(f => strikeReachable(f))
+                  ? `No friendly fleet within ${STRIKECRAFT_RANGE} hexes (or in supply from here)`
+                  : `No reachable fleet has free ${cls === "GS" ? "gunship" : "fighter"} capacity`;
               return (
                 <div key={s.id} className="border border-border rounded-sm p-2 flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -682,7 +699,7 @@ export default function BuildShipsDialog({
                         <span key={t} className="text-[9px] px-1 rounded-sm bg-bronze/20 text-bronze font-semibold">{t}</span>
                       ))}
                       {isStrikecraft && (
-                        <span className="text-[9px] text-bronze italic">arrives instantly · needs fleet ≤{STRIKECRAFT_RANGE} hex w/ capacity</span>
+                        <span className="text-[9px] text-bronze italic">arrives instantly · fleet ≤{STRIKECRAFT_RANGE} hex, or any in-supply fleet</span>
                       )}
                     </div>
                     <p className="text-[10px] text-slate-500">

@@ -1421,6 +1421,7 @@ export type Database = {
       }
       fleets: {
         Row: {
+          auto_resupply: boolean
           created_at: string
           current_ground_invasion: number
           current_supply: number
@@ -1439,6 +1440,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_resupply?: boolean
           created_at?: string
           current_ground_invasion?: number
           current_supply?: number
@@ -1457,6 +1459,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_resupply?: boolean
           created_at?: string
           current_ground_invasion?: number
           current_supply?: number

@@ -20,6 +20,7 @@
 import type { Phase, TurnContext } from "../types";
 import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
+import { computeSupplyGrid } from "@/lib/supplyGrid";
 
 interface MiniShipType {
   id: string;
@@ -107,6 +108,19 @@ export const shipProductionPhase: Phase = {
         if (ownerMatchesFaction(ownerClass, code)) return true;
       }
       return false;
+    };
+
+    // Per-faction supply grid cache (used for instant strikecraft ferrying).
+    const supplyGridCache = new Map<string, Set<string>>();
+    const hexInSupply = (ownerClass: string, x: number, y: number): boolean => {
+      const key = String(ownerClass || "");
+      if (!key) return false;
+      let grid = supplyGridCache.get(key);
+      if (!grid) {
+        grid = computeSupplyGrid(key, mapState.systems, mapState.hexes, facilityTypes as any);
+        supplyGridCache.set(key, grid);
+      }
+      return grid.has(`${x},${y}`);
     };
 
     /**
@@ -345,7 +359,14 @@ export const shipProductionPhase: Phase = {
       // AI strikecraft (fighters/gunships) teleport to their destination
       // fleet regardless of distance — no transit, arrive same turn.
       const aiStrikeTeleport = isStrikecraft(ship) && isAiOwner(ownerClass);
-      if (aiStrikeTeleport || dist <= ship.map_speed) {
+      // Player strikecraft also arrive instantly when BOTH the producing
+      // planet and the destination fleet sit inside the faction's supply
+      // grid — supply logistics ferry them across the network.
+      const supplyStrikeTeleport = isStrikecraft(ship)
+        && !aiStrikeTeleport
+        && hexInSupply(ownerClass, systemHex.x, systemHex.y)
+        && hexInSupply(ownerClass, dest.hex_x, dest.hex_y);
+      if (aiStrikeTeleport || supplyStrikeTeleport || dist <= ship.map_speed) {
         // Clamp strikecraft to destination fleet's free capacity; overflow refunded.
         const fitQty = await clampStrikecraftArrival(dest.fleet_id, ship, row.quantity, ownerClass);
         // Insert directly into game_fleet_ships — one row per ship for HP tracking.

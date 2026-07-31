@@ -647,6 +647,7 @@ function RegionDetail({ id, gameData, mode, gameId, onBuildFacility, playerTreas
         </Dialog>
 
         <BuildShipsDialog
+          supplyGrid={supplyGrid}
           open={shipDialogOpen}
           onOpenChange={setShipDialogOpen}
           gameId={gameId}
@@ -790,6 +791,7 @@ function ArmyDetail({ id, gameData, playerOwnerClassification, fleetOrderContext
         combatPointsAvailable={combatPointsAvailable}
         onOrdersChanged={onOrdersChanged}
         supplyGrid={supplyGrid}
+        ownClassification={playerOwnerClassification}
       />
     );
   }

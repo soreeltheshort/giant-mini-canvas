@@ -10,7 +10,7 @@ import { offsetToCube, cubeDistance } from "@/lib/hexUtils";
 import { isHexBlockedForPlayer } from "@/lib/hexAccess";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
-import { computeSupplyGrid } from "@/lib/supplyGrid";
+import { computeSupplyGrid, collectOwnedPlanetHexes } from "@/lib/supplyGrid";
 import { useBusyCursor } from "@/hooks/useBusyCursor";
 
 import GameHeader from "@/components/game-shell/GameHeader";
@@ -914,6 +914,13 @@ const PlayerGame = () => {
       dbFacilityTypesFull as any,
     );
   }, [mapState, player?.own_classification, dbFacilityTypesFull]);
+
+  // Hexes of planets this player owns — fleets within half their map speed of
+  // one of these may resupply even when outside the supply grid.
+  const ownedPlanetHexes = useMemo(() => {
+    if (!mapState || !player?.own_classification) return [] as Array<{ x: number; y: number }>;
+    return collectOwnedPlanetHexes(player.own_classification, mapState.systems, mapState.hexes);
+  }, [mapState, player?.own_classification]);
 
 
 
