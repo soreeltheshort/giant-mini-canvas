@@ -53,6 +53,7 @@ interface FleetDetail {
   special2_role: string;
   current_supply: number;
   current_ground_invasion: number;
+  auto_resupply: boolean;
 }
 
 /** Per-ship-type capacity + cost data needed for strikecraft build orders. */
@@ -114,6 +115,8 @@ interface Props {
   onOrdersChanged?: () => void;
   /** Set of "x,y" hex keys currently in the viewer's supply grid. */
   supplyGrid?: Set<string>;
+  /** Viewing player's own classification — used to find owned planets for the resupply reach rule. */
+  ownClassification?: string;
 }
 
 interface PendingOrder {
@@ -128,7 +131,7 @@ export interface BuildItem {
   quantity: number;
 }
 
-export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], allSystems = [], allHexes, canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, supplyGrid }: Props) {
+export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = [], allSystems = [], allHexes, canEdit, orderContext, onStartTargeting, combatPointsAvailable, onOrdersChanged, supplyGrid, ownClassification }: Props) {
   const { toast } = useToast();
   const [detail, setDetail] = useState<FleetDetail | null>(null);
   const [ships, setShips] = useState<FleetShipRow[]>([]);
@@ -231,7 +234,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
       const [{ data: f }, { data: fs }, { data: po }] = await Promise.all([
         supabase
           .from("fleets")
-          .select("id, name, readiness, next_readiness, special1_role, special2_role, current_supply, current_ground_invasion")
+          .select("id, name, readiness, next_readiness, special1_role, special2_role, current_supply, current_ground_invasion, auto_resupply")
           .eq("id", sourceId)
           .maybeSingle(),
         supabase
@@ -259,6 +262,7 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
           special1_role: f.special1_role || "Flank",
           special2_role: f.special2_role || "Flank",
           current_supply: (f as any).current_supply ?? 0,
+          auto_resupply: (f as any).auto_resupply !== false,
           current_ground_invasion: (f as any).current_ground_invasion ?? 0,
         });
       } else {
@@ -599,8 +603,27 @@ export default function FleetDetailContent({ fleet, shipTypes = [], allFleets = 
     queueMicrotask(() => setReplenishAmount(supplyDelta));
   }
 
-  // ── Replenish eligibility: fleet's current hex must be in the player's supply grid ──
-  const inSupplyGrid = canEdit ? !!supplyGrid?.has(`${fleet.hex_x},${fleet.hex_y}`) : false;
+  // ── Replenish eligibility ──
+  // In the supply grid OR within floor(map_speed / 2) hexes of an owned planet.
+  const ownedPlanetHexes = (() => {
+    if (!ownClassification || !allHexes) return [] as Array<{ x: number; y: number }>;
+    const hexById = new Map<number, { x: number; y: number }>();
+    for (const h of allHexes.values()) hexById.set((h as any).hex_id, { x: h.x, y: h.y });
+    const out: Array<{ x: number; y: number }> = [];
+    for (const sys of allSystems) {
+      if (!ownerMatchesFaction((sys as any).owner, ownClassification)) continue;
+      const hx = hexById.get((sys as any).hex_id);
+      if (hx) out.push(hx);
+    }
+    return out;
+  })();
+  const resupplyEligibility = canFleetResupply(
+    { x: fleet.hex_x, y: fleet.hex_y },
+    attackRangeBaseSpeed,
+    ownedPlanetHexes,
+    supplyGrid,
+  );
+  const inSupplyGrid = canEdit ? resupplyEligibility.ok : false;
 
   const replenishOrder = pendingOrders.find(
     o => o.order_type === "other" && o.order_json?.kind === "replenish_supply",
