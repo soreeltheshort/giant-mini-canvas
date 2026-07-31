@@ -245,6 +245,10 @@ export const groundCombatPhase: Phase = {
         if (tgtFleet) sys = sysOnHex(tgtFleet.hex_x, tgtFleet.hex_y);
       }
       if (!sys) continue;
+      // Starbases have no surface — they cannot be invaded, only destroyed in
+      // space combat (see phases/combat.ts).
+      if ((sys.system_type || "system") === "station") continue;
+
 
       const sysHex = Array.from(mapState.hexes.values()).find(h => h.hex_id === sys.hex_id);
       if (!sysHex) continue;
