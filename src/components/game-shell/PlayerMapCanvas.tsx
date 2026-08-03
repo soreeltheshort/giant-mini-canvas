@@ -601,7 +601,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
     ctx.stroke();
 
     ctx.restore();
-  }, [hexes, systems, visibleSet, everSeenSet, visibleFleets, debugVisibleHexKeys, everSeenHexKeys, scoutedHexIds, orderArrow, ownClassification]);
+  }, [hexes, systems, visibleSet, everSeenSet, visibleFleets, debugVisibleHexKeys, everSeenHexKeys, scoutedHexIds, orderArrow, ownClassification, supplyGrid, targetingMode, validTargetHexKeys, infectedHexOwners]);
 
   useEffect(() => {
     const loop = () => {
