@@ -61,6 +61,8 @@ interface Props {
    *  When provided, a bronze outline is drawn along edges where in-supply
    *  hexes border out-of-supply hexes (or the map edge). */
   supplyGrid?: Set<string>;
+  /** When in "hex" targeting mode, restricts and highlights the legal hexes. */
+  validTargetHexKeys?: Set<string> | null;
   className?: string;
 }
 
