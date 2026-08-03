@@ -601,10 +601,7 @@ function FoundStarbaseCard({
   return (
     <ImperialCard title="Found Starbase">
       <div className="space-y-1.5">
-        <p className="text-[10px] text-muted-foreground leading-snug">
-          Raise a new starbase on an empty hex inside your supply grid.
-          <span className="block text-bronze-dark font-semibold mt-0.5">Cost: 1 Admin Point</span>
-        </p>
+        <p className="text-[10px] text-bronze-dark font-semibold leading-snug">Cost: 1 Admin Point</p>
         {!open ? (
           <button
             onClick={() => setOpen(true)}

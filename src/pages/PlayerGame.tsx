@@ -917,6 +917,21 @@ const PlayerGame = () => {
     );
   }, [mapState, player?.own_classification, dbFacilityTypesFull]);
 
+  // Hexes eligible to found a starbase: in supply grid AND no system present.
+  const starbaseCandidateHexKeys = useMemo(() => {
+    const set = new Set<string>();
+    if (!mapState) return set;
+    const occupied = new Set<number>();
+    for (const s of mapState.systems.values()) occupied.add(s.hex_id);
+    for (const hk of supplyGrid) {
+      const hex = mapState.hexes.get(hk);
+      if (!hex) continue;
+      if (hex.has_system || occupied.has(hex.hex_id)) continue;
+      set.add(hk);
+    }
+    return set;
+  }, [mapState, supplyGrid]);
+
   // Hexes of planets this player owns — fleets within half their map speed of
   // one of these may resupply even when outside the supply grid.
   const ownedPlanetHexes = useMemo(() => {
@@ -2168,6 +2183,9 @@ const PlayerGame = () => {
               currentSelectionId={selection.type === "army" || selection.type === "region" ? selection.id : null}
               infectedHexOwners={infectedHexOwners}
               supplyGrid={supplyGrid}
+              validTargetHexKeys={
+                targeting?.orderType === "found_starbase" ? starbaseCandidateHexKeys : null
+              }
               className="flex-1"
             />
           ) : (

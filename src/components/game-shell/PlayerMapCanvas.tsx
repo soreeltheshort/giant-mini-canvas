@@ -61,6 +61,8 @@ interface Props {
    *  When provided, a bronze outline is drawn along edges where in-supply
    *  hexes border out-of-supply hexes (or the map edge). */
   supplyGrid?: Set<string>;
+  /** When in "hex" targeting mode, restricts and highlights the legal hexes. */
+  validTargetHexKeys?: Set<string> | null;
   className?: string;
 }
 
@@ -123,6 +125,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
   currentSelectionId = null,
   infectedHexOwners,
   supplyGrid,
+  validTargetHexKeys = null,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -389,6 +392,30 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.restore();
     }
 
+    // Legal-target highlight while a restricted hex targeting mode is armed.
+    if (targetingMode === "hex" && validTargetHexKeys && validTargetHexKeys.size > 0) {
+      ctx.save();
+      for (const hk of validTargetHexKeys) {
+        const hex = hexes.get(hk);
+        if (!hex) continue;
+        const [px, py] = hexToPixel(hex.x, hex.y, size);
+        if (px < left || px > right || py < top || py > bottom) continue;
+        const corners = hexCorners(px, py, size);
+        ctx.beginPath();
+        ctx.moveTo(corners[0][0], corners[0][1]);
+        for (let i = 1; i < 6; i++) ctx.lineTo(corners[i][0], corners[i][1]);
+        ctx.closePath();
+        ctx.fillStyle = "rgba(200,169,110,0.35)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(232,203,140,0.95)";
+        ctx.lineWidth = Math.max(1, size * 0.1);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+
+
 
     // Build hexId -> hex lookup
     const hexIdMap = new Map<number, HexData>();
@@ -574,7 +601,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
     ctx.stroke();
 
     ctx.restore();
-  }, [hexes, systems, visibleSet, everSeenSet, visibleFleets, debugVisibleHexKeys, everSeenHexKeys, scoutedHexIds, orderArrow, ownClassification]);
+  }, [hexes, systems, visibleSet, everSeenSet, visibleFleets, debugVisibleHexKeys, everSeenHexKeys, scoutedHexIds, orderArrow, ownClassification, supplyGrid, targetingMode, validTargetHexKeys, infectedHexOwners]);
 
   useEffect(() => {
     const loop = () => {
@@ -702,6 +729,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
 
         // Targeting mode: capture click as hex or enemy fleet target
         if (targetingMode === "hex") {
+          if (validTargetHexKeys && !validTargetHexKeys.has(hk)) return;
           if (hex) onHexTargetPicked?.({ x: coords[0], y: coords[1] });
           return;
         }
@@ -744,7 +772,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
         }
       }
     },
-    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, hexKeyToFleets, currentSelectionId, onSystemClick, onFleetClick, targetingMode, onHexTargetPicked, onFleetTargetPicked, onSystemTargetPicked]
+    [isDragging, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, hexKeyToFleets, currentSelectionId, onSystemClick, onFleetClick, targetingMode, validTargetHexKeys, onHexTargetPicked, onFleetTargetPicked, onSystemTargetPicked]
   );
 
   const handleMouseLeave = useCallback(() => {
