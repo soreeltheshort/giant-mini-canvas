@@ -622,9 +622,10 @@ function FoundStarbaseCard({
               <button
                 onClick={() => { if (!canConfirm) return; onStartStarbaseTargeting(name.trim()); setName(""); setOpen(false); }}
                 disabled={!canConfirm}
-                className="flex-1 py-1.5 rounded-sm bg-crimson text-ivory text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={name.trim().length === 0 ? "Enter a starbase name first" : undefined}
+                className="flex-1 py-1.5 rounded-sm bg-crimson text-ivory text-[11px] font-heading uppercase tracking-wider hover:bg-crimson-light transition-colors disabled:opacity-40 disabled:bg-muted disabled:text-muted-foreground disabled:pointer-events-none"
               >
-                Pick Hex
+                {name.trim().length === 0 ? "Name Required" : "Pick Hex"}
               </button>
               <button
                 onClick={() => { setName(""); setOpen(false); }}
