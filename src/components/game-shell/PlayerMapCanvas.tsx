@@ -392,6 +392,30 @@ const PlayerMapCanvas: React.FC<Props> = ({
       ctx.restore();
     }
 
+    // Legal-target highlight while a restricted hex targeting mode is armed.
+    if (targetingMode === "hex" && validTargetHexKeys && validTargetHexKeys.size > 0) {
+      ctx.save();
+      for (const hk of validTargetHexKeys) {
+        const hex = hexes.get(hk);
+        if (!hex) continue;
+        const [px, py] = hexToPixel(hex.x, hex.y, size);
+        if (px < left || px > right || py < top || py > bottom) continue;
+        const corners = hexCorners(px, py, size);
+        ctx.beginPath();
+        ctx.moveTo(corners[0][0], corners[0][1]);
+        for (let i = 1; i < 6; i++) ctx.lineTo(corners[i][0], corners[i][1]);
+        ctx.closePath();
+        ctx.fillStyle = "rgba(200,169,110,0.35)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(232,203,140,0.95)";
+        ctx.lineWidth = Math.max(1, size * 0.1);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+
+
 
     // Build hexId -> hex lookup
     const hexIdMap = new Map<number, HexData>();
