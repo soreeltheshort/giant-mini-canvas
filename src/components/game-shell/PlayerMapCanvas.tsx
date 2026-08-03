@@ -729,6 +729,7 @@ const PlayerMapCanvas: React.FC<Props> = ({
 
         // Targeting mode: capture click as hex or enemy fleet target
         if (targetingMode === "hex") {
+          if (validTargetHexKeys && !validTargetHexKeys.has(hk)) return;
           if (hex) onHexTargetPicked?.({ x: coords[0], y: coords[1] });
           return;
         }
