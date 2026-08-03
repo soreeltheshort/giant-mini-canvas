@@ -2168,6 +2168,9 @@ const PlayerGame = () => {
               currentSelectionId={selection.type === "army" || selection.type === "region" ? selection.id : null}
               infectedHexOwners={infectedHexOwners}
               supplyGrid={supplyGrid}
+              validTargetHexKeys={
+                targeting?.orderType === "found_starbase" ? starbaseCandidateHexKeys : null
+              }
               className="flex-1"
             />
           ) : (
