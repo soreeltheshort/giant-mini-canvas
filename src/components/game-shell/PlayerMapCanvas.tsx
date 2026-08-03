@@ -705,13 +705,18 @@ const PlayerMapCanvas: React.FC<Props> = ({
       setHoveredFleet(fleet || null);
       setHoveredSystem(sys);
 
-      if (fleet || sys) {
+      if (targetingMode === "hex") {
+        // While picking a hex, legality is what matters — not whether a planet
+        // or fleet happens to sit there.
+        const legal = !validTargetHexKeys || validTargetHexKeys.has(hk);
+        setCursorStyle(hex && legal ? "crosshair" : "not-allowed");
+      } else if (fleet || sys) {
         setCursorStyle("pointer");
       } else {
         setCursorStyle("grab");
       }
     },
-    [isDragging, mouseDownPos, dragStart, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet]
+    [isDragging, mouseDownPos, dragStart, getHexCoordsAtMouse, hexes, hexIdToSystem, hexKeyToFleet, targetingMode, validTargetHexKeys]
   );
 
   const handleMouseUp = useCallback(
