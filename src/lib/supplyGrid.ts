@@ -1,15 +1,18 @@
 /**
  * Supply Grid System
  *
- * A faction's supply grid is the set of hexes considered "in supply" for that
- * faction on the current turn. A hex is in supply if either:
+ * A faction's supply grid is a SINGLE CONTIGUOUS region rooted in that
+ * faction's province. A hex is in supply if either:
  *   1. Its `classification` equals the player's own classification
  *      (their province — always in supply), OR
- *   2. It lies within `supply_range` of an owned planet that hosts a facility
- *      with `supply_range > 0`. Largest supply_range per planet wins;
- *      multiple planets each project their own radius (union).
+ *   2. It lies within `supply_range` of an owned planet/starbase that hosts a
+ *      facility with `supply_range > 0` AND whose own hex is already in
+ *      supply. Emitters therefore chain outward from the province; an emitter
+ *      that is cut off (planet taken, relay starbase destroyed) projects
+ *      nothing and everything it used to cover is orphaned off the grid.
  *
  * Used to gate fleet supply replenishment and facility construction.
+
  */
 import type { SystemData, HexData } from "./mapTypes";
 import { hexKey } from "./mapTypes";
