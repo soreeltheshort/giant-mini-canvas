@@ -1,15 +1,18 @@
 /**
  * Supply Grid System
  *
- * A faction's supply grid is the set of hexes considered "in supply" for that
- * faction on the current turn. A hex is in supply if either:
+ * A faction's supply grid is a SINGLE CONTIGUOUS region rooted in that
+ * faction's province. A hex is in supply if either:
  *   1. Its `classification` equals the player's own classification
  *      (their province — always in supply), OR
- *   2. It lies within `supply_range` of an owned planet that hosts a facility
- *      with `supply_range > 0`. Largest supply_range per planet wins;
- *      multiple planets each project their own radius (union).
+ *   2. It lies within `supply_range` of an owned planet/starbase that hosts a
+ *      facility with `supply_range > 0` AND whose own hex is already in
+ *      supply. Emitters therefore chain outward from the province; an emitter
+ *      that is cut off (planet taken, relay starbase destroyed) projects
+ *      nothing and everything it used to cover is orphaned off the grid.
  *
  * Used to gate fleet supply replenishment and facility construction.
+
  */
 import type { SystemData, HexData } from "./mapTypes";
 import { hexKey } from "./mapTypes";
@@ -68,7 +71,13 @@ export function computeSupplyGrid(
   const hexById = new Map<number, HexData>();
   for (const h of hexes.values()) hexById.set(h.hex_id, h);
 
-  // 2. Union of radii from owned planets with supply-emitting facilities.
+  // 2. Contiguous growth from the province seed. An emitter only projects
+  //    supply if its OWN hex is already in supply — i.e. it is connected back
+  //    to the province through an unbroken chain. Repeat until no emitter
+  //    activates, so chains of relays extend the grid but orphaned outposts
+  //    (planet captured / starbase destroyed mid-chain) contribute nothing.
+  interface Emitter { x: number; y: number; range: number; active: boolean }
+  const emitters: Emitter[] = [];
   for (const sys of systems.values()) {
     if (!ownerMatchesFaction(sys.owner, ownClassification)) continue;
     // A starbase only projects supply once construction is finished.
@@ -82,15 +91,32 @@ export function computeSupplyGrid(
     if (maxRange <= 0) continue;
     const hex = hexById.get(sys.hex_id);
     if (!hex) continue;
-    const [cx, cy, cz] = offsetToCube(hex.x, hex.y);
-    // Cheap: iterate all hexes and test cube distance. 141x141 is fine.
-    for (const h of hexes.values()) {
-      const [hx, hy, hz] = offsetToCube(h.x, h.y);
-      if (cubeDistance(cx, cy, cz, hx, hy, hz) <= maxRange) {
-        grid.add(hexKey(h.x, h.y));
+    emitters.push({ x: hex.x, y: hex.y, range: maxRange, active: false });
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const em of emitters) {
+      if (em.active) continue;
+      if (!grid.has(hexKey(em.x, em.y))) continue;
+      em.active = true;
+      changed = true;
+      const [cx, cy, cz] = offsetToCube(em.x, em.y);
+      // Enumerate the bounding box around the emitter rather than the whole
+      // 141x141 map; +1 on x covers odd-r row staggering.
+      for (let y = em.y - em.range; y <= em.y + em.range; y++) {
+        for (let x = em.x - em.range - 1; x <= em.x + em.range + 1; x++) {
+          const key = hexKey(x, y);
+          if (grid.has(key)) continue;
+          if (!hexes.has(key)) continue;
+          const [hx, hy, hz] = offsetToCube(x, y);
+          if (cubeDistance(cx, cy, cz, hx, hy, hz) <= em.range) grid.add(key);
+        }
       }
     }
   }
+
 
   return grid;
 }
