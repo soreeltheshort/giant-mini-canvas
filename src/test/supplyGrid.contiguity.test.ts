@@ -101,10 +101,12 @@ describe("supply grid — contiguity from the province", () => {
 
   it("re-establishes the chain once the middle link is retaken", () => {
     const systems = new Map<number, SystemData>([
-      [1, makeSystem(1, at(4), "PROVINCE_4")],
-      [2, makeSystem(2, at(6), "PROVINCE_4")],
+      [1, makeSystem(1, at(2), "PROVINCE_4")],
+      [2, makeSystem(2, at(4), "PROVINCE_4")],
+      [3, makeSystem(3, at(6), "PROVINCE_4")],
     ]);
     const grid = computeSupplyGrid("PROVINCE_4", systems, hexes, FACILITY_TYPES);
     expect(grid.has(hexKey(8, 0))).toBe(true);
   });
+
 });
