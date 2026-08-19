@@ -171,9 +171,26 @@ export default function AIInspector() {
               {isTestMode ? "Disable test mode" : "Enable test mode"}
             </Button>
           </div>
-          <div className="rounded border border-border/60 bg-muted/30 px-3 py-2 text-xs">
-            <span className="font-semibold">AI goal slates (Phase 2a):</span>{" "}
-            Always ON — every processed turn recomputes the 3-slot goal slate for each AI faction.
+          <div className="flex items-center justify-between gap-3 rounded border border-border/60 bg-muted/30 px-3 py-2 text-xs">
+            <div>
+              <span className="font-semibold">AI engine (slates / plans / actions):</span>{" "}
+              {currentGame?.enable_ai_slates
+                ? "ON — every processed turn recomputes goal slates, binds plans and executes AI actions."
+                : "OFF — all AI phases skip this game and log an ai_skip entry."}
+            </div>
+            <Button
+              size="sm"
+              variant={currentGame?.enable_ai_slates ? "secondary" : "outline"}
+              onClick={async () => {
+                const next = !currentGame?.enable_ai_slates;
+                const { error } = await supabase.from("games").update({ enable_ai_slates: next } as any).eq("id", gameId);
+                if (error) { toast.error(error.message); return; }
+                setGames((gs) => gs.map((g) => g.id === gameId ? { ...g, enable_ai_slates: next } : g));
+                toast.success(`AI engine ${next ? "enabled" : "disabled"}`);
+              }}
+            >
+              {currentGame?.enable_ai_slates ? "Disable AI" : "Enable AI"}
+            </Button>
           </div>
 
         </div>

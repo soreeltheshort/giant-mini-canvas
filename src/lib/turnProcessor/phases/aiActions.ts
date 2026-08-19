@@ -39,9 +39,19 @@ const DEFAULT_BUDGET = 300;
 
 
 export const aiActionsPhase: Phase = {
-  name: "ai_plans" as any,
+  name: "ai_actions",
   label: "AI Actions",
   async run(ctx: TurnContext) {
+    if (!ctx.enableAiSlates) {
+      ctx.logs.push({
+        game_id: ctx.gameId,
+        turn_number: ctx.currentTurn,
+        phase: "ai_actions",
+        log_type: "ai_skip",
+        message: "Skipped — enable_ai_slates is false",
+      });
+      return;
+    }
     const { supabase, gameId, currentTurn, mapState, facilityTypes } = ctx;
 
     // 1. AI factions
@@ -106,7 +116,7 @@ export const aiActionsPhase: Phase = {
       const hub = selectProductionHub(mapState, factionCode, facilityTypes, hullSortByCode);
       if (!hub) {
         ctx.logs.push({
-          game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+          game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
           message: `[${factionCode}] enhance_offense: no production hub (no owned shipyard)`,
           details_json: { plan_id: plan.id },
@@ -129,7 +139,7 @@ export const aiActionsPhase: Phase = {
       );
       if (!composition) {
         ctx.logs.push({
-          game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+          game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
           message: `[${factionCode}] enhance_offense: composer returned no template (reason: ${composerDiag.reason}); budget ${budget}, eligible=${composerDiag.eligible_fleet_ids}/${composerDiag.total_fleets_scanned}, nonempty=${composerDiag.nonempty_templates}, ship_rows=${composerDiag.ship_rows_for_eligible}`,
           details_json: { plan_id: plan.id, budget, composer_diagnostics: composerDiag },
@@ -147,7 +157,7 @@ export const aiActionsPhase: Phase = {
       } else {
         if (!gameOwnerId) {
           ctx.logs.push({
-            game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+            game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
             log_type: "ai_action_error",
             message: `[${factionCode}] enhance_offense: fleet create failed: game owner unavailable`,
             details_json: { plan_id: plan.id },
@@ -166,7 +176,7 @@ export const aiActionsPhase: Phase = {
           .single();
         if (ftErr || !fleetTemplate?.id) {
           ctx.logs.push({
-            game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+            game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
             log_type: "ai_action_error",
             message: `[${factionCode}] enhance_offense: fleet template create failed: ${ftErr?.message || "unknown"}`,
             details_json: { plan_id: plan.id, error: ftErr?.message },
@@ -191,7 +201,7 @@ export const aiActionsPhase: Phase = {
           .single();
         if (nfErr || !newFleet?.id) {
           ctx.logs.push({
-            game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+            game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
             log_type: "ai_action_error",
             message: `[${factionCode}] enhance_offense: fleet create failed: ${nfErr?.message || "unknown"}`,
             details_json: { plan_id: plan.id, error: nfErr?.message },
@@ -239,7 +249,7 @@ export const aiActionsPhase: Phase = {
       // will re-select next turn only if still active; that's expected.
       if (shipsNeeded.length === 0) {
         ctx.logs.push({
-          game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+          game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
           message: `[${factionCode}] enhance_offense: plan fleet "${fleetName}" already at target composition — nothing to queue`,
           details_json: { plan_id: plan.id, fleet_id: targetFleetId, template_id: composition.template_id },
@@ -253,7 +263,7 @@ export const aiActionsPhase: Phase = {
       );
       if (yards.length === 0) {
         ctx.logs.push({
-          game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+          game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
           message: `[${factionCode}] enhance_offense: no shipyards within ${HUB_RADIUS} of hub ${hub.system.system_name}`,
           details_json: { plan_id: plan.id, hub_system_id: hub.system.system_id },
@@ -330,7 +340,7 @@ export const aiActionsPhase: Phase = {
           ? "no_ships_affordable"
           : "plan_fleet_blocked";
         ctx.logs.push({
-          game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+          game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: `ai_action_skip`,
           message: `[${factionCode}] enhance_offense: ${reason} for "${fleetName}" (treasury ${treasury0}, ${shipsNeeded.length} ship(s) needed)`,
           details_json: {
@@ -355,7 +365,7 @@ export const aiActionsPhase: Phase = {
       // 3h. Audit logs
       const verb = priorFleet ? "reinforced" : "raised";
       ctx.logs.push({
-        game_id: gameId, turn_number: currentTurn, phase: "ai_plans" as any,
+        game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
         log_type: "ai_action",
         message: `[${factionCode}] enhance_offense: ${verb} fleet "${fleetName}" at (${spawn.x},${spawn.y}); queued ${queued.length} ship(s) across ${yards.length} shipyard(s); treasury ${treasury0} → ${treasury}`,
         details_json: {

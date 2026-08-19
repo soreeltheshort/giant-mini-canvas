@@ -92,12 +92,13 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
   });
 
   // Load orders, players, and faction catalog (for owner→faction id mapping).
-  const [{ data: ordersRaw }, { data: playersRaw }, { data: factionsRaw }] = await perf.time("load.orders+players+factions", () => Promise.all([
+  const [{ data: ordersRaw }, { data: playersRaw }, { data: factionsRaw }, { data: gameRow }] = await perf.time("load.orders+players+factions+game", () => Promise.all([
     (supabase as any).from("player_orders").select("*").eq("game_id", gameId).eq("turn_number", currentTurn),
     (supabase as any).from("game_factions")
       .select("id, user_id, player_slot, faction_id, treasury, admin_capability, combat_capability, visible_system_ids, scouted_hex_ids")
       .eq("game_id", gameId),
     (supabase as any).from("factions").select("id, name, code_name, infect"),
+    (supabase as any).from("games").select("enable_ai_slates").eq("id", gameId).maybeSingle(),
   ]));
 
   const orders: ConditionalOrder[] = ordersRaw || [];
@@ -128,6 +129,7 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     playerEcon: new Map(),
     logs: [],
     perf,
+    enableAiSlates: (gameRow as any)?.enable_ai_slates ?? false,
   };
 
   // Phase header log (per turn)

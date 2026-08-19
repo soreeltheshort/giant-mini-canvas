@@ -75,4 +75,20 @@ export const RECOMMENDED_GOAL_WEIGHTS: Record<string, Record<string, number>> = 
     degrade_enemy: 0.5,
     conquer: 0.3,
   },
+  Synod: {
+    colonize: 0,
+    expand_economy: 0,
+    enhance_offense: 1.0,
+    bolster_defense: 0.6,
+    degrade_enemy: 0,
+    conquer: 1.0,
+  },
+  "Neutral Colonies": {
+    colonize: 0,
+    expand_economy: 0,
+    enhance_offense: 0,
+    bolster_defense: 1.0,
+    degrade_enemy: 0,
+    conquer: 0,
+  },
 };
