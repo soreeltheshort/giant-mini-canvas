@@ -12,6 +12,17 @@ export const aiSlatesPhase: Phase = {
   name: "ai_slates" as any,
   label: "AI Slates",
   async run(ctx: TurnContext) {
+    if (!ctx.enableAiSlates) {
+      ctx.logs.push({
+        game_id: ctx.gameId,
+        turn_number: ctx.currentTurn,
+        phase: "ai_slates" as any,
+        log_type: "ai_skip",
+        message: "Skipped — enable_ai_slates is false",
+      });
+      return;
+    }
+
     const { supabase, gameId, currentTurn, mapState } = ctx;
 
 

@@ -13,6 +13,17 @@ export const aiPlansPhase: Phase = {
   name: "ai_plans" as any,
   label: "AI Plans",
   async run(ctx: TurnContext) {
+    if (!ctx.enableAiSlates) {
+      ctx.logs.push({
+        game_id: ctx.gameId,
+        turn_number: ctx.currentTurn,
+        phase: "ai_plans" as any,
+        log_type: "ai_skip",
+        message: "Skipped — enable_ai_slates is false",
+      });
+      return;
+    }
+
     const { supabase, gameId, currentTurn, mapState } = ctx;
 
     const { data: gfRows } = await (supabase as any)

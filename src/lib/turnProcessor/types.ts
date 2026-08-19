@@ -12,7 +12,7 @@ import type { ShipTypeForUpkeep } from "@/lib/turnEngine";
 import type { FactionMeta } from "./ownerKey";
 import type { PerfTimer } from "./perf";
 
-export type PhaseName = "economy" | "movement" | "visibility" | "combat" | "ground_combat" | "infect_intel_leech" | "threat_assessment" | "ai_slates" | "ai_plans";
+export type PhaseName = "economy" | "movement" | "visibility" | "combat" | "ground_combat" | "infect_intel_leech" | "threat_assessment" | "ai_slates" | "ai_plans" | "ai_actions";
 
 /** A single conditional order, as stored in player_orders. */
 export interface ConditionalOrder {
@@ -85,6 +85,9 @@ export interface TurnContext {
 
   /** Optional perf timer (admin-only). Phases may push nested timings via `perf?.time(...)`. */
   perf?: PerfTimer;
+
+  /** Master AI switch (games.enable_ai_slates). When false, all AI phases skip. */
+  enableAiSlates: boolean;
 }
 
 /** A phase definition. Phases are pure-ish functions over the context. */
