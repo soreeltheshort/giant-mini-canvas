@@ -63,6 +63,34 @@ export const DEFAULT_PERSONAS: DefaultPersona[] = [
       diplomacy: 0.3,
     },
   },
+  {
+    name: "Synod",
+    description:
+      "Dormant until sighted. Masses force against a detected target, attacks when the odds favor it, falls back to rebuilding on failure. No diplomatic or economic behavior.",
+    traits: {
+      aggression: 0.9,
+      expansionism: 0.5,
+      economic_focus: 0.1,
+      risk_tolerance: 0.6,
+      loyalty: 0.5,
+      paranoia: 0.5,
+      diplomacy: 0.0,
+    },
+  },
+  {
+    name: "Neutral Colonies",
+    description:
+      "Dormant until sighted. Builds and holds defensive posture only. No expansion, no offense, no targeting beyond threat-in-range.",
+    traits: {
+      aggression: 0.1,
+      expansionism: 0.05,
+      economic_focus: 0.3,
+      risk_tolerance: 0.1,
+      loyalty: 0.5,
+      paranoia: 0.9,
+      diplomacy: 0.3,
+    },
+  },
 ];
 
 async function backfillGoalWeights(personaId: string, personaName: string) {
