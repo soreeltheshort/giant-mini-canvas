@@ -2802,6 +2802,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_game: { Args: { _game_id: string }; Returns: boolean }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -2819,6 +2820,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
