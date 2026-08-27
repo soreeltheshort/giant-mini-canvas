@@ -27,6 +27,9 @@
 import type { Phase, TurnContext } from "../types";
 import { selectProductionHub, selectSpawnHex, shipyardsWithinRange } from "@/lib/ai/productionHub";
 import { composeFleetFromTemplates } from "@/lib/ai/fleetComposer";
+import { decideBolsterDefense } from "@/lib/ai/bolsterDefense";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
+
 
 const HUB_RADIUS = 8;
 // Aspirational target size for a raised fleet. Independent of current
@@ -74,10 +77,11 @@ export const aiActionsPhase: Phase = {
       .eq("status", "active")
       .gte("feasibility", 0.5)
       .in("player_id", aiFactions.map((f) => f.id));
-    const plans = (planRows || []).filter(
-      (p: any) => p.ai_goals?.goal_type === "enhance_offense",
-    );
-    if (plans.length === 0) return;
+    const allPlans = (planRows || []) as any[];
+    const plans = allPlans.filter((p: any) => p.ai_goals?.goal_type === "enhance_offense");
+    const defensePlans = allPlans.filter((p: any) => p.ai_goals?.goal_type === "bolster_defense");
+    if (plans.length === 0 && defensePlans.length === 0) return;
+
 
     // 3. Hull class sort order
     const { data: hullRows } = await (supabase as any)
@@ -406,5 +410,101 @@ export const aiActionsPhase: Phase = {
       });
 
     }
+
+    // ---------------------------------------------------------------
+    // 4. bolster_defense — draft garrison at the target system, or start
+    //    one defense facility when the garrison is already at capacity.
+    // ---------------------------------------------------------------
+    for (const plan of defensePlans) {
+      const faction = aiFactions.find((f) => f.id === plan.player_id);
+      if (!faction) continue;
+      const factionCode = faction.factions?.code_name || "";
+      const skip = (reason: string, extra: any = {}) => {
+        ctx.logs.push({
+          game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
+          log_type: "ai_action_skip",
+          message: `[${factionCode}] bolster_defense: ${reason}`,
+          details_json: { plan_id: plan.id, ...extra },
+        });
+      };
+
+      if (plan.target_kind !== "system" || !plan.target_id) {
+        skip("no system target bound");
+        continue;
+      }
+      const sysId = Number(plan.target_id);
+      const sys = mapState.systems.get(sysId);
+      if (!sys) { skip(`target system ${plan.target_id} not found`); continue; }
+      if (!ownerMatchesFaction(sys.owner, factionCode)) {
+        skip(`${sys.system_name} no longer owned`, { system_id: sysId, owner: sys.owner });
+        continue;
+      }
+
+      const treasuryBefore = Number(faction.treasury) || 0;
+      const decision = decideBolsterDefense(sys, facilityTypes, treasuryBefore);
+      if (decision.total_cost <= 0) {
+        skip(`${sys.system_name}: ${decision.reason}`, {
+          system_id: sysId, treasury: treasuryBefore,
+          cur: sys.current_ground_defenses, max: sys.max_ground_defenses,
+        });
+        continue;
+      }
+
+      let summary = "";
+      if (decision.draft > 0) {
+        mapState.systems.set(sysId, {
+          ...sys,
+          current_ground_defenses: (Number(sys.current_ground_defenses) || 0) + decision.draft,
+        });
+        summary = `drafted ${decision.draft} garrison at ${sys.system_name}`;
+      } else if (decision.facility) {
+        const turns = Math.max(1, Number(decision.facility.turns_to_build) || 1);
+        mapState.systems.set(sysId, {
+          ...sys,
+          facilities_in_production: [
+            ...((sys.facilities_in_production as any[]) || []),
+            { facility_type_id: decision.facility.id, turns_remaining: turns },
+          ],
+        });
+        summary = `started ${decision.facility.name} (${turns}T) at ${sys.system_name}`;
+      }
+
+      const treasuryAfter = treasuryBefore - decision.total_cost;
+      await (supabase as any)
+        .from("game_factions")
+        .update({ treasury: treasuryAfter })
+        .eq("id", faction.id);
+      faction.treasury = treasuryAfter;
+
+      ctx.logs.push({
+        game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
+        log_type: "ai_action",
+        message: `[${factionCode}] bolster_defense: ${summary}; treasury ${treasuryBefore} → ${treasuryAfter}`,
+        details_json: {
+          plan_id: plan.id, faction: factionCode, goal: "bolster_defense",
+          system_id: sysId, system_name: sys.system_name,
+          draft: decision.draft,
+          facility_type_id: decision.facility?.id || null,
+          facility_name: decision.facility?.name || null,
+          cost: decision.total_cost,
+          treasury_before: treasuryBefore, treasury_after: treasuryAfter,
+        },
+      });
+
+      await (supabase as any).from("ai_decision_log").insert({
+        game_id: gameId,
+        player_id: faction.id,
+        turn_number: currentTurn,
+        phase: "actions",
+        summary: `bolster_defense → ${summary} (₡${decision.total_cost})`,
+        details_json: {
+          plan_id: plan.id, slot: plan.slate_slot, system_id: sysId,
+          draft: decision.draft,
+          facility_type_id: decision.facility?.id || null,
+          treasury_before: treasuryBefore, treasury_after: treasuryAfter,
+        },
+      });
+    }
   },
+
 };
