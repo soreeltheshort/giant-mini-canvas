@@ -123,7 +123,7 @@ export const aiActionsPhase: Phase = {
       .maybeSingle();
     const gameOwnerId = gameRow?.created_by || null;
 
-    for (const plan of plans) {
+    for (const { plan, goal } of buildPlans) {
       const faction = aiFactions.find((f) => f.id === plan.player_id);
       if (!faction) continue;
       const factionCode = faction.factions?.code_name || "";
@@ -141,7 +141,7 @@ export const aiActionsPhase: Phase = {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
-          message: `[${factionCode}] enhance_offense: no production hub (no owned shipyard)`,
+          message: `[${factionCode}] ${goal}: no production hub (no owned shipyard)`,
           details_json: { plan_id: plan.id },
         });
         continue;
@@ -152,10 +152,43 @@ export const aiActionsPhase: Phase = {
         ? { x: priorFleet.hex_x, y: priorFleet.hex_y }
         : (selectSpawnHex(mapState, hub, 3) ?? { x: hub.hex.x, y: hub.hex.y });
 
+      // 3b-bis. conquer — analyse the target's defences to size the force.
+      let assessment: ConquerAssessment | null = null;
+      let targetSystemName: string | null = null;
+      if (goal === "conquer") {
+        if (plan.target_kind !== "system" || !plan.target_id) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
+            log_type: "ai_action_skip",
+            message: `[${factionCode}] conquer: no system target bound`,
+            details_json: { plan_id: plan.id },
+          });
+          continue;
+        }
+        const sysId = Number(plan.target_id);
+        const targetSys = mapState.systems.get(sysId);
+        if (!targetSys) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
+            log_type: "ai_action_skip",
+            message: `[${factionCode}] conquer: target system ${plan.target_id} not found`,
+            details_json: { plan_id: plan.id },
+          });
+          continue;
+        }
+        targetSystemName = targetSys.system_name;
+        const visibleRaw = faction.visible_system_ids;
+        const visible: number[] = Array.isArray(visibleRaw)
+          ? visibleRaw.map((v: any) => Number(v))
+          : [];
+        const garrisonKnown = visible.includes(sysId);
+        assessment = assessConquerForce(targetSys, garrisonKnown, conquerShipTypes, hullSortByCode);
+      }
+
       // 3c. Composer — aspirational target composition. Independent of
       // current treasury; per-ship affordability is checked in 3f.
       const treasury0 = Number(faction.treasury) || 0;
-      const budget = DEFAULT_BUDGET;
+      const budget = assessment ? assessment.combat_budget : DEFAULT_BUDGET;
 
       const { result: composition, diagnostics: composerDiag } = await composeFleetFromTemplates(
         supabase, faction.faction_id, budget, hullSortByCode,
@@ -164,11 +197,27 @@ export const aiActionsPhase: Phase = {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
-          message: `[${factionCode}] enhance_offense: composer returned no template (reason: ${composerDiag.reason}); budget ${budget}, eligible=${composerDiag.eligible_fleet_ids}/${composerDiag.total_fleets_scanned}, nonempty=${composerDiag.nonempty_templates}, ship_rows=${composerDiag.ship_rows_for_eligible}`,
+          message: `[${factionCode}] ${goal}: composer returned no template (reason: ${composerDiag.reason}); budget ${budget}, eligible=${composerDiag.eligible_fleet_ids}/${composerDiag.total_fleets_scanned}, nonempty=${composerDiag.nonempty_templates}, ship_rows=${composerDiag.ship_rows_for_eligible}`,
           details_json: { plan_id: plan.id, budget, composer_diagnostics: composerDiag },
         });
         continue;
       }
+
+      // 3c-bis. conquer — append troop hulls so the fleet lands 1.25x the
+      // known (or assumed) garrison.
+      const wantedShips = assessment
+        ? [
+            ...composition.ships,
+            ...assessment.troop_ships.map((t) => ({
+              ship_type_id: t.ship_type_id,
+              hull_class: t.hull_class,
+              point_cost: t.point_cost,
+              ship_name: t.ship_name,
+              hull_sort: t.hull_sort,
+            })),
+          ]
+        : composition.ships;
+
 
       // 3d. Instantiate OR reuse target fleet.
       let targetFleetId: string;
