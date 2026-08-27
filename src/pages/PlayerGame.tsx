@@ -2003,6 +2003,13 @@ const PlayerGame = () => {
 
   return (
     <div className="h-screen flex flex-col bg-ivory overflow-hidden">
+      <TurnBriefingOverlay
+        open={briefingOpen}
+        briefing={briefing}
+        reviewOnly={briefingReviewOnly}
+        onAcknowledge={() => { setBriefingReviewOnly(false); acknowledgeBriefing(); }}
+        onClose={() => setBriefingOpen(false)}
+      />
       <GameHeader
         gameName={game.name}
         turnNumber={game.turn_number}
@@ -2010,7 +2017,9 @@ const PlayerGame = () => {
         playerName={playerName}
         backTo={isAdmin ? "/admin/games" : "/new-game"}
         isImpersonating={isAdmin}
+        onOpenBriefing={() => { setBriefingReviewOnly(true); setBriefingOpen(true); }}
       />
+
 
       <div className={`flex-1 flex overflow-hidden ${isMobile ? "flex-col" : ""}`}>
         {/* Left Strategic Panel — includes inline context on tablet */}
