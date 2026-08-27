@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ScrollText } from "lucide-react";
 import type { GlobalStats } from "./gameShellTypes";
 
 interface GameHeaderProps {
@@ -9,7 +10,10 @@ interface GameHeaderProps {
   backTo: string;
   /** When true, the viewer is an admin impersonating a player — show the player name. */
   isImpersonating?: boolean;
+  /** Re-opens the turn briefing overlay. */
+  onOpenBriefing?: () => void;
 }
+
 
 const LaurelIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5">
