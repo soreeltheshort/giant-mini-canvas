@@ -74,10 +74,11 @@ export const aiActionsPhase: Phase = {
       .eq("status", "active")
       .gte("feasibility", 0.5)
       .in("player_id", aiFactions.map((f) => f.id));
-    const plans = (planRows || []).filter(
-      (p: any) => p.ai_goals?.goal_type === "enhance_offense",
-    );
-    if (plans.length === 0) return;
+    const allPlans = (planRows || []) as any[];
+    const plans = allPlans.filter((p: any) => p.ai_goals?.goal_type === "enhance_offense");
+    const defensePlans = allPlans.filter((p: any) => p.ai_goals?.goal_type === "bolster_defense");
+    if (plans.length === 0 && defensePlans.length === 0) return;
+
 
     // 3. Hull class sort order
     const { data: hullRows } = await (supabase as any)
