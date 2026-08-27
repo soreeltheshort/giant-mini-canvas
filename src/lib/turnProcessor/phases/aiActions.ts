@@ -28,6 +28,7 @@ import type { Phase, TurnContext } from "../types";
 import { selectProductionHub, selectSpawnHex, shipyardsWithinRange } from "@/lib/ai/productionHub";
 import { composeFleetFromTemplates } from "@/lib/ai/fleetComposer";
 import { decideBolsterDefense } from "@/lib/ai/bolsterDefense";
+import { assessConquerForce, type ConquerAssessment } from "@/lib/ai/conquerForce";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 
@@ -60,16 +61,17 @@ export const aiActionsPhase: Phase = {
     // 1. AI factions
     const { data: gfRows } = await (supabase as any)
       .from("game_factions")
-      .select("id, treasury, is_ai, faction_id, factions:faction_id(code_name)")
+      .select("id, treasury, is_ai, faction_id, visible_system_ids, factions:faction_id(code_name)")
       .eq("game_id", gameId)
       .eq("is_ai", true);
     const aiFactions = (gfRows || []) as Array<{
       id: string; treasury: number | null; faction_id: string;
+      visible_system_ids: any;
       factions: { code_name: string } | null;
     }>;
     if (aiFactions.length === 0) return;
 
-    // 2. Active enhance_offense plans
+    // 2. Active plans we can execute
     const { data: planRows } = await (supabase as any)
       .from("ai_plans")
       .select("id, player_id, goal_id, slate_slot, target_kind, target_id, target_label, feasibility, ai_goals:goal_id(goal_type)")
@@ -78,9 +80,14 @@ export const aiActionsPhase: Phase = {
       .gte("feasibility", 0.5)
       .in("player_id", aiFactions.map((f) => f.id));
     const allPlans = (planRows || []) as any[];
-    const plans = allPlans.filter((p: any) => p.ai_goals?.goal_type === "enhance_offense");
     const defensePlans = allPlans.filter((p: any) => p.ai_goals?.goal_type === "bolster_defense");
-    if (plans.length === 0 && defensePlans.length === 0) return;
+    // enhance_offense and conquer share the "raise a fleet" pipeline; conquer
+    // additionally sizes the force against the target's known defenses and
+    // adds ground invasion troops.
+    const buildPlans = allPlans
+      .filter((p: any) => p.ai_goals?.goal_type === "enhance_offense" || p.ai_goals?.goal_type === "conquer")
+      .map((p: any) => ({ plan: p, goal: p.ai_goals.goal_type as "enhance_offense" | "conquer" }));
+    if (buildPlans.length === 0 && defensePlans.length === 0) return;
 
 
     // 3. Hull class sort order
@@ -90,12 +97,25 @@ export const aiActionsPhase: Phase = {
     const hullSortByCode = new Map<string, number>();
     for (const r of (hullRows as any[]) || []) hullSortByCode.set(r.code, Number(r.sort_order) || 0);
 
+    // Ship catalogue (troop-capable hull selection for conquer).
+    const { data: shipTypeRows } = await (supabase as any)
+      .from("ship_types")
+      .select("id, name, hull_class, point_cost, ground_invasion");
+    const conquerShipTypes = ((shipTypeRows as any[]) || []).map((s) => ({
+      id: String(s.id),
+      name: s.name,
+      hull_class: s.hull_class,
+      point_cost: Number(s.point_cost) || 0,
+      ground_invasion: Number(s.ground_invasion) || 0,
+    }));
+
     // Cache existing fleets (used to find prior plan fleet for resume-fill).
     const { data: fleetRows } = await (supabase as any)
       .from("game_fleets")
       .select("id, fleet_id, fleet_name, owner_classification, hex_x, hex_y")
       .eq("game_id", gameId);
     const existingFleets = (fleetRows as any[]) || [];
+
 
     const { data: gameRow } = await (supabase as any)
       .from("games")
@@ -104,7 +124,7 @@ export const aiActionsPhase: Phase = {
       .maybeSingle();
     const gameOwnerId = gameRow?.created_by || null;
 
-    for (const plan of plans) {
+    for (const { plan, goal } of buildPlans) {
       const faction = aiFactions.find((f) => f.id === plan.player_id);
       if (!faction) continue;
       const factionCode = faction.factions?.code_name || "";
@@ -122,7 +142,7 @@ export const aiActionsPhase: Phase = {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
-          message: `[${factionCode}] enhance_offense: no production hub (no owned shipyard)`,
+          message: `[${factionCode}] ${goal}: no production hub (no owned shipyard)`,
           details_json: { plan_id: plan.id },
         });
         continue;
@@ -133,10 +153,43 @@ export const aiActionsPhase: Phase = {
         ? { x: priorFleet.hex_x, y: priorFleet.hex_y }
         : (selectSpawnHex(mapState, hub, 3) ?? { x: hub.hex.x, y: hub.hex.y });
 
+      // 3b-bis. conquer — analyse the target's defences to size the force.
+      let assessment: ConquerAssessment | null = null;
+      let targetSystemName: string | null = null;
+      if (goal === "conquer") {
+        if (plan.target_kind !== "system" || !plan.target_id) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
+            log_type: "ai_action_skip",
+            message: `[${factionCode}] conquer: no system target bound`,
+            details_json: { plan_id: plan.id },
+          });
+          continue;
+        }
+        const sysId = Number(plan.target_id);
+        const targetSys = mapState.systems.get(sysId);
+        if (!targetSys) {
+          ctx.logs.push({
+            game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
+            log_type: "ai_action_skip",
+            message: `[${factionCode}] conquer: target system ${plan.target_id} not found`,
+            details_json: { plan_id: plan.id },
+          });
+          continue;
+        }
+        targetSystemName = targetSys.system_name;
+        const visibleRaw = faction.visible_system_ids;
+        const visible: number[] = Array.isArray(visibleRaw)
+          ? visibleRaw.map((v: any) => Number(v))
+          : [];
+        const garrisonKnown = visible.includes(sysId);
+        assessment = assessConquerForce(targetSys, garrisonKnown, conquerShipTypes, hullSortByCode);
+      }
+
       // 3c. Composer — aspirational target composition. Independent of
       // current treasury; per-ship affordability is checked in 3f.
       const treasury0 = Number(faction.treasury) || 0;
-      const budget = DEFAULT_BUDGET;
+      const budget = assessment ? assessment.combat_budget : DEFAULT_BUDGET;
 
       const { result: composition, diagnostics: composerDiag } = await composeFleetFromTemplates(
         supabase, faction.faction_id, budget, hullSortByCode,
@@ -145,11 +198,27 @@ export const aiActionsPhase: Phase = {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
-          message: `[${factionCode}] enhance_offense: composer returned no template (reason: ${composerDiag.reason}); budget ${budget}, eligible=${composerDiag.eligible_fleet_ids}/${composerDiag.total_fleets_scanned}, nonempty=${composerDiag.nonempty_templates}, ship_rows=${composerDiag.ship_rows_for_eligible}`,
+          message: `[${factionCode}] ${goal}: composer returned no template (reason: ${composerDiag.reason}); budget ${budget}, eligible=${composerDiag.eligible_fleet_ids}/${composerDiag.total_fleets_scanned}, nonempty=${composerDiag.nonempty_templates}, ship_rows=${composerDiag.ship_rows_for_eligible}`,
           details_json: { plan_id: plan.id, budget, composer_diagnostics: composerDiag },
         });
         continue;
       }
+
+      // 3c-bis. conquer — append troop hulls so the fleet lands 1.25x the
+      // known (or assumed) garrison.
+      const wantedShips = assessment
+        ? [
+            ...composition.ships,
+            ...assessment.troop_ships.map((t) => ({
+              ship_type_id: t.ship_type_id,
+              hull_class: t.hull_class,
+              point_cost: t.point_cost,
+              ship_name: t.ship_name,
+              hull_sort: t.hull_sort,
+            })),
+          ]
+        : composition.ships;
+
 
       // 3d. Instantiate OR reuse target fleet.
       let targetFleetId: string;
@@ -163,18 +232,22 @@ export const aiActionsPhase: Phase = {
           ctx.logs.push({
             game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
             log_type: "ai_action_error",
-            message: `[${factionCode}] enhance_offense: fleet create failed: game owner unavailable`,
+            message: `[${factionCode}] ${goal}: fleet create failed: game owner unavailable`,
             details_json: { plan_id: plan.id },
           });
           continue;
         }
-        fleetName = `${composition.template_name} ${planTag}`;
+        fleetName = assessment
+          ? `Invasion of ${targetSystemName || plan.target_label || "target"} ${planTag}`
+          : `${composition.template_name} ${planTag}`;
         const { data: fleetTemplate, error: ftErr } = await (supabase as any)
           .from("fleets")
           .insert({
             owner_user_id: gameOwnerId,
             name: fleetName,
-            points_budget: composition.template_points,
+            points_budget: composition.template_points + (assessment?.troop_cost || 0),
+            is_invasion_fleet: !!assessment,
+            remaining_ground_units: assessment?.required_troops ?? null,
           })
           .select("id")
           .single();
@@ -182,7 +255,7 @@ export const aiActionsPhase: Phase = {
           ctx.logs.push({
             game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
             log_type: "ai_action_error",
-            message: `[${factionCode}] enhance_offense: fleet template create failed: ${ftErr?.message || "unknown"}`,
+            message: `[${factionCode}] ${goal}: fleet template create failed: ${ftErr?.message || "unknown"}`,
             details_json: { plan_id: plan.id, error: ftErr?.message },
           });
           continue;
@@ -207,7 +280,7 @@ export const aiActionsPhase: Phase = {
           ctx.logs.push({
             game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
             log_type: "ai_action_error",
-            message: `[${factionCode}] enhance_offense: fleet create failed: ${nfErr?.message || "unknown"}`,
+            message: `[${factionCode}] ${goal}: fleet create failed: ${nfErr?.message || "unknown"}`,
             details_json: { plan_id: plan.id, error: nfErr?.message },
           });
           continue;
@@ -243,7 +316,7 @@ export const aiActionsPhase: Phase = {
       for (const r of ((haveRows as any[]) || []).concat((queuedRows as any[]) || [])) {
         covered.set(r.ship_type_id, (covered.get(r.ship_type_id) || 0) + (Number(r.quantity) || 0));
       }
-      const shipsNeeded = composition.ships.filter((s) => {
+      const shipsNeeded = wantedShips.filter((s) => {
         const rem = covered.get(s.ship_type_id) || 0;
         if (rem > 0) { covered.set(s.ship_type_id, rem - 1); return false; }
         return true;
@@ -255,7 +328,7 @@ export const aiActionsPhase: Phase = {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
-          message: `[${factionCode}] enhance_offense: plan fleet "${fleetName}" already at target composition — nothing to queue`,
+          message: `[${factionCode}] ${goal}: plan fleet "${fleetName}" already at target composition — nothing to queue`,
           details_json: { plan_id: plan.id, fleet_id: targetFleetId, template_id: composition.template_id },
         });
         continue;
@@ -269,7 +342,7 @@ export const aiActionsPhase: Phase = {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
-          message: `[${factionCode}] enhance_offense: no shipyards within ${HUB_RADIUS} of hub ${hub.system.system_name}`,
+          message: `[${factionCode}] ${goal}: no shipyards within ${HUB_RADIUS} of hub ${hub.system.system_name}`,
           details_json: { plan_id: plan.id, hub_system_id: hub.system.system_id },
         });
         continue;
@@ -346,7 +419,7 @@ export const aiActionsPhase: Phase = {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: `ai_action_skip`,
-          message: `[${factionCode}] enhance_offense: ${reason} for "${fleetName}" (treasury ${treasury0}, ${shipsNeeded.length} ship(s) needed)`,
+          message: `[${factionCode}] ${goal}: ${reason} for "${fleetName}" (treasury ${treasury0}, ${shipsNeeded.length} ship(s) needed)`,
           details_json: {
             plan_id: plan.id, fleet_id: targetFleetId, reason,
             treasury: treasury0, needed: shipsNeeded.length, skipped,
@@ -371,11 +444,11 @@ export const aiActionsPhase: Phase = {
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
         log_type: "ai_action",
-        message: `[${factionCode}] enhance_offense: ${verb} fleet "${fleetName}" at (${spawn.x},${spawn.y}); queued ${queued.length} ship(s) across ${yards.length} shipyard(s); treasury ${treasury0} → ${treasury}`,
+        message: `[${factionCode}] ${goal}: ${verb} fleet "${fleetName}" at (${spawn.x},${spawn.y}); queued ${queued.length} ship(s) across ${yards.length} shipyard(s); treasury ${treasury0} → ${treasury}`,
         details_json: {
           plan_id: plan.id,
           faction: factionCode,
-          goal: "enhance_offense",
+          goal,
           hub_system_id: hub.system.system_id,
           hub_system_name: hub.system.system_name,
           spawn_hex: spawn,
@@ -387,6 +460,8 @@ export const aiActionsPhase: Phase = {
           fleet_name: fleetName,
           reused_prior_fleet: !!priorFleet,
           queued, skipped,
+          conquer_assessment: assessment,
+          target_system: targetSystemName,
           treasury_before: treasury0, treasury_after: treasury,
         },
       });
@@ -396,7 +471,7 @@ export const aiActionsPhase: Phase = {
         player_id: faction.id,
         turn_number: currentTurn,
         phase: "actions",
-        summary: `enhance_offense → ${verb} "${fleetName}" at hub ${hub.system.system_name}; queued ${queued.length} ship(s) (₡${treasury0 - treasury})`,
+        summary: `${goal} → ${verb} "${fleetName}" at hub ${hub.system.system_name}; queued ${queued.length} ship(s) (₡${treasury0 - treasury})`,
         details_json: {
           plan_id: plan.id, slot: plan.slate_slot,
           hub_system_id: hub.system.system_id,
@@ -405,6 +480,9 @@ export const aiActionsPhase: Phase = {
           template_id: composition.template_id,
           queued_count: queued.length,
           skipped_count: skipped.length,
+          required_troops: assessment?.required_troops ?? null,
+          garrison_known: assessment?.garrison_known ?? null,
+          assumed_garrison: assessment?.garrison ?? null,
           treasury_before: treasury0, treasury_after: treasury,
         },
       });
