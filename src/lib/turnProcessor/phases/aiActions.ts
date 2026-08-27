@@ -460,6 +460,8 @@ export const aiActionsPhase: Phase = {
           fleet_name: fleetName,
           reused_prior_fleet: !!priorFleet,
           queued, skipped,
+          conquer_assessment: assessment,
+          target_system: targetSystemName,
           treasury_before: treasury0, treasury_after: treasury,
         },
       });
@@ -478,6 +480,9 @@ export const aiActionsPhase: Phase = {
           template_id: composition.template_id,
           queued_count: queued.length,
           skipped_count: skipped.length,
+          required_troops: assessment?.required_troops ?? null,
+          garrison_known: assessment?.garrison_known ?? null,
+          assumed_garrison: assessment?.garrison ?? null,
           treasury_before: treasury0, treasury_after: treasury,
         },
       });
