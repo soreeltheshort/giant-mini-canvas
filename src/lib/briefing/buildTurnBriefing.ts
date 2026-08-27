@@ -215,7 +215,7 @@ export function buildTurnBriefing(input: BriefingInput): TurnBriefing {
       tone: "neutral" as const,
     }));
 
-  const sections: BriefingSection[] = [
+  const sections: BriefingSection[] = ([
     { key: "economy", title: "Treasury & Economy", items: economyItems },
     { key: "territory", title: "Territory", items: territoryItems },
     { key: "military", title: "Military", items: militaryItems },
