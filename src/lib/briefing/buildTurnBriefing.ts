@@ -221,7 +221,7 @@ export function buildTurnBriefing(input: BriefingInput): TurnBriefing {
     { key: "military", title: "Military", items: militaryItems },
     { key: "orders", title: "Orders & Production", items: orderItems },
     { key: "dispatches", title: "Dispatches", items: dispatchItems },
-  ].filter(s => s.items.length > 0 || s.key === "economy");
+  ] as BriefingSection[]).filter(s => s.items.length > 0 || s.key === "economy");
 
   const changeCount = territoryItems.length + militaryItems.length + orderItems.length;
   const lede = changeCount === 0
