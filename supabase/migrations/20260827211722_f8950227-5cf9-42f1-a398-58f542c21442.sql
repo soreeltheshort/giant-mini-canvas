@@ -1,0 +1,1 @@
+ALTER TABLE public.game_factions ADD COLUMN IF NOT EXISTS last_briefing_turn integer NOT NULL DEFAULT 0;

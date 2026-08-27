@@ -1534,6 +1534,7 @@ export type Database = {
           id: string
           initialized: boolean
           is_ai: boolean
+          last_briefing_turn: number
           last_maintenance: number
           last_tribute: number
           orders_locked: boolean
@@ -1555,6 +1556,7 @@ export type Database = {
           id?: string
           initialized?: boolean
           is_ai?: boolean
+          last_briefing_turn?: number
           last_maintenance?: number
           last_tribute?: number
           orders_locked?: boolean
@@ -1576,6 +1578,7 @@ export type Database = {
           id?: string
           initialized?: boolean
           is_ai?: boolean
+          last_briefing_turn?: number
           last_maintenance?: number
           last_tribute?: number
           orders_locked?: boolean
