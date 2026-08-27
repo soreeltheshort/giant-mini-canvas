@@ -54,7 +54,18 @@ export default function GameHeader({
 
       {/* Right: faction (and player name only when admin is impersonating) */}
       <div className="flex items-center gap-3">
+        {onOpenBriefing && (
+          <button
+            onClick={onOpenBriefing}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-sm border border-bronze/50 text-crimson hover:bg-ivory-dark transition-colors"
+            title="Open the turn briefing"
+          >
+            <ScrollText className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-heading font-bold uppercase tracking-wider">Briefing</span>
+          </button>
+        )}
         <div className="text-right">
+
           <p className="text-[10px] font-heading font-semibold text-bronze-dark uppercase tracking-wider">{factionName}</p>
           {isImpersonating && (
             <p className="text-[9px] text-muted-foreground">Logged in as: {playerName}</p>
