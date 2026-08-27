@@ -28,6 +28,7 @@ import type { Phase, TurnContext } from "../types";
 import { selectProductionHub, selectSpawnHex, shipyardsWithinRange } from "@/lib/ai/productionHub";
 import { composeFleetFromTemplates } from "@/lib/ai/fleetComposer";
 import { decideBolsterDefense } from "@/lib/ai/bolsterDefense";
+import { assessConquerForce, type ConquerAssessment } from "@/lib/ai/conquerForce";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
 
 
@@ -231,18 +232,22 @@ export const aiActionsPhase: Phase = {
           ctx.logs.push({
             game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
             log_type: "ai_action_error",
-            message: `[${factionCode}] enhance_offense: fleet create failed: game owner unavailable`,
+            message: `[${factionCode}] ${goal}: fleet create failed: game owner unavailable`,
             details_json: { plan_id: plan.id },
           });
           continue;
         }
-        fleetName = `${composition.template_name} ${planTag}`;
+        fleetName = assessment
+          ? `Invasion of ${targetSystemName || plan.target_label || "target"} ${planTag}`
+          : `${composition.template_name} ${planTag}`;
         const { data: fleetTemplate, error: ftErr } = await (supabase as any)
           .from("fleets")
           .insert({
             owner_user_id: gameOwnerId,
             name: fleetName,
-            points_budget: composition.template_points,
+            points_budget: composition.template_points + (assessment?.troop_cost || 0),
+            is_invasion_fleet: !!assessment,
+            remaining_ground_units: assessment?.required_troops ?? null,
           })
           .select("id")
           .single();
@@ -250,7 +255,7 @@ export const aiActionsPhase: Phase = {
           ctx.logs.push({
             game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
             log_type: "ai_action_error",
-            message: `[${factionCode}] enhance_offense: fleet template create failed: ${ftErr?.message || "unknown"}`,
+            message: `[${factionCode}] ${goal}: fleet template create failed: ${ftErr?.message || "unknown"}`,
             details_json: { plan_id: plan.id, error: ftErr?.message },
           });
           continue;
@@ -275,7 +280,7 @@ export const aiActionsPhase: Phase = {
           ctx.logs.push({
             game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
             log_type: "ai_action_error",
-            message: `[${factionCode}] enhance_offense: fleet create failed: ${nfErr?.message || "unknown"}`,
+            message: `[${factionCode}] ${goal}: fleet create failed: ${nfErr?.message || "unknown"}`,
             details_json: { plan_id: plan.id, error: nfErr?.message },
           });
           continue;
@@ -311,7 +316,7 @@ export const aiActionsPhase: Phase = {
       for (const r of ((haveRows as any[]) || []).concat((queuedRows as any[]) || [])) {
         covered.set(r.ship_type_id, (covered.get(r.ship_type_id) || 0) + (Number(r.quantity) || 0));
       }
-      const shipsNeeded = composition.ships.filter((s) => {
+      const shipsNeeded = wantedShips.filter((s) => {
         const rem = covered.get(s.ship_type_id) || 0;
         if (rem > 0) { covered.set(s.ship_type_id, rem - 1); return false; }
         return true;
@@ -323,7 +328,7 @@ export const aiActionsPhase: Phase = {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
-          message: `[${factionCode}] enhance_offense: plan fleet "${fleetName}" already at target composition — nothing to queue`,
+          message: `[${factionCode}] ${goal}: plan fleet "${fleetName}" already at target composition — nothing to queue`,
           details_json: { plan_id: plan.id, fleet_id: targetFleetId, template_id: composition.template_id },
         });
         continue;
@@ -337,7 +342,7 @@ export const aiActionsPhase: Phase = {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: "ai_action_skip",
-          message: `[${factionCode}] enhance_offense: no shipyards within ${HUB_RADIUS} of hub ${hub.system.system_name}`,
+          message: `[${factionCode}] ${goal}: no shipyards within ${HUB_RADIUS} of hub ${hub.system.system_name}`,
           details_json: { plan_id: plan.id, hub_system_id: hub.system.system_id },
         });
         continue;
@@ -414,7 +419,7 @@ export const aiActionsPhase: Phase = {
         ctx.logs.push({
           game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
           log_type: `ai_action_skip`,
-          message: `[${factionCode}] enhance_offense: ${reason} for "${fleetName}" (treasury ${treasury0}, ${shipsNeeded.length} ship(s) needed)`,
+          message: `[${factionCode}] ${goal}: ${reason} for "${fleetName}" (treasury ${treasury0}, ${shipsNeeded.length} ship(s) needed)`,
           details_json: {
             plan_id: plan.id, fleet_id: targetFleetId, reason,
             treasury: treasury0, needed: shipsNeeded.length, skipped,
@@ -439,11 +444,11 @@ export const aiActionsPhase: Phase = {
       ctx.logs.push({
         game_id: gameId, turn_number: currentTurn, phase: "ai_actions",
         log_type: "ai_action",
-        message: `[${factionCode}] enhance_offense: ${verb} fleet "${fleetName}" at (${spawn.x},${spawn.y}); queued ${queued.length} ship(s) across ${yards.length} shipyard(s); treasury ${treasury0} → ${treasury}`,
+        message: `[${factionCode}] ${goal}: ${verb} fleet "${fleetName}" at (${spawn.x},${spawn.y}); queued ${queued.length} ship(s) across ${yards.length} shipyard(s); treasury ${treasury0} → ${treasury}`,
         details_json: {
           plan_id: plan.id,
           faction: factionCode,
-          goal: "enhance_offense",
+          goal,
           hub_system_id: hub.system.system_id,
           hub_system_name: hub.system.system_name,
           spawn_hex: spawn,
@@ -464,7 +469,7 @@ export const aiActionsPhase: Phase = {
         player_id: faction.id,
         turn_number: currentTurn,
         phase: "actions",
-        summary: `enhance_offense → ${verb} "${fleetName}" at hub ${hub.system.system_name}; queued ${queued.length} ship(s) (₡${treasury0 - treasury})`,
+        summary: `${goal} → ${verb} "${fleetName}" at hub ${hub.system.system_name}; queued ${queued.length} ship(s) (₡${treasury0 - treasury})`,
         details_json: {
           plan_id: plan.id, slot: plan.slate_slot,
           hub_system_id: hub.system.system_id,
