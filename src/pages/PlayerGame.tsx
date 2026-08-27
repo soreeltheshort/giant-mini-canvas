@@ -14,6 +14,9 @@ import { computeSupplyGrid, collectOwnedPlanetHexes } from "@/lib/supplyGrid";
 import { useBusyCursor } from "@/hooks/useBusyCursor";
 
 import GameHeader from "@/components/game-shell/GameHeader";
+import TurnBriefingOverlay from "@/components/game-shell/TurnBriefingOverlay";
+import { useTurnBriefing } from "@/hooks/useTurnBriefing";
+
 import LeftPanel from "@/components/game-shell/LeftPanel";
 import TestModePanel from "@/components/game-shell/TestModePanel";
 import ContextPanel from "@/components/game-shell/ContextPanel";
