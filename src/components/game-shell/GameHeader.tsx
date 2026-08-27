@@ -28,7 +28,9 @@ export default function GameHeader({
   playerName,
   backTo,
   isImpersonating = false,
+  onOpenBriefing,
 }: GameHeaderProps) {
+
   return (
     <header className="h-11 flex items-center justify-between px-4 bg-marble border-b-2 border-bronze/60 relative z-30 shrink-0">
       {/* Left: title block */}
