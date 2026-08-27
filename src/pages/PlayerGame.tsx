@@ -14,6 +14,9 @@ import { computeSupplyGrid, collectOwnedPlanetHexes } from "@/lib/supplyGrid";
 import { useBusyCursor } from "@/hooks/useBusyCursor";
 
 import GameHeader from "@/components/game-shell/GameHeader";
+import TurnBriefingOverlay from "@/components/game-shell/TurnBriefingOverlay";
+import { useTurnBriefing } from "@/hooks/useTurnBriefing";
+
 import LeftPanel from "@/components/game-shell/LeftPanel";
 import TestModePanel from "@/components/game-shell/TestModePanel";
 import ContextPanel from "@/components/game-shell/ContextPanel";
@@ -1022,6 +1025,33 @@ const PlayerGame = () => {
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number]);
 
+  // ─── Turn briefing (Politics) ───
+  // Auto-opens once per turn with a summary of what changed last turn.
+  const {
+    briefing,
+    open: briefingOpen,
+    setOpen: setBriefingOpen,
+    acknowledge: acknowledgeBriefing,
+  } = useTurnBriefing({
+    gameId: game?.id,
+    turnNumber: game?.turn_number,
+    playerId: player?.id,
+    factionName: player?.faction_name || "",
+    ownClassification: player?.own_classification || "",
+    economy: {
+      treasury: player?.treasury ?? 0,
+      tribute: player?.last_tribute ?? 0,
+      maintenance: player?.last_maintenance ?? 0,
+      adminPoints: player?.admin_points_remaining ?? 0,
+      combatPoints: player?.combat_points_remaining ?? 0,
+    },
+    systems: mapState ? Array.from(mapState.systems.values()) : undefined,
+    enabled: !!player?.initialized,
+  });
+  const [briefingReviewOnly, setBriefingReviewOnly] = useState(false);
+
+
+
 
   // ─── Submission-blocking issues ───
   // Currently checks: per-fleet, per-tactical-group strikecraft overcapacity
@@ -1973,6 +2003,13 @@ const PlayerGame = () => {
 
   return (
     <div className="h-screen flex flex-col bg-ivory overflow-hidden">
+      <TurnBriefingOverlay
+        open={briefingOpen}
+        briefing={briefing}
+        reviewOnly={briefingReviewOnly}
+        onAcknowledge={() => { setBriefingReviewOnly(false); acknowledgeBriefing(); }}
+        onClose={() => setBriefingOpen(false)}
+      />
       <GameHeader
         gameName={game.name}
         turnNumber={game.turn_number}
@@ -1980,7 +2017,9 @@ const PlayerGame = () => {
         playerName={playerName}
         backTo={isAdmin ? "/admin/games" : "/new-game"}
         isImpersonating={isAdmin}
+        onOpenBriefing={() => { setBriefingReviewOnly(true); setBriefingOpen(true); }}
       />
+
 
       <div className={`flex-1 flex overflow-hidden ${isMobile ? "flex-col" : ""}`}>
         {/* Left Strategic Panel — includes inline context on tablet */}

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ScrollText } from "lucide-react";
 import type { GlobalStats } from "./gameShellTypes";
 
 interface GameHeaderProps {
@@ -9,7 +10,10 @@ interface GameHeaderProps {
   backTo: string;
   /** When true, the viewer is an admin impersonating a player — show the player name. */
   isImpersonating?: boolean;
+  /** Re-opens the turn briefing overlay. */
+  onOpenBriefing?: () => void;
 }
+
 
 const LaurelIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -24,7 +28,9 @@ export default function GameHeader({
   playerName,
   backTo,
   isImpersonating = false,
+  onOpenBriefing,
 }: GameHeaderProps) {
+
   return (
     <header className="h-11 flex items-center justify-between px-4 bg-marble border-b-2 border-bronze/60 relative z-30 shrink-0">
       {/* Left: title block */}
@@ -48,7 +54,18 @@ export default function GameHeader({
 
       {/* Right: faction (and player name only when admin is impersonating) */}
       <div className="flex items-center gap-3">
+        {onOpenBriefing && (
+          <button
+            onClick={onOpenBriefing}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-sm border border-bronze/50 text-crimson hover:bg-ivory-dark transition-colors"
+            title="Open the turn briefing"
+          >
+            <ScrollText className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-heading font-bold uppercase tracking-wider">Briefing</span>
+          </button>
+        )}
         <div className="text-right">
+
           <p className="text-[10px] font-heading font-semibold text-bronze-dark uppercase tracking-wider">{factionName}</p>
           {isImpersonating && (
             <p className="text-[9px] text-muted-foreground">Logged in as: {playerName}</p>
