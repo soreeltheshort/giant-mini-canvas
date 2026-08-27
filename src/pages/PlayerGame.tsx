@@ -1025,6 +1025,33 @@ const PlayerGame = () => {
     return () => { cancelled = true; };
   }, [player?.id, game?.id, game?.turn_number]);
 
+  // ─── Turn briefing (Politics) ───
+  // Auto-opens once per turn with a summary of what changed last turn.
+  const {
+    briefing,
+    open: briefingOpen,
+    setOpen: setBriefingOpen,
+    acknowledge: acknowledgeBriefing,
+  } = useTurnBriefing({
+    gameId: game?.id,
+    turnNumber: game?.turn_number,
+    playerId: player?.id,
+    factionName: player?.faction_name || "",
+    ownClassification: player?.own_classification || "",
+    economy: {
+      treasury: player?.treasury ?? 0,
+      tribute: player?.last_tribute ?? 0,
+      maintenance: player?.last_maintenance ?? 0,
+      adminPoints: player?.admin_points_remaining ?? 0,
+      combatPoints: player?.combat_points_remaining ?? 0,
+    },
+    systems: mapState ? Array.from(mapState.systems.values()) : undefined,
+    enabled: !!player?.initialized,
+  });
+  const [briefingReviewOnly, setBriefingReviewOnly] = useState(false);
+
+
+
 
   // ─── Submission-blocking issues ───
   // Currently checks: per-fleet, per-tactical-group strikecraft overcapacity
