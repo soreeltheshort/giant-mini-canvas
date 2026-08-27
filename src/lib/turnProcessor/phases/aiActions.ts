@@ -60,16 +60,17 @@ export const aiActionsPhase: Phase = {
     // 1. AI factions
     const { data: gfRows } = await (supabase as any)
       .from("game_factions")
-      .select("id, treasury, is_ai, faction_id, factions:faction_id(code_name)")
+      .select("id, treasury, is_ai, faction_id, visible_system_ids, factions:faction_id(code_name)")
       .eq("game_id", gameId)
       .eq("is_ai", true);
     const aiFactions = (gfRows || []) as Array<{
       id: string; treasury: number | null; faction_id: string;
+      visible_system_ids: any;
       factions: { code_name: string } | null;
     }>;
     if (aiFactions.length === 0) return;
 
-    // 2. Active enhance_offense plans
+    // 2. Active plans we can execute
     const { data: planRows } = await (supabase as any)
       .from("ai_plans")
       .select("id, player_id, goal_id, slate_slot, target_kind, target_id, target_label, feasibility, ai_goals:goal_id(goal_type)")
@@ -78,9 +79,14 @@ export const aiActionsPhase: Phase = {
       .gte("feasibility", 0.5)
       .in("player_id", aiFactions.map((f) => f.id));
     const allPlans = (planRows || []) as any[];
-    const plans = allPlans.filter((p: any) => p.ai_goals?.goal_type === "enhance_offense");
     const defensePlans = allPlans.filter((p: any) => p.ai_goals?.goal_type === "bolster_defense");
-    if (plans.length === 0 && defensePlans.length === 0) return;
+    // enhance_offense and conquer share the "raise a fleet" pipeline; conquer
+    // additionally sizes the force against the target's known defenses and
+    // adds ground invasion troops.
+    const buildPlans = allPlans
+      .filter((p: any) => p.ai_goals?.goal_type === "enhance_offense" || p.ai_goals?.goal_type === "conquer")
+      .map((p: any) => ({ plan: p, goal: p.ai_goals.goal_type as "enhance_offense" | "conquer" }));
+    if (buildPlans.length === 0 && defensePlans.length === 0) return;
 
 
     // 3. Hull class sort order
@@ -90,12 +96,25 @@ export const aiActionsPhase: Phase = {
     const hullSortByCode = new Map<string, number>();
     for (const r of (hullRows as any[]) || []) hullSortByCode.set(r.code, Number(r.sort_order) || 0);
 
+    // Ship catalogue (troop-capable hull selection for conquer).
+    const { data: shipTypeRows } = await (supabase as any)
+      .from("ship_types")
+      .select("id, name, hull_class, point_cost, ground_invasion");
+    const conquerShipTypes = ((shipTypeRows as any[]) || []).map((s) => ({
+      id: String(s.id),
+      name: s.name,
+      hull_class: s.hull_class,
+      point_cost: Number(s.point_cost) || 0,
+      ground_invasion: Number(s.ground_invasion) || 0,
+    }));
+
     // Cache existing fleets (used to find prior plan fleet for resume-fill).
     const { data: fleetRows } = await (supabase as any)
       .from("game_fleets")
       .select("id, fleet_id, fleet_name, owner_classification, hex_x, hex_y")
       .eq("game_id", gameId);
     const existingFleets = (fleetRows as any[]) || [];
+
 
     const { data: gameRow } = await (supabase as any)
       .from("games")
