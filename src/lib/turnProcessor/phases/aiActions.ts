@@ -27,6 +27,9 @@
 import type { Phase, TurnContext } from "../types";
 import { selectProductionHub, selectSpawnHex, shipyardsWithinRange } from "@/lib/ai/productionHub";
 import { composeFleetFromTemplates } from "@/lib/ai/fleetComposer";
+import { decideBolsterDefense } from "@/lib/ai/bolsterDefense";
+import { ownerMatchesFaction } from "@/lib/factionUtils";
+
 
 const HUB_RADIUS = 8;
 // Aspirational target size for a raised fleet. Independent of current
