@@ -2190,7 +2190,9 @@ const PlayerGame = () => {
               </label>
             </div>
           )}
-          {mapState ? (
+          {activeMode === "diplomacy" ? (
+            <PoliticsPanel playerOwnerClassification={player.own_classification} />
+          ) : mapState ? (
             <PlayerMapCanvas
               hexes={mapState.hexes}
               systems={mapState.systems}
