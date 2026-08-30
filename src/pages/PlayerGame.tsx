@@ -22,6 +22,7 @@ import TestModePanel from "@/components/game-shell/TestModePanel";
 import ContextPanel from "@/components/game-shell/ContextPanel";
 import type { GameMapData, FacilityTypeFull, ShipTypeLookup } from "@/components/game-shell/ContextPanel";
 import PlayerMapCanvas from "@/components/game-shell/PlayerMapCanvas";
+import PoliticsPanel from "@/components/game-shell/PoliticsPanel";
 import BottomStrip from "@/components/game-shell/BottomStrip";
 import OverlayDemoBar from "@/components/game-shell/OverlayDemoBar";
 import type { GameMode, MapSelection } from "@/components/game-shell/gameShellTypes";
@@ -1228,6 +1229,8 @@ const PlayerGame = () => {
     setActiveMode(mode);
     setSelection({ type: "none" });
     setRightPanelOpen(true);
+    // The map is hidden in Politics mode — cancel any pending hex/fleet targeting.
+    if (mode === "diplomacy") setTargeting(null);
   };
 
   const handleViewNews = () => {
