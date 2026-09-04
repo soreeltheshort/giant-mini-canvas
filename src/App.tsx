@@ -32,6 +32,7 @@ import UIShowcase from "./pages/UIShowcase";
 import MapTesting from "./pages/MapTesting";
 import MapTestingConfig from "./pages/MapTestingConfig";
 import AdminMapConfig from "./pages/AdminMapConfig";
+import AdminPolitics from "./pages/AdminPolitics";
 import PlanetTesting from "./pages/PlanetTesting";
 import FleetTesting from "./pages/FleetTesting";
 import RequireRole from "@/components/RequireRole";
