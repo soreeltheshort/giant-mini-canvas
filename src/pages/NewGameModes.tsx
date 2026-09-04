@@ -9,6 +9,7 @@ import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { PROVINCE_NAMES, startGame } from "@/lib/gameLifecycle";
 import FactionsConfigPicker from "@/components/FactionsConfigPicker";
 import MapPicker, { SavedMapRow } from "@/components/MapPicker";
+import SenateBlocSetPicker from "@/components/SenateBlocSetPicker";
 import { applyAndSetDefaultFactionsConfig } from "@/lib/factionsConfig";
 
 const TITLE_BG =
@@ -292,6 +293,7 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
   const [slot, setSlot] = useState<number>(1);
   const [chosenMap, setChosenMap] = useState<SavedMapRow | null>(null);
   const [factionsConfigId, setFactionsConfigId] = useState<string | null>(null);
+  const [blocSetId, setBlocSetId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
 
@@ -309,7 +311,7 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
 
       setStage("Creating game…");
       const { data: g, error } = await (supabase as any)
-        .from("games").insert({ name: name.trim(), created_by: user.id })
+        .from("games").insert({ name: name.trim(), created_by: user.id, senate_bloc_set_id: blocSetId })
         .select("id, name").single();
       if (error) throw error;
 
@@ -387,6 +389,8 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
           onChange={setFactionsConfigId}
           disabled={busy}
         />
+
+        <SenateBlocSetPicker value={blocSetId} onChange={setBlocSetId} disabled={busy} />
 
         <div>
           <label className="font-heading uppercase tracking-[0.25em] text-xs text-bronze block mb-2">

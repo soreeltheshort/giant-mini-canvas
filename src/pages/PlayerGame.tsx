@@ -2191,7 +2191,7 @@ const PlayerGame = () => {
             </div>
           )}
           {activeMode === "diplomacy" ? (
-            <PoliticsPanel playerOwnerClassification={player.own_classification} />
+            <PoliticsPanel gameId={gameId} />
           ) : mapState ? (
             <PlayerMapCanvas
               hexes={mapState.hexes}

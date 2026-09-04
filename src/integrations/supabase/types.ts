@@ -694,6 +694,7 @@ export type Database = {
         Row: {
           default_factions_config_id: string | null
           default_map_id: string | null
+          default_senate_bloc_set_id: string | null
           id: string
           planet_naming_convention_id: string | null
           updated_at: string
@@ -701,6 +702,7 @@ export type Database = {
         Insert: {
           default_factions_config_id?: string | null
           default_map_id?: string | null
+          default_senate_bloc_set_id?: string | null
           id?: string
           planet_naming_convention_id?: string | null
           updated_at?: string
@@ -708,6 +710,7 @@ export type Database = {
         Update: {
           default_factions_config_id?: string | null
           default_map_id?: string | null
+          default_senate_bloc_set_id?: string | null
           id?: string
           planet_naming_convention_id?: string | null
           updated_at?: string
@@ -718,6 +721,13 @@ export type Database = {
             columns: ["default_map_id"]
             isOneToOne: false
             referencedRelation: "saved_maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_settings_default_senate_bloc_set_id_fkey"
+            columns: ["default_senate_bloc_set_id"]
+            isOneToOne: false
+            referencedRelation: "senate_bloc_sets"
             referencedColumns: ["id"]
           },
           {
@@ -1836,6 +1846,7 @@ export type Database = {
           name: string
           parent_game_id: string | null
           parent_snapshot_id: string | null
+          senate_bloc_set_id: string | null
           status: Database["public"]["Enums"]["game_status"]
           turn_number: number
           turn_phase: Database["public"]["Enums"]["turn_phase"]
@@ -1853,6 +1864,7 @@ export type Database = {
           name: string
           parent_game_id?: string | null
           parent_snapshot_id?: string | null
+          senate_bloc_set_id?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           turn_number?: number
           turn_phase?: Database["public"]["Enums"]["turn_phase"]
@@ -1870,6 +1882,7 @@ export type Database = {
           name?: string
           parent_game_id?: string | null
           parent_snapshot_id?: string | null
+          senate_bloc_set_id?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           turn_number?: number
           turn_phase?: Database["public"]["Enums"]["turn_phase"]
@@ -1888,6 +1901,13 @@ export type Database = {
             columns: ["parent_snapshot_id"]
             isOneToOne: false
             referencedRelation: "game_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "games_senate_bloc_set_id_fkey"
+            columns: ["senate_bloc_set_id"]
+            isOneToOne: false
+            referencedRelation: "senate_bloc_sets"
             referencedColumns: ["id"]
           },
         ]
@@ -2286,6 +2306,77 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      senate_bloc_sets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      senate_blocs: {
+        Row: {
+          accent_color: string
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          name: string
+          set_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          name: string
+          set_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          set_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "senate_blocs_set_id_fkey"
+            columns: ["set_id"]
+            isOneToOne: false
+            referencedRelation: "senate_bloc_sets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ship_hull_classes: {
         Row: {

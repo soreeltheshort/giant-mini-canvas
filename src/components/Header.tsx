@@ -210,6 +210,10 @@ const Header = () => {
                       <DropdownMenuItem asChild>
                         <Link to="/map-testing/config">Factions Config</Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/politics">Politics</Link>
+                      </DropdownMenuItem>
+
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
