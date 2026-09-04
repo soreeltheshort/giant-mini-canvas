@@ -390,6 +390,8 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
           disabled={busy}
         />
 
+        <SenateBlocSetPicker value={blocSetId} onChange={setBlocSetId} disabled={busy} />
+
         <div>
           <label className="font-heading uppercase tracking-[0.25em] text-xs text-bronze block mb-2">
             Choose Faction
