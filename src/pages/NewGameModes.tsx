@@ -9,6 +9,7 @@ import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { PROVINCE_NAMES, startGame } from "@/lib/gameLifecycle";
 import FactionsConfigPicker from "@/components/FactionsConfigPicker";
 import MapPicker, { SavedMapRow } from "@/components/MapPicker";
+import SenateBlocSetPicker from "@/components/SenateBlocSetPicker";
 import { applyAndSetDefaultFactionsConfig } from "@/lib/factionsConfig";
 
 const TITLE_BG =
