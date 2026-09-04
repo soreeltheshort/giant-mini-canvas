@@ -293,6 +293,7 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
   const [slot, setSlot] = useState<number>(1);
   const [chosenMap, setChosenMap] = useState<SavedMapRow | null>(null);
   const [factionsConfigId, setFactionsConfigId] = useState<string | null>(null);
+  const [blocSetId, setBlocSetId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
 
