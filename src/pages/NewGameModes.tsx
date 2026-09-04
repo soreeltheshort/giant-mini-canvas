@@ -311,7 +311,7 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
 
       setStage("Creating game…");
       const { data: g, error } = await (supabase as any)
-        .from("games").insert({ name: name.trim(), created_by: user.id })
+        .from("games").insert({ name: name.trim(), created_by: user.id, senate_bloc_set_id: blocSetId })
         .select("id, name").single();
       if (error) throw error;
 
