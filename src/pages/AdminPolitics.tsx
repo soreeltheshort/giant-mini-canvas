@@ -26,6 +26,7 @@ import {
   updateSenateBloc,
   updateSenateBlocSet,
 } from "@/lib/senateBlocs";
+import { AFFINITIES, MAX_AFFINITIES, canAddAffinity } from "@/lib/senateAffinities";
 
 const IMAGE_BUCKET = "images";
 
@@ -163,6 +164,8 @@ export default function AdminPolitics() {
         image_url: b.image_url,
         accent_color: b.accent_color,
         sort_order: b.sort_order,
+        senate_votes: b.senate_votes ?? 0,
+        affinities: b.affinities ?? [],
       });
     } catch (e: any) {
       toast.error(e.message ?? String(e));
@@ -260,6 +263,52 @@ export default function AdminPolitics() {
                     title="Accent color"
                   />
                 </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="text-xs font-heading uppercase tracking-widest text-bronze">Senate Votes</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    className="w-24"
+                    value={b.senate_votes ?? 0}
+                    onChange={(e) => patchBloc(b.id, { senate_votes: Math.max(0, parseInt(e.target.value || "0", 10)) })}
+                    onBlur={() => saveBloc(b)}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="text-xs font-heading uppercase tracking-widest text-bronze">
+                    Affinities ({(b.affinities ?? []).length}/{MAX_AFFINITIES})
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {AFFINITIES.map((a) => {
+                      const cur = b.affinities ?? [];
+                      const on = cur.includes(a.id);
+                      const disabled = !on && !canAddAffinity(cur, a.id);
+                      return (
+                        <button
+                          key={a.id}
+                          type="button"
+                          disabled={busy || disabled}
+                          onClick={() => {
+                            const next = on ? cur.filter((x) => x !== a.id) : [...cur, a.id];
+                            patchBloc(b.id, { affinities: next });
+                            saveBloc({ ...b, affinities: next });
+                          }}
+                          className={`px-2 py-1 rounded-sm border text-xs font-body font-semibold transition-colors ${
+                            on
+                              ? "border-crimson bg-crimson/10 text-crimson"
+                              : disabled
+                                ? "border-border text-muted-foreground/50 cursor-not-allowed"
+                                : "border-bronze/40 text-senate-dark hover:border-bronze"
+                          }`}
+                        >
+                          {a.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <Textarea
                   value={b.description}
                   onChange={(e) => patchBloc(b.id, { description: e.target.value })}

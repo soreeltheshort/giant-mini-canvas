@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSenateBlocs } from "@/hooks/useSenateBlocs";
+import { affinityLabel } from "@/lib/senateAffinities";
 
 /**
  * Politics surface — shows the SENATE BLOCS of the game's chosen bloc set.
@@ -83,8 +84,34 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
               </h2>
               <span className="w-4 h-4 rounded-sm border border-bronze/60" style={{ background: selected.accent_color }} />
             </div>
+            {/* Headline: votes + affinities */}
+            <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-b border-bronze/30 bg-marble-dark/25">
+              <div className="text-center">
+                <p className="font-heading text-3xl font-bold leading-none text-crimson">
+                  {selected.senate_votes ?? 0}
+                </p>
+                <p className="text-[9px] font-heading font-semibold uppercase tracking-widest text-senate-dark">
+                  Senate Votes
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {(selected.affinities ?? []).length === 0 ? (
+                  <span className="text-xs font-body font-semibold text-senate-dark/70">No declared affinities</span>
+                ) : (
+                  (selected.affinities ?? []).map((a) => (
+                    <span
+                      key={a}
+                      className="px-2.5 py-1 rounded-sm border border-bronze/60 bg-ivory-dark text-xs font-heading font-bold uppercase tracking-wider text-senate-dark"
+                    >
+                      {affinityLabel(a)}
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+
             {selected.description && (
-              <p className="px-4 pt-3 font-body font-medium text-sm text-foreground">{selected.description}</p>
+              <p className="px-4 pt-3 font-body font-semibold text-sm text-senate-dark">{selected.description}</p>
             )}
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 p-4 text-sm">
               <DossierRow label="Leader" value="—" />
@@ -106,7 +133,7 @@ function DossierRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-[9px] font-heading font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="font-body font-medium text-foreground">{value}</p>
+      <p className="font-body font-semibold text-senate-dark">{value}</p>
     </div>
   );
 }
@@ -119,7 +146,7 @@ function DossierMeter({ label, value }: { label: string; value: number }) {
         <div className="flex-1 h-2 rounded-sm bg-ivory-dark border border-bronze/30 overflow-hidden">
           <div className="h-full bg-bronze/70" style={{ width: `${value}%` }} />
         </div>
-        <span className="text-xs font-body font-medium text-foreground w-8 text-right">{value}</span>
+        <span className="text-xs font-body font-semibold text-senate-dark w-8 text-right">{value}</span>
       </div>
     </div>
   );

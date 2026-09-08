@@ -2337,33 +2337,39 @@ export type Database = {
       senate_blocs: {
         Row: {
           accent_color: string
+          affinities: string[]
           created_at: string
           description: string
           id: string
           image_url: string | null
           name: string
+          senate_votes: number
           set_id: string
           sort_order: number
           updated_at: string
         }
         Insert: {
           accent_color?: string
+          affinities?: string[]
           created_at?: string
           description?: string
           id?: string
           image_url?: string | null
           name: string
+          senate_votes?: number
           set_id: string
           sort_order?: number
           updated_at?: string
         }
         Update: {
           accent_color?: string
+          affinities?: string[]
           created_at?: string
           description?: string
           id?: string
           image_url?: string | null
           name?: string
+          senate_votes?: number
           set_id?: string
           sort_order?: number
           updated_at?: string
