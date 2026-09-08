@@ -16,6 +16,8 @@ export interface SenateBloc {
   image_url: string | null;
   accent_color: string;
   sort_order: number;
+  senate_votes: number;
+  affinities: string[];
 }
 
 export interface SenateBlocSet {
@@ -30,7 +32,7 @@ export interface SenateBlocSetBundle {
   version: 1;
   name: string;
   description: string;
-  blocs: Array<Pick<SenateBloc, "name" | "description" | "image_url" | "accent_color" | "sort_order">>;
+  blocs: Array<Pick<SenateBloc, "name" | "description" | "image_url" | "accent_color" | "sort_order" | "senate_votes" | "affinities">>;
 }
 
 const db = () => supabase as any;
@@ -47,7 +49,7 @@ export async function listSenateBlocSets(): Promise<SenateBlocSet[]> {
 export async function listSenateBlocs(setId: string): Promise<SenateBloc[]> {
   const { data, error } = await db()
     .from("senate_blocs")
-    .select("id, set_id, name, description, image_url, accent_color, sort_order")
+    .select("id, set_id, name, description, image_url, accent_color, sort_order, senate_votes, affinities")
     .eq("set_id", setId)
     .order("sort_order", { ascending: true });
   if (error) throw error;
@@ -108,7 +110,7 @@ export async function addSenateBloc(setId: string, sortOrder: number): Promise<S
   const { data, error } = await db()
     .from("senate_blocs")
     .insert({ set_id: setId, name: "New Bloc", description: "", sort_order: sortOrder })
-    .select("id, set_id, name, description, image_url, accent_color, sort_order")
+    .select("id, set_id, name, description, image_url, accent_color, sort_order, senate_votes, affinities")
     .single();
   if (error) throw error;
   return data as SenateBloc;
@@ -116,7 +118,7 @@ export async function addSenateBloc(setId: string, sortOrder: number): Promise<S
 
 export async function updateSenateBloc(
   id: string,
-  updates: Partial<Pick<SenateBloc, "name" | "description" | "image_url" | "accent_color" | "sort_order">>,
+  updates: Partial<Pick<SenateBloc, "name" | "description" | "image_url" | "accent_color" | "sort_order" | "senate_votes" | "affinities">>,
 ) {
   const { error } = await db().from("senate_blocs").update(updates).eq("id", id);
   if (error) throw error;
@@ -142,6 +144,8 @@ export async function exportSenateBlocSet(setId: string): Promise<SenateBlocSetB
       image_url: b.image_url,
       accent_color: b.accent_color,
       sort_order: b.sort_order,
+      senate_votes: b.senate_votes ?? 0,
+      affinities: b.affinities ?? [],
     })),
   };
 }
@@ -160,6 +164,8 @@ export async function importSenateBlocSet(bundle: SenateBlocSetBundle, createdBy
       image_url: b.image_url ?? null,
       accent_color: b.accent_color || "#8a6d3b",
       sort_order: b.sort_order ?? i + 1,
+      senate_votes: b.senate_votes ?? 0,
+      affinities: b.affinities ?? [],
     }));
     const { error } = await db().from("senate_blocs").insert(rows);
     if (error) throw error;
