@@ -1,30 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Header from "@/components/Header";
 import PageMeta from "@/components/PageMeta";
+import SenateBlocSetToolbar from "@/components/SenateBlocSetToolbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Download, Upload, Copy, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
   SenateBloc,
-  SenateBlocSet,
   addSenateBloc,
-  createSenateBlocSet,
   deleteSenateBloc,
-  deleteSenateBlocSet,
-  duplicateSenateBlocSet,
-  exportSenateBlocSet,
-  getDefaultSenateBlocSetId,
-  importSenateBlocSet,
-  listSenateBlocSets,
   listSenateBlocs,
-  setDefaultSenateBlocSetId,
   updateSenateBloc,
-  updateSenateBlocSet,
 } from "@/lib/senateBlocs";
 import { AFFINITIES, MAX_AFFINITIES, canAddAffinity, isStandaloneAffinity, oppositeOf } from "@/lib/senateAffinities";
 import { AffinityConfigRow, listAffinityConfig, updateAffinityConfig } from "@/lib/senateAffinityConfig";
