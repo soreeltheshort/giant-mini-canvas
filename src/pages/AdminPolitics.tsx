@@ -241,7 +241,9 @@ export default function AdminPolitics() {
           </div>
           <div className="divide-y divide-bronze/20">
             {(affinityCfg.length ? affinityCfg : AFFINITIES.map((a, i) => ({ id: a.id, label: a.label, icon_url: null, sort_order: i }))).map((row) => {
-              const count = blocs.filter((b) => (b.affinities ?? []).includes(row.id)).length;
+              const holding = blocs.filter((b) => (b.affinities ?? []).includes(row.id));
+              const count = holding.length;
+              const voteSum = holding.reduce((sum, b) => sum + (b.senate_votes ?? 0), 0);
               const opp = oppositeOf(row.id);
               const patch = (updates: Partial<AffinityConfigRow>) =>
                 setAffinityCfg((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...updates } : r)));
@@ -249,7 +251,7 @@ export default function AdminPolitics() {
                 try { await updateAffinityConfig(row.id, updates); } catch (e: any) { toast.error(e.message ?? String(e)); }
               };
               return (
-                <div key={row.id} className="grid grid-cols-[3rem_1fr_auto_18rem] items-center gap-3 px-4 py-2">
+                <div key={row.id} className="grid grid-cols-[3rem_1fr_auto_auto_18rem] items-center gap-3 px-4 py-2">
                   <div className="h-10 w-10 border border-bronze/40 rounded-sm overflow-hidden bg-muted flex items-center justify-center">
                     {row.icon_url
                       ? <img src={row.icon_url} alt={`${row.label} affinity icon`} className="w-full h-full object-cover" />
