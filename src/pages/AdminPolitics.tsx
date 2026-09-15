@@ -269,8 +269,8 @@ export default function AdminPolitics() {
                     </span>
                   </div>
                   <div className="text-right w-16 tabular-nums">
-                    <div className="font-body font-semibold text-crimson">{count} bloc{count === 1 ? "" : "s"}</div>
-                    <div className="font-body font-semibold text-xs text-bronze-dark">{voteSum} votes</div>
+                    <div className="font-body font-semibold text-white">{count} bloc{count === 1 ? "" : "s"}</div>
+                    <div className="font-body font-semibold text-xs text-white">{voteSum} votes</div>
                   </div>
                   <Select
                     value={row.icon_url ?? "none"}
