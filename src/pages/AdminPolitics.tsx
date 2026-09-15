@@ -26,7 +26,7 @@ import {
   updateSenateBloc,
   updateSenateBlocSet,
 } from "@/lib/senateBlocs";
-import { AFFINITIES, MAX_AFFINITIES, canAddAffinity } from "@/lib/senateAffinities";
+import { AFFINITIES, MAX_AFFINITIES, canAddAffinity, isStandaloneAffinity } from "@/lib/senateAffinities";
 
 const IMAGE_BUCKET = "images";
 
