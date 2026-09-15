@@ -372,7 +372,12 @@ export default function AdminPolitics() {
                                 : "border-bronze/50 text-muted-foreground hover:border-bronze hover:text-bronze-dark"
                           }`}
                         >
-                          {a.label}
+                          <span className="inline-flex items-center gap-1">
+                            {affinityIconOf(a.id) && (
+                              <img src={affinityIconOf(a.id)!} alt="" className="h-3.5 w-3.5 object-cover rounded-[2px]" />
+                            )}
+                            {affinityLabelOf(a.id)}
+                          </span>
                         </button>
                       );
                     })}
