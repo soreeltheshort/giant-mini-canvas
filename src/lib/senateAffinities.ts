@@ -24,9 +24,10 @@ export const AFFINITIES: AffinityDef[] = [
   { id: "improvement", label: "Improvement", opposite: "expansion" },
   { id: "populist", label: "Populist", opposite: "patrician" },
   { id: "patrician", label: "Patrician", opposite: "populist" },
-  { id: "piety", label: "Piety" },
-  { id: "commerce", label: "Commerce" },
-  { id: "science", label: "Science" },
+  { id: "sullani", label: "Sullani" },
+  { id: "mariani", label: "Mariani" },
+  { id: "tsaesariani", label: "Tsaesariani" },
+  { id: "pompeiani", label: "Pompeiani" },
 ];
 
 export const MAX_AFFINITIES = 3;
