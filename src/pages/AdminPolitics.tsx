@@ -209,27 +209,15 @@ export default function AdminPolitics() {
         </p>
 
         {/* Set toolbar */}
-        <div className="flex flex-wrap items-end gap-3 mb-8 border border-bronze/40 rounded-sm p-4 bg-card">
-          <div className="space-y-1.5">
-            <div className="text-xs font-heading uppercase tracking-[0.25em] text-bronze">Active Set</div>
-            <Select value={activeSetId ?? ""} onValueChange={setActiveSetId} disabled={busy || sets.length === 0}>
-              <SelectTrigger className="min-w-[16rem]">
-                <SelectValue placeholder={sets.length ? "Select a set" : "No sets yet"} />
-              </SelectTrigger>
-              <SelectContent className="bg-background z-50">
-                {sets.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleNewSet} disabled={busy}><Plus className="h-4 w-4 mr-1" />New</Button>
-          <Button variant="outline" size="sm" onClick={handleRenameSet} disabled={busy || !activeSet}>Rename</Button>
-          <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={busy || !activeSet}><Copy className="h-4 w-4 mr-1" />Duplicate</Button>
-          <Button variant="outline" size="sm" onClick={handleMakeDefault} disabled={busy || !activeSet}>Make Default</Button>
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={busy || !activeSet}><Download className="h-4 w-4 mr-1" />Save</Button>
-          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={busy}><Upload className="h-4 w-4 mr-1" />Load</Button>
-          <Button variant="destructive" size="sm" onClick={handleDeleteSet} disabled={busy || !activeSet}><Trash2 className="h-4 w-4 mr-1" />Delete Set</Button>
-          <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={handleFile} />
-        </div>
+        <SenateBlocSetToolbar
+          value={activeSetId}
+          onChange={setActiveSetId}
+          userId={user?.id}
+          disabled={busy}
+          mode="full"
+          onSetsChanged={() => loadBlocs(activeSetId)}
+          className="flex flex-wrap items-end gap-3 mb-8 border border-bronze/40 rounded-sm p-4 bg-card"
+        />
 
         {/* Affinities table */}
         <div className="mb-8 border border-bronze/40 rounded-sm bg-card">
