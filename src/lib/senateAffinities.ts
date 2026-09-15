@@ -13,21 +13,20 @@ export interface AffinityDef {
 
 export const AFFINITY_PAIRS: Array<[string, string]> = [
   ["peace", "war"],
-  ["tradition", "reform"],
+  ["expansion", "improvement"],
   ["populist", "patrician"],
 ];
 
 export const AFFINITIES: AffinityDef[] = [
   { id: "peace", label: "Peace", opposite: "war" },
   { id: "war", label: "War", opposite: "peace" },
-  { id: "tradition", label: "Tradition", opposite: "reform" },
-  { id: "reform", label: "Reform", opposite: "tradition" },
+  { id: "expansion", label: "Expansion", opposite: "improvement" },
+  { id: "improvement", label: "Improvement", opposite: "expansion" },
   { id: "populist", label: "Populist", opposite: "patrician" },
   { id: "patrician", label: "Patrician", opposite: "populist" },
   { id: "piety", label: "Piety" },
   { id: "commerce", label: "Commerce" },
   { id: "science", label: "Science" },
-  { id: "expansion", label: "Expansion" },
 ];
 
 export const MAX_AFFINITIES = 3;
