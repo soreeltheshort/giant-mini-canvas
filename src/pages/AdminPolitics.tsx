@@ -40,6 +40,11 @@ export default function AdminPolitics() {
   const [blocs, setBlocs] = useState<SenateBloc[]>([]);
   const [images, setImages] = useState<{ name: string; url: string }[]>([]);
   const [busy, setBusy] = useState(false);
+  const [affinityCfg, setAffinityCfg] = useState<AffinityConfigRow[]>([]);
+
+  const affinityLabelOf = (id: string) =>
+    affinityCfg.find((a) => a.id === id)?.label ?? AFFINITIES.find((a) => a.id === id)?.label ?? id;
+  const affinityIconOf = (id: string) => affinityCfg.find((a) => a.id === id)?.icon_url ?? null;
 
   const activeSet = sets.find((s) => s.id === activeSetId) || null;
 
@@ -57,6 +62,7 @@ export default function AdminPolitics() {
   }, []);
 
   useEffect(() => { loadSets(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { listAffinityConfig().then(setAffinityCfg).catch(() => setAffinityCfg([])); }, []);
   useEffect(() => { loadBlocs(activeSetId); }, [activeSetId, loadBlocs]);
 
   useEffect(() => {
