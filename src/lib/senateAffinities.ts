@@ -1,7 +1,7 @@
 /**
  * Senate bloc affinities.
  *
- * Three opposed pairs (a bloc may hold only one side of a pair) plus four
+ * Three opposed pairs (a bloc may hold only one side of a pair) plus three
  * standalone affinities. A bloc holds between 1 and 3 affinities.
  */
 export interface AffinityDef {
