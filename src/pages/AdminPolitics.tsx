@@ -299,7 +299,7 @@ export default function AdminPolitics() {
                               ? "border-crimson bg-crimson/10 text-crimson"
                               : disabled
                                 ? "border-border text-muted-foreground/50 cursor-not-allowed"
-                                : "border-bronze/40 text-senate-dark hover:border-bronze"
+                                : "border-bronze/50 text-muted-foreground hover:border-bronze hover:text-bronze-dark"
                           }`}
                         >
                           {a.label}
