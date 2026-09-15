@@ -43,22 +43,10 @@ export default function AdminPolitics() {
     affinityCfg.find((a) => a.id === id)?.label ?? AFFINITIES.find((a) => a.id === id)?.label ?? id;
   const affinityIconOf = (id: string) => affinityCfg.find((a) => a.id === id)?.icon_url ?? null;
 
-  const activeSet = sets.find((s) => s.id === activeSetId) || null;
-
-  const loadSets = useCallback(async (preferId?: string) => {
-    const rows = await listSenateBlocSets().catch(() => [] as SenateBlocSet[]);
-    setSets(rows);
-    const defId = await getDefaultSenateBlocSetId().catch(() => null);
-    const next = preferId || activeSetId || defId || rows[0]?.id || null;
-    setActiveSetId(rows.some((r) => r.id === next) ? next : rows[0]?.id ?? null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSetId]);
-
   const loadBlocs = useCallback(async (setId: string | null) => {
     setBlocs(setId ? await listSenateBlocs(setId).catch(() => []) : []);
   }, []);
 
-  useEffect(() => { loadSets(); /* eslint-disable-next-line */ }, []);
   useEffect(() => { listAffinityConfig().then(setAffinityCfg).catch(() => setAffinityCfg([])); }, []);
   useEffect(() => { loadBlocs(activeSetId); }, [activeSetId, loadBlocs]);
 
