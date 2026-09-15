@@ -236,12 +236,14 @@ export default function AdminPolitics() {
           <div className="px-4 py-3 border-b border-bronze/30">
             <h2 className="font-heading text-xl text-gold">Affinities</h2>
             <p className="font-body font-medium text-xs text-muted-foreground">
-              Labels and icons are shared across all sets. The count shows how many blocs in the active set hold each affinity.
+              Labels and icons are shared across all sets. For each affinity: how many blocs in the active set hold it, and the combined senate votes of those blocs.
             </p>
           </div>
           <div className="divide-y divide-bronze/20">
             {(affinityCfg.length ? affinityCfg : AFFINITIES.map((a, i) => ({ id: a.id, label: a.label, icon_url: null, sort_order: i }))).map((row) => {
-              const count = blocs.filter((b) => (b.affinities ?? []).includes(row.id)).length;
+              const holding = blocs.filter((b) => (b.affinities ?? []).includes(row.id));
+              const count = holding.length;
+              const voteSum = holding.reduce((sum, b) => sum + (b.senate_votes ?? 0), 0);
               const opp = oppositeOf(row.id);
               const patch = (updates: Partial<AffinityConfigRow>) =>
                 setAffinityCfg((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...updates } : r)));
@@ -249,7 +251,7 @@ export default function AdminPolitics() {
                 try { await updateAffinityConfig(row.id, updates); } catch (e: any) { toast.error(e.message ?? String(e)); }
               };
               return (
-                <div key={row.id} className="grid grid-cols-[3rem_1fr_auto_18rem] items-center gap-3 px-4 py-2">
+                <div key={row.id} className="grid grid-cols-[3rem_1fr_auto_auto_18rem] items-center gap-3 px-4 py-2">
                   <div className="h-10 w-10 border border-bronze/40 rounded-sm overflow-hidden bg-muted flex items-center justify-center">
                     {row.icon_url
                       ? <img src={row.icon_url} alt={`${row.label} affinity icon`} className="w-full h-full object-cover" />
@@ -266,7 +268,10 @@ export default function AdminPolitics() {
                       {opp ? `opposed to ${affinityLabelOf(opp)}` : "allegiance"}
                     </span>
                   </div>
-                  <div className="font-body font-semibold text-crimson w-16 text-right tabular-nums">{count}</div>
+                  <div className="text-right w-16 tabular-nums">
+                    <div className="font-body font-semibold text-crimson">{count} bloc{count === 1 ? "" : "s"}</div>
+                    <div className="font-body font-semibold text-xs text-bronze-dark">{voteSum} votes</div>
+                  </div>
                   <Select
                     value={row.icon_url ?? "none"}
                     onValueChange={(v) => {
