@@ -33,9 +33,6 @@ const IMAGE_BUCKET = "images";
 
 export default function AdminPolitics() {
   const { user, isAdmin } = useAuth();
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const [sets, setSets] = useState<SenateBlocSet[]>([]);
   const [activeSetId, setActiveSetId] = useState<string | null>(null);
   const [blocs, setBlocs] = useState<SenateBloc[]>([]);
   const [images, setImages] = useState<{ name: string; url: string }[]>([]);
