@@ -390,7 +390,14 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
           disabled={busy}
         />
 
-        <SenateBlocSetPicker value={blocSetId} onChange={setBlocSetId} disabled={busy} />
+        <SenateBlocSetToolbar
+          value={blocSetId}
+          onChange={setBlocSetId}
+          userId={user?.id}
+          disabled={busy}
+          mode="load"
+          label="Politics Set"
+        />
 
         <div>
           <label className="font-heading uppercase tracking-[0.25em] text-xs text-bronze block mb-2">
