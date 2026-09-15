@@ -1,7 +1,7 @@
 /**
  * Senate bloc affinities.
  *
- * Three opposed pairs (a bloc may hold only one side of a pair) plus three
+ * Three opposed pairs (a bloc may hold only one side of a pair) plus four
  * standalone affinities. A bloc holds between 1 and 3 affinities.
  */
 export interface AffinityDef {
@@ -24,9 +24,10 @@ export const AFFINITIES: AffinityDef[] = [
   { id: "improvement", label: "Improvement", opposite: "expansion" },
   { id: "populist", label: "Populist", opposite: "patrician" },
   { id: "patrician", label: "Patrician", opposite: "populist" },
-  { id: "piety", label: "Piety" },
-  { id: "commerce", label: "Commerce" },
-  { id: "science", label: "Science" },
+  { id: "sullani", label: "Sullani" },
+  { id: "mariani", label: "Mariani" },
+  { id: "tsaesariani", label: "Tsaesariani" },
+  { id: "pompeiani", label: "Pompeiani" },
 ];
 
 export const MAX_AFFINITIES = 3;
