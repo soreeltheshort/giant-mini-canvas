@@ -1,30 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Header from "@/components/Header";
 import PageMeta from "@/components/PageMeta";
+import SenateBlocSetToolbar from "@/components/SenateBlocSetToolbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Download, Upload, Copy, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
   SenateBloc,
-  SenateBlocSet,
   addSenateBloc,
-  createSenateBlocSet,
   deleteSenateBloc,
-  deleteSenateBlocSet,
-  duplicateSenateBlocSet,
-  exportSenateBlocSet,
-  getDefaultSenateBlocSetId,
-  importSenateBlocSet,
-  listSenateBlocSets,
   listSenateBlocs,
-  setDefaultSenateBlocSetId,
   updateSenateBloc,
-  updateSenateBlocSet,
 } from "@/lib/senateBlocs";
 import { AFFINITIES, MAX_AFFINITIES, canAddAffinity, isStandaloneAffinity, oppositeOf } from "@/lib/senateAffinities";
 import { AffinityConfigRow, listAffinityConfig, updateAffinityConfig } from "@/lib/senateAffinityConfig";
@@ -33,9 +24,6 @@ const IMAGE_BUCKET = "images";
 
 export default function AdminPolitics() {
   const { user, isAdmin } = useAuth();
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const [sets, setSets] = useState<SenateBlocSet[]>([]);
   const [activeSetId, setActiveSetId] = useState<string | null>(null);
   const [blocs, setBlocs] = useState<SenateBloc[]>([]);
   const [images, setImages] = useState<{ name: string; url: string }[]>([]);
@@ -46,22 +34,10 @@ export default function AdminPolitics() {
     affinityCfg.find((a) => a.id === id)?.label ?? AFFINITIES.find((a) => a.id === id)?.label ?? id;
   const affinityIconOf = (id: string) => affinityCfg.find((a) => a.id === id)?.icon_url ?? null;
 
-  const activeSet = sets.find((s) => s.id === activeSetId) || null;
-
-  const loadSets = useCallback(async (preferId?: string) => {
-    const rows = await listSenateBlocSets().catch(() => [] as SenateBlocSet[]);
-    setSets(rows);
-    const defId = await getDefaultSenateBlocSetId().catch(() => null);
-    const next = preferId || activeSetId || defId || rows[0]?.id || null;
-    setActiveSetId(rows.some((r) => r.id === next) ? next : rows[0]?.id ?? null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSetId]);
-
   const loadBlocs = useCallback(async (setId: string | null) => {
     setBlocs(setId ? await listSenateBlocs(setId).catch(() => []) : []);
   }, []);
 
-  useEffect(() => { loadSets(); /* eslint-disable-next-line */ }, []);
   useEffect(() => { listAffinityConfig().then(setAffinityCfg).catch(() => setAffinityCfg([])); }, []);
   useEffect(() => { loadBlocs(activeSetId); }, [activeSetId, loadBlocs]);
 
@@ -90,67 +66,6 @@ export default function AdminPolitics() {
     try { await fn(); } catch (e: any) { toast.error(e.message ?? String(e)); } finally { setBusy(false); }
   };
 
-  const handleNewSet = () => withBusy(async () => {
-    const name = prompt("Name for the new politics set?")?.trim();
-    if (!name) return;
-    const set = await createSenateBlocSet(name, "", user?.id);
-    await loadSets(set.id);
-    toast.success("Set created");
-  });
-
-  const handleRenameSet = () => withBusy(async () => {
-    if (!activeSet) return;
-    const name = prompt("Rename set", activeSet.name)?.trim();
-    if (!name) return;
-    await updateSenateBlocSet(activeSet.id, { name });
-    await loadSets(activeSet.id);
-  });
-
-  const handleDuplicate = () => withBusy(async () => {
-    if (!activeSetId) return;
-    const copy = await duplicateSenateBlocSet(activeSetId, user?.id);
-    await loadSets(copy.id);
-    toast.success("Set duplicated");
-  });
-
-  const handleDeleteSet = () => withBusy(async () => {
-    if (!activeSet) return;
-    if (!confirm(`Delete "${activeSet.name}" and all of its blocs?`)) return;
-    await deleteSenateBlocSet(activeSet.id);
-    setActiveSetId(null);
-    await loadSets();
-    toast.success("Set deleted");
-  });
-
-  const handleMakeDefault = () => withBusy(async () => {
-    if (!activeSetId) return;
-    await setDefaultSenateBlocSetId(activeSetId);
-    toast.success("Set as default for new games");
-  });
-
-  const handleExport = () => withBusy(async () => {
-    if (!activeSetId) return;
-    const bundle = await exportSenateBlocSet(activeSetId);
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `politics-${bundle.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  });
-
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    withBusy(async () => {
-      const bundle = JSON.parse(await file.text());
-      const set = await importSenateBlocSet(bundle, user?.id);
-      await loadSets(set.id);
-      toast.success(`Imported "${set.name}"`);
-    });
-  };
 
   const handleAddBloc = () => withBusy(async () => {
     if (!activeSetId) return;
@@ -209,27 +124,15 @@ export default function AdminPolitics() {
         </p>
 
         {/* Set toolbar */}
-        <div className="flex flex-wrap items-end gap-3 mb-8 border border-bronze/40 rounded-sm p-4 bg-card">
-          <div className="space-y-1.5">
-            <div className="text-xs font-heading uppercase tracking-[0.25em] text-bronze">Active Set</div>
-            <Select value={activeSetId ?? ""} onValueChange={setActiveSetId} disabled={busy || sets.length === 0}>
-              <SelectTrigger className="min-w-[16rem]">
-                <SelectValue placeholder={sets.length ? "Select a set" : "No sets yet"} />
-              </SelectTrigger>
-              <SelectContent className="bg-background z-50">
-                {sets.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleNewSet} disabled={busy}><Plus className="h-4 w-4 mr-1" />New</Button>
-          <Button variant="outline" size="sm" onClick={handleRenameSet} disabled={busy || !activeSet}>Rename</Button>
-          <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={busy || !activeSet}><Copy className="h-4 w-4 mr-1" />Duplicate</Button>
-          <Button variant="outline" size="sm" onClick={handleMakeDefault} disabled={busy || !activeSet}>Make Default</Button>
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={busy || !activeSet}><Download className="h-4 w-4 mr-1" />Save</Button>
-          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={busy}><Upload className="h-4 w-4 mr-1" />Load</Button>
-          <Button variant="destructive" size="sm" onClick={handleDeleteSet} disabled={busy || !activeSet}><Trash2 className="h-4 w-4 mr-1" />Delete Set</Button>
-          <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={handleFile} />
-        </div>
+        <SenateBlocSetToolbar
+          value={activeSetId}
+          onChange={setActiveSetId}
+          userId={user?.id}
+          disabled={busy}
+          mode="full"
+          onSetsChanged={() => loadBlocs(activeSetId)}
+          className="flex flex-wrap items-end gap-3 mb-8 border border-bronze/40 rounded-sm p-4 bg-card"
+        />
 
         {/* Affinities table */}
         <div className="mb-8 border border-bronze/40 rounded-sm bg-card">

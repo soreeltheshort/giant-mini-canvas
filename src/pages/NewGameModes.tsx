@@ -9,7 +9,7 @@ import { materializeGameFleets } from "@/lib/materializeGameFleets";
 import { PROVINCE_NAMES, startGame } from "@/lib/gameLifecycle";
 import FactionsConfigPicker from "@/components/FactionsConfigPicker";
 import MapPicker, { SavedMapRow } from "@/components/MapPicker";
-import SenateBlocSetPicker from "@/components/SenateBlocSetPicker";
+import SenateBlocSetToolbar from "@/components/SenateBlocSetToolbar";
 import { applyAndSetDefaultFactionsConfig } from "@/lib/factionsConfig";
 
 const TITLE_BG =
@@ -390,7 +390,14 @@ function SinglePlayerPanel({ onBack }: { onBack: () => void }) {
           disabled={busy}
         />
 
-        <SenateBlocSetPicker value={blocSetId} onChange={setBlocSetId} disabled={busy} />
+        <SenateBlocSetToolbar
+          value={blocSetId}
+          onChange={setBlocSetId}
+          userId={user?.id}
+          disabled={busy}
+          mode="load"
+          label="Politics Set"
+        />
 
         <div>
           <label className="font-heading uppercase tracking-[0.25em] text-xs text-bronze block mb-2">
