@@ -231,6 +231,62 @@ export default function AdminPolitics() {
           <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={handleFile} />
         </div>
 
+        {/* Affinities table */}
+        <div className="mb-8 border border-bronze/40 rounded-sm bg-card">
+          <div className="px-4 py-3 border-b border-bronze/30">
+            <h2 className="font-heading text-xl text-gold">Affinities</h2>
+            <p className="font-body font-medium text-xs text-muted-foreground">
+              Labels and icons are shared across all sets. The count shows how many blocs in the active set hold each affinity.
+            </p>
+          </div>
+          <div className="divide-y divide-bronze/20">
+            {(affinityCfg.length ? affinityCfg : AFFINITIES.map((a, i) => ({ id: a.id, label: a.label, icon_url: null, sort_order: i }))).map((row) => {
+              const count = blocs.filter((b) => (b.affinities ?? []).includes(row.id)).length;
+              const opp = oppositeOf(row.id);
+              const patch = (updates: Partial<AffinityConfigRow>) =>
+                setAffinityCfg((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...updates } : r)));
+              const save = async (updates: Partial<AffinityConfigRow>) => {
+                try { await updateAffinityConfig(row.id, updates); } catch (e: any) { toast.error(e.message ?? String(e)); }
+              };
+              return (
+                <div key={row.id} className="grid grid-cols-[3rem_1fr_auto_18rem] items-center gap-3 px-4 py-2">
+                  <div className="h-10 w-10 border border-bronze/40 rounded-sm overflow-hidden bg-muted flex items-center justify-center">
+                    {row.icon_url
+                      ? <img src={row.icon_url} alt={`${row.label} affinity icon`} className="w-full h-full object-cover" />
+                      : <span className="text-[10px] font-body text-muted-foreground">none</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={row.label}
+                      onChange={(e) => patch({ label: e.target.value })}
+                      onBlur={() => save({ label: row.label })}
+                      className="max-w-[14rem]"
+                    />
+                    <span className="text-xs font-body text-muted-foreground">
+                      {opp ? `opposed to ${affinityLabelOf(opp)}` : "allegiance"}
+                    </span>
+                  </div>
+                  <div className="font-body font-semibold text-crimson w-16 text-right tabular-nums">{count}</div>
+                  <Select
+                    value={row.icon_url ?? "none"}
+                    onValueChange={(v) => {
+                      const url = v === "none" ? null : v;
+                      patch({ icon_url: url });
+                      save({ icon_url: url });
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Choose an icon" /></SelectTrigger>
+                    <SelectContent className="bg-background z-50 max-h-72">
+                      <SelectItem value="none">No icon</SelectItem>
+                      {images.map((img) => <SelectItem key={img.name} value={img.url}>{img.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Blocs */}
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-heading text-xl text-gold">
