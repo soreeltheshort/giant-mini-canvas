@@ -2307,6 +2307,33 @@ export type Database = {
         }
         Relationships: []
       }
+      senate_affinity_config: {
+        Row: {
+          created_at: string
+          icon_url: string | null
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon_url?: string | null
+          id: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon_url?: string | null
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       senate_bloc_sets: {
         Row: {
           created_at: string
