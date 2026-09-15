@@ -226,7 +226,12 @@ export default function AdminPolitics() {
 
         {/* Blocs */}
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-heading text-xl text-gold">Senate Blocs ({blocs.length})</h2>
+          <h2 className="font-heading text-xl text-gold">
+            Senate Blocs ({blocs.length})
+            <span className="ml-4 font-body font-semibold text-base text-crimson">
+              Total Seats: {blocs.reduce((sum, b) => sum + (b.senate_votes ?? 0), 0)}
+            </span>
+          </h2>
           <Button size="sm" onClick={handleAddBloc} disabled={busy || !activeSetId}><Plus className="h-4 w-4 mr-1" />Add Bloc</Button>
         </div>
 
