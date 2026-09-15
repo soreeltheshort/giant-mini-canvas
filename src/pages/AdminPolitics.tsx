@@ -26,7 +26,7 @@ import {
   updateSenateBloc,
   updateSenateBlocSet,
 } from "@/lib/senateBlocs";
-import { AFFINITIES, MAX_AFFINITIES, canAddAffinity } from "@/lib/senateAffinities";
+import { AFFINITIES, MAX_AFFINITIES, canAddAffinity, isStandaloneAffinity } from "@/lib/senateAffinities";
 
 const IMAGE_BUCKET = "images";
 
@@ -282,7 +282,9 @@ export default function AdminPolitics() {
 
                 <div className="space-y-1.5">
                   <div className="text-xs font-heading uppercase tracking-widest text-bronze">
-                    Affinities ({(b.affinities ?? []).length}/{MAX_AFFINITIES})
+                    Affinities ({(b.affinities ?? []).filter((x) => !isStandaloneAffinity(x)).length}/{MAX_AFFINITIES}
+                    {" + "}
+                    {(b.affinities ?? []).filter(isStandaloneAffinity).length} allegiances)
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {AFFINITIES.map((a) => {

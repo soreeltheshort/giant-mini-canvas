@@ -40,10 +40,23 @@ export function oppositeOf(id: string): string | undefined {
   return AFFINITIES.find((a) => a.id === id)?.opposite;
 }
 
-/** Can this affinity be added to the current selection? */
+/** Is this affinity a standalone (non-paired) one? */
+export function isStandaloneAffinity(id: string): boolean {
+  return !oppositeOf(id);
+}
+
+/**
+ * Can this affinity be added to the current selection?
+ * The 1-3 limit applies only to the paired affinities; standalone affinities
+ * (Sullani, Mariani, Tsaesariani, Pompeiani) can always be toggled freely.
+ */
 export function canAddAffinity(current: string[], id: string): boolean {
   if (current.includes(id)) return false;
-  if (current.length >= MAX_AFFINITIES) return false;
   const opp = oppositeOf(id);
-  return !(opp && current.includes(opp));
+  if (opp) {
+    if (current.includes(opp)) return false;
+    const pairedCount = current.filter((c) => !isStandaloneAffinity(c)).length;
+    if (pairedCount >= MAX_AFFINITIES) return false;
+  }
+  return true;
 }
