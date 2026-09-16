@@ -213,6 +213,9 @@ const Header = () => {
                       <DropdownMenuItem asChild>
                         <Link to="/admin/politics">Politics</Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/favores">Favores</Link>
+                      </DropdownMenuItem>
 
                     </DropdownMenuContent>
                   </DropdownMenu>
