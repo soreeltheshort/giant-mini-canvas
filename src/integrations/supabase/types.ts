@@ -693,6 +693,7 @@ export type Database = {
       app_settings: {
         Row: {
           default_factions_config_id: string | null
+          default_favor_set_id: string | null
           default_map_id: string | null
           default_senate_bloc_set_id: string | null
           id: string
@@ -701,6 +702,7 @@ export type Database = {
         }
         Insert: {
           default_factions_config_id?: string | null
+          default_favor_set_id?: string | null
           default_map_id?: string | null
           default_senate_bloc_set_id?: string | null
           id?: string
@@ -709,6 +711,7 @@ export type Database = {
         }
         Update: {
           default_factions_config_id?: string | null
+          default_favor_set_id?: string | null
           default_map_id?: string | null
           default_senate_bloc_set_id?: string | null
           id?: string
@@ -1362,6 +1365,98 @@ export type Database = {
             columns: ["ship_naming_convention_id"]
             isOneToOne: false
             referencedRelation: "naming_conventions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      favor_sets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      favors: {
+        Row: {
+          affinity_reward: number
+          bloc_reward: number
+          created_at: string
+          criterion_params: Json
+          criterion_type: string
+          description: string
+          id: string
+          name: string
+          rarity: string
+          rarity_weight: number
+          set_id: string
+          sort_order: number
+          target_affinities: string[]
+          target_bloc_ids: string[]
+          updated_at: string
+          variables: Json
+        }
+        Insert: {
+          affinity_reward?: number
+          bloc_reward?: number
+          created_at?: string
+          criterion_params?: Json
+          criterion_type?: string
+          description?: string
+          id?: string
+          name?: string
+          rarity?: string
+          rarity_weight?: number
+          set_id: string
+          sort_order?: number
+          target_affinities?: string[]
+          target_bloc_ids?: string[]
+          updated_at?: string
+          variables?: Json
+        }
+        Update: {
+          affinity_reward?: number
+          bloc_reward?: number
+          created_at?: string
+          criterion_params?: Json
+          criterion_type?: string
+          description?: string
+          id?: string
+          name?: string
+          rarity?: string
+          rarity_weight?: number
+          set_id?: string
+          sort_order?: number
+          target_affinities?: string[]
+          target_bloc_ids?: string[]
+          updated_at?: string
+          variables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favors_set_id_fkey"
+            columns: ["set_id"]
+            isOneToOne: false
+            referencedRelation: "favor_sets"
             referencedColumns: ["id"]
           },
         ]
