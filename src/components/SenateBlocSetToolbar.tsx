@@ -172,6 +172,7 @@ export default function SenateBlocSetToolbar({
   };
 
   return (
+    <>
     <div
       className={
         className ??
