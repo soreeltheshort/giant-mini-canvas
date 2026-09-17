@@ -170,6 +170,7 @@ export default function FavorSetToolbar({
   };
 
   return (
+    <>
     <div
       className={
         className ??
