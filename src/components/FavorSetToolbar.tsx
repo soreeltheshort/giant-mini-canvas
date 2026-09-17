@@ -230,6 +230,8 @@ export default function FavorSetToolbar({
       )}
 
       <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={handleFile} />
-    </div>
+      </div>
+      {dialog}
+    </>
   );
 }
