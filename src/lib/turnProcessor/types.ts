@@ -11,6 +11,7 @@ import type { DbFacilityType } from "@/hooks/useFacilityTypes";
 import type { ShipTypeForUpkeep } from "@/lib/turnEngine";
 import type { FactionMeta } from "./ownerKey";
 import type { PerfTimer } from "./perf";
+import type { PlayerTurnFlags } from "./playerFlags";
 
 export type PhaseName = "economy" | "movement" | "visibility" | "combat" | "ground_combat" | "infect_intel_leech" | "threat_assessment" | "ai_slates" | "ai_plans" | "ai_actions";
 
@@ -82,6 +83,13 @@ export interface TurnContext {
 
   /** Logs queued for bulk insertion at the end of processing. */
   logs: PhaseLogEntry[];
+
+  /**
+   * Open, additive per-player flag bags (game_factions.id → flags).
+   * ANY phase may merge keys in via setPlayerFlags(); the runner persists
+   * them once at the end of the turn. See ./playerFlags.
+   */
+  playerFlags: Map<string, PlayerTurnFlags>;
 
   /** Optional perf timer (admin-only). Phases may push nested timings via `perf?.time(...)`. */
   perf?: PerfTimer;

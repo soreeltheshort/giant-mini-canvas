@@ -1412,6 +1412,8 @@ export type Database = {
           sort_order: number
           target_affinities: string[]
           target_bloc_ids: string[]
+          trigger_params: Json
+          trigger_type: string
           updated_at: string
           variables: Json
         }
@@ -1430,6 +1432,8 @@ export type Database = {
           sort_order?: number
           target_affinities?: string[]
           target_bloc_ids?: string[]
+          trigger_params?: Json
+          trigger_type?: string
           updated_at?: string
           variables?: Json
         }
@@ -1448,6 +1452,8 @@ export type Database = {
           sort_order?: number
           target_affinities?: string[]
           target_bloc_ids?: string[]
+          trigger_params?: Json
+          trigger_type?: string
           updated_at?: string
           variables?: Json
         }
@@ -1646,6 +1652,7 @@ export type Database = {
           player_slot: number | null
           scouted_hex_ids: number[]
           treasury: number
+          turn_flags: Json
           user_id: string | null
           visible_system_ids: Json
         }
@@ -1668,6 +1675,7 @@ export type Database = {
           player_slot?: number | null
           scouted_hex_ids?: number[]
           treasury?: number
+          turn_flags?: Json
           user_id?: string | null
           visible_system_ids?: Json
         }
@@ -1690,6 +1698,7 @@ export type Database = {
           player_slot?: number | null
           scouted_hex_ids?: number[]
           treasury?: number
+          turn_flags?: Json
           user_id?: string | null
           visible_system_ids?: Json
         }

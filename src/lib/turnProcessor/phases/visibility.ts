@@ -16,6 +16,7 @@ import type { Phase, TurnContext } from "../types";
 import { buildSystemSnapshot } from "@/lib/systemIntel";
 import { offsetToCube, cubeDistance, getNeighbors } from "@/lib/hexUtils";
 import { hexKey } from "@/lib/mapTypes";
+import { setPlayerFlags } from "../playerFlags";
 
 export const SENSOR_RADIUS = 1;
 
@@ -322,7 +323,10 @@ export const visibilityPhase: Phase = {
       }
 
       // For each observer, find enemy fleets inside coverage and emit intel rows.
+      // The same sweep also produces per-player turn flags (see playerFlags.ts)
+      // so downstream consumers — e.g. Favor triggers — never rescan the map.
       const intelUpserts: any[] = [];
+      const synodSeenByGf = new Map<string, number>();
       for (const [observerGfId, centers] of centersByGf) {
         const ownString = ownerStringByGfId.get(observerGfId);
         for (const f of mapState.fleets ?? []) {
@@ -334,6 +338,9 @@ export const visibilityPhase: Phase = {
             if (cubeDistance(cx, cy, cz, ox, oy, oz) <= r) { inRange = true; break; }
           }
           if (!inRange) continue;
+          if (isInfectedOwner(owner)) {
+            synodSeenByGf.set(observerGfId, (synodSeenByGf.get(observerGfId) || 0) + 1);
+          }
           const roster = fleetRosterById.get(f.fleet_id) || [];
           // Aggregate quantities per ship_type (rosters store one row per ship
           // after the snapshot trigger, so we sum them here).
@@ -363,6 +370,15 @@ export const visibilityPhase: Phase = {
             });
         }
       }
+      // Per-player turn flags contributed by this phase.
+      for (const gp of players) {
+        const seen = synodSeenByGf.get(gp.id) || 0;
+        setPlayerFlags(ctx, gp.id, {
+          synod_fleet_visible: seen > 0,
+          synod_fleets_seen: seen,
+        });
+      }
+
       ctx.logs.push({
         game_id: gameId,
         turn_number: currentTurn,

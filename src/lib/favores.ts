@@ -10,6 +10,8 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { FavorVariable } from "@/lib/favorCriteria";
+import { evaluateTrigger } from "@/lib/favorTriggers";
+import type { PlayerTurnFlags } from "@/lib/turnProcessor/playerFlags";
 
 export interface Favor {
   id: string;
@@ -19,6 +21,9 @@ export interface Favor {
   variables: FavorVariable[];
   criterion_type: string;
   criterion_params: Record<string, any>;
+  /** Precondition for eligibility; evaluated against player turn flags. */
+  trigger_type: string;
+  trigger_params: Record<string, any>;
   rarity: string;
   rarity_weight: number;
   bloc_reward: number;
@@ -46,7 +51,7 @@ export interface FavorSetBundle {
 }
 
 const COLS =
-  "id, set_id, name, description, variables, criterion_type, criterion_params, rarity, rarity_weight, bloc_reward, affinity_reward, target_bloc_ids, target_affinities, sort_order";
+  "id, set_id, name, description, variables, criterion_type, criterion_params, trigger_type, trigger_params, rarity, rarity_weight, bloc_reward, affinity_reward, target_bloc_ids, target_affinities, sort_order";
 
 const db = () => supabase as any;
 
@@ -140,6 +145,8 @@ export async function exportFavorSet(setId: string): Promise<FavorSetBundle> {
       variables: f.variables ?? [],
       criterion_type: f.criterion_type,
       criterion_params: f.criterion_params ?? {},
+      trigger_type: f.trigger_type || "none",
+      trigger_params: f.trigger_params ?? {},
       rarity: f.rarity,
       rarity_weight: f.rarity_weight ?? 100,
       bloc_reward: f.bloc_reward ?? 0,
@@ -169,6 +176,8 @@ export async function importFavorSet(bundle: FavorSetBundle, createdBy?: string)
       variables: f.variables ?? [],
       criterion_type: f.criterion_type || "credit_auction",
       criterion_params: f.criterion_params ?? {},
+      trigger_type: f.trigger_type || "none",
+      trigger_params: f.trigger_params ?? {},
       rarity: f.rarity || "common",
       rarity_weight: f.rarity_weight ?? 100,
       bloc_reward: f.bloc_reward ?? 0,
@@ -186,4 +195,13 @@ export async function importFavorSet(bundle: FavorSetBundle, createdBy?: string)
 export async function duplicateFavorSet(setId: string, createdBy?: string): Promise<FavorSet> {
   const bundle = await exportFavorSet(setId);
   return importFavorSet({ ...bundle, name: `${bundle.name} (copy)` }, createdBy);
+}
+
+/**
+ * Is this favor eligible for a player right now? Reads only the player's
+ * pre-computed turn flags — no map scan, so a draw can filter the whole pool
+ * cheaply.
+ */
+export function isFavorEligible(favor: Favor, flags: PlayerTurnFlags | null | undefined): boolean {
+  return evaluateTrigger(favor.trigger_type, favor.trigger_params, flags);
 }
