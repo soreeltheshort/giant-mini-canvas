@@ -496,6 +496,21 @@ export const combatPhase: Phase = {
         });
       }
 
+      // Synod hulls destroyed this turn — credited to whichever side fought
+      // the Synod (Synod = faction flagged `infect`).
+      const synodOwners = new Set(
+        ctx.factions.filter((f) => (f as any).infect)
+          .flatMap((f) => [f.name, (f as any).code_name])
+          .filter(Boolean)
+          .map((s: any) => String(s).toLowerCase()),
+      );
+      const isSynod = (owner?: string | null) => !!owner && synodOwners.has(String(owner).toLowerCase());
+      if (isSynod(targetMF.owner_classification) && !isSynod(attackerMF.owner_classification)) {
+        creditSynodKill(ctx, attackerMF.owner_classification, destroyedPoints(battleResult.finalState.fleetB), targetMF.fleet_name, lossesB.totalRemaining <= 0);
+      } else if (isSynod(attackerMF.owner_classification) && !isSynod(targetMF.owner_classification)) {
+        creditSynodKill(ctx, targetMF.owner_classification, destroyedPoints(battleResult.finalState.fleetA), attackerMF.fleet_name, lossesA.totalRemaining <= 0);
+      }
+
       resolved++;
       const attackerReadiness = (snapA.snapshot as any).readiness ?? 2;
       const defenderReadiness = (snapB.snapshot as any).readiness ?? 2;
