@@ -83,6 +83,13 @@ export interface TurnContext {
   /** Logs queued for bulk insertion at the end of processing. */
   logs: PhaseLogEntry[];
 
+  /**
+   * Open, additive per-player flag bags (game_factions.id → flags).
+   * ANY phase may merge keys in via setPlayerFlags(); the runner persists
+   * them once at the end of the turn. See ./playerFlags.
+   */
+  playerFlags: Map<string, PlayerTurnFlags>;
+
   /** Optional perf timer (admin-only). Phases may push nested timings via `perf?.time(...)`. */
   perf?: PerfTimer;
 
