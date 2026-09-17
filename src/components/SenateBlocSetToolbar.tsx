@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Trash2, Download, Upload, Copy } from "lucide-react";
+import { usePromptDialog } from "@/hooks/usePromptDialog";
 import {
   SenateBlocSet,
   createSenateBlocSet,
@@ -50,6 +51,7 @@ export default function SenateBlocSetToolbar({
   const fileRef = useRef<HTMLInputElement>(null);
   const [sets, setSets] = useState<SenateBlocSet[]>([]);
   const [busy, setBusy] = useState(false);
+  const { ask, askConfirm, dialog } = usePromptDialog();
   const full = mode === "full";
 
   const loadSets = useCallback(
