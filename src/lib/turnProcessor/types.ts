@@ -11,6 +11,7 @@ import type { DbFacilityType } from "@/hooks/useFacilityTypes";
 import type { ShipTypeForUpkeep } from "@/lib/turnEngine";
 import type { FactionMeta } from "./ownerKey";
 import type { PerfTimer } from "./perf";
+import type { PlayerTurnFlags } from "./playerFlags";
 
 export type PhaseName = "economy" | "movement" | "visibility" | "combat" | "ground_combat" | "infect_intel_leech" | "threat_assessment" | "ai_slates" | "ai_plans" | "ai_actions";
 

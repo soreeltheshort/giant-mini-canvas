@@ -127,6 +127,7 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
     factions,
     orders,
     playerEcon: new Map(),
+    playerFlags: new Map(),
     logs: [],
     perf,
     enableAiSlates: (gameRow as any)?.enable_ai_slates ?? false,
