@@ -89,7 +89,12 @@ export default function SenateBlocSetToolbar({
 
   const handleNewSet = () =>
     withBusy(async () => {
-      const name = prompt("Name for the new politics set?")?.trim();
+      const name = await ask({
+        title: "New Politics Set",
+        message: "Enter a name for the new politics set.",
+        placeholder: "Set name",
+        confirmLabel: "Create",
+      });
       if (!name) return;
       const set = await createSenateBlocSet(name, "", userId);
       await loadSets(set.id);
@@ -99,7 +104,12 @@ export default function SenateBlocSetToolbar({
   const handleRenameSet = () =>
     withBusy(async () => {
       if (!activeSet) return;
-      const name = prompt("Rename set", activeSet.name)?.trim();
+      const name = await ask({
+        title: "Rename Set",
+        message: `Renaming "${activeSet.name}".`,
+        defaultValue: activeSet.name,
+        confirmLabel: "Rename",
+      });
       if (!name) return;
       await updateSenateBlocSet(activeSet.id, { name });
       await loadSets(activeSet.id);
