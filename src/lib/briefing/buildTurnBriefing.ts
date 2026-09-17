@@ -168,6 +168,15 @@ export function buildTurnBriefing(input: BriefingInput): TurnBriefing {
       });
       continue;
     }
+    if (l.log_type === "synod_fleet_defeated" && d.player_id === playerId) {
+      militaryItems.push({
+        id: `mil-${l.id}`,
+        text: `Synod hulls destroyed: ${d.points} points${d.wiped ? " — Synod fleet annihilated" : ""}`,
+        detail: `${d.synod_fleet_name || "Synod fleet"} · ${d.total_points} points destroyed this turn`,
+        tone: "good",
+      });
+      continue;
+    }
     if (l.log_type === "fleet_destroyed" && mine(d.owner_classification || d.owner)) {
       militaryItems.push({ id: `mil-${l.id}`, text: l.message, tone: "bad" });
     }

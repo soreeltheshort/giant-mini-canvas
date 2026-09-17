@@ -29,6 +29,51 @@ import { destroyFleet } from "../fleetCleanup";
 import { fetchFleetMapSpeed, attackRangeFromMapSpeed, hexDistance } from "@/lib/fleetRange";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
 import { isStarbase, isUnderConstruction, computeStarbaseCombatStats, starbaseSnapshot } from "@/lib/starbase";
+import { setPlayerFlags, getPlayerFlags } from "../playerFlags";
+
+/**
+ * Point value of the ships on one side that were outright destroyed
+ * (hull reduced to zero). Uses `ship_types.point_cost` carried on each engine
+ * instance, so it needs no extra lookups.
+ */
+function destroyedPoints(finalSide: any[]): number {
+  let pts = 0;
+  for (const s of finalSide) {
+    if ((Number(s.currentHull) || 0) > 0) continue;
+    pts += Number(s?.shipTypeData?.point_cost ?? 0) || 0;
+  }
+  return pts;
+}
+
+/**
+ * Credit a player with Synod hulls destroyed this turn. Feeds the
+ * `defeat_synod_fleet` Favor criterion and the player's turn report.
+ */
+function creditSynodKill(
+  ctx: TurnContext,
+  victorOwner: string | null | undefined,
+  points: number,
+  fleetName: string,
+  wiped: boolean,
+) {
+  if (!victorOwner || points <= 0) return;
+  const player = ctx.players.find((p) => {
+    const f = ctx.factions.find((ff) => ff.id === (p as any).faction_id);
+    return ownerMatchesFaction(victorOwner, f?.name) || ownerMatchesFaction(victorOwner, (f as any)?.code_name);
+  });
+  if (!player) return;
+  const prev = Number(getPlayerFlags(ctx, player.id).synod_points_destroyed ?? 0) || 0;
+  setPlayerFlags(ctx, player.id, {
+    synod_fleet_defeated: true,
+    synod_points_destroyed: prev + points,
+  });
+  ctx.logs.push({
+    game_id: ctx.gameId, turn_number: ctx.currentTurn, phase: "combat",
+    log_type: "synod_fleet_defeated",
+    message: `Synod losses inflicted on ${fleetName}: ${points} points destroyed${wiped ? " — fleet annihilated" : ""}.`,
+    details_json: { player_id: player.id, points, total_points: prev + points, synod_fleet_name: fleetName, wiped },
+  });
+}
 
 
 /**
@@ -449,6 +494,21 @@ export const combatPhase: Phase = {
           fleetName: targetMF.fleet_name,
           reason: "combat_wiped",
         });
+      }
+
+      // Synod hulls destroyed this turn — credited to whichever side fought
+      // the Synod (Synod = faction flagged `infect`).
+      const synodOwners = new Set(
+        ctx.factions.filter((f) => (f as any).infect)
+          .flatMap((f) => [f.name, (f as any).code_name])
+          .filter(Boolean)
+          .map((s: any) => String(s).toLowerCase()),
+      );
+      const isSynod = (owner?: string | null) => !!owner && synodOwners.has(String(owner).toLowerCase());
+      if (isSynod(targetMF.owner_classification) && !isSynod(attackerMF.owner_classification)) {
+        creditSynodKill(ctx, attackerMF.owner_classification, destroyedPoints(battleResult.finalState.fleetB), targetMF.fleet_name, lossesB.totalRemaining <= 0);
+      } else if (isSynod(attackerMF.owner_classification) && !isSynod(targetMF.owner_classification)) {
+        creditSynodKill(ctx, targetMF.owner_classification, destroyedPoints(battleResult.finalState.fleetA), attackerMF.fleet_name, lossesA.totalRemaining <= 0);
       }
 
       resolved++;

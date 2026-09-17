@@ -54,6 +54,16 @@ export const CRITERION_TYPES: CriterionDef[] = [
     ],
   },
   {
+    id: "defeat_synod_fleet",
+    label: "Defeat Synod Fleet",
+    description:
+      "First player to destroy at least this many points of Synod hulls in a single turn wins.",
+    fields: [
+      { key: "points", label: "Synod Points Destroyed", type: "number", default: 100, help: "Total point value of Synod ships destroyed in one turn." },
+      { key: "deadline_turns", label: "Open For (turns)", type: "number", default: 3 },
+    ],
+  },
+  {
     id: "colonize_planet",
     label: "Colonize a Planet",
     description: "First player to colonize the required number of new planets wins.",
