@@ -17,6 +17,7 @@ import type { ShipTypeForUpkeep } from "@/lib/turnEngine";
 import type { Phase, TurnContext, PlayerCtx, ConditionalOrder } from "./types";
 import { PerfTimer, type PerfEntry } from "./perf";
 import { ownerMatchesFaction } from "@/lib/factionUtils";
+import { flushPlayerFlags } from "./playerFlags";
 
 
 import { economyPhase } from "./phases/economy";
@@ -190,6 +191,12 @@ export async function runTurnProcessor(args: RunTurnArgs): Promise<RunTurnResult
   });
 
 
+
+  // Persist every player's accumulated turn flags (one write per player,
+  // regardless of how many phases contributed keys).
+  await perf.time("playerFlags.flush", async () => {
+    await flushPlayerFlags(supabase, ctx);
+  });
 
   // Bulk insert all logs (single round trip). First clear any prior logs for
   // this turn so re-runs (e.g. after snapshot restore) don't accumulate duplicates.
