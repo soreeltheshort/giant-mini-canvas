@@ -20,6 +20,7 @@ import {
   defaultRarityWeight,
   parseDescriptionVariables,
 } from "@/lib/favorCriteria";
+import { TRIGGER_TYPES, defaultTriggerParams, triggerDef } from "@/lib/favorTriggers";
 import { AFFINITIES } from "@/lib/senateAffinities";
 import { SenateBloc, listSenateBlocs, getDefaultSenateBlocSetId } from "@/lib/senateBlocs";
 
@@ -138,6 +139,12 @@ export default function AdminFavores() {
     save({ ...f, target_affinities: next });
   };
 
+  const setTriggerParam = (f: Favor, key: string, value: any) => {
+    const next = { ...(f.trigger_params ?? {}), [key]: value };
+    patch(f.id, { trigger_params: next });
+    return { ...f, trigger_params: next };
+  };
+
   const setParam = (f: Favor, key: string, value: any) => {
     const next = { ...(f.criterion_params ?? {}), [key]: value };
     patch(f.id, { criterion_params: next });
@@ -180,6 +187,7 @@ export default function AdminFavores() {
           <div className="space-y-4">
             {favors.map((f, i) => {
               const def = criterionDef(f.criterion_type);
+              const tdef = triggerDef(f.trigger_type || "none");
               const declared = parseDescriptionVariables(f.description);
               return (
                 <div key={f.id} className="border border-bronze/40 rounded-sm p-4 bg-card space-y-4">
@@ -368,6 +376,44 @@ export default function AdminFavores() {
                       })}
                     </div>
                   )}
+
+                  {/* Trigger */}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>Trigger</Label>
+                      <Select
+                        value={f.trigger_type || "none"}
+                        onValueChange={(val) => {
+                          const next = { ...f, trigger_type: val, trigger_params: defaultTriggerParams(val) };
+                          patch(f.id, { trigger_type: val, trigger_params: next.trigger_params });
+                          save(next);
+                        }}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {TRIGGER_TYPES.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {tdef && <p className="text-xs font-body text-muted-foreground">{tdef.description}</p>}
+                    </div>
+
+                    {tdef && tdef.fields.length > 0 && (
+                      <div className="flex flex-wrap items-end gap-3">
+                        {tdef.fields.map((field) => (
+                          <NumBox
+                            key={field.key}
+                            label={field.label}
+                            value={Number((f.trigger_params ?? {})[field.key] ?? field.default) || 0}
+                            onChange={(n) => setTriggerParam(f, field.key, n)}
+                            onCommit={() => save(favors.find((x) => x.id === f.id) ?? f)}
+                            width="w-40"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Rewards */}
                   <div className="flex flex-wrap items-end gap-3">
