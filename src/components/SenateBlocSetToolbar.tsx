@@ -126,7 +126,13 @@ export default function SenateBlocSetToolbar({
   const handleDeleteSet = () =>
     withBusy(async () => {
       if (!activeSet) return;
-      if (!confirm(`Delete "${activeSet.name}" and all of its blocs?`)) return;
+      const ok = await askConfirm({
+        title: "Delete Set",
+        message: `Delete "${activeSet.name}" and all of its senate blocs?`,
+        confirmLabel: "Delete",
+        destructive: true,
+      });
+      if (!ok) return;
       await deleteSenateBlocSet(activeSet.id);
       onChange(null);
       await loadSets();
