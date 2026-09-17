@@ -85,7 +85,7 @@ export default function FavorSetToolbar({
 
   const handleNewSet = () =>
     withBusy(async () => {
-      const name = prompt("Name for the new Favores set?")?.trim();
+      const name = prompt("Enter a name for the new Favores set.")?.trim();
       if (!name) return;
       const set = await createFavorSet(name, "", userId);
       await loadSets(set.id);
