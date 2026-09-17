@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Trash2, Download, Upload, Copy } from "lucide-react";
+import { usePromptDialog } from "@/hooks/usePromptDialog";
 import {
   SenateBlocSet,
   createSenateBlocSet,
@@ -50,6 +51,7 @@ export default function SenateBlocSetToolbar({
   const fileRef = useRef<HTMLInputElement>(null);
   const [sets, setSets] = useState<SenateBlocSet[]>([]);
   const [busy, setBusy] = useState(false);
+  const { ask, askConfirm, dialog } = usePromptDialog();
   const full = mode === "full";
 
   const loadSets = useCallback(
@@ -87,7 +89,12 @@ export default function SenateBlocSetToolbar({
 
   const handleNewSet = () =>
     withBusy(async () => {
-      const name = prompt("Name for the new politics set?")?.trim();
+      const name = await ask({
+        title: "New Politics Set",
+        message: "Enter a name for the new politics set.",
+        placeholder: "Set name",
+        confirmLabel: "Create",
+      });
       if (!name) return;
       const set = await createSenateBlocSet(name, "", userId);
       await loadSets(set.id);
@@ -97,7 +104,12 @@ export default function SenateBlocSetToolbar({
   const handleRenameSet = () =>
     withBusy(async () => {
       if (!activeSet) return;
-      const name = prompt("Rename set", activeSet.name)?.trim();
+      const name = await ask({
+        title: "Rename Set",
+        message: `Renaming "${activeSet.name}".`,
+        defaultValue: activeSet.name,
+        confirmLabel: "Rename",
+      });
       if (!name) return;
       await updateSenateBlocSet(activeSet.id, { name });
       await loadSets(activeSet.id);
@@ -114,7 +126,13 @@ export default function SenateBlocSetToolbar({
   const handleDeleteSet = () =>
     withBusy(async () => {
       if (!activeSet) return;
-      if (!confirm(`Delete "${activeSet.name}" and all of its blocs?`)) return;
+      const ok = await askConfirm({
+        title: "Delete Set",
+        message: `Delete "${activeSet.name}" and all of its senate blocs?`,
+        confirmLabel: "Delete",
+        destructive: true,
+      });
+      if (!ok) return;
       await deleteSenateBlocSet(activeSet.id);
       onChange(null);
       await loadSets();
@@ -154,6 +172,7 @@ export default function SenateBlocSetToolbar({
   };
 
   return (
+    <>
     <div
       className={
         className ??
@@ -214,6 +233,8 @@ export default function SenateBlocSetToolbar({
       )}
 
       <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={handleFile} />
-    </div>
+      </div>
+      {dialog}
+    </>
   );
 }
