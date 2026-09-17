@@ -87,7 +87,12 @@ export default function FavorSetToolbar({
 
   const handleNewSet = () =>
     withBusy(async () => {
-      const name = prompt("Enter a name for the new Favores set.")?.trim();
+      const name = await ask({
+        title: "New Favores Set",
+        message: "Enter a name for the new Favores set.",
+        placeholder: "Set name",
+        confirmLabel: "Create",
+      });
       if (!name) return;
       const set = await createFavorSet(name, "", userId);
       await loadSets(set.id);
@@ -97,7 +102,12 @@ export default function FavorSetToolbar({
   const handleRenameSet = () =>
     withBusy(async () => {
       if (!activeSet) return;
-      const name = prompt("Rename set", activeSet.name)?.trim();
+      const name = await ask({
+        title: "Rename Set",
+        message: `Renaming "${activeSet.name}".`,
+        defaultValue: activeSet.name,
+        confirmLabel: "Rename",
+      });
       if (!name) return;
       await updateFavorSet(activeSet.id, { name });
       await loadSets(activeSet.id);
