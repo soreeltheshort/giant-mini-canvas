@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSenateBlocs } from "@/hooks/useSenateBlocs";
 import { useFavores } from "@/hooks/useFavores";
 import type { SenateBloc } from "@/lib/senateBlocs";
 import type { Favor } from "@/lib/favores";
 import { affinityLabel } from "@/lib/senateAffinities";
-import { criterionLabel, rarityLabel } from "@/lib/favorCriteria";
+import { criterionLabel, materializeFavorDescription } from "@/lib/favorCriteria";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ScrollText } from "lucide-react";
 
@@ -29,6 +29,13 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
   const selectedFavor = selection?.type === "favor"
     ? favors.find((favor) => favor.id === selection.id)
     : undefined;
+  const playerDescriptions = useMemo(
+    () => new Map(favors.map((favor) => [
+      favor.id,
+      materializeFavorDescription(favor.description, favor.variables),
+    ])),
+    [favors],
+  );
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-ivory-dark">
@@ -94,7 +101,6 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
         <section className="min-h-0 overflow-y-auto p-4 lg:border-r lg:border-bronze/40" aria-labelledby="favores-heading">
           <div className="flex items-end justify-between border-b border-bronze/40 pb-2 mb-3">
             <div>
-              <p className="font-heading text-[9px] font-semibold uppercase tracking-widest text-crimson">Petitions before the Republic</p>
               <h2 id="favores-heading" className="font-heading text-base font-bold uppercase text-senate-dark">Open Favores</h2>
             </div>
             <span className="font-heading text-xs font-bold text-muted-foreground">{favors.length}</span>
@@ -122,9 +128,8 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
                     <span className="w-7 shrink-0 self-start pt-0.5 font-heading text-[10px] font-bold text-bronze-dark">{String(index + 1).padStart(2, "0")}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block font-heading text-xs font-bold uppercase text-senate-dark">{favor.name}</span>
-                      <span className="mt-1 block line-clamp-2 font-body text-xs font-semibold text-muted-foreground">{favor.description || "No petition text supplied."}</span>
+                      <span className="mt-1 block line-clamp-2 font-body text-xs font-semibold text-muted-foreground">{playerDescriptions.get(favor.id) || "No description supplied."}</span>
                     </span>
-                    <span className="self-center border border-bronze/40 px-2 py-1 font-heading text-[9px] font-bold uppercase text-bronze-dark">{rarityLabel(favor.rarity)}</span>
                     <ChevronRight className={`h-4 w-4 shrink-0 text-bronze transition-transform ${active ? "translate-x-0.5" : "group-hover:translate-x-0.5"}`} aria-hidden="true" />
                   </Button>
                 );
@@ -135,7 +140,7 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
 
         <aside className="min-h-0 overflow-y-auto bg-marble-dark/30 p-4" aria-live="polite">
           {selectedFavor ? (
-            <FavorDossier favor={selectedFavor} blocs={blocs} />
+            <FavorDossier favor={selectedFavor} blocs={blocs} description={playerDescriptions.get(selectedFavor.id) ?? ""} />
           ) : selectedBloc ? (
             <BlocDossier bloc={selectedBloc} />
           ) : (
@@ -184,7 +189,7 @@ function BlocDossier({ bloc }: { bloc: SenateBloc }) {
   );
 }
 
-function FavorDossier({ favor, blocs }: { favor: Favor; blocs: SenateBloc[] }) {
+function FavorDossier({ favor, blocs, description }: { favor: Favor; blocs: SenateBloc[]; description: string }) {
   const targetBlocNames = favor.target_bloc_ids
     .map((id) => blocs.find((bloc) => bloc.id === id)?.name)
     .filter((name): name is string => Boolean(name));
@@ -197,11 +202,10 @@ function FavorDossier({ favor, blocs }: { favor: Favor; blocs: SenateBloc[] }) {
         <h2 className="mt-1 font-heading text-base font-bold uppercase text-senate-dark">{favor.name}</h2>
       </div>
       <div className="px-4 py-3 border-b border-bronze/30">
-        <p className="font-body text-sm font-semibold leading-relaxed text-senate-dark">{favor.description || "No petition text supplied."}</p>
+        <p className="font-body text-sm font-semibold leading-relaxed text-senate-dark">{description || "No description supplied."}</p>
       </div>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-4 p-4">
         <DossierDatum label="Criterion" value={criterionLabel(favor.criterion_type)} />
-        <DossierDatum label="Rarity" value={rarityLabel(favor.rarity)} />
         <DossierDatum label="Bloc Reward" value={String(favor.bloc_reward ?? 0)} />
         <DossierDatum label="Affinity Reward" value={String(favor.affinity_reward ?? 0)} />
       </dl>
