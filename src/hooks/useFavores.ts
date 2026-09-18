@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Favor, getDefaultFavorSetId, listFavors } from "@/lib/favores";
+import { Favor, getDefaultFavorSetId, listFavorSets, listFavors } from "@/lib/favores";
 
 /** Loads the active Favores set for the player-facing Politics surface. */
 export function useFavores() {
@@ -9,7 +9,8 @@ export function useFavores() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const setId = await getDefaultFavorSetId();
+      const defaultSetId = await getDefaultFavorSetId();
+      const setId = defaultSetId ?? (await listFavorSets())[0]?.id ?? null;
       setFavors(setId ? await listFavors(setId) : []);
     } catch (error) {
       console.error("[Favores] load failed", error);
