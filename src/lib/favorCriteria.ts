@@ -131,3 +131,26 @@ export function parseDescriptionVariables(description: string): string[] {
   }
   return out;
 }
+
+/** Resolves every configured {variable} before Favor text is shown to a player. */
+export function materializeFavorDescription(
+  description: string,
+  variables: FavorVariable[] | null | undefined,
+  random: () => number = Math.random,
+): string {
+  const values = new Map<string, number>();
+
+  for (const variable of variables ?? []) {
+    const min = Number.isFinite(variable.min) ? variable.min : 0;
+    const max = Number.isFinite(variable.max) ? Math.max(min, variable.max) : min;
+    const step = Number.isFinite(variable.step) && variable.step > 0 ? variable.step : 1;
+    const optionCount = Math.floor((max - min) / step) + 1;
+    const optionIndex = Math.min(optionCount - 1, Math.floor(random() * optionCount));
+    values.set(variable.key, min + optionIndex * step);
+  }
+
+  return description.replace(/\{([a-zA-Z0-9_]+)\}/g, (placeholder, key: string) => {
+    const value = values.get(key);
+    return value === undefined ? placeholder : String(value);
+  });
+}
