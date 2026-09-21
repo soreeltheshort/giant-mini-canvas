@@ -162,6 +162,7 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
               })}
             </div>
           )}
+          </>)}
         </section>
 
         <aside className="min-h-0 overflow-y-auto bg-marble-dark/30 p-4" aria-live="polite">
