@@ -10,13 +10,39 @@ import {
 } from "@/lib/votingDummy";
 import { DEFAULT_INFLUENCE_MULTIPLIER, getInfluenceMultiplier } from "@/lib/votingConfig";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Zap } from "lucide-react";
+
+type InfluenceChoice = "none" | "yea" | "nay" | "strong-yea" | "strong-nay";
 
 interface Commitment {
-  stance: PlayerStance;
-  influence: number;
-  adminPoint: boolean;
+  choice: InfluenceChoice;
+}
+
+const CHOICE_SEQUENCE: InfluenceChoice[] = ["none", "yea", "nay", "strong-yea", "strong-nay"];
+
+const CHOICE_LABELS: Record<InfluenceChoice, string> = {
+  none: "Do not influence",
+  yea: "Yea",
+  nay: "Nay",
+  "strong-yea": "Strong Yea",
+  "strong-nay": "Strong Nay",
+};
+
+function stanceForChoice(choice: InfluenceChoice): PlayerStance {
+  if (choice === "yea" || choice === "strong-yea") return "yea";
+  if (choice === "nay" || choice === "strong-nay") return "nay";
+  return "none";
+}
+
+function isStrongChoice(choice: InfluenceChoice) {
+  return choice === "strong-yea" || choice === "strong-nay";
+}
+
+function choiceTone(choice: InfluenceChoice) {
+  if (choice === "yea") return "border-crimson/60 bg-crimson/10 text-crimson";
+  if (choice === "strong-yea") return "border-crimson bg-crimson text-primary-foreground shadow-md shadow-crimson/20";
+  if (choice === "nay") return "border-bronze/80 bg-bronze/15 text-senate-dark";
+  if (choice === "strong-nay") return "border-senate-dark bg-senate-dark text-primary-foreground shadow-md";
+  return "border-bronze/40 bg-ivory text-muted-foreground hover:border-bronze hover:bg-marble-dark/50";
 }
 
 interface VotesPanelProps {
@@ -32,36 +58,43 @@ export default function VotesPanel({ blocs, onSelectBloc, selectedBlocId }: Vote
 
   useEffect(() => { getInfluenceMultiplier().then(setMultiplier).catch(() => undefined); }, []);
 
-  const get = (id: string): Commitment => commitments[id] ?? { stance: "none", influence: 0, adminPoint: false };
-  const patch = (id: string, updates: Partial<Commitment>) =>
-    setCommitments((prev) => ({ ...prev, [id]: { ...get(id), ...updates } }));
+  const get = (id: string): Commitment => commitments[id] ?? { choice: "none" };
+  const cycleChoice = (id: string) => {
+    setCommitments((prev) => {
+      const current = prev[id]?.choice ?? "none";
+      const currentIndex = CHOICE_SEQUENCE.indexOf(current);
+      const choice = CHOICE_SEQUENCE[(currentIndex + 1) % CHOICE_SEQUENCE.length];
+      return { ...prev, [id]: { choice } };
+    });
+  };
 
   const rows = useMemo(() => blocs.map((bloc, index) => {
     const stanceData = dummyStanceFor(index);
     const c = get(bloc.id);
-    const effective = Math.round(c.influence * (c.adminPoint ? multiplier : 1) * 10) / 10;
-    const alreadyAligned = c.stance !== "none" && stanceData.lean === c.stance;
-    const swung = c.stance !== "none" && (alreadyAligned || effective >= stanceData.barrier);
+    const stance = stanceForChoice(c.choice);
+    const strong = isStrongChoice(c.choice);
+    const effective = strong ? multiplier : 1;
+    const alreadyAligned = stance !== "none" && stanceData.lean === stance;
+    const swung = stance !== "none" && (alreadyAligned || effective >= stanceData.barrier);
     const projected: PlayerStance | "abstain" = swung
-      ? c.stance
+      ? stance
       : stanceData.lean === "undecided" ? "abstain" : stanceData.lean;
-    return { bloc, ...stanceData, c, effective, alreadyAligned, swung, projected };
+    return { bloc, ...stanceData, c, stance, strong, projected };
   }), [blocs, commitments, multiplier]);
 
   const totals = rows.reduce(
     (acc, r) => {
-      acc.influence += r.c.influence;
-      acc.admin += r.c.adminPoint ? 1 : 0;
+      acc.influenced += r.stance === "none" ? 0 : 1;
+      acc.admin += r.strong ? 1 : 0;
       const votes = r.bloc.senate_votes ?? 0;
       if (r.projected === "yea") acc.yea += votes;
       else if (r.projected === "nay") acc.nay += votes;
       else acc.abstain += votes;
       return acc;
     },
-    { influence: 0, admin: 0, yea: 0, nay: 0, abstain: 0 },
+    { influenced: 0, admin: 0, yea: 0, nay: 0, abstain: 0 },
   );
 
-  const influenceLeft = DUMMY_INFLUENCE_POOL - totals.influence;
   const adminLeft = DUMMY_ADMIN_POINTS - totals.admin;
 
   return (
@@ -91,89 +124,48 @@ export default function VotesPanel({ blocs, onSelectBloc, selectedBlocId }: Vote
         </div>
       </div>
 
-      {/* Pools */}
+      {/* Available resources */}
       <div className="flex flex-wrap items-center gap-4 border border-bronze/40 bg-marble-dark/40 px-4 py-2 rounded-sm">
-        <Pool label="Influence Available" value={`${influenceLeft} / ${DUMMY_INFLUENCE_POOL}`} />
+        <Pool label="Accumulated Influence" value={String(DUMMY_INFLUENCE_POOL)} />
         <Pool label="Admin Points" value={`${adminLeft} / ${DUMMY_ADMIN_POINTS}`} />
-        <Pool label="Admin Point Boost" value={`${multiplier}x`} />
+        <Pool label="Strong Vote Multiplier" value={`${multiplier}x`} />
       </div>
 
-      {/* Bloc rows */}
-      <div className="border-y border-bronze/30 divide-y divide-bronze/20">
+      {/* Bloc vote controls */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 xl:grid-cols-4">
         {rows.map((r) => (
           <div
             key={r.bloc.id}
-            className={`px-3 py-3 ${selectedBlocId === r.bloc.id ? "bg-crimson/5" : ""}`}
+            className="min-w-0 text-center"
           >
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <button
-                type="button"
-                onClick={() => onSelectBloc(r.bloc.id)}
-                className="min-w-0 flex-1 text-left"
-              >
-                <span className="block font-heading text-xs font-bold uppercase text-senate-dark">{r.bloc.name}</span>
-                <span className="block font-body text-xs font-semibold text-muted-foreground">
-                  {r.bloc.senate_votes ?? 0} votes · {leanLabel(r.lean)} · barrier {r.barrier}
-                </span>
-              </button>
-
-              <div className="flex items-center gap-1">
-                {(["yea", "nay", "none"] as PlayerStance[]).map((s) => (
-                  <Button
-                    key={s}
-                    type="button"
-                    size="sm"
-                    variant={r.c.stance === s ? "default" : "outline"}
-                    className="h-7 px-2 font-heading text-[10px] font-bold uppercase"
-                    onClick={() => patch(r.bloc.id, { stance: s })}
-                  >
-                    {s === "none" ? "Leave" : s}
-                  </Button>
-                ))}
-              </div>
-
-              <Input
-                type="number"
-                min={0}
-                value={r.c.influence || ""}
-                placeholder="0"
-                onChange={(e) => patch(r.bloc.id, { influence: Math.max(0, Number(e.target.value) || 0) })}
-                className="h-7 w-20 text-xs"
-                aria-label={`Influence committed to ${r.bloc.name}`}
-                disabled={r.c.stance === "none"}
-              />
-
-              <Button
-                type="button"
-                size="sm"
-                variant={r.c.adminPoint ? "default" : "outline"}
-                className="h-7 px-2 font-heading text-[10px] font-bold uppercase"
-                disabled={r.c.stance === "none"}
-                onClick={() => patch(r.bloc.id, { adminPoint: !r.c.adminPoint })}
-              >
-                <Zap className="mr-1 h-3 w-3" aria-hidden="true" />
-                1 AP
-              </Button>
-
-              <span className="w-40 shrink-0 text-right font-body text-xs font-bold">
-                {r.c.stance === "none" ? (
-                  <span className="text-muted-foreground">No pressure applied</span>
-                ) : r.alreadyAligned ? (
-                  <span className="text-crimson">Already with you</span>
-                ) : (
-                  <span className={r.swung ? "text-crimson" : "text-muted-foreground"}>
-                    {r.c.influence}{r.c.adminPoint ? ` → ${r.effective}` : ""} vs {r.barrier} — {r.swung ? "Swung" : "Not enough"}
-                  </span>
-                )}
+            <p className="mb-1 font-heading text-xl font-bold leading-none text-crimson">{r.bloc.senate_votes ?? 0}</p>
+            <p className="mb-2 font-heading text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">Votes</p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                onSelectBloc(r.bloc.id);
+                cycleChoice(r.bloc.id);
+              }}
+              className={`h-20 w-full whitespace-normal rounded-sm border-2 px-2 font-heading text-xs font-bold uppercase transition-colors ${choiceTone(r.c.choice)} ${selectedBlocId === r.bloc.id ? "ring-1 ring-bronze ring-offset-2 ring-offset-ivory-dark" : ""}`}
+              aria-label={`${r.bloc.name}: ${CHOICE_LABELS[r.c.choice]}. Click for next choice.`}
+            >
+              <span>
+                <span className="block text-[10px] leading-tight opacity-75">{r.bloc.name}</span>
+                <span className="mt-1 block leading-tight">{CHOICE_LABELS[r.c.choice]}</span>
+                {r.strong && <span className="mt-1 block font-body text-[9px] font-bold normal-case">1 Admin Point</span>}
               </span>
-            </div>
+            </Button>
+            <p className="mt-2 font-body text-xs font-bold text-senate-dark">
+              {r.lean === "undecided" ? "Undecided" : `Leans ${leanLabel(r.lean)}`}
+            </p>
           </div>
         ))}
       </div>
 
       {/* Totals */}
       <div className="flex flex-wrap items-center justify-between gap-3 border border-bronze/40 bg-marble-dark/40 px-4 py-2 rounded-sm">
-        <Pool label="Influence Committed" value={String(totals.influence)} />
+        <Pool label="Blocs Influenced" value={String(totals.influenced)} />
         <Pool label="Admin Points Spent" value={String(totals.admin)} />
         <Pool
           label="Projected Result"
