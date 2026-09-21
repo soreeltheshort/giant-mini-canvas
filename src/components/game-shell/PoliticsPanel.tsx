@@ -6,7 +6,12 @@ import type { Favor } from "@/lib/favores";
 import { affinityLabel } from "@/lib/senateAffinities";
 import { criterionLabel, materializeFavorDescription } from "@/lib/favorCriteria";
 import { Button } from "@/components/ui/button";
+import { TabControl } from "@/components/game-shell/TabControl";
+import VotesPanel from "@/components/game-shell/politics/VotesPanel";
+import ProposeVotePanel from "@/components/game-shell/politics/ProposeVotePanel";
 import { ChevronRight, ScrollText } from "lucide-react";
+
+const TABS = ["Favores", "Votes", "Propose"];
 
 /**
  * Politics surface — shows the SENATE BLOCS of the game's chosen bloc set.
