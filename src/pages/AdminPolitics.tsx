@@ -19,6 +19,7 @@ import {
 } from "@/lib/senateBlocs";
 import { AFFINITIES, MAX_AFFINITIES, canAddAffinity, isStandaloneAffinity, oppositeOf } from "@/lib/senateAffinities";
 import { AffinityConfigRow, listAffinityConfig, updateAffinityConfig } from "@/lib/senateAffinityConfig";
+import { DEFAULT_INFLUENCE_MULTIPLIER, getInfluenceMultiplier, setInfluenceMultiplier } from "@/lib/votingConfig";
 
 const IMAGE_BUCKET = "images";
 
@@ -29,6 +30,7 @@ export default function AdminPolitics() {
   const [images, setImages] = useState<{ name: string; url: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [affinityCfg, setAffinityCfg] = useState<AffinityConfigRow[]>([]);
+  const [influenceMultiplier, setInfluenceMultiplierState] = useState(DEFAULT_INFLUENCE_MULTIPLIER);
 
   const affinityLabelOf = (id: string) =>
     affinityCfg.find((a) => a.id === id)?.label ?? AFFINITIES.find((a) => a.id === id)?.label ?? id;
