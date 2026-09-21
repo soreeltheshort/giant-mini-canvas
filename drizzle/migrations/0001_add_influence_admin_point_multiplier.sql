@@ -1,0 +1,1 @@
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS influence_admin_point_multiplier numeric NOT NULL DEFAULT 1.5;

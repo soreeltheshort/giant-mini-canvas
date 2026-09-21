@@ -697,6 +697,7 @@ export type Database = {
           default_map_id: string | null
           default_senate_bloc_set_id: string | null
           id: string
+          influence_admin_point_multiplier: number
           planet_naming_convention_id: string | null
           updated_at: string
         }
@@ -706,6 +707,7 @@ export type Database = {
           default_map_id?: string | null
           default_senate_bloc_set_id?: string | null
           id?: string
+          influence_admin_point_multiplier?: number
           planet_naming_convention_id?: string | null
           updated_at?: string
         }
@@ -715,6 +717,7 @@ export type Database = {
           default_map_id?: string | null
           default_senate_bloc_set_id?: string | null
           id?: string
+          influence_admin_point_multiplier?: number
           planet_naming_convention_id?: string | null
           updated_at?: string
         }
