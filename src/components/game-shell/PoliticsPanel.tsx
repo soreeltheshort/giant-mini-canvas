@@ -26,6 +26,7 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
   const { blocs, loading: blocsLoading } = useSenateBlocs(gameId);
   const { favors, loading: favorsLoading } = useFavores();
   const [selection, setSelection] = useState<{ type: "bloc" | "favor"; id: string } | null>(null);
+  const [tab, setTab] = useState(TABS[0]);
   const selectedBloc = selection?.type === "bloc"
     ? blocs.find((bloc) => bloc.id === selection.id)
     : !selection
