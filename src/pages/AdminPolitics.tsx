@@ -195,6 +195,34 @@ export default function AdminPolitics() {
           </div>
         </div>
 
+        {/* Voting settings */}
+        <div className="mb-8 border border-bronze/40 rounded-sm bg-card px-4 py-3">
+          <h2 className="font-heading text-xl text-gold">Voting</h2>
+          <p className="font-body font-medium text-xs text-muted-foreground mb-3">
+            Multiplier applied to a player's committed influence on a bloc when they spend 1 admin point.
+          </p>
+          <div className="flex items-end gap-3">
+            <div>
+              <label htmlFor="influence-coefficient" className="block font-body text-xs text-muted-foreground mb-1">
+                Influence Coefficient
+              </label>
+              <Input
+                id="influence-coefficient"
+                type="number"
+                step="0.1"
+                min="1"
+                value={influenceMultiplier}
+                onChange={(e) => setInfluenceMultiplierState(Number(e.target.value))}
+                onBlur={async () => {
+                  try { await setInfluenceMultiplier(influenceMultiplier); toast.success("Influence coefficient saved"); }
+                  catch (e: any) { toast.error(e.message ?? String(e)); }
+                }}
+                className="w-28"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Blocs */}
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-heading text-xl text-gold">
