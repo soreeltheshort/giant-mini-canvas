@@ -104,7 +104,27 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
       </div>
 
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-        <section className="min-h-0 overflow-y-auto p-4 lg:border-r lg:border-bronze/40" aria-labelledby="favores-heading">
+        <section className="min-h-0 overflow-y-auto p-4 lg:border-r lg:border-bronze/40">
+          <div className="mb-4">
+            <TabControl tabs={TABS} active={tab} onChange={setTab} />
+          </div>
+
+          {tab === "Votes" && (
+            <VotesPanel
+              blocs={blocs}
+              selectedBlocId={selectedBloc?.id ?? null}
+              onSelectBloc={(id) => setSelection({ type: "bloc", id })}
+            />
+          )}
+
+          {tab === "Propose" && (
+            <ProposeVotePanel
+              blocs={blocs}
+              onSelectBloc={(id) => setSelection({ type: "bloc", id })}
+            />
+          )}
+
+          {tab === "Favores" && (<>
           <div className="flex items-end justify-between border-b border-bronze/40 pb-2 mb-3">
             <div>
               <h2 id="favores-heading" className="font-heading text-base font-bold uppercase text-senate-dark">Open Favores</h2>
