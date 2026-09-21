@@ -41,6 +41,7 @@ export default function AdminPolitics() {
   }, []);
 
   useEffect(() => { listAffinityConfig().then(setAffinityCfg).catch(() => setAffinityCfg([])); }, []);
+  useEffect(() => { getInfluenceMultiplier().then(setInfluenceMultiplierState).catch(() => undefined); }, []);
   useEffect(() => { loadBlocs(activeSetId); }, [activeSetId, loadBlocs]);
 
   useEffect(() => {
