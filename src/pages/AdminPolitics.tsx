@@ -20,6 +20,7 @@ import {
 import { AFFINITIES, MAX_AFFINITIES, canAddAffinity, isStandaloneAffinity, oppositeOf } from "@/lib/senateAffinities";
 import { AffinityConfigRow, listAffinityConfig, updateAffinityConfig } from "@/lib/senateAffinityConfig";
 import { DEFAULT_INFLUENCE_MULTIPLIER, getInfluenceMultiplier, setInfluenceMultiplier } from "@/lib/votingConfig";
+import { SENATE_EMBLEMS } from "@/lib/senateEmblems";
 
 const IMAGE_BUCKET = "images";
 
@@ -87,6 +88,7 @@ export default function AdminPolitics() {
         name: b.name,
         description: b.description,
         image_url: b.image_url,
+        icon_url: b.icon_url,
         accent_color: b.accent_color,
         sort_order: b.sort_order,
         senate_votes: b.senate_votes ?? 0,
@@ -246,6 +248,11 @@ export default function AdminPolitics() {
                     ? <img src={b.image_url} alt={b.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full" style={{ background: b.accent_color }} />}
                 </div>
+                <div className="flex h-20 w-full items-center justify-center rounded-sm border border-bronze/40 bg-ivory p-2 text-senate-dark">
+                  {b.icon_url
+                    ? <img src={b.icon_url} alt={`${b.name} emblem`} className="h-full w-full object-contain" />
+                    : <span className="font-body text-[10px] font-semibold text-muted-foreground">No emblem</span>}
+                </div>
                 <div className="flex gap-1">
                   <Button variant="outline" size="icon" className="h-7 w-7" disabled={busy || i === 0} onClick={() => move(i, -1)}><ArrowUp className="h-3 w-3" /></Button>
                   <Button variant="outline" size="icon" className="h-7 w-7" disabled={busy || i === blocs.length - 1} onClick={() => move(i, 1)}><ArrowDown className="h-3 w-3" /></Button>
@@ -350,6 +357,29 @@ export default function AdminPolitics() {
                     onChange={(e) => patchBloc(b.id, { image_url: e.target.value || null })}
                     onBlur={() => saveBloc(b)}
                     placeholder="…or paste an image URL"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                  <label className="shrink-0 text-xs font-heading uppercase tracking-widest text-bronze">Emblem</label>
+                  <Select
+                    value={b.icon_url ?? "none"}
+                    onValueChange={(v) => {
+                      const url = v === "none" ? null : v;
+                      patchBloc(b.id, { icon_url: url });
+                      saveBloc({ ...b, icon_url: url });
+                    }}
+                  >
+                    <SelectTrigger className="sm:w-72"><SelectValue placeholder="Choose an emblem" /></SelectTrigger>
+                    <SelectContent className="bg-background z-50 max-h-72">
+                      <SelectItem value="none">No emblem</SelectItem>
+                      {SENATE_EMBLEMS.map((emblem) => <SelectItem key={emblem.url} value={emblem.url}>{emblem.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={b.icon_url ?? ""}
+                    onChange={(e) => patchBloc(b.id, { icon_url: e.target.value || null })}
+                    onBlur={() => saveBloc(b)}
+                    placeholder="…or paste an emblem URL"
                   />
                 </div>
               </div>

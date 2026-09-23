@@ -147,13 +147,17 @@ export default function VotesPanel({ blocs, onSelectBloc, selectedBlocId }: Vote
                 onSelectBloc(r.bloc.id);
                 cycleChoice(r.bloc.id);
               }}
-              className={`h-16 w-full whitespace-normal rounded-sm border-2 px-1 font-heading font-bold uppercase transition-colors ${choiceTone(r.c.choice)} ${selectedBlocId === r.bloc.id ? "ring-1 ring-bronze ring-offset-2 ring-offset-ivory-dark" : ""}`}
+              className={`h-20 w-full whitespace-normal rounded-sm border-2 px-1 py-1 font-heading font-bold uppercase transition-colors ${choiceTone(r.c.choice)} ${selectedBlocId === r.bloc.id ? "ring-1 ring-bronze ring-offset-2 ring-offset-ivory-dark" : ""}`}
               aria-label={`${r.bloc.name}: ${CHOICE_LABELS[r.c.choice]}. Click for next choice.`}
             >
-              <span>
-                <span className="block text-[9px] leading-tight opacity-75">{r.bloc.name}</span>
-                <span className="mt-0.5 block text-[10px] leading-tight">{CHOICE_LABELS[r.c.choice]}</span>
-                {r.strong && <span className="mt-0.5 block font-body text-[8px] font-bold normal-case">1 Admin Point</span>}
+              <span className="flex h-full w-full flex-col items-center justify-between">
+                <span className="block text-[9px] leading-tight">{CHOICE_LABELS[r.c.choice]}</span>
+                {r.bloc.icon_url ? (
+                  <img src={r.bloc.icon_url} alt="" className="h-10 w-10 object-contain" />
+                ) : (
+                  <span className="flex h-10 w-10 items-center justify-center border border-current/40 font-heading text-sm">{r.bloc.name.charAt(0)}</span>
+                )}
+                <span className="block min-h-2 font-body text-[8px] font-bold normal-case">{r.strong ? "1 Admin Point" : ""}</span>
               </span>
             </Button>
             <p className="mt-1.5 font-body text-[10px] font-bold text-senate-dark">
