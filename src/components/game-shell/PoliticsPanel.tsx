@@ -90,6 +90,11 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
                       style={{ background: `linear-gradient(160deg, ${b.accent_color}33, ${b.accent_color}99)` }}
                     />
                   )}
+                  {b.icon_url && (
+                    <span className="absolute inset-3 flex items-center justify-center rounded-sm border border-bronze/50 bg-ivory/90 p-2 text-senate-dark shadow-sm">
+                      <img src={b.icon_url} alt="" className="h-full w-full object-contain" />
+                    </span>
+                  )}
                   <div className="absolute top-0 inset-x-0 h-1" style={{ background: b.accent_color }} />
                   <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-senate-dark/80 to-transparent px-1.5 pb-1 pt-4">
                     <p className="font-heading text-[9px] font-bold uppercase tracking-wider text-primary-foreground leading-tight whitespace-normal">
