@@ -1,12 +1,12 @@
-import marianiAsset from "@/assets/senate-emblems/mariani.svg.asset.json";
-import mercantileCuriaAsset from "@/assets/senate-emblems/mercantile-curia.svg.asset.json";
-import optimateConcordAsset from "@/assets/senate-emblems/optimate-concord.svg.asset.json";
-import pompeianiAsset from "@/assets/senate-emblems/pompeiani.svg.asset.json";
-import popularesUnionAsset from "@/assets/senate-emblems/populares-union.svg.asset.json";
-import provincialAssemblyAsset from "@/assets/senate-emblems/provincial-assembly.svg.asset.json";
-import republicanShipwrightsAsset from "@/assets/senate-emblems/republican-shipwrights.svg.asset.json";
-import sullianiCoalitionAsset from "@/assets/senate-emblems/sulliani-coalition.svg.asset.json";
-import tsaesarianiAsset from "@/assets/senate-emblems/tsaesariani.svg.asset.json";
+import marianiAsset from "@/assets/senate-emblems/mariani.png.asset.json";
+import mercantileCuriaAsset from "@/assets/senate-emblems/mercantile-curia.png.asset.json";
+import optimateConcordAsset from "@/assets/senate-emblems/optimate-concord.png.asset.json";
+import pompeianiAsset from "@/assets/senate-emblems/pompeiani.png.asset.json";
+import popularesUnionAsset from "@/assets/senate-emblems/populares-union.png.asset.json";
+import provincialAssemblyAsset from "@/assets/senate-emblems/provincial-assembly.png.asset.json";
+import republicanShipwrightsAsset from "@/assets/senate-emblems/republican-shipwrights.png.asset.json";
+import sullianiCoalitionAsset from "@/assets/senate-emblems/sulliani-coalition.png.asset.json";
+import tsaesarianiAsset from "@/assets/senate-emblems/tsaesariani.png.asset.json";
 
 export interface SenateEmblemOption {
   name: string;
