@@ -38,11 +38,11 @@ function isStrongChoice(choice: InfluenceChoice) {
 }
 
 function choiceTone(choice: InfluenceChoice) {
-  if (choice === "yea") return "border-vote-yea bg-vote-yea/20 text-vote-yea-strong";
-  if (choice === "strong-yea") return "border-vote-yea-strong bg-vote-yea-strong text-primary-foreground shadow-md shadow-vote-yea/25";
-  if (choice === "nay") return "border-vote-nay bg-vote-nay/20 text-vote-nay-strong";
-  if (choice === "strong-nay") return "border-vote-nay-strong bg-vote-nay-strong text-primary-foreground shadow-md shadow-vote-nay/25";
-  return "border-bronze/40 bg-ivory text-muted-foreground hover:border-bronze hover:bg-marble-dark/50";
+  if (choice === "yea") return "border-vote-yea bg-vote-yea/20 text-vote-yea-strong hover:bg-vote-yea/35 hover:text-vote-yea-strong";
+  if (choice === "strong-yea") return "border-vote-yea-strong bg-vote-yea-strong text-primary-foreground shadow-md shadow-vote-yea/25 hover:bg-vote-yea-strong hover:text-primary-foreground";
+  if (choice === "nay") return "border-vote-nay bg-vote-nay/20 text-vote-nay-strong hover:bg-vote-nay/35 hover:text-vote-nay-strong";
+  if (choice === "strong-nay") return "border-vote-nay-strong bg-vote-nay-strong text-primary-foreground shadow-md shadow-vote-nay/25 hover:bg-vote-nay-strong hover:text-primary-foreground";
+  return "border-bronze/40 bg-ivory text-muted-foreground hover:border-bronze hover:bg-marble-dark/50 hover:text-muted-foreground";
 }
 
 interface VotesPanelProps {
