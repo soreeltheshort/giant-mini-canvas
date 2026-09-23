@@ -132,14 +132,14 @@ export default function VotesPanel({ blocs, onSelectBloc, selectedBlocId }: Vote
       </div>
 
       {/* Bloc vote controls */}
-      <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-3 gap-x-2 gap-y-4 md:grid-cols-5">
         {rows.map((r) => (
           <div
             key={r.bloc.id}
             className="min-w-0 text-center"
           >
-            <p className="mb-1 font-heading text-xl font-bold leading-none text-crimson">{r.bloc.senate_votes ?? 0}</p>
-            <p className="mb-2 font-heading text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">Votes</p>
+            <p className="mb-0.5 font-heading text-base font-bold leading-none text-crimson">{r.bloc.senate_votes ?? 0}</p>
+            <p className="mb-1.5 font-heading text-[8px] font-semibold uppercase tracking-widest text-muted-foreground">Votes</p>
             <Button
               type="button"
               variant="outline"
@@ -147,16 +147,16 @@ export default function VotesPanel({ blocs, onSelectBloc, selectedBlocId }: Vote
                 onSelectBloc(r.bloc.id);
                 cycleChoice(r.bloc.id);
               }}
-              className={`h-20 w-full whitespace-normal rounded-sm border-2 px-2 font-heading text-xs font-bold uppercase transition-colors ${choiceTone(r.c.choice)} ${selectedBlocId === r.bloc.id ? "ring-1 ring-bronze ring-offset-2 ring-offset-ivory-dark" : ""}`}
+              className={`h-16 w-full whitespace-normal rounded-sm border-2 px-1 font-heading font-bold uppercase transition-colors ${choiceTone(r.c.choice)} ${selectedBlocId === r.bloc.id ? "ring-1 ring-bronze ring-offset-2 ring-offset-ivory-dark" : ""}`}
               aria-label={`${r.bloc.name}: ${CHOICE_LABELS[r.c.choice]}. Click for next choice.`}
             >
               <span>
-                <span className="block text-[10px] leading-tight opacity-75">{r.bloc.name}</span>
-                <span className="mt-1 block leading-tight">{CHOICE_LABELS[r.c.choice]}</span>
-                {r.strong && <span className="mt-1 block font-body text-[9px] font-bold normal-case">1 Admin Point</span>}
+                <span className="block text-[9px] leading-tight opacity-75">{r.bloc.name}</span>
+                <span className="mt-0.5 block text-[10px] leading-tight">{CHOICE_LABELS[r.c.choice]}</span>
+                {r.strong && <span className="mt-0.5 block font-body text-[8px] font-bold normal-case">1 Admin Point</span>}
               </span>
             </Button>
-            <p className="mt-2 font-body text-xs font-bold text-senate-dark">
+            <p className="mt-1.5 font-body text-[10px] font-bold text-senate-dark">
               {r.lean === "undecided" ? "Undecided" : `Leans ${leanLabel(r.lean)}`}
             </p>
           </div>
