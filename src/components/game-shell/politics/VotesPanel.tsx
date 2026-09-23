@@ -20,7 +20,7 @@ interface Commitment {
 const CHOICE_SEQUENCE: InfluenceChoice[] = ["none", "yea", "nay", "strong-yea", "strong-nay"];
 
 const CHOICE_LABELS: Record<InfluenceChoice, string> = {
-  none: "Do not influence",
+  none: "Do Not Influence",
   yea: "Yea",
   nay: "Nay",
   "strong-yea": "Strong Yea",
