@@ -38,11 +38,11 @@ function isStrongChoice(choice: InfluenceChoice) {
 }
 
 function choiceTone(choice: InfluenceChoice) {
-  if (choice === "yea") return "border-crimson/60 bg-crimson/10 text-crimson";
-  if (choice === "strong-yea") return "border-crimson bg-crimson text-primary-foreground shadow-md shadow-crimson/20";
-  if (choice === "nay") return "border-bronze/80 bg-bronze/15 text-senate-dark";
-  if (choice === "strong-nay") return "border-senate-dark bg-senate-dark text-primary-foreground shadow-md";
-  return "border-bronze/40 bg-ivory text-muted-foreground hover:border-bronze hover:bg-marble-dark/50";
+  if (choice === "yea") return "border-vote-yea bg-vote-yea/20 text-vote-yea-strong hover:bg-vote-yea/35 hover:text-vote-yea-strong";
+  if (choice === "strong-yea") return "border-vote-yea-strong bg-vote-yea-strong text-primary-foreground shadow-md shadow-vote-yea/25 hover:bg-vote-yea-strong hover:text-primary-foreground";
+  if (choice === "nay") return "border-vote-nay bg-vote-nay/20 text-vote-nay-strong hover:bg-vote-nay/35 hover:text-vote-nay-strong";
+  if (choice === "strong-nay") return "border-vote-nay-strong bg-vote-nay-strong text-primary-foreground shadow-md shadow-vote-nay/25 hover:bg-vote-nay-strong hover:text-primary-foreground";
+  return "border-bronze/40 bg-ivory text-muted-foreground hover:border-bronze hover:bg-marble-dark/50 hover:text-muted-foreground";
 }
 
 interface VotesPanelProps {
@@ -118,8 +118,8 @@ export default function VotesPanel({ blocs, onSelectBloc, selectedBlocId }: Vote
         </div>
         <p className="px-4 py-3 font-body text-sm font-semibold text-senate-dark">{DUMMY_OPEN_VOTE.description}</p>
         <div className="grid grid-cols-3 border-t border-bronze/30 text-center">
-          <Tally label="Yea" value={totals.yea} tone="text-crimson" />
-          <Tally label="Nay" value={totals.nay} tone="text-senate-dark" />
+          <Tally label="Yea" value={totals.yea} tone="text-vote-yea-strong" />
+          <Tally label="Nay" value={totals.nay} tone="text-vote-nay-strong" />
           <Tally label="Abstain" value={totals.abstain} tone="text-muted-foreground" />
         </div>
       </div>

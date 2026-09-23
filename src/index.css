@@ -54,6 +54,12 @@
     --marble-dark: 40 15% 82%;
     --senate-dark: 20 15% 15%;
 
+    /* Senate vote stances: light/heavy blue (yea), light/heavy verdigris (nay) */
+    --vote-yea: 207 68% 55%;
+    --vote-yea-strong: 215 76% 30%;
+    --vote-nay: 172 42% 44%;
+    --vote-nay-strong: 174 74% 24%;
+
     --sidebar-background: 40 18% 88%;
     --sidebar-foreground: 20 15% 15%;
     --sidebar-primary: 0 65% 38%;
@@ -98,6 +104,10 @@
     --marble: 213 19% 12%;
     --marble-dark: 213 19% 9%;
     --senate-dark: 213 19% 6%;
+    --vote-yea: 207 68% 55%;
+    --vote-yea-strong: 215 76% 30%;
+    --vote-nay: 172 42% 44%;
+    --vote-nay-strong: 174 74% 24%;
     --sidebar-background: 213 19% 9%;
     --sidebar-foreground: 213 18% 91%;
     --sidebar-primary: 211 48% 44%;

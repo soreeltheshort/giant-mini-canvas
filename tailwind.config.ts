@@ -73,6 +73,14 @@ export default {
           dark: "hsl(var(--marble-dark))",
         },
         "senate-dark": "hsl(var(--senate-dark))",
+        "vote-yea": {
+          DEFAULT: "hsl(var(--vote-yea))",
+          strong: "hsl(var(--vote-yea-strong))",
+        },
+        "vote-nay": {
+          DEFAULT: "hsl(var(--vote-nay))",
+          strong: "hsl(var(--vote-nay-strong))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
