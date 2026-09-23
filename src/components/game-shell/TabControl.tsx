@@ -13,7 +13,7 @@ export function TabControl({ tabs, active, onChange }: TabControlProps) {
           onClick={() => onChange(tab)}
           className={`
             px-3 py-1.5 text-[10px] font-heading font-semibold uppercase tracking-wider
-            transition-all duration-150 border-r border-border last:border-r-0
+            transition-all duration-150 border-r border-border
             ${active === tab
               ? "bg-crimson text-primary-foreground"
               : "text-muted-foreground hover:text-foreground hover:bg-ivory-dark"
