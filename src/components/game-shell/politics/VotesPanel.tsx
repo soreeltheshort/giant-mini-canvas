@@ -157,7 +157,7 @@ export default function VotesPanel({ blocs, onSelectBloc, selectedBlocId }: Vote
               </span>
             </Button>
             <p className="mt-1.5 font-body text-[10px] font-bold text-senate-dark">
-              {r.lean === "undecided" ? "Undecided" : `Leans ${leanLabel(r.lean)}`}
+              {leanLabel(r.lean)}
             </p>
           </div>
         ))}
