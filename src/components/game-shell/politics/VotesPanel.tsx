@@ -117,10 +117,6 @@ export default function VotesPanel({ blocs, onSelectBloc, selectedBlocId }: Vote
               Sponsored by {DUMMY_OPEN_VOTE.sponsorBlocName}
             </p>
           </div>
-          <div className="text-right shrink-0">
-            <p className="font-heading text-2xl font-bold leading-none text-crimson">{DUMMY_OPEN_VOTE.turnsRemaining}</p>
-            <p className="text-[9px] font-heading font-semibold uppercase tracking-widest text-senate-dark">Turns Left</p>
-          </div>
         </div>
         <p className="px-4 py-3 font-body text-sm font-semibold text-senate-dark">{DUMMY_OPEN_VOTE.description}</p>
         <div className="grid grid-cols-3 border-t border-bronze/30 text-center">
