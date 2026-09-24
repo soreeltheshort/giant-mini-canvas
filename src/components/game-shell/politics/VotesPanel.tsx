@@ -99,6 +99,12 @@ export default function VotesPanel({ blocs, onSelectBloc, selectedBlocId }: Vote
 
   return (
     <div className="space-y-4">
+      {/* Available resources stay visible while the vote list scrolls. */}
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-4 border border-bronze/40 bg-marble-dark px-4 py-2 rounded-sm shadow-sm">
+        <Pool label="Accumulated Influence" value={String(DUMMY_INFLUENCE_POOL)} />
+        <Pool label="Admin Points" value={`${adminLeft} / ${DUMMY_ADMIN_POINTS}`} />
+      </div>
+
       {/* Open vote header */}
       <div className="border-2 border-bronze/40 bg-ivory rounded-sm">
         <div className="flex items-start justify-between gap-4 px-4 py-3 border-b border-bronze/30 bg-marble-dark/50">
@@ -122,13 +128,6 @@ export default function VotesPanel({ blocs, onSelectBloc, selectedBlocId }: Vote
           <Tally label="Nay" value={totals.nay} tone="text-vote-nay-strong" />
           <Tally label="Abstain" value={totals.abstain} tone="text-muted-foreground" />
         </div>
-      </div>
-
-      {/* Available resources */}
-      <div className="flex flex-wrap items-center gap-4 border border-bronze/40 bg-marble-dark/40 px-4 py-2 rounded-sm">
-        <Pool label="Accumulated Influence" value={String(DUMMY_INFLUENCE_POOL)} />
-        <Pool label="Admin Points" value={`${adminLeft} / ${DUMMY_ADMIN_POINTS}`} />
-        <Pool label="Strong Vote Multiplier" value={`${multiplier}x`} />
       </div>
 
       {/* Bloc vote controls */}
