@@ -2521,6 +2521,100 @@ export type Database = {
           },
         ]
       }
+      senate_proposals: {
+        Row: {
+          created_at: string
+          description: string
+          game_id: string
+          id: string
+          params: Json
+          proposed_by: string
+          sponsor_bloc_id: string | null
+          status: string
+          title: string
+          turn_number: number | null
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          game_id: string
+          id?: string
+          params?: Json
+          proposed_by?: string
+          sponsor_bloc_id?: string | null
+          status?: string
+          title: string
+          turn_number?: number | null
+          vote_type: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          game_id?: string
+          id?: string
+          params?: Json
+          proposed_by?: string
+          sponsor_bloc_id?: string | null
+          status?: string
+          title?: string
+          turn_number?: number | null
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "senate_proposals_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "senate_proposals_sponsor_bloc_id_fkey"
+            columns: ["sponsor_bloc_id"]
+            isOneToOne: false
+            referencedRelation: "senate_blocs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "senate_proposals_vote_type_fkey"
+            columns: ["vote_type"]
+            isOneToOne: false
+            referencedRelation: "senate_vote_types"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      senate_vote_types: {
+        Row: {
+          created_at: string
+          description_template: string
+          fields: Json
+          key: string
+          label: string
+          sort_order: number
+          title_template: string
+        }
+        Insert: {
+          created_at?: string
+          description_template: string
+          fields?: Json
+          key: string
+          label: string
+          sort_order?: number
+          title_template: string
+        }
+        Update: {
+          created_at?: string
+          description_template?: string
+          fields?: Json
+          key?: string
+          label?: string
+          sort_order?: number
+          title_template?: string
+        }
+        Relationships: []
+      }
       ship_hull_classes: {
         Row: {
           code: string
