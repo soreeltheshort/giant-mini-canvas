@@ -121,6 +121,7 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
 
           {tab === "Propose" && (
             <ProposeVotePanel
+              gameId={gameId}
               blocs={blocs}
               onSelectBloc={(id) => setSelection({ type: "bloc", id })}
             />
