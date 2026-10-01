@@ -56,7 +56,7 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
             No senate blocs configured for this game.
           </p>
         ) : (
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="grid grid-cols-9 gap-1.5 sm:gap-2 w-full">
             {blocs.map((b) => {
               const active = selectedBloc?.id === b.id;
               return (
@@ -68,7 +68,7 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
                   onFocus={() => setSelection({ type: "bloc", id: b.id })}
                   onClick={() => setSelection({ type: "bloc", id: b.id })}
                   className={`
-                    w-24 h-auto p-0 aspect-[5/7] rounded-sm overflow-hidden relative shrink-0
+                    w-full min-w-0 h-auto p-0 aspect-[5/7] rounded-sm overflow-hidden relative
                     border-2 transition-all duration-150 text-left
                     ${active
                       ? "border-crimson shadow-md shadow-crimson/20 -translate-y-1"
@@ -85,19 +85,16 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                   ) : (
-                    <div
-                      className="absolute inset-0"
-                      style={{ background: `linear-gradient(160deg, ${b.accent_color}33, ${b.accent_color}99)` }}
-                    />
+                    <div className="absolute inset-0 bg-ivory-dark" />
                   )}
                   {b.icon_url && (
-                    <span className="absolute inset-3 flex items-center justify-center rounded-sm border border-bronze/50 bg-ivory/90 p-2 text-senate-dark shadow-sm">
+                    <span className={`absolute inset-x-1 top-2 bottom-7 flex items-center justify-center ${b.image_url ? "rounded-sm border border-bronze/50 bg-ivory/90 p-1" : "p-1"}`}>
                       <img src={b.icon_url} alt="" className="h-full w-full object-contain" />
                     </span>
                   )}
                   <div className="absolute top-0 inset-x-0 h-1" style={{ background: b.accent_color }} />
-                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-senate-dark/80 to-transparent px-1.5 pb-1 pt-4">
-                    <p className="font-heading text-[9px] font-bold uppercase tracking-wider text-primary-foreground leading-tight whitespace-normal">
+                  <div className="absolute bottom-0 inset-x-0 bg-senate-dark px-1 py-1">
+                    <p className="font-heading text-[8px] font-bold uppercase text-primary-foreground leading-tight whitespace-normal text-center break-words">
                       {b.name}
                     </p>
                   </div>
