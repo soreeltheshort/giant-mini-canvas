@@ -69,3 +69,21 @@ export async function submitProposal(input: {
   });
   if (error) throw error;
 }
+
+export async function saveVoteType(t: SenateVoteType) {
+  const { error } = await (supabase as any).from("senate_vote_types").upsert({
+    key: t.key, label: t.label, title_template: t.title_template,
+    description_template: t.description_template, fields: t.fields, sort_order: t.sort_order,
+  });
+  if (error) throw error;
+}
+
+export async function deleteVoteType(key: string) {
+  const { error } = await (supabase as any).from("senate_vote_types").delete().eq("key", key);
+  if (error) throw error;
+}
+
+/** Field kinds the proposal UI knows how to render. */
+export const FIELD_KINDS: { value: VoteTypeField["kind"]; label: string }[] = [
+  { value: "faction", label: "Faction (players pick player factions)" },
+];
