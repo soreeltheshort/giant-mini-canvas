@@ -21,6 +21,7 @@ import { AFFINITIES, MAX_AFFINITIES, canAddAffinity, isStandaloneAffinity, oppos
 import { AffinityConfigRow, listAffinityConfig, updateAffinityConfig } from "@/lib/senateAffinityConfig";
 import { DEFAULT_INFLUENCE_MULTIPLIER, getInfluenceMultiplier, setInfluenceMultiplier } from "@/lib/votingConfig";
 import { SENATE_EMBLEMS } from "@/lib/senateEmblems";
+import VoteTypesEditor from "@/components/admin/VoteTypesEditor";
 
 const IMAGE_BUCKET = "images";
 
@@ -227,6 +228,9 @@ export default function AdminPolitics() {
             </div>
           </div>
         </div>
+
+        <VoteTypesEditor />
+
 
         {/* Blocs */}
         <div className="flex items-center justify-between mb-3">
