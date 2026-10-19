@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SenateBloc } from "@/lib/senateBlocs";
 import { affinityLabel } from "@/lib/senateAffinities";
 import {
+  SPONSOR_SCORE_BONUS,
+  affinityScore,
   blocPreInfluenceScore,
   listVoteTypes,
   renderVoteTemplate,

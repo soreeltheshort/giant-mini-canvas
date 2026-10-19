@@ -247,9 +247,10 @@ export default function VoteTypesEditor() {
           <div className="border border-bronze/30 rounded-sm px-3 py-2 space-y-1">
             <p className="font-body text-xs font-semibold">What Goes Into the Score</p>
             <p className="font-body text-xs text-muted-foreground">
-              The pre-influence score is built from: the sponsoring bloc's inherent support, each bloc's affinity alignment
-              with the motion, and the bloc's relationship with the factions named in the motion's fields. Player influence
-              is applied on top of this score and is not part of these cutoffs.
+              The pre-influence score is built from: the sum of the affinity weights above for every affinity the bloc
+              holds, plus a +5 bonus for the sponsoring bloc. (A term for the bloc's relationship with the factions named
+              in the motion's fields will join later.) Player influence is applied on top of this score and is not part of
+              these cutoffs.
             </p>
             <p className="font-body text-xs text-muted-foreground">
               Influence range: with the cutoffs above, a bloc sits between {draft.strong_negative} and {draft.strong_positive} before
