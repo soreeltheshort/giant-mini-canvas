@@ -9,6 +9,7 @@ import {
   FIELD_KINDS, VOTE_STANCE_LABELS, deleteVoteType, listVoteTypes, renderVoteTemplate, saveVoteType, stanceForScore,
   type SenateVoteType, type VoteStance, type VoteTypeField,
 } from "@/lib/senateVoteTypes";
+import { AFFINITIES } from "@/lib/senateAffinities";
 
 const NONE = "__none__";
 
@@ -47,7 +48,7 @@ export default function VoteTypesEditor() {
   const addType = () => {
     setIsNew(true);
     setSelectedKey("");
-    setDraft({ key: "", label: "", title_template: "", description_template: "", fields: [], sort_order: types.length + 1, ...DEFAULT_TOLERANCES });
+    setDraft({ key: "", label: "", title_template: "", description_template: "", fields: [], sort_order: types.length + 1, ...DEFAULT_TOLERANCES, affinity_weights: {} });
   };
 
   const patch = (p: Partial<SenateVoteType>) => setDraft((d) => (d ? { ...d, ...p } : d));
