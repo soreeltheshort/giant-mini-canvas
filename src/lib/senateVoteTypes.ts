@@ -21,6 +21,14 @@ export interface SenateVoteType {
   /** Score cutoffs for strong stances (must exceed the lean cutoffs). */
   strong_positive: number;
   strong_negative: number;
+  /** Affinity id -> score weight; a bloc sums the weights of the affinities it holds. */
+  affinity_weights: Record<string, number>;
+}
+
+/** Score contribution of a bloc's affinities for this vote type. */
+export function affinityScore(type: SenateVoteType, affinities: string[]): number {
+  const weights = type.affinity_weights ?? {};
+  return affinities.reduce((sum, a) => sum + (Number(weights[a]) || 0), 0);
 }
 
 /** Pre-influence stance of a bloc toward a motion, derived from its score and the type's tolerances. */
