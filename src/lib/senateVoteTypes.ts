@@ -15,12 +15,6 @@ export interface SenateVoteType {
   description_template: string;
   fields: VoteTypeField[];
   sort_order: number;
-  /** Pre-influence score cutoffs: >= lean_positive leans yea, <= lean_negative leans nay. */
-  lean_positive: number;
-  lean_negative: number;
-  /** Score cutoffs for strong stances (must exceed the lean cutoffs). */
-  strong_positive: number;
-  strong_negative: number;
   /** Affinity id -> score weight; a bloc sums the weights of the affinities it holds. */
   affinity_weights: Record<string, number>;
 }
@@ -44,12 +38,30 @@ export const VOTE_STANCE_LABELS: Record<VoteStance, string> = {
   "strong-nay": "Strongly Nay",
 };
 
-/** Map a bloc's pre-influence score to its stance using the vote type's tolerance cutoffs. */
-export function stanceForScore(type: SenateVoteType, score: number): VoteStance {
-  if (score >= type.strong_positive) return "strong-yea";
-  if (score >= type.lean_positive) return "yea";
-  if (score <= type.strong_negative) return "strong-nay";
-  if (score <= type.lean_negative) return "nay";
+/**
+ * Global stance tolerances: a bloc's pre-influence score (whatever the vote type) is compared
+ * against these cutoffs to label its stance before any player influence is applied.
+ */
+export interface StanceTolerances {
+  lean_positive: number;
+  lean_negative: number;
+  strong_positive: number;
+  strong_negative: number;
+}
+
+export const DEFAULT_STANCE_TOLERANCES: StanceTolerances = {
+  lean_positive: 2.5,
+  lean_negative: -2.5,
+  strong_positive: 7.5,
+  strong_negative: -7.5,
+};
+
+/** Map a bloc's pre-influence score to its stance using the global tolerance cutoffs. */
+export function stanceForScore(tol: StanceTolerances, score: number): VoteStance {
+  if (score >= tol.strong_positive) return "strong-yea";
+  if (score >= tol.lean_positive) return "yea";
+  if (score <= tol.strong_negative) return "strong-nay";
+  if (score <= tol.lean_negative) return "nay";
   return "neutral";
 }
 
@@ -128,9 +140,36 @@ export async function saveVoteType(t: SenateVoteType) {
   const { error } = await (supabase as any).from("senate_vote_types").upsert({
     key: t.key, label: t.label, title_template: t.title_template,
     description_template: t.description_template, fields: t.fields, sort_order: t.sort_order,
-    lean_positive: t.lean_positive, lean_negative: t.lean_negative,
-    strong_positive: t.strong_positive, strong_negative: t.strong_negative,
     affinity_weights: t.affinity_weights ?? {},
+  });
+  if (error) throw error;
+}
+
+/** Read the global stance tolerances from app_settings (fallback to defaults). */
+export async function getStanceTolerances(): Promise<StanceTolerances> {
+  const { data } = await (supabase as any)
+    .from("app_settings")
+    .select("stance_lean_positive, stance_lean_negative, stance_strong_positive, stance_strong_negative")
+    .eq("id", "global")
+    .maybeSingle();
+  const n = (v: any, d: number) => (Number.isFinite(Number(v)) ? Number(v) : d);
+  const d = DEFAULT_STANCE_TOLERANCES;
+  return {
+    lean_positive: n(data?.stance_lean_positive, d.lean_positive),
+    lean_negative: n(data?.stance_lean_negative, d.lean_negative),
+    strong_positive: n(data?.stance_strong_positive, d.strong_positive),
+    strong_negative: n(data?.stance_strong_negative, d.strong_negative),
+  };
+}
+
+export async function setStanceTolerances(t: StanceTolerances): Promise<void> {
+  const { error } = await (supabase as any).from("app_settings").upsert({
+    id: "global",
+    stance_lean_positive: t.lean_positive,
+    stance_lean_negative: t.lean_negative,
+    stance_strong_positive: t.strong_positive,
+    stance_strong_negative: t.strong_negative,
+    updated_at: new Date().toISOString(),
   });
   if (error) throw error;
 }
