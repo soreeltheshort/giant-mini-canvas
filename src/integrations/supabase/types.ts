@@ -2592,7 +2592,11 @@ export type Database = {
           fields: Json
           key: string
           label: string
+          lean_negative: number
+          lean_positive: number
           sort_order: number
+          strong_negative: number
+          strong_positive: number
           title_template: string
         }
         Insert: {
@@ -2601,7 +2605,11 @@ export type Database = {
           fields?: Json
           key: string
           label: string
+          lean_negative?: number
+          lean_positive?: number
           sort_order?: number
+          strong_negative?: number
+          strong_positive?: number
           title_template: string
         }
         Update: {
@@ -2610,7 +2618,11 @@ export type Database = {
           fields?: Json
           key?: string
           label?: string
+          lean_negative?: number
+          lean_positive?: number
           sort_order?: number
+          strong_negative?: number
+          strong_positive?: number
           title_template?: string
         }
         Relationships: []
