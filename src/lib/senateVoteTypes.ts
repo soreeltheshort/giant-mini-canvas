@@ -15,6 +15,43 @@ export interface SenateVoteType {
   description_template: string;
   fields: VoteTypeField[];
   sort_order: number;
+  /** Pre-influence score cutoffs: >= lean_positive leans yea, <= lean_negative leans nay. */
+  lean_positive: number;
+  lean_negative: number;
+  /** Score cutoffs for strong stances (must exceed the lean cutoffs). */
+  strong_positive: number;
+  strong_negative: number;
+}
+
+/** Pre-influence stance of a bloc toward a motion, derived from its score and the type's tolerances. */
+export type VoteStance = "strong-yea" | "yea" | "neutral" | "nay" | "strong-nay";
+
+export const VOTE_STANCES: VoteStance[] = ["strong-yea", "yea", "neutral", "nay", "strong-nay"];
+
+export const VOTE_STANCE_LABELS: Record<VoteStance, string> = {
+  "strong-yea": "Strongly Yea",
+  yea: "Yea",
+  neutral: "Neutral",
+  nay: "Nay",
+  "strong-nay": "Strongly Nay",
+};
+
+/** Map a bloc's pre-influence score to its stance using the vote type's tolerance cutoffs. */
+export function stanceForScore(type: SenateVoteType, score: number): VoteStance {
+  if (score >= type.strong_positive) return "strong-yea";
+  if (score >= type.lean_positive) return "yea";
+  if (score <= type.strong_negative) return "strong-nay";
+  if (score <= type.lean_negative) return "nay";
+  return "neutral";
+}
+
+/**
+ * Pre-influence score of a bloc toward a motion of this type (no player influence applied).
+ * Placeholder until the affinity/relationship model lands: the sponsor leans in, the rest are neutral.
+ */
+export function blocPreInfluenceScore(type: SenateVoteType, bloc: { id: string }, sponsorBlocId?: string): number {
+  void type;
+  return sponsorBlocId && bloc.id === sponsorBlocId ? 5 : 0;
 }
 
 export async function listVoteTypes(): Promise<SenateVoteType[]> {
@@ -74,6 +111,8 @@ export async function saveVoteType(t: SenateVoteType) {
   const { error } = await (supabase as any).from("senate_vote_types").upsert({
     key: t.key, label: t.label, title_template: t.title_template,
     description_template: t.description_template, fields: t.fields, sort_order: t.sort_order,
+    lean_positive: t.lean_positive, lean_negative: t.lean_negative,
+    strong_positive: t.strong_positive, strong_negative: t.strong_negative,
   });
   if (error) throw error;
 }

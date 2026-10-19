@@ -29,6 +29,13 @@
       "when": 1790887236620,
       "tag": "0003_senate_vote_types_and_proposals",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792431898898,
+      "tag": "0004_add_stance_tolerances_to_senate_vote_types",
+      "breakpoints": true
     }
   ]
 }
