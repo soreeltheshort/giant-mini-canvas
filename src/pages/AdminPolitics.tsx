@@ -22,6 +22,7 @@ import { AffinityConfigRow, listAffinityConfig, updateAffinityConfig } from "@/l
 import { DEFAULT_INFLUENCE_MULTIPLIER, getInfluenceMultiplier, setInfluenceMultiplier } from "@/lib/votingConfig";
 import { SENATE_EMBLEMS } from "@/lib/senateEmblems";
 import VoteTypesEditor from "@/components/admin/VoteTypesEditor";
+import StanceTolerancesEditor from "@/components/admin/StanceTolerancesEditor";
 
 const IMAGE_BUCKET = "images";
 
@@ -228,6 +229,8 @@ export default function AdminPolitics() {
             </div>
           </div>
         </div>
+
+        <StanceTolerancesEditor />
 
         <VoteTypesEditor />
 
