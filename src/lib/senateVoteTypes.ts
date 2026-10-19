@@ -130,6 +130,7 @@ export async function saveVoteType(t: SenateVoteType) {
     description_template: t.description_template, fields: t.fields, sort_order: t.sort_order,
     lean_positive: t.lean_positive, lean_negative: t.lean_negative,
     strong_positive: t.strong_positive, strong_negative: t.strong_negative,
+    affinity_weights: t.affinity_weights ?? {},
   });
   if (error) throw error;
 }
