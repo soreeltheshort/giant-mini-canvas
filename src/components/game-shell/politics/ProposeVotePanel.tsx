@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SenateBloc } from "@/lib/senateBlocs";
 import { affinityLabel } from "@/lib/senateAffinities";
 import {
+  SPONSOR_SCORE_BONUS,
+  affinityScore,
   blocPreInfluenceScore,
   listVoteTypes,
   renderVoteTemplate,
@@ -63,6 +65,12 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: Propos
 
   const type = types.find((t) => t.key === typeKey);
   const sponsor = blocs.find((b) => b.id === sponsorId);
+
+  /** Pre-influence score + stance of a bloc toward this motion. */
+  const blocScore = (b: { id: string; affinities?: string[] | null }) =>
+    type ? blocPreInfluenceScore(type, b, sponsorId) : 0;
+  const blocStance = (b: { id: string; affinities?: string[] | null }) =>
+    type ? stanceForScore(type, blocScore(b)) : ("neutral" as VoteStance);
 
   const displayValues = useMemo(() => {
     const out: Record<string, string> = {};
@@ -132,8 +140,8 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: Propos
                       <div className="px-2 py-1.5 font-body text-xs font-semibold text-muted-foreground">No player factions in this game</div>
                     )}
                     {playerFactions.map((pf) => {
-                      // Pre-influence stance of the sponsoring bloc toward this faction as named combatant.
-                      const stance = type ? stanceForScore(type, blocPreInfluenceScore(type, { id: pf.id }, sponsorId)) : "neutral";
+                      // Border shows the sponsoring bloc's pre-influence stance if this faction is named.
+                      const stance = sponsor ? blocStance(sponsor) : "neutral";
                       return (
                         <SelectItem key={pf.id} value={pf.id} disabled={pf.id === excluded}>
                           <span className={`inline-block rounded-sm border-2 px-1.5 py-0.5 ${STANCE_BORDER[stance]}`}>{pf.name}</span>
@@ -159,6 +167,14 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: Propos
                 ) : <span className="font-body text-xs font-semibold text-muted-foreground">No declared affinities</span>
               ) : <span className="font-body text-xs font-semibold text-muted-foreground">Choose a sponsor first</span>}
             </div>
+            {sponsor && type && (
+              <p className="mt-2 font-body text-[11px] font-semibold text-muted-foreground">
+                Pre-influence score {(blocScore(sponsor) >= 0 ? "+" : "") + blocScore(sponsor).toFixed(1)}
+                {" "}(affinities {(affinityScore(type, sponsor.affinities ?? []) >= 0 ? "+" : "") + affinityScore(type, sponsor.affinities ?? []).toFixed(1)}
+                {" "}+ sponsor bonus +{SPONSOR_SCORE_BONUS}) — leans{" "}
+                <span className="uppercase">{blocStance(sponsor).replace("-", " ")}</span> before any player influence.
+              </p>
+            )}
           </div>
         </div>
 

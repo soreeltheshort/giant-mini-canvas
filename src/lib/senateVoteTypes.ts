@@ -21,6 +21,14 @@ export interface SenateVoteType {
   /** Score cutoffs for strong stances (must exceed the lean cutoffs). */
   strong_positive: number;
   strong_negative: number;
+  /** Affinity id -> score weight; a bloc sums the weights of the affinities it holds. */
+  affinity_weights: Record<string, number>;
+}
+
+/** Score contribution of a bloc's affinities for this vote type. */
+export function affinityScore(type: SenateVoteType, affinities: string[]): number {
+  const weights = type.affinity_weights ?? {};
+  return affinities.reduce((sum, a) => sum + (Number(weights[a]) || 0), 0);
 }
 
 /** Pre-influence stance of a bloc toward a motion, derived from its score and the type's tolerances. */
@@ -45,13 +53,22 @@ export function stanceForScore(type: SenateVoteType, score: number): VoteStance 
   return "neutral";
 }
 
+/** Bonus a bloc gets toward a motion it sponsors itself. */
+export const SPONSOR_SCORE_BONUS = 5;
+
 /**
- * Pre-influence score of a bloc toward a motion of this type (no player influence applied).
- * Placeholder until the affinity/relationship model lands: the sponsor leans in, the rest are neutral.
+ * Pre-influence score of a bloc toward a motion of this type (no player influence applied):
+ * the sum of the vote type's weights for each affinity the bloc holds, plus a bonus
+ * for the sponsoring bloc. The relationship-with-named-factions term lands later.
  */
-export function blocPreInfluenceScore(type: SenateVoteType, bloc: { id: string }, sponsorBlocId?: string): number {
-  void type;
-  return sponsorBlocId && bloc.id === sponsorBlocId ? 5 : 0;
+export function blocPreInfluenceScore(
+  type: SenateVoteType,
+  bloc: { id: string; affinities?: string[] | null },
+  sponsorBlocId?: string,
+): number {
+  let score = affinityScore(type, bloc.affinities ?? []);
+  if (sponsorBlocId && bloc.id === sponsorBlocId) score += SPONSOR_SCORE_BONUS;
+  return score;
 }
 
 export async function listVoteTypes(): Promise<SenateVoteType[]> {
@@ -113,6 +130,7 @@ export async function saveVoteType(t: SenateVoteType) {
     description_template: t.description_template, fields: t.fields, sort_order: t.sort_order,
     lean_positive: t.lean_positive, lean_negative: t.lean_negative,
     strong_positive: t.strong_positive, strong_negative: t.strong_negative,
+    affinity_weights: t.affinity_weights ?? {},
   });
   if (error) throw error;
 }

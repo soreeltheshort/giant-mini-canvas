@@ -2587,6 +2587,7 @@ export type Database = {
       }
       senate_vote_types: {
         Row: {
+          affinity_weights: Json
           created_at: string
           description_template: string
           fields: Json
@@ -2600,6 +2601,7 @@ export type Database = {
           title_template: string
         }
         Insert: {
+          affinity_weights?: Json
           created_at?: string
           description_template: string
           fields?: Json
@@ -2613,6 +2615,7 @@ export type Database = {
           title_template: string
         }
         Update: {
+          affinity_weights?: Json
           created_at?: string
           description_template?: string
           fields?: Json

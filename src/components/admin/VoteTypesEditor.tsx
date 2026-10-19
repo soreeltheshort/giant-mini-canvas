@@ -9,6 +9,7 @@ import {
   FIELD_KINDS, VOTE_STANCE_LABELS, deleteVoteType, listVoteTypes, renderVoteTemplate, saveVoteType, stanceForScore,
   type SenateVoteType, type VoteStance, type VoteTypeField,
 } from "@/lib/senateVoteTypes";
+import { AFFINITIES } from "@/lib/senateAffinities";
 
 const NONE = "__none__";
 
@@ -47,7 +48,7 @@ export default function VoteTypesEditor() {
   const addType = () => {
     setIsNew(true);
     setSelectedKey("");
-    setDraft({ key: "", label: "", title_template: "", description_template: "", fields: [], sort_order: types.length + 1, ...DEFAULT_TOLERANCES });
+    setDraft({ key: "", label: "", title_template: "", description_template: "", fields: [], sort_order: types.length + 1, ...DEFAULT_TOLERANCES, affinity_weights: {} });
   };
 
   const patch = (p: Partial<SenateVoteType>) => setDraft((d) => (d ? { ...d, ...p } : d));
@@ -171,6 +172,44 @@ export default function VoteTypesEditor() {
             <p className="font-body text-sm font-medium">{renderVoteTemplate(draft.description_template, draft.fields, sample)}</p>
           </div>
 
+          {/* Affinity weights */}
+          <div>
+            <p className="font-body text-xs text-muted-foreground mb-2">
+              Affinity Weights — when a vote of this type is proposed, each bloc's pre-influence score sums the weights
+              of the affinities it holds. Positive leans yea, negative leans nay; leave at 0 for no effect.
+            </p>
+            <div className="border border-bronze/30 rounded-sm overflow-hidden">
+              <div className="grid grid-cols-[10rem_1fr_8rem] gap-2 px-3 py-1.5 border-b border-bronze/30 bg-muted/40">
+                <span className="font-heading text-[10px] uppercase tracking-widest text-bronze">Affinity</span>
+                <span className="font-heading text-[10px] uppercase tracking-widest text-bronze">Effect</span>
+                <span className="font-heading text-[10px] uppercase tracking-widest text-bronze text-right">Weight</span>
+              </div>
+              {AFFINITIES.map((a) => {
+                const w = Number(draft.affinity_weights?.[a.id]) || 0;
+                return (
+                  <div key={a.id} className="grid grid-cols-[10rem_1fr_8rem] gap-2 px-3 py-1.5 items-center border-b border-bronze/20 last:border-0">
+                    <span className="font-body text-xs font-semibold">{a.label}</span>
+                    <span className="font-body text-xs text-muted-foreground">
+                      {w > 0 ? "Leans yea" : w < 0 ? "Leans nay" : "No effect"}
+                    </span>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      className="h-8 w-24 ml-auto text-right"
+                      value={w}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        const next = { ...(draft.affinity_weights ?? {}) };
+                        if (v) next[a.id] = v; else delete next[a.id];
+                        patch({ affinity_weights: next });
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Pre-influence stance tolerances */}
           <div>
             <p className="font-body text-xs text-muted-foreground mb-2">
@@ -208,9 +247,10 @@ export default function VoteTypesEditor() {
           <div className="border border-bronze/30 rounded-sm px-3 py-2 space-y-1">
             <p className="font-body text-xs font-semibold">What Goes Into the Score</p>
             <p className="font-body text-xs text-muted-foreground">
-              The pre-influence score is built from: the sponsoring bloc's inherent support, each bloc's affinity alignment
-              with the motion, and the bloc's relationship with the factions named in the motion's fields. Player influence
-              is applied on top of this score and is not part of these cutoffs.
+              The pre-influence score is built from: the sum of the affinity weights above for every affinity the bloc
+              holds, plus a +5 bonus for the sponsoring bloc. (A term for the bloc's relationship with the factions named
+              in the motion's fields will join later.) Player influence is applied on top of this score and is not part of
+              these cutoffs.
             </p>
             <p className="font-body text-xs text-muted-foreground">
               Influence range: with the cutoffs above, a bloc sits between {draft.strong_negative} and {draft.strong_positive} before
