@@ -43,6 +43,13 @@
       "when": 1792432101632,
       "tag": "0005_add_affinity_weights_to_senate_vote_types",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792441664272,
+      "tag": "0006_make_stance_tolerances_global",
+      "breakpoints": true
     }
   ]
 }

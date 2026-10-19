@@ -699,6 +699,10 @@ export type Database = {
           id: string
           influence_admin_point_multiplier: number
           planet_naming_convention_id: string | null
+          stance_lean_negative: number
+          stance_lean_positive: number
+          stance_strong_negative: number
+          stance_strong_positive: number
           updated_at: string
         }
         Insert: {
@@ -709,6 +713,10 @@ export type Database = {
           id?: string
           influence_admin_point_multiplier?: number
           planet_naming_convention_id?: string | null
+          stance_lean_negative?: number
+          stance_lean_positive?: number
+          stance_strong_negative?: number
+          stance_strong_positive?: number
           updated_at?: string
         }
         Update: {
@@ -719,6 +727,10 @@ export type Database = {
           id?: string
           influence_admin_point_multiplier?: number
           planet_naming_convention_id?: string | null
+          stance_lean_negative?: number
+          stance_lean_positive?: number
+          stance_strong_negative?: number
+          stance_strong_positive?: number
           updated_at?: string
         }
         Relationships: [
