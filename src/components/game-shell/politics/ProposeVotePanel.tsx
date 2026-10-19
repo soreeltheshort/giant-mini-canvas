@@ -167,6 +167,14 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: Propos
                 ) : <span className="font-body text-xs font-semibold text-muted-foreground">No declared affinities</span>
               ) : <span className="font-body text-xs font-semibold text-muted-foreground">Choose a sponsor first</span>}
             </div>
+            {sponsor && type && (
+              <p className="mt-2 font-body text-[11px] font-semibold text-muted-foreground">
+                Pre-influence score {(blocScore(sponsor) >= 0 ? "+" : "") + blocScore(sponsor).toFixed(1)}
+                {" "}(affinities {(affinityScore(type, sponsor.affinities ?? []) >= 0 ? "+" : "") + affinityScore(type, sponsor.affinities ?? []).toFixed(1)}
+                {" "}+ sponsor bonus +{SPONSOR_SCORE_BONUS}) — leans{" "}
+                <span className="uppercase">{blocStance(sponsor).replace("-", " ")}</span> before any player influence.
+              </p>
+            )}
           </div>
         </div>
 
