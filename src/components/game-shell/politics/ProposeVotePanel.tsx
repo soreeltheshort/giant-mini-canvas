@@ -4,12 +4,24 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SenateBloc } from "@/lib/senateBlocs";
 import { affinityLabel } from "@/lib/senateAffinities";
 import {
+  blocPreInfluenceScore,
   listVoteTypes,
   renderVoteTemplate,
+  stanceForScore,
   submitProposal,
   validateVoteParams,
   type SenateVoteType,
+  type VoteStance,
 } from "@/lib/senateVoteTypes";
+
+/** Border colour per pre-influence stance — same palette as the Votes tab toggles. */
+const STANCE_BORDER: Record<VoteStance, string> = {
+  "strong-yea": "border-vote-yea-strong",
+  yea: "border-vote-yea",
+  neutral: "border-bronze/50",
+  nay: "border-vote-nay",
+  "strong-nay": "border-vote-nay-strong",
+};
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -119,9 +131,15 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: Propos
                     {playerFactions.length === 0 && (
                       <div className="px-2 py-1.5 font-body text-xs font-semibold text-muted-foreground">No player factions in this game</div>
                     )}
-                    {playerFactions.map((pf) => (
-                      <SelectItem key={pf.id} value={pf.id} disabled={pf.id === excluded}>{pf.name}</SelectItem>
-                    ))}
+                    {playerFactions.map((pf) => {
+                      // Pre-influence stance of the sponsoring bloc toward this faction as named combatant.
+                      const stance = type ? stanceForScore(type, blocPreInfluenceScore(type, { id: pf.id }, sponsorId)) : "neutral";
+                      return (
+                        <SelectItem key={pf.id} value={pf.id} disabled={pf.id === excluded}>
+                          <span className={`inline-block rounded-sm border-2 px-1.5 py-0.5 ${STANCE_BORDER[stance]}`}>{pf.name}</span>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </Field>

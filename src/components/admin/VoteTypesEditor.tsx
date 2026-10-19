@@ -60,6 +60,8 @@ export default function VoteTypesEditor() {
     if (!key || !draft.label.trim()) return toast.error("Key and name are required.");
     const keys = draft.fields.map((f) => f.key);
     if (keys.some((k) => !k) || new Set(keys).size !== keys.length) return toast.error("Field keys must be filled in and unique.");
+    if (!(draft.strong_positive >= draft.lean_positive && draft.lean_positive >= draft.lean_negative && draft.lean_negative >= draft.strong_negative))
+      return toast.error("Cutoffs must run: strong yea ≥ yea ≥ nay ≥ strong nay.");
     try {
       await saveVoteType({ ...draft, key });
       toast.success(`Saved "${draft.label}"`);
