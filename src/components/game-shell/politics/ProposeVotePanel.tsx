@@ -4,15 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SenateBloc } from "@/lib/senateBlocs";
 import { affinityLabel } from "@/lib/senateAffinities";
 import {
+  DEFAULT_STANCE_TOLERANCES,
   SPONSOR_SCORE_BONUS,
   affinityScore,
   blocPreInfluenceScore,
+  getStanceTolerances,
   listVoteTypes,
   renderVoteTemplate,
   stanceForScore,
   submitProposal,
   validateVoteParams,
   type SenateVoteType,
+  type StanceTolerances,
   type VoteStance,
 } from "@/lib/senateVoteTypes";
 
@@ -38,6 +41,7 @@ interface FactionOption { id: string; name: string }
 /** Propose a senate vote. Title and description are generated from the vote type. */
 export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: ProposeVotePanelProps) {
   const [types, setTypes] = useState<SenateVoteType[]>([]);
+  const [tolerances, setTolerances] = useState<StanceTolerances>(DEFAULT_STANCE_TOLERANCES);
   const [typeKey, setTypeKey] = useState("");
   const [params, setParams] = useState<Record<string, string>>({});
   const [sponsorId, setSponsorId] = useState("");
@@ -48,6 +52,7 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: Propos
     listVoteTypes()
       .then((t) => { setTypes(t); if (t[0]) setTypeKey(t[0].key); })
       .catch(() => toast.error("Could not load vote types"));
+    getStanceTolerances().then(setTolerances).catch(() => undefined);
   }, []);
 
   // Player (non-AI) factions in this game — the only choices the UI offers.
@@ -70,7 +75,7 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: Propos
   const blocScore = (b: { id: string; affinities?: string[] | null }) =>
     type ? blocPreInfluenceScore(type, b, sponsorId) : 0;
   const blocStance = (b: { id: string; affinities?: string[] | null }) =>
-    type ? stanceForScore(type, blocScore(b)) : ("neutral" as VoteStance);
+    type ? stanceForScore(tolerances, blocScore(b)) : ("neutral" as VoteStance);
 
   const displayValues = useMemo(() => {
     const out: Record<string, string> = {};
