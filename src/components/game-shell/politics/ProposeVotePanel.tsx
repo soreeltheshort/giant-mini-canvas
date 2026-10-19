@@ -140,8 +140,8 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: Propos
                       <div className="px-2 py-1.5 font-body text-xs font-semibold text-muted-foreground">No player factions in this game</div>
                     )}
                     {playerFactions.map((pf) => {
-                      // Pre-influence stance of the sponsoring bloc toward this faction as named combatant.
-                      const stance = type ? stanceForScore(type, blocPreInfluenceScore(type, { id: pf.id }, sponsorId)) : "neutral";
+                      // Border shows the sponsoring bloc's pre-influence stance if this faction is named.
+                      const stance = sponsor ? blocStance(sponsor) : "neutral";
                       return (
                         <SelectItem key={pf.id} value={pf.id} disabled={pf.id === excluded}>
                           <span className={`inline-block rounded-sm border-2 px-1.5 py-0.5 ${STANCE_BORDER[stance]}`}>{pf.name}</span>
