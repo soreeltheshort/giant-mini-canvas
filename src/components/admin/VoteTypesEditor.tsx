@@ -6,21 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  FIELD_KINDS, VOTE_STANCE_LABELS, deleteVoteType, listVoteTypes, renderVoteTemplate, saveVoteType, stanceForScore,
-  type SenateVoteType, type VoteStance, type VoteTypeField,
+  FIELD_KINDS, deleteVoteType, listVoteTypes, renderVoteTemplate, saveVoteType,
+  type SenateVoteType, type VoteTypeField,
 } from "@/lib/senateVoteTypes";
 import { AFFINITIES } from "@/lib/senateAffinities";
 
 const NONE = "__none__";
-
-const DEFAULT_TOLERANCES = { lean_positive: 2.5, lean_negative: -2.5, strong_positive: 7.5, strong_negative: -7.5 };
-
-const TOLERANCE_ROWS: { key: keyof typeof DEFAULT_TOLERANCES; stance: VoteStance; hint: string }[] = [
-  { key: "strong_positive", stance: "strong-yea", hint: "Score at or above" },
-  { key: "lean_positive", stance: "yea", hint: "Score at or above" },
-  { key: "lean_negative", stance: "nay", hint: "Score at or below" },
-  { key: "strong_negative", stance: "strong-nay", hint: "Score at or below" },
-];
 
 /** Admin editor for senate vote types: label, generated title/description templates, and custom fields. */
 export default function VoteTypesEditor() {
@@ -48,7 +39,7 @@ export default function VoteTypesEditor() {
   const addType = () => {
     setIsNew(true);
     setSelectedKey("");
-    setDraft({ key: "", label: "", title_template: "", description_template: "", fields: [], sort_order: types.length + 1, ...DEFAULT_TOLERANCES, affinity_weights: {} });
+    setDraft({ key: "", label: "", title_template: "", description_template: "", fields: [], sort_order: types.length + 1, affinity_weights: {} });
   };
 
   const patch = (p: Partial<SenateVoteType>) => setDraft((d) => (d ? { ...d, ...p } : d));
@@ -61,8 +52,6 @@ export default function VoteTypesEditor() {
     if (!key || !draft.label.trim()) return toast.error("Key and name are required.");
     const keys = draft.fields.map((f) => f.key);
     if (keys.some((k) => !k) || new Set(keys).size !== keys.length) return toast.error("Field keys must be filled in and unique.");
-    if (!(draft.strong_positive >= draft.lean_positive && draft.lean_positive >= draft.lean_negative && draft.lean_negative >= draft.strong_negative))
-      return toast.error("Cutoffs must run: strong yea ≥ yea ≥ nay ≥ strong nay.");
     try {
       await saveVoteType({ ...draft, key });
       toast.success(`Saved "${draft.label}"`);
