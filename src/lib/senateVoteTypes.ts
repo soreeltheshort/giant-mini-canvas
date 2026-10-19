@@ -53,13 +53,22 @@ export function stanceForScore(type: SenateVoteType, score: number): VoteStance 
   return "neutral";
 }
 
+/** Bonus a bloc gets toward a motion it sponsors itself. */
+export const SPONSOR_SCORE_BONUS = 5;
+
 /**
- * Pre-influence score of a bloc toward a motion of this type (no player influence applied).
- * Placeholder until the affinity/relationship model lands: the sponsor leans in, the rest are neutral.
+ * Pre-influence score of a bloc toward a motion of this type (no player influence applied):
+ * the sum of the vote type's weights for each affinity the bloc holds, plus a bonus
+ * for the sponsoring bloc. The relationship-with-named-factions term lands later.
  */
-export function blocPreInfluenceScore(type: SenateVoteType, bloc: { id: string }, sponsorBlocId?: string): number {
-  void type;
-  return sponsorBlocId && bloc.id === sponsorBlocId ? 5 : 0;
+export function blocPreInfluenceScore(
+  type: SenateVoteType,
+  bloc: { id: string; affinities?: string[] | null },
+  sponsorBlocId?: string,
+): number {
+  let score = affinityScore(type, bloc.affinities ?? []);
+  if (sponsorBlocId && bloc.id === sponsorBlocId) score += SPONSOR_SCORE_BONUS;
+  return score;
 }
 
 export async function listVoteTypes(): Promise<SenateVoteType[]> {
