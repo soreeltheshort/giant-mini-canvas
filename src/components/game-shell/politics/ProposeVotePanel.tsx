@@ -66,6 +66,12 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: Propos
   const type = types.find((t) => t.key === typeKey);
   const sponsor = blocs.find((b) => b.id === sponsorId);
 
+  /** Pre-influence score + stance of a bloc toward this motion. */
+  const blocScore = (b: { id: string; affinities?: string[] | null }) =>
+    type ? blocPreInfluenceScore(type, b, sponsorId) : 0;
+  const blocStance = (b: { id: string; affinities?: string[] | null }) =>
+    type ? stanceForScore(type, blocScore(b)) : ("neutral" as VoteStance);
+
   const displayValues = useMemo(() => {
     const out: Record<string, string> = {};
     for (const [k, v] of Object.entries(params)) out[k] = playerFactions.find((f) => f.id === v)?.name ?? "";
