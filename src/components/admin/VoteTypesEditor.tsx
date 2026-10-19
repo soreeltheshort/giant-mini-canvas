@@ -199,53 +199,15 @@ export default function VoteTypesEditor() {
             </div>
           </div>
 
-          {/* Pre-influence stance tolerances */}
-          <div>
-            <p className="font-body text-xs text-muted-foreground mb-2">
-              Stance Tolerances — a bloc's pre-influence score is compared against these cutoffs to decide whether it is
-              neutral, leans yea/nay, or is strongly yea/nay before any player influence is applied.
-            </p>
-            <div className="border border-bronze/30 rounded-sm overflow-hidden">
-              <div className="grid grid-cols-[10rem_1fr_8rem] gap-2 px-3 py-1.5 border-b border-bronze/30 bg-muted/40">
-                <span className="font-heading text-[10px] uppercase tracking-widest text-bronze">Stance</span>
-                <span className="font-heading text-[10px] uppercase tracking-widest text-bronze">Rule</span>
-                <span className="font-heading text-[10px] uppercase tracking-widest text-bronze text-right">Cutoff</span>
-              </div>
-              {TOLERANCE_ROWS.map((row) => (
-                <div key={row.key} className="grid grid-cols-[10rem_1fr_8rem] gap-2 px-3 py-1.5 items-center border-b border-bronze/20 last:border-0">
-                  <span className="font-body text-xs font-semibold">{VOTE_STANCE_LABELS[row.stance]}</span>
-                  <span className="font-body text-xs text-muted-foreground">{row.hint}</span>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    className="h-8 w-24 ml-auto text-right"
-                    value={draft[row.key]}
-                    onChange={(e) => patch({ [row.key]: Number(e.target.value) } as Partial<SenateVoteType>)}
-                  />
-                </div>
-              ))}
-              <div className="grid grid-cols-[10rem_1fr_8rem] gap-2 px-3 py-1.5 items-center bg-muted/40">
-                <span className="font-body text-xs font-semibold">{VOTE_STANCE_LABELS.neutral}</span>
-                <span className="font-body text-xs text-muted-foreground">Score between the yea and nay cutoffs</span>
-                <span className="font-body text-xs text-muted-foreground text-right">—</span>
-              </div>
-            </div>
-          </div>
-
           {/* What goes into the score */}
           <div className="border border-bronze/30 rounded-sm px-3 py-2 space-y-1">
             <p className="font-body text-xs font-semibold">What Goes Into the Score</p>
             <p className="font-body text-xs text-muted-foreground">
               The pre-influence score is built from: the sum of the affinity weights above for every affinity the bloc
               holds, plus a +5 bonus for the sponsoring bloc. (A term for the bloc's relationship with the factions named
-              in the motion's fields will join later.) Player influence is applied on top of this score and is not part of
-              these cutoffs.
-            </p>
-            <p className="font-body text-xs text-muted-foreground">
-              Influence range: with the cutoffs above, a bloc sits between {draft.strong_negative} and {draft.strong_positive} before
-              influence; the most influence that can matter is {Math.max(0, draft.strong_positive - draft.lean_negative).toFixed(1)} to
-              swing a leaning-nay bloc to strongly yea, and {Math.max(0, draft.lean_positive - draft.strong_negative).toFixed(1)} to swing a
-              leaning-yea bloc to strongly nay.
+              in the motion's fields will join later.) Player influence is applied on top of this score. Where the score
+              lands — yea, nay, strongly yea/nay, or neutral — is decided by the <span className="font-semibold">global
+              Stance Tolerances</span> in the section above these vote types; those cutoffs are shared by every vote type.
             </p>
           </div>
 
