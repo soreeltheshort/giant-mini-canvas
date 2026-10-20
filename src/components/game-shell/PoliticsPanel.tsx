@@ -4,7 +4,7 @@ import { useFavores } from "@/hooks/useFavores";
 import type { SenateBloc } from "@/lib/senateBlocs";
 import type { Favor } from "@/lib/favores";
 import { affinityLabel } from "@/lib/senateAffinities";
-import { criterionLabel, materializeFavorDescription } from "@/lib/favorCriteria";
+import { criterionLabel, criterionDef, defaultCriterionParams, materializeFavorDescription } from "@/lib/favorCriteria";
 import type { VoteStance } from "@/lib/senateVoteTypes";
 import { VOTE_STANCE_LABELS } from "@/lib/senateVoteTypes";
 import { Button } from "@/components/ui/button";
@@ -273,6 +273,66 @@ function FavorDossier({ favor, blocs, description }: { favor: Favor; blocs: Sena
           )) : <span className="font-body text-xs font-semibold text-muted-foreground">No affiliations assigned</span>}
         </div>
       </div>
+      <FavorBidBox favor={favor} />
+    </div>
+  );
+}
+
+/** Bidding dialogue for auction-type Favores. Placing a bid costs 1 Admin Point. */
+function FavorBidBox({ favor }: { favor: Favor }) {
+  const def = criterionDef(favor.criterion_type);
+  const isAuction = favor.criterion_type === "influence_auction" || favor.criterion_type === "credit_auction";
+  const params = { ...defaultCriterionParams(favor.criterion_type), ...favor.criterion_params };
+  const minBid = Number(params.min_bid) || 1;
+  const unit = favor.criterion_type === "influence_auction" ? "Influence" : "Credits";
+
+  const [amount, setAmount] = useState("");
+  const [placedBid, setPlacedBid] = useState<number | null>(null);
+
+  const bid = Number(amount);
+  const valid = Number.isFinite(bid) && bid >= minBid;
+
+  if (!isAuction) return null;
+
+  return (
+    <div className="border-t border-bronze/30 bg-marble-dark/25 px-4 py-3">
+      <p className="text-[9px] font-heading font-semibold uppercase tracking-widest text-crimson">
+        Place a Bid — {def?.label ?? "Auction"}
+      </p>
+      <p className="mt-1 font-body text-xs font-semibold text-muted-foreground">
+        Highest bid wins. Placing a bid costs <span className="font-bold text-senate-dark">1 Admin Point</span>.
+      </p>
+      {placedBid !== null ? (
+        <div className="mt-2 border border-bronze/50 bg-ivory-dark px-3 py-2">
+          <p className="font-heading text-[10px] font-bold uppercase text-senate-dark">
+            Bid of {placedBid} {unit} placed
+          </p>
+          <p className="mt-0.5 font-body text-[10px] font-semibold text-muted-foreground">
+            1 Admin Point spent. The auction resolves at turn processing.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-2 flex items-stretch gap-2">
+          <input
+            type="number"
+            min={minBid}
+            step={1}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder={`Min ${minBid}`}
+            aria-label={`Bid amount in ${unit}`}
+            className="w-28 border border-bronze/60 bg-ivory px-2 py-1.5 font-body text-sm font-bold text-senate-dark placeholder:font-semibold placeholder:text-muted-foreground focus:outline-none focus:border-crimson"
+          />
+          <Button
+            type="button"
+            disabled={!valid}
+            onClick={() => setPlacedBid(bid)}
+            className="rounded-none bg-crimson px-4 font-heading text-xs font-bold uppercase text-primary-foreground hover:bg-crimson/90 disabled:opacity-40"
+          >
+            Bid {unit}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
