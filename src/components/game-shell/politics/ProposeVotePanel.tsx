@@ -18,6 +18,8 @@ import {
   type StanceTolerances,
   type VoteStance,
 } from "@/lib/senateVoteTypes";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 /** Border colour per pre-influence stance — same palette as the Votes tab toggles. */
 const STANCE_BORDER: Record<VoteStance, string> = {
@@ -27,19 +29,19 @@ const STANCE_BORDER: Record<VoteStance, string> = {
   nay: "border-vote-nay",
   "strong-nay": "border-vote-nay-strong",
 };
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ProposeVotePanelProps {
   gameId?: string | null;
   blocs: SenateBloc[];
   onSelectBloc: (id: string) => void;
+  /** Reports each bloc's pre-influence stance toward the motion being drafted. */
+  onStances?: (stances: Record<string, VoteStance>) => void;
 }
 
 interface FactionOption { id: string; name: string }
 
 /** Propose a senate vote. Title and description are generated from the vote type. */
-export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: ProposeVotePanelProps) {
+export default function ProposeVotePanel({ gameId, blocs, onSelectBloc, onStances }: ProposeVotePanelProps) {
   const [types, setTypes] = useState<SenateVoteType[]>([]);
   const [tolerances, setTolerances] = useState<StanceTolerances>(DEFAULT_STANCE_TOLERANCES);
   const [typeKey, setTypeKey] = useState("");
@@ -76,6 +78,14 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc }: Propos
     type ? blocPreInfluenceScore(type, b, sponsorId) : 0;
   const blocStance = (b: { id: string; affinities?: string[] | null }) =>
     type ? stanceForScore(tolerances, blocScore(b)) : ("neutral" as VoteStance);
+
+  // Share every bloc's predisposition upward so the dossier can show it beside the name.
+  useEffect(() => {
+    if (!onStances || !type) return;
+    const next: Record<string, VoteStance> = {};
+    for (const b of blocs) next[b.id] = stanceForScore(tolerances, blocPreInfluenceScore(type, b, sponsorId));
+    onStances(next);
+  }, [blocs, type, tolerances, sponsorId, onStances]);
 
   const displayValues = useMemo(() => {
     const out: Record<string, string> = {};
