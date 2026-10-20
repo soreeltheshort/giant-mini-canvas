@@ -699,6 +699,16 @@ export type Database = {
           id: string
           influence_admin_point_multiplier: number
           planet_naming_convention_id: string | null
+          stance_desc_negative: string
+          stance_desc_neutral: string
+          stance_desc_positive: string
+          stance_desc_strong_negative: string
+          stance_desc_strong_positive: string
+          stance_label_negative: string
+          stance_label_neutral: string
+          stance_label_positive: string
+          stance_label_strong_negative: string
+          stance_label_strong_positive: string
           stance_lean_negative: number
           stance_lean_positive: number
           stance_strong_negative: number
@@ -713,6 +723,16 @@ export type Database = {
           id?: string
           influence_admin_point_multiplier?: number
           planet_naming_convention_id?: string | null
+          stance_desc_negative?: string
+          stance_desc_neutral?: string
+          stance_desc_positive?: string
+          stance_desc_strong_negative?: string
+          stance_desc_strong_positive?: string
+          stance_label_negative?: string
+          stance_label_neutral?: string
+          stance_label_positive?: string
+          stance_label_strong_negative?: string
+          stance_label_strong_positive?: string
           stance_lean_negative?: number
           stance_lean_positive?: number
           stance_strong_negative?: number
@@ -727,6 +747,16 @@ export type Database = {
           id?: string
           influence_admin_point_multiplier?: number
           planet_naming_convention_id?: string | null
+          stance_desc_negative?: string
+          stance_desc_neutral?: string
+          stance_desc_positive?: string
+          stance_desc_strong_negative?: string
+          stance_desc_strong_positive?: string
+          stance_label_negative?: string
+          stance_label_neutral?: string
+          stance_label_positive?: string
+          stance_label_strong_negative?: string
+          stance_label_strong_positive?: string
           stance_lean_negative?: number
           stance_lean_positive?: number
           stance_strong_negative?: number

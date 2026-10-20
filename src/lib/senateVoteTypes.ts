@@ -38,15 +38,29 @@ export const VOTE_STANCE_LABELS: Record<VoteStance, string> = {
   "strong-nay": "Strongly Nay",
 };
 
+/** Default wording shown for each stance; admins can rename and describe them. */
+export const DEFAULT_STANCE_LABELS: Record<VoteStance, string> = { ...VOTE_STANCE_LABELS };
+
+export const DEFAULT_STANCE_DESCRIPTIONS: Record<VoteStance, string> = {
+  "strong-yea": "Firmly in favor before any influence is applied",
+  yea: "In favor before any influence is applied",
+  neutral: "Undecided before any influence is applied",
+  nay: "Against before any influence is applied",
+  "strong-nay": "Firmly against before any influence is applied",
+};
+
 /**
  * Global stance tolerances: a bloc's pre-influence score (whatever the vote type) is compared
  * against these cutoffs to label its stance before any player influence is applied.
+ * Names and descriptions are editable by admins and shown wherever a stance appears.
  */
 export interface StanceTolerances {
   lean_positive: number;
   lean_negative: number;
   strong_positive: number;
   strong_negative: number;
+  labels: Record<VoteStance, string>;
+  descriptions: Record<VoteStance, string>;
 }
 
 export const DEFAULT_STANCE_TOLERANCES: StanceTolerances = {
@@ -54,7 +68,14 @@ export const DEFAULT_STANCE_TOLERANCES: StanceTolerances = {
   lean_negative: -2.5,
   strong_positive: 7.5,
   strong_negative: -7.5,
+  labels: DEFAULT_STANCE_LABELS,
+  descriptions: DEFAULT_STANCE_DESCRIPTIONS,
 };
+
+/** Display name for a stance, honoring admin overrides with fallback to defaults. */
+export function stanceLabel(tol: StanceTolerances | null | undefined, stance: VoteStance): string {
+  return tol?.labels?.[stance] || VOTE_STANCE_LABELS[stance];
+}
 
 /** Map a bloc's pre-influence score to its stance using the global tolerance cutoffs. */
 export function stanceForScore(tol: StanceTolerances, score: number): VoteStance {
@@ -145,20 +166,37 @@ export async function saveVoteType(t: SenateVoteType) {
   if (error) throw error;
 }
 
-/** Read the global stance tolerances from app_settings (fallback to defaults). */
+/** Read the global stance tolerances (cutoffs, names, descriptions) from app_settings. */
 export async function getStanceTolerances(): Promise<StanceTolerances> {
   const { data } = await (supabase as any)
     .from("app_settings")
-    .select("stance_lean_positive, stance_lean_negative, stance_strong_positive, stance_strong_negative")
+    .select(`stance_lean_positive, stance_lean_negative, stance_strong_positive, stance_strong_negative,
+      stance_label_strong_positive, stance_label_positive, stance_label_neutral, stance_label_negative, stance_label_strong_negative,
+      stance_desc_strong_positive, stance_desc_positive, stance_desc_neutral, stance_desc_negative, stance_desc_strong_negative`)
     .eq("id", "global")
     .maybeSingle();
   const n = (v: any, d: number) => (Number.isFinite(Number(v)) ? Number(v) : d);
+  const s = (v: any, d: string) => (typeof v === "string" && v.trim() ? v : d);
   const d = DEFAULT_STANCE_TOLERANCES;
   return {
     lean_positive: n(data?.stance_lean_positive, d.lean_positive),
     lean_negative: n(data?.stance_lean_negative, d.lean_negative),
     strong_positive: n(data?.stance_strong_positive, d.strong_positive),
     strong_negative: n(data?.stance_strong_negative, d.strong_negative),
+    labels: {
+      "strong-yea": s(data?.stance_label_strong_positive, d.labels["strong-yea"]),
+      yea: s(data?.stance_label_positive, d.labels.yea),
+      neutral: s(data?.stance_label_neutral, d.labels.neutral),
+      nay: s(data?.stance_label_negative, d.labels.nay),
+      "strong-nay": s(data?.stance_label_strong_negative, d.labels["strong-nay"]),
+    },
+    descriptions: {
+      "strong-yea": typeof data?.stance_desc_strong_positive === "string" ? data.stance_desc_strong_positive : d.descriptions["strong-yea"],
+      yea: typeof data?.stance_desc_positive === "string" ? data.stance_desc_positive : d.descriptions.yea,
+      neutral: typeof data?.stance_desc_neutral === "string" ? data.stance_desc_neutral : d.descriptions.neutral,
+      nay: typeof data?.stance_desc_negative === "string" ? data.stance_desc_negative : d.descriptions.nay,
+      "strong-nay": typeof data?.stance_desc_strong_negative === "string" ? data.stance_desc_strong_negative : d.descriptions["strong-nay"],
+    },
   };
 }
 
@@ -169,6 +207,16 @@ export async function setStanceTolerances(t: StanceTolerances): Promise<void> {
     stance_lean_negative: t.lean_negative,
     stance_strong_positive: t.strong_positive,
     stance_strong_negative: t.strong_negative,
+    stance_label_strong_positive: t.labels["strong-yea"],
+    stance_label_positive: t.labels.yea,
+    stance_label_neutral: t.labels.neutral,
+    stance_label_negative: t.labels.nay,
+    stance_label_strong_negative: t.labels["strong-nay"],
+    stance_desc_strong_positive: t.descriptions["strong-yea"],
+    stance_desc_positive: t.descriptions.yea,
+    stance_desc_neutral: t.descriptions.neutral,
+    stance_desc_negative: t.descriptions.nay,
+    stance_desc_strong_negative: t.descriptions["strong-nay"],
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
