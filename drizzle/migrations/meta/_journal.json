@@ -50,6 +50,13 @@
       "when": 1792441664272,
       "tag": "0006_make_stance_tolerances_global",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792516807538,
+      "tag": "0007_stance_label_and_description",
+      "breakpoints": true
     }
   ]
 }
