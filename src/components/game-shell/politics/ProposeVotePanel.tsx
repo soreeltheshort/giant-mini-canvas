@@ -34,8 +34,8 @@ interface ProposeVotePanelProps {
   gameId?: string | null;
   blocs: SenateBloc[];
   onSelectBloc: (id: string) => void;
-  /** Reports each bloc's pre-influence stance toward the motion being drafted. */
-  onStances?: (stances: Record<string, VoteStance>) => void;
+  /** Reports each bloc's pre-influence stance toward the motion being drafted, plus the stance names. */
+  onStances?: (stances: Record<string, VoteStance>, labels: Record<VoteStance, string>) => void;
 }
 
 interface FactionOption { id: string; name: string }
@@ -84,7 +84,7 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc, onStance
     if (!onStances || !type) return;
     const next: Record<string, VoteStance> = {};
     for (const b of blocs) next[b.id] = stanceForScore(tolerances, blocPreInfluenceScore(type, b, sponsorId));
-    onStances(next);
+    onStances(next, tolerances.labels);
   }, [blocs, type, tolerances, sponsorId, onStances]);
 
   const displayValues = useMemo(() => {
@@ -186,8 +186,9 @@ export default function ProposeVotePanel({ gameId, blocs, onSelectBloc, onStance
               <p className="mt-2 font-body text-[11px] font-semibold text-muted-foreground">
                 Pre-influence score {(blocScore(sponsor) >= 0 ? "+" : "") + blocScore(sponsor).toFixed(1)}
                 {" "}(affinities {(affinityScore(type, sponsor.affinities ?? []) >= 0 ? "+" : "") + affinityScore(type, sponsor.affinities ?? []).toFixed(1)}
-                {" "}+ sponsor bonus +{SPONSOR_SCORE_BONUS}) — leans{" "}
-                <span className="uppercase">{blocStance(sponsor).replace("-", " ")}</span> before any player influence.
+                {" "}+ sponsor bonus +{SPONSOR_SCORE_BONUS}) —{" "}
+                <span className="uppercase">{tolerances.labels[blocStance(sponsor)] || blocStance(sponsor).replace("-", " ")}</span>{" "}
+                before any player influence.
               </p>
             )}
           </div>
