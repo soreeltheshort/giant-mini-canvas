@@ -166,20 +166,37 @@ export async function saveVoteType(t: SenateVoteType) {
   if (error) throw error;
 }
 
-/** Read the global stance tolerances from app_settings (fallback to defaults). */
+/** Read the global stance tolerances (cutoffs, names, descriptions) from app_settings. */
 export async function getStanceTolerances(): Promise<StanceTolerances> {
   const { data } = await (supabase as any)
     .from("app_settings")
-    .select("stance_lean_positive, stance_lean_negative, stance_strong_positive, stance_strong_negative")
+    .select(`stance_lean_positive, stance_lean_negative, stance_strong_positive, stance_strong_negative,
+      stance_label_strong_positive, stance_label_positive, stance_label_neutral, stance_label_negative, stance_label_strong_negative,
+      stance_desc_strong_positive, stance_desc_positive, stance_desc_neutral, stance_desc_negative, stance_desc_strong_negative`)
     .eq("id", "global")
     .maybeSingle();
   const n = (v: any, d: number) => (Number.isFinite(Number(v)) ? Number(v) : d);
+  const s = (v: any, d: string) => (typeof v === "string" && v.trim() ? v : d);
   const d = DEFAULT_STANCE_TOLERANCES;
   return {
     lean_positive: n(data?.stance_lean_positive, d.lean_positive),
     lean_negative: n(data?.stance_lean_negative, d.lean_negative),
     strong_positive: n(data?.stance_strong_positive, d.strong_positive),
     strong_negative: n(data?.stance_strong_negative, d.strong_negative),
+    labels: {
+      "strong-yea": s(data?.stance_label_strong_positive, d.labels["strong-yea"]),
+      yea: s(data?.stance_label_positive, d.labels.yea),
+      neutral: s(data?.stance_label_neutral, d.labels.neutral),
+      nay: s(data?.stance_label_negative, d.labels.nay),
+      "strong-nay": s(data?.stance_label_strong_negative, d.labels["strong-nay"]),
+    },
+    descriptions: {
+      "strong-yea": typeof data?.stance_desc_strong_positive === "string" ? data.stance_desc_strong_positive : d.descriptions["strong-yea"],
+      yea: typeof data?.stance_desc_positive === "string" ? data.stance_desc_positive : d.descriptions.yea,
+      neutral: typeof data?.stance_desc_neutral === "string" ? data.stance_desc_neutral : d.descriptions.neutral,
+      nay: typeof data?.stance_desc_negative === "string" ? data.stance_desc_negative : d.descriptions.nay,
+      "strong-nay": typeof data?.stance_desc_strong_negative === "string" ? data.stance_desc_strong_negative : d.descriptions["strong-nay"],
+    },
   };
 }
 
@@ -190,6 +207,16 @@ export async function setStanceTolerances(t: StanceTolerances): Promise<void> {
     stance_lean_negative: t.lean_negative,
     stance_strong_positive: t.strong_positive,
     stance_strong_negative: t.strong_negative,
+    stance_label_strong_positive: t.labels["strong-yea"],
+    stance_label_positive: t.labels.yea,
+    stance_label_neutral: t.labels.neutral,
+    stance_label_negative: t.labels.nay,
+    stance_label_strong_negative: t.labels["strong-nay"],
+    stance_desc_strong_positive: t.descriptions["strong-yea"],
+    stance_desc_positive: t.descriptions.yea,
+    stance_desc_neutral: t.descriptions.neutral,
+    stance_desc_negative: t.descriptions.nay,
+    stance_desc_strong_negative: t.descriptions["strong-nay"],
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
