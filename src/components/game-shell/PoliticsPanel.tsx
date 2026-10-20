@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSenateBlocs } from "@/hooks/useSenateBlocs";
 import { useFavores } from "@/hooks/useFavores";
 import type { SenateBloc } from "@/lib/senateBlocs";
 import type { Favor } from "@/lib/favores";
 import { affinityLabel } from "@/lib/senateAffinities";
 import { criterionLabel, materializeFavorDescription } from "@/lib/favorCriteria";
+import type { VoteStance } from "@/lib/senateVoteTypes";
+import { VOTE_STANCE_LABELS } from "@/lib/senateVoteTypes";
 import { Button } from "@/components/ui/button";
 import { TabControl } from "@/components/game-shell/TabControl";
 import VotesPanel from "@/components/game-shell/politics/VotesPanel";
@@ -12,6 +14,15 @@ import ProposeVotePanel from "@/components/game-shell/politics/ProposeVotePanel"
 import { ChevronRight, ScrollText } from "lucide-react";
 
 const TABS = ["Favores", "Votes", "Propose"];
+
+/** Stance chip styling — same palette as the vote toggles, never red. */
+const STANCE_CHIP: Record<VoteStance, string> = {
+  "strong-yea": "border-vote-yea-strong bg-vote-yea-strong text-primary-foreground",
+  yea: "border-vote-yea bg-vote-yea/15 text-vote-yea-strong",
+  neutral: "border-bronze/60 bg-ivory-dark text-senate-dark",
+  nay: "border-vote-nay bg-vote-nay/15 text-vote-nay-strong",
+  "strong-nay": "border-vote-nay-strong bg-vote-nay-strong text-primary-foreground",
+};
 
 /**
  * Politics surface — shows the SENATE BLOCS of the game's chosen bloc set.
@@ -27,6 +38,10 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
   const { favors, loading: favorsLoading } = useFavores();
   const [selection, setSelection] = useState<{ type: "bloc" | "favor"; id: string } | null>(null);
   const [tab, setTab] = useState(TABS[0]);
+  const [stances, setStances] = useState<Record<string, VoteStance>>({});
+  const reportStances = useCallback((next: Record<string, VoteStance>) => {
+    setStances((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+  }, []);
   const selectedBloc = selection?.type === "bloc"
     ? blocs.find((bloc) => bloc.id === selection.id)
     : !selection
@@ -69,7 +84,7 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
                   onClick={() => setSelection({ type: "bloc", id: b.id })}
                   className={`
                     w-full min-w-0 h-auto p-0 aspect-[5/7] rounded-sm overflow-hidden relative
-                    border-2 transition-all duration-150 text-left
+                    border-4 transition-all duration-150 text-left
                     ${active
                       ? "border-crimson shadow-md shadow-crimson/20 -translate-y-1"
                       : "border-bronze/50 hover:border-bronze hover:-translate-y-0.5 shadow-sm"
@@ -124,6 +139,7 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
               gameId={gameId}
               blocs={blocs}
               onSelectBloc={(id) => setSelection({ type: "bloc", id })}
+              onStances={reportStances}
             />
           )}
 
@@ -172,7 +188,10 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
           {selectedFavor ? (
             <FavorDossier favor={selectedFavor} blocs={blocs} description={playerDescriptions.get(selectedFavor.id) ?? ""} />
           ) : selectedBloc ? (
-            <BlocDossier bloc={selectedBloc} />
+            <BlocDossier
+              bloc={selectedBloc}
+              predisposition={tab === "Propose" ? stances[selectedBloc.id] ?? null : null}
+            />
           ) : (
             <p className="py-8 text-center text-xs font-body font-semibold text-muted-foreground">Select a bloc or Favor.</p>
           )}
@@ -182,15 +201,22 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
   );
 }
 
-function BlocDossier({ bloc }: { bloc: SenateBloc }) {
+function BlocDossier({ bloc, predisposition }: { bloc: SenateBloc; predisposition?: VoteStance | null }) {
   return (
     <div className="border-2 border-bronze/40 rounded-sm bg-ivory shadow-sm">
       <div className="flex items-center justify-between px-4 py-2 border-b border-bronze/30 bg-marble-dark/50">
-        <div>
+        <div className="min-w-0">
           <p className="font-heading text-[9px] font-semibold uppercase tracking-widest text-crimson">Senate Bloc</p>
-          <h2 className="font-heading text-sm font-bold uppercase text-senate-dark">{bloc.name}</h2>
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="truncate font-heading text-sm font-bold uppercase text-senate-dark">{bloc.name}</h2>
+            {predisposition && (
+              <span className={`shrink-0 border px-1.5 py-0.5 font-heading text-[9px] font-bold uppercase leading-none ${STANCE_CHIP[predisposition]}`}>
+                {VOTE_STANCE_LABELS[predisposition]}
+              </span>
+            )}
+          </div>
         </div>
-        <span className="w-4 h-4 rounded-sm border border-bronze/60" style={{ background: bloc.accent_color }} />
+        <span className="w-4 h-4 shrink-0 rounded-sm border border-bronze/60" style={{ background: bloc.accent_color }} />
       </div>
       <div className="px-4 py-4 border-b border-bronze/30 bg-marble-dark/25">
         <p className="font-heading text-4xl font-bold leading-none text-crimson">{bloc.senate_votes ?? 0}</p>
