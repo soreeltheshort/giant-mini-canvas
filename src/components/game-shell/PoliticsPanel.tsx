@@ -4,7 +4,7 @@ import { useFavores } from "@/hooks/useFavores";
 import type { SenateBloc } from "@/lib/senateBlocs";
 import type { Favor } from "@/lib/favores";
 import { affinityLabel } from "@/lib/senateAffinities";
-import { criterionLabel, materializeFavorDescription } from "@/lib/favorCriteria";
+import { criterionLabel, criterionDef, defaultCriterionParams, materializeFavorDescription } from "@/lib/favorCriteria";
 import type { VoteStance } from "@/lib/senateVoteTypes";
 import { VOTE_STANCE_LABELS } from "@/lib/senateVoteTypes";
 import { Button } from "@/components/ui/button";
