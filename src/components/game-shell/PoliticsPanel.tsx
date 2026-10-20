@@ -207,10 +207,10 @@ function BlocDossier({ bloc, predisposition }: { bloc: SenateBloc; predispositio
       <div className="flex items-center justify-between px-4 py-2 border-b border-bronze/30 bg-marble-dark/50">
         <div className="min-w-0">
           <p className="font-heading text-[9px] font-semibold uppercase tracking-widest text-crimson">Senate Bloc</p>
-          <div className="flex min-w-0 items-center gap-2">
-            <h2 className="truncate font-heading text-sm font-bold uppercase text-senate-dark">{bloc.name}</h2>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <h2 className="font-heading text-sm font-bold uppercase leading-tight text-senate-dark">{bloc.name}</h2>
             {predisposition && (
-              <span className={`shrink-0 border px-1.5 py-0.5 font-heading text-[9px] font-bold uppercase leading-none ${STANCE_CHIP[predisposition]}`}>
+              <span className={`shrink-0 border px-1 py-0.5 font-heading text-[8px] font-bold uppercase leading-none tracking-tight ${STANCE_CHIP[predisposition]}`}>
                 {VOTE_STANCE_LABELS[predisposition]}
               </span>
             )}
