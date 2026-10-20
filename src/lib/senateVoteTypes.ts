@@ -77,24 +77,6 @@ export function stanceLabel(tol: StanceTolerances | null | undefined, stance: Vo
   return tol?.labels?.[stance] || VOTE_STANCE_LABELS[stance];
 }
 
-/**
- * Global stance tolerances: a bloc's pre-influence score (whatever the vote type) is compared
- * against these cutoffs to label its stance before any player influence is applied.
- */
-export interface StanceTolerances {
-  lean_positive: number;
-  lean_negative: number;
-  strong_positive: number;
-  strong_negative: number;
-}
-
-export const DEFAULT_STANCE_TOLERANCES: StanceTolerances = {
-  lean_positive: 2.5,
-  lean_negative: -2.5,
-  strong_positive: 7.5,
-  strong_negative: -7.5,
-};
-
 /** Map a bloc's pre-influence score to its stance using the global tolerance cutoffs. */
 export function stanceForScore(tol: StanceTolerances, score: number): VoteStance {
   if (score >= tol.strong_positive) return "strong-yea";
