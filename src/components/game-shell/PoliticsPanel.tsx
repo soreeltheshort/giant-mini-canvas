@@ -225,7 +225,7 @@ function BlocDossier({
             <h2 className="font-heading text-sm font-bold uppercase leading-tight text-senate-dark">{bloc.name}</h2>
             {predisposition && (
               <span className={`shrink-0 border px-1 py-0.5 font-heading text-[8px] font-bold uppercase leading-none tracking-tight ${STANCE_CHIP[predisposition]}`}>
-                {VOTE_STANCE_LABELS[predisposition]}
+                {predispositionLabel?.[predisposition] || VOTE_STANCE_LABELS[predisposition]}
               </span>
             )}
           </div>
