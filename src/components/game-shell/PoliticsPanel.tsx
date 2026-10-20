@@ -39,9 +39,14 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
   const [selection, setSelection] = useState<{ type: "bloc" | "favor"; id: string } | null>(null);
   const [tab, setTab] = useState(TABS[0]);
   const [stances, setStances] = useState<Record<string, VoteStance>>({});
-  const reportStances = useCallback((next: Record<string, VoteStance>) => {
-    setStances((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
-  }, []);
+  const [stanceLabels, setStanceLabels] = useState<Record<VoteStance, string> | null>(null);
+  const reportStances = useCallback(
+    (next: Record<string, VoteStance>, labels: Record<VoteStance, string>) => {
+      setStances((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+      setStanceLabels((prev) => (prev && JSON.stringify(prev) === JSON.stringify(labels) ? prev : labels));
+    },
+    [],
+  );
   const selectedBloc = selection?.type === "bloc"
     ? blocs.find((bloc) => bloc.id === selection.id)
     : !selection
@@ -191,6 +196,7 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
             <BlocDossier
               bloc={selectedBloc}
               predisposition={tab === "Propose" ? stances[selectedBloc.id] ?? null : null}
+              predispositionLabel={tab === "Propose" ? stanceLabels : null}
             />
           ) : (
             <p className="py-8 text-center text-xs font-body font-semibold text-muted-foreground">Select a bloc or Favor.</p>
@@ -201,7 +207,15 @@ export default function PoliticsPanel({ gameId }: PoliticsPanelProps) {
   );
 }
 
-function BlocDossier({ bloc, predisposition }: { bloc: SenateBloc; predisposition?: VoteStance | null }) {
+function BlocDossier({
+  bloc,
+  predisposition,
+  predispositionLabel,
+}: {
+  bloc: SenateBloc;
+  predisposition?: VoteStance | null;
+  predispositionLabel?: Record<VoteStance, string> | null;
+}) {
   return (
     <div className="border-2 border-bronze/40 rounded-sm bg-ivory shadow-sm">
       <div className="flex items-center justify-between px-4 py-2 border-b border-bronze/30 bg-marble-dark/50">
