@@ -38,6 +38,45 @@ export const VOTE_STANCE_LABELS: Record<VoteStance, string> = {
   "strong-nay": "Strongly Nay",
 };
 
+/** Default wording shown for each stance; admins can rename and describe them. */
+export const DEFAULT_STANCE_LABELS: Record<VoteStance, string> = { ...VOTE_STANCE_LABELS };
+
+export const DEFAULT_STANCE_DESCRIPTIONS: Record<VoteStance, string> = {
+  "strong-yea": "Firmly in favor before any influence is applied",
+  yea: "In favor before any influence is applied",
+  neutral: "Undecided before any influence is applied",
+  nay: "Against before any influence is applied",
+  "strong-nay": "Firmly against before any influence is applied",
+};
+
+/**
+ * Global stance tolerances: a bloc's pre-influence score (whatever the vote type) is compared
+ * against these cutoffs to label its stance before any player influence is applied.
+ * Names and descriptions are editable by admins and shown wherever a stance appears.
+ */
+export interface StanceTolerances {
+  lean_positive: number;
+  lean_negative: number;
+  strong_positive: number;
+  strong_negative: number;
+  labels: Record<VoteStance, string>;
+  descriptions: Record<VoteStance, string>;
+}
+
+export const DEFAULT_STANCE_TOLERANCES: StanceTolerances = {
+  lean_positive: 2.5,
+  lean_negative: -2.5,
+  strong_positive: 7.5,
+  strong_negative: -7.5,
+  labels: DEFAULT_STANCE_LABELS,
+  descriptions: DEFAULT_STANCE_DESCRIPTIONS,
+};
+
+/** Display name for a stance, honoring admin overrides with fallback to defaults. */
+export function stanceLabel(tol: StanceTolerances | null | undefined, stance: VoteStance): string {
+  return tol?.labels?.[stance] || VOTE_STANCE_LABELS[stance];
+}
+
 /**
  * Global stance tolerances: a bloc's pre-influence score (whatever the vote type) is compared
  * against these cutoffs to label its stance before any player influence is applied.
